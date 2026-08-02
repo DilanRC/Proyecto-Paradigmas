@@ -4,79 +4,97 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Datos académicos ficticios. Las comprobaciones explícitas hacen el script idempotente.
 START TRANSACTION;
 
-INSERT INTO tbproductores (
-    tbproductoresIdentificacionNumero,
-    tbproductoresIdentificacionTipo,
-    tbproductoresNombre,
-    tbproductoresTelefono,
-    tbproductoresCorreoElectronico,
-    tbproductoresEstado
-) VALUES
-    ('101110111', 'CEDULA_FISICA', 'Maria Fernandez Solano', '88881111', 'contacto.compartido@example.test', 1),
-    ('3101111111', 'CEDULA_JURIDICA', 'Ganaderia Valle Verde S.A.', '+50622221111', 'contacto.compartido@example.test', 1)
-ON DUPLICATE KEY UPDATE
-    tbproductoresNombre = VALUES(tbproductoresNombre),
-    tbproductoresTelefono = VALUES(tbproductoresTelefono),
-    tbproductoresCorreoElectronico = VALUES(tbproductoresCorreoElectronico),
-    tbproductoresEstado = VALUES(tbproductoresEstado);
+UPDATE tbproductor SET
+    tbproductorId = 1,
+    tbproductorIdentificacionTipo = 'CEDULA_FISICA',
+    tbproductorNombre = 'Maria Fernandez Solano',
+    tbproductorTelefono = '88881111',
+    tbproductorCorreoElectronico = 'contacto.compartido@example.test',
+    tbproductorEstado = 1
+WHERE tbproductorIdentificacionNumero = '101110111';
 
-UPDATE tbproductoresdireccion SET
-    tbproductoresdireccionProvincia = 'Alajuela',
-    tbproductoresdireccionCanton = 'San Carlos',
-    tbproductoresdireccionDistrito = 'Quesada',
-    tbproductoresdireccionPueblo = 'Centro',
-    tbproductoresdireccionSenas = 'Datos ficticios para demostracion.'
-WHERE tbproductoresIdentificacionNumero = '101110111';
+UPDATE tbproductor SET
+    tbproductorId = 2,
+    tbproductorIdentificacionTipo = 'CEDULA_JURIDICA',
+    tbproductorNombre = 'Ganaderia Valle Verde S.A.',
+    tbproductorTelefono = '+50622221111',
+    tbproductorCorreoElectronico = 'contacto.compartido@example.test',
+    tbproductorEstado = 1
+WHERE tbproductorIdentificacionNumero = '3101111111';
 
-UPDATE tbproductoresdireccion SET
-    tbproductoresdireccionProvincia = 'Guanacaste',
-    tbproductoresdireccionCanton = 'Tilaran',
-    tbproductoresdireccionDistrito = 'Tilaran',
-    tbproductoresdireccionPueblo = NULL,
-    tbproductoresdireccionSenas = 'Datos ficticios para demostracion.'
-WHERE tbproductoresIdentificacionNumero = '3101111111';
-
-INSERT INTO tbproductoresdireccion (
-    tbproductoresIdentificacionNumero,
-    tbproductoresdireccionProvincia,
-    tbproductoresdireccionCanton,
-    tbproductoresdireccionDistrito,
-    tbproductoresdireccionPueblo,
-    tbproductoresdireccionSenas
-) SELECT '101110111', 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
+INSERT INTO tbproductor (
+    tbproductorId,
+    tbproductorIdentificacionNumero,
+    tbproductorIdentificacionTipo,
+    tbproductorNombre,
+    tbproductorTelefono,
+    tbproductorCorreoElectronico,
+    tbproductorEstado
+)
+SELECT 1, '101110111', 'CEDULA_FISICA', 'Maria Fernandez Solano', '88881111',
+       'contacto.compartido@example.test', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = '101110111'
+    SELECT 1 FROM tbproductor WHERE tbproductorIdentificacionNumero = '101110111'
 )
 UNION ALL
-SELECT '3101111111', 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
+SELECT 2, '3101111111', 'CEDULA_JURIDICA', 'Ganaderia Valle Verde S.A.', '+50622221111',
+       'contacto.compartido@example.test', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = '3101111111'
+    SELECT 1 FROM tbproductor WHERE tbproductorIdentificacionNumero = '3101111111'
 );
 
-UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 1
-WHERE (tbproductoresIdentificacionNumero = '101110111' AND tbproductoresfincaNombre IN ('Finca El Roble', 'Finca Valle Verde'))
-   OR (tbproductoresIdentificacionNumero = '3101111111' AND tbproductoresfincaNombre = 'Finca Valle Verde');
+UPDATE tbproductordireccion SET
+    tbproductordireccionProvincia = 'Alajuela',
+    tbproductordireccionCanton = 'San Carlos',
+    tbproductordireccionDistrito = 'Quesada',
+    tbproductordireccionPueblo = 'Centro',
+    tbproductordireccionSenas = 'Datos ficticios para demostracion.'
+WHERE tbproductorId = 1;
 
-INSERT INTO tbproductoresfinca (
-    tbproductoresIdentificacionNumero,
-    tbproductoresfincaNombre,
-    tbproductoresfincaEstado
-) SELECT '101110111', 'Finca El Roble', 1
+UPDATE tbproductordireccion SET
+    tbproductordireccionProvincia = 'Guanacaste',
+    tbproductordireccionCanton = 'Tilaran',
+    tbproductordireccionDistrito = 'Tilaran',
+    tbproductordireccionPueblo = NULL,
+    tbproductordireccionSenas = 'Datos ficticios para demostracion.'
+WHERE tbproductorId = 2;
+
+INSERT INTO tbproductordireccion (
+    tbproductorId,
+    tbproductordireccionProvincia,
+    tbproductordireccionCanton,
+    tbproductordireccionDistrito,
+    tbproductordireccionPueblo,
+    tbproductordireccionSenas
+)
+SELECT 1, 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
+WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorId = 1)
+UNION ALL
+SELECT 2, 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
+WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorId = 2);
+
+UPDATE tbproductorfinca SET tbproductorfincaEstado = 1
+WHERE (tbproductorId = 1 AND tbproductorfincaNombre IN ('Finca El Roble', 'Finca Valle Verde'))
+   OR (tbproductorId = 2 AND tbproductorfincaNombre = 'Finca Valle Verde');
+
+INSERT INTO tbproductorfinca (
+    tbproductorId,
+    tbproductorfincaNombre,
+    tbproductorfincaEstado
+)
+SELECT 1, 'Finca El Roble', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM tbproductoresfinca
-    WHERE tbproductoresIdentificacionNumero = '101110111' AND tbproductoresfincaNombre = 'Finca El Roble'
+    SELECT 1 FROM tbproductorfinca WHERE tbproductorId = 1 AND tbproductorfincaNombre = 'Finca El Roble'
 )
 UNION ALL
-SELECT '101110111', 'Finca Valle Verde', 1
+SELECT 1, 'Finca Valle Verde', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM tbproductoresfinca
-    WHERE tbproductoresIdentificacionNumero = '101110111' AND tbproductoresfincaNombre = 'Finca Valle Verde'
+    SELECT 1 FROM tbproductorfinca WHERE tbproductorId = 1 AND tbproductorfincaNombre = 'Finca Valle Verde'
 )
 UNION ALL
-SELECT '3101111111', 'Finca Valle Verde', 1
+SELECT 2, 'Finca Valle Verde', 1
 WHERE NOT EXISTS (
-    SELECT 1 FROM tbproductoresfinca
-    WHERE tbproductoresIdentificacionNumero = '3101111111' AND tbproductoresfincaNombre = 'Finca Valle Verde'
+    SELECT 1 FROM tbproductorfinca WHERE tbproductorId = 2 AND tbproductorfincaNombre = 'Finca Valle Verde'
 );
 
 COMMIT;

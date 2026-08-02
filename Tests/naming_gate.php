@@ -25,20 +25,24 @@ foreach ($forbiddenFiles as $file) {
     if (file_exists("{$root}/{$file}")) throw new RuntimeException("Archivo obsoleto: {$file}");
 }
 $sql = implode("\n", array_map('file_get_contents', glob("{$root}/Database/SqlScripts/*.sql")));
-foreach (['tbproductores', 'tbproductoresdireccion', 'tbproductoresfinca', 'tbbitacora'] as $table) {
+foreach (['tbproductor', 'tbproductordireccion', 'tbproductorfinca', 'tbbitacora'] as $table) {
     if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
     'tbparticipanteidentificacion ', 'CREATE TABLE IF NOT EXISTS tbfinca'] as $obsolete) {
     if (str_contains($sql, $obsolete)) throw new RuntimeException("Referencia obsoleta en SQL: {$obsolete}");
 }
-if (!preg_match('/PRIMARY KEY \(tbproductoresIdentificacionNumero\)/', $sql)) {
-    throw new RuntimeException('La identificación no es PK natural.');
+foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ', 'ON UPDATE', 'ON DELETE'] as $forbiddenSql) {
+    if (str_contains($sql, $forbiddenSql)) {
+        throw new RuntimeException("El esquema no puede contener {$forbiddenSql}");
+    }
 }
-if (substr_count($sql, 'PRIMARY KEY') !== 1 || str_contains($sql, 'FOREIGN KEY')
-    || str_contains($sql, 'REFERENCES tbproductores') || str_contains($sql, 'ON UPDATE')
-    || str_contains($sql, 'ON DELETE')) {
-    throw new RuntimeException('Solo puede existir la PRIMARY KEY de tbproductores y no puede haber FOREIGN KEY.');
+if (!preg_match('/tbproductorId INT NOT NULL/', $sql)
+    || preg_match('/tbproductorId[^,\n]*AUTO_INCREMENT/', $sql)) {
+    throw new RuntimeException('tbproductorId debe ser INT ordinario sin AUTO_INCREMENT.');
+}
+foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
+    if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
 }
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 5
     || !str_contains($sql, 'ALTER DATABASE dbtindercows')) {
@@ -47,6 +51,16 @@ if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 5
 $controller = file_get_contents("{$root}/Application/Controller/ProductorController.php");
 if (str_contains($controller, 'participanteId') || str_contains($controller, 'tbrol')) {
     throw new RuntimeException('El controlador aún depende del modelo descartado.');
+}
+$models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
+if (str_contains($models, '->query(') || str_contains($models, '->exec(')
+    || !str_contains($models, '->prepare(') || !str_contains($models, 'GET_LOCK')
+    || !str_contains($models, 'MAX(tbproductorId)')) {
+    throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular tbproductorId en PHP.');
+}
+$databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
+if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
+    throw new RuntimeException('PDO debe usar sentencias preparadas nativas.');
 }
 $js = file_get_contents("{$root}/Public/js/productores.js");
 foreach (['fetch(', 'textContent', 'identificacionNumero', 'AbortController'] as $needle) {
@@ -70,4 +84,4 @@ foreach (['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'] as $pdf) {
     }
 }
 
-echo "OK naming_gate: cuatro tablas, una sola PK, cero FK, collation, PDFs y ausencia del modelo descartado.\n";
+echo "OK naming_gate: tablas singulares, cero PK/FK/CHECK, ID PHP, sentencias preparadas y PDFs.\n";

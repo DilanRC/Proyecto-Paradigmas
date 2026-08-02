@@ -21,7 +21,7 @@ try {
     foreach ($eventos as $evento) {
         test_same('PRODUCTOR', $evento['tbbitacoraEntidad'], 'Entidad simplificada');
         test_same('NO_AUTENTICADO', $evento['tbbitacoraActorTipo'], 'Actor real disponible');
-        test_same(null, $evento['tbusuarioId'], 'Sin usuario ficticio');
+        test_same(null, $evento['tbbitacoraUsuarioId'], 'Sin usuario ficticio');
         test_same('API_PRODUCTORES', $evento['tbbitacoraOrigen'], 'Origen técnico');
     }
 } finally {

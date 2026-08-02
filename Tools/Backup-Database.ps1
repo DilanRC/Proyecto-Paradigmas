@@ -143,6 +143,7 @@ try {
 - Cantidad de índices: Pendiente
 - Cantidad de PRIMARY KEY: Pendiente
 - Cantidad de FOREIGN KEY: Pendiente
+- Cantidad de CHECK: Pendiente
 - Resultado final: Pendiente
 - Observaciones: Ejecutar Tools/Test-Restore.ps1 $Avance y registrar el resultado antes de etiquetar.
 "@

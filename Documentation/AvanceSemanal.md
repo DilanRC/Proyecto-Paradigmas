@@ -1,43 +1,49 @@
-# Avance semanal - Corrección 03 del Avance 01
+# Avance semanal - Corrección 04 del Avance 01
 
-## Nueva aclaración docente
+## Observación docente aplicada
 
-El profesor Cristian Brenes aclaró que el modelo no debe contener PRIMARY KEY
-ni FOREIGN KEY en dirección, finca o bitácora. La única PRIMARY KEY permitida
-es `tbproductoresIdentificacionNumero` dentro de `tbproductores`.
+El profesor Cristian Brenes indicó que la creación de la base no debe usar
+`PRIMARY KEY`, `FOREIGN KEY` ni `CHECK`. También solicitó tablas singulares,
+columnas camelCase, `tbproductorId INT NOT NULL` sin `AUTO_INCREMENT` en MySQL y
+sentencias preparadas en PHP.
 
 ## Modelo vigente
 
-La entrega conserva exactamente cuatro tablas:
+La base continúa llamándose `dbtindercows` para facilitar la migración y
+conserva exactamente cuatro tablas:
 
-- `tbproductores`, con la única PRIMARY KEY del modelo;
-- `tbproductoresdireccion`, sin PRIMARY KEY y sin FOREIGN KEY;
-- `tbproductoresfinca`, sin PRIMARY KEY compuesta y sin FOREIGN KEY;
-- `tbbitacora`, sin PRIMARY KEY y sin FOREIGN KEY.
+- `tbproductor`;
+- `tbproductordireccion`;
+- `tbproductorfinca`;
+- `tbbitacora`.
 
-No existen participante, roles, catálogo de tipos, identificaciones separadas,
-`tbfinca` ni tablas adicionales. `tbbitacoraId` sigue siendo `AUTO_INCREMENT`
-mediante un índice ordinario no único.
+Todas las columnas usan camelCase. Los datos de dirección y finca se asocian
+lógicamente mediante `tbproductorId`, sin FK. La identificación continúa
+inmutable por contrato de aplicación, pero no es una PK.
 
-## Comportamiento de aplicación
+## Implementación
 
-- POST y PUT mantienen una dirección por productor como política de aplicación.
-- La sincronización de fincas usa consulta, actualización e inserción explícitas;
-  no depende de `ON DUPLICATE KEY` ni de una PK compuesta.
-- PUT continúa rechazando cambios de identificación.
-- La desactivación es lógica y la reactivación usa la misma identificación.
+- PHP adquiere `GET_LOCK`, calcula `MAX(tbproductorId) + 1`, inserta y libera el
+  bloqueo después del commit o rollback.
+- Los modelos usan `PDO::prepare()` y parámetros enlazados. Los valores de las
+  solicitudes no se concatenan al SQL.
+- POST y PUT mantienen una dirección y evitan fincas duplicadas como política
+  de aplicación.
 - La bitácora permanece dentro de la transacción.
+- Los scripts de creación no contienen restricciones PK, FK, UNIQUE ni CHECK.
 
-## Pruebas y respaldo
+## Validación y respaldo
 
-La aceptación exige exactamente una PRIMARY KEY global, cero FOREIGN KEY,
-cuatro tablas, `utf8mb4_unicode_ci`, pruebas PHP/Node/PDF y restauraciones sin
-diferencias. La evidencia se registra en
-`EvidenciasPruebasAvance01Correccion03.md` y el paquete nuevo en
-`Database/Backups/Avance01Correccion03/`. Las correcciones anteriores permanecen
-históricas e intactas.
+La aceptación comprueba cuatro tablas singulares, cero restricciones, doce
+índices ordinarios no únicos, `tbproductorId` sin `AUTO_INCREMENT`,
+`utf8mb4_unicode_ci`, sentencias preparadas, pruebas PHP/Node/PDF y restauración
+sin diferencias. La evidencia corresponde a
+`EvidenciasPruebasAvance01Correccion04.md` y el respaldo a
+`Database/Backups/Avance01Correccion04/`.
 
 ## Limitación consciente
 
-MySQL acepta filas huérfanas y duplicados en las tablas sin llave. La aplicación
-evita generarlos en sus flujos normales, pero SQL directo no tiene esa garantía.
+SQL directo puede insertar IDs o identificaciones duplicadas, asociaciones
+huérfanas y valores fuera del dominio. Esa ausencia de seguridad estructural es
+intencional según la indicación docente. Los flujos PHP aplican las reglas del
+CRUD, pero no convierten esas reglas en restricciones de MySQL.

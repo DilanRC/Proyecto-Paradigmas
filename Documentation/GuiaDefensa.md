@@ -1,18 +1,18 @@
 # Guía de defensa
 
-1. **¿Cuál es la única PRIMARY KEY?** `tbproductores.tbproductoresIdentificacionNumero`.
-2. **¿Hay otras PRIMARY KEY?** No. Dirección, finca y bitácora no tienen PK.
-3. **¿Hay FOREIGN KEY?** No existe ninguna FK en el esquema.
-4. **¿Por qué se repite la identificación?** Es una referencia lógica usada por la aplicación, no una restricción MySQL.
-5. **¿Cómo se mantiene una dirección?** POST y PUT verifican el conteo dentro de la transacción.
-6. **¿Cómo admite varias fincas?** Varias filas comparten la identificación; no existe PK compuesta.
-7. **¿Cómo evita fincas duplicadas la aplicación?** Valida nombres y sincroniza mediante SELECT, UPDATE e INSERT.
-8. **¿`tbbitacoraId` es PK?** No. Es AUTO_INCREMENT con un índice ordinario requerido por MySQL.
-9. **¿Puede cambiar la identificación?** No; PUT la rechaza.
-10. **¿Cómo se elimina un productor?** Cambiando su estado, sin borrado físico.
-11. **¿Cómo se reactiva?** PATCH reutiliza la misma identificación.
-12. **¿Quién registra la bitácora?** `NO_AUTENTICADO`, con `tbusuarioId = NULL`.
-13. **¿Qué pasa si falla la bitácora?** La transacción revierte toda la operación.
-14. **¿Cuántas tablas hay?** Exactamente cuatro.
-15. **¿Qué intercalación usan?** `utf8mb4_unicode_ci`.
-16. **¿Qué riesgo existe sin FK/PK adicionales?** SQL directo puede crear huérfanos o duplicados; la aplicación mantiene sus propias políticas.
+1. **¿Cuántas tablas hay?** Cuatro, todas con nombre singular.
+2. **¿Hay PRIMARY KEY?** No, el esquema tiene cero PK.
+3. **¿Hay FOREIGN KEY?** No, las asociaciones son lógicas.
+4. **¿Hay CHECK o UNIQUE?** No existe ninguna de esas restricciones.
+5. **¿Qué es `tbproductorId`?** Un `INT NOT NULL` ordinario.
+6. **¿Cómo obtiene su valor?** PHP mantiene un `GET_LOCK`, consulta `MAX(id)+1`, inserta y libera después de finalizar la transacción.
+7. **¿Es AUTO_INCREMENT?** No en MySQL.
+8. **¿Cómo se asocian dirección y finca?** Guardan `tbproductorId` sin FK.
+9. **¿Cómo se conserva una dirección?** POST crea una y PUT exige exactamente una como política de aplicación.
+10. **¿Cómo se evitan fincas duplicadas?** El modelo consulta, actualiza o inserta mediante sentencias preparadas.
+11. **¿La identificación es una PK?** No. Es inmutable por contrato del CRUD.
+12. **¿Cómo se evita inyección SQL?** Los modelos usan `PDO::prepare()`, valores enlazados y preparadas nativas.
+13. **¿Qué valida MySQL?** Tipos y nulabilidad; no aplica PK, FK, UNIQUE ni CHECK.
+14. **¿Qué riesgo queda?** SQL directo puede insertar duplicados, huérfanos y dominio inválido.
+15. **¿Cómo se audita?** La bitácora permanece dentro de la transacción y registra las cuatro acciones.
+16. **¿Cómo se comprobó?** `information_schema`, pruebas PHP/Node/PDF, semillas repetidas y dos restauraciones comparadas.

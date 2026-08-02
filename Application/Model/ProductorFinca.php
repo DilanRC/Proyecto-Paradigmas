@@ -12,42 +12,42 @@ final class ProductorFinca
     {
     }
 
-    public function sincronizar(string $identificacionNumero, array $nombres): void
+    public function sincronizar(int $productorId, array $nombres): void
     {
         if ($nombres === []) {
             $sentencia = $this->conexion->prepare(
-                'UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 0
-                 WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
+                'UPDATE tbproductorfinca SET tbproductorfincaEstado = 0
+                 WHERE tbproductorId = :productorId'
             );
-            $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
+            $sentencia->execute(['productorId' => $productorId]);
             return;
         }
 
         $marcadores = implode(',', array_fill(0, count($nombres), '?'));
         $desactivar = $this->conexion->prepare(
-            "UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 0
-             WHERE tbproductoresIdentificacionNumero = ?
-               AND tbproductoresfincaNombre NOT IN ({$marcadores})"
+            "UPDATE tbproductorfinca SET tbproductorfincaEstado = 0
+             WHERE tbproductorId = ?
+               AND tbproductorfincaNombre NOT IN ({$marcadores})"
         );
-        $desactivar->execute([$identificacionNumero, ...$nombres]);
+        $desactivar->execute([$productorId, ...$nombres]);
 
         $contar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductoresfinca
-             WHERE tbproductoresIdentificacionNumero = :identificacionNumero
-               AND tbproductoresfincaNombre = :nombre'
+            'SELECT COUNT(*) FROM tbproductorfinca
+             WHERE tbproductorId = :productorId
+               AND tbproductorfincaNombre = :nombre'
         );
         $reactivar = $this->conexion->prepare(
-            'UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 1
-             WHERE tbproductoresIdentificacionNumero = :identificacionNumero
-               AND tbproductoresfincaNombre = :nombre'
+            'UPDATE tbproductorfinca SET tbproductorfincaEstado = 1
+             WHERE tbproductorId = :productorId
+               AND tbproductorfincaNombre = :nombre'
         );
         $asociar = $this->conexion->prepare(
-            'INSERT INTO tbproductoresfinca
-             (tbproductoresIdentificacionNumero, tbproductoresfincaNombre, tbproductoresfincaEstado)
-             VALUES (:identificacionNumero, :nombre, 1)'
+            'INSERT INTO tbproductorfinca
+             (tbproductorId, tbproductorfincaNombre, tbproductorfincaEstado)
+             VALUES (:productorId, :nombre, 1)'
         );
         foreach ($nombres as $nombre) {
-            $parametros = ['identificacionNumero' => $identificacionNumero, 'nombre' => $nombre];
+            $parametros = ['productorId' => $productorId, 'nombre' => $nombre];
             $contar->execute($parametros);
             $coincidencias = (int) $contar->fetchColumn();
             if ($coincidencias > 1) {
@@ -57,37 +57,37 @@ final class ProductorFinca
         }
     }
 
-    public function listarActivas(string $identificacionNumero): array
+    public function listarActivas(int $productorId): array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbproductoresfincaNombre AS nombre
-             FROM tbproductoresfinca
-             WHERE tbproductoresIdentificacionNumero = :identificacionNumero
-               AND tbproductoresfincaEstado = 1
-             ORDER BY tbproductoresfincaNombre'
+            'SELECT tbproductorfincaNombre AS nombre
+             FROM tbproductorfinca
+             WHERE tbproductorId = :productorId
+               AND tbproductorfincaEstado = 1
+             ORDER BY tbproductorfincaNombre'
         );
-        $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
+        $sentencia->execute(['productorId' => $productorId]);
 
         return $sentencia->fetchAll();
     }
 
-    public function listarPorProductores(array $identificaciones): array
+    public function listarPorProductores(array $productorIds): array
     {
-        if ($identificaciones === []) {
+        if ($productorIds === []) {
             return [];
         }
-        $marcadores = implode(',', array_fill(0, count($identificaciones), '?'));
+        $marcadores = implode(',', array_fill(0, count($productorIds), '?'));
         $sentencia = $this->conexion->prepare(
-            "SELECT tbproductoresIdentificacionNumero, tbproductoresfincaNombre AS nombre
-             FROM tbproductoresfinca
-             WHERE tbproductoresIdentificacionNumero IN ({$marcadores})
-               AND tbproductoresfincaEstado = 1
-             ORDER BY tbproductoresfincaNombre"
+            "SELECT tbproductorId, tbproductorfincaNombre AS nombre
+             FROM tbproductorfinca
+             WHERE tbproductorId IN ({$marcadores})
+               AND tbproductorfincaEstado = 1
+             ORDER BY tbproductorfincaNombre"
         );
-        $sentencia->execute($identificaciones);
+        $sentencia->execute($productorIds);
         $resultado = [];
         foreach ($sentencia->fetchAll() as $fila) {
-            $resultado[$fila['tbproductoresIdentificacionNumero']][] = ['nombre' => $fila['nombre']];
+            $resultado[(int) $fila['tbproductorId']][] = ['nombre' => $fila['nombre']];
         }
 
         return $resultado;

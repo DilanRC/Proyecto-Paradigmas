@@ -1,61 +1,49 @@
-# Decisiones de la corrección del Avance 01
+# Decisiones - Corrección 04
 
-## DEC-C03-001 - Alcance docente
+## DEC-C04-001 - Instrucción docente vigente
 
-La instrucción docente vigente reemplaza las decisiones anteriores sobre PK/FK.
-El modelo activo contiene únicamente `tbproductores`,
-`tbproductoresdireccion`, `tbproductoresfinca` y `tbbitacora`.
+La instrucción docente sustituye el modelo anterior. `dbtindercows` conserva
+cuatro tablas: `tbproductor`, `tbproductordireccion`, `tbproductorfinca` y
+`tbbitacora`.
 
-## DEC-C03-002 - Única PRIMARY KEY
+## DEC-C04-002 - Cero restricciones de integridad
 
-`tbproductoresIdentificacionNumero` es la única PRIMARY KEY de todo el esquema.
-Es una llave natural `VARCHAR`, se normaliza antes de persistir y PUT no permite
-modificarla.
+El esquema no define `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE` ni `CHECK`. Las
+asociaciones y validaciones son una política de aplicación. SQL directo puede
+crear duplicados, huérfanos o valores fuera del dominio.
 
-Si una identificación fue digitada incorrectamente, se debe:
+## DEC-C04-003 - ID de productor calculado en PHP
+
+`tbproductorId` es `INT NOT NULL`, no es clave y no usa `AUTO_INCREMENT`.
+Durante POST, PHP mantiene un bloqueo nombrado hasta después del commit,
+calcula `MAX(tbproductorId) + 1` mediante SQL preparado y asigna el resultado.
+Dirección y finca guardan ese mismo valor como enlace lógico, sin FK.
+
+## DEC-C04-004 - Identificación inmutable por contrato
+
+`tbproductorIdentificacionNumero` no es PK. La aplicación no permite cambiarla.
+Si fue digitada incorrectamente se debe:
 
 1. desactivar el registro incorrecto;
 2. conservar su bitácora;
 3. crear el registro correcto;
-4. no modificar directamente la PRIMARY KEY.
+4. no modificar directamente la identificación existente.
 
-## DEC-C03-003 - Cero FOREIGN KEY
+## DEC-C04-005 - Sentencias preparadas
 
-Dirección, finca y bitácora conservan la identificación solo como columna de
-referencia lógica. No existe ninguna FOREIGN KEY ni reglas `ON UPDATE` o
-`ON DELETE`. MySQL acepta huérfanos; la aplicación controla el flujo normal.
+Los modelos usan `PDO::prepare()` y parámetros enlazados. Ningún valor recibido
+por HTTP se concatena al SQL. PDO mantiene desactivada la emulación de
+sentencias preparadas.
 
-## DEC-C03-004 - Dirección por aplicación
+## DEC-C04-006 - Bitácora
 
-`tbproductoresdireccion` no tiene PRIMARY KEY, FOREIGN KEY ni identificador
-artificial. POST comprueba que no exista una dirección previa y PUT exige que
-exista exactamente una. La relación 1:1 es una política de aplicación.
+La bitácora registra CREAR, ACTUALIZAR, DESACTIVAR y REACTIVAR dentro de la
+misma transacción. Antes de autenticación usa `NO_AUTENTICADO` y
+`tbbitacoraUsuarioId = NULL`. `tbbitacoraId` puede conservar `AUTO_INCREMENT`
+con un índice ordinario no único porque la prohibición aplica a
+`tbproductorId`.
 
-## DEC-C03-005 - Fincas sin llave compuesta
+## DEC-C04-007 - Entregas históricas
 
-`tbproductoresfinca` no tiene PRIMARY KEY ni FOREIGN KEY. Puede almacenar varias
-fincas por productor. La aplicación evita nombres repetidos y sincroniza estados
-con `SELECT`, `UPDATE` e `INSERT`, sin depender de `ON DUPLICATE KEY`.
-
-## DEC-C03-006 - Bitácora sin PRIMARY KEY
-
-`tbbitacoraId` conserva `AUTO_INCREMENT` para ordenar eventos, pero no es PRIMARY
-KEY. MySQL requiere indexarlo, por lo que usa un índice ordinario no único. La
-bitácora registra CREAR, ACTUALIZAR, DESACTIVAR y REACTIVAR dentro de la misma
-transacción, con actor `NO_AUTENTICADO` y `tbusuarioId = NULL`.
-
-## DEC-C03-007 - Tipo e intercalación
-
-El tipo de identificación permanece como columna controlada, sin catálogo. La
-base y las cuatro tablas usan `utf8mb4` con `utf8mb4_unicode_ci`.
-
-## DEC-C03-008 - Versionado
-
-La nueva entrega usa `Database/Backups/Avance01Correccion03/` y la etiqueta
-`avance-01-correccion-03`. No se modifican respaldos ni etiquetas anteriores.
-
-## Limitaciones
-
-- SQL directo puede insertar huérfanos o duplicados en tablas sin llave.
-- No hay autenticación ni autorización.
-- El cambio de identificación no está implementado.
+Avance01 y Correcciones 01, 02 y 03 permanecen intactas. La nueva evidencia,
+respaldo y etiqueta corresponden a Corrección 04.

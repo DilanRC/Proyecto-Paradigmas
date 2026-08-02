@@ -20,7 +20,7 @@ final class Bitacora
             'INSERT INTO tbbitacora
              (tbbitacoraEntidad, tbbitacoraRegistroIdentificacionNumero, tbbitacoraAccion,
               tbbitacoraDatosAnteriores, tbbitacoraDatosNuevos, tbbitacoraActorTipo,
-              tbusuarioId, tbbitacoraOrigen, tbbitacoraSolicitudId)
+              tbbitacoraUsuarioId, tbbitacoraOrigen, tbbitacoraSolicitudId)
              VALUES (\'PRODUCTOR\', :registroId, :accion, :anteriores, :nuevos,
                      \'NO_AUTENTICADO\', NULL, \'API_PRODUCTORES\', :solicitudId)'
         );

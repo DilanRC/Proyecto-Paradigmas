@@ -7,15 +7,15 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 La base `dbtindercows` contiene exactamente:
 
-1. `tbproductores`
-2. `tbproductoresdireccion`
-3. `tbproductoresfinca`
+1. `tbproductor`
+2. `tbproductordireccion`
+3. `tbproductorfinca`
 4. `tbbitacora`
 
-`tbproductoresIdentificacionNumero` es la única PRIMARY KEY del esquema.
-Dirección, finca y bitácora no tienen PRIMARY KEY, y no existe ninguna FOREIGN
-KEY. La identificación se repite en ellas solo como referencia lógica. No
-existen tablas de participante, roles, tipos de identificación ni `tbfinca`.
+El esquema no contiene `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE` ni `CHECK`.
+`tbproductorId` es `INT NOT NULL`, no es clave y no usa `AUTO_INCREMENT`.
+PHP calcula su consecutivo y dirección/finca lo usan como asociación lógica.
+No existen tablas de participante, roles, tipos de identificación ni `tbfinca`.
 
 ## Requisitos e inicio
 
@@ -84,16 +84,21 @@ Endpoint: `/api/productores.php`
 ```
 
 La identificación se almacena sin espacios ni guiones y con letras mayúsculas.
-Como es la PK, PUT no puede cambiarla. El correo no es único. DELETE cambia el
-estado y PATCH reutiliza la misma fila.
+PUT no puede cambiarla por contrato de aplicación, no por una clave MySQL. El
+correo no es único. DELETE cambia el estado y PATCH reutiliza la misma fila.
 
 Si una identificación fue digitada incorrectamente, se desactiva el registro
-incorrecto, se conserva su bitácora y se crea el registro correcto. La PRIMARY
-KEY no se modifica directamente.
+incorrecto, se conserva su bitácora y se crea el registro correcto. La
+identificación existente no se modifica directamente.
 
 POST y PUT mantienen una dirección y evitan fincas duplicadas como políticas de
-aplicación. Sin PK/FK adicionales, SQL directo puede insertar duplicados o
-huérfanos; MySQL no aplica integridad referencial en esas tres tablas.
+aplicación. Sin PK, FK, UNIQUE ni CHECK, SQL directo puede insertar duplicados,
+huérfanos o valores fuera del dominio.
+
+Los modelos usan `PDO::prepare()` con parámetros enlazados y preparadas nativas.
+Ningún valor recibido por HTTP se concatena al SQL. Para crear un productor,
+PHP adquiere un bloqueo nombrado, consulta `MAX(tbproductorId) + 1`, inserta y
+libera el bloqueo después del commit o rollback.
 
 La base y las cuatro tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `001_create_database.sql` altera también una base que
@@ -122,13 +127,13 @@ python3 Tests/documentation_test.py
 
 ## Respaldos
 
-`Database/Backups/Avance01/`, `Avance01Correccion01/` y
-`Avance01Correccion02/` son históricos e inmutables. La entrega vigente usa
-`Database/Backups/Avance01Correccion03/` y `avance-01-correccion-03`.
+Los respaldos hasta `Avance01Correccion03/` son históricos e inmutables. La
+entrega vigente usa `Database/Backups/Avance01Correccion04/` y
+`avance-01-correccion-04`.
 
 ```bash
-Tools/backup-database.sh Avance01Correccion03 Dilan
-Tools/test-restore.sh Avance01Correccion03
+Tools/backup-database.sh Avance01Correccion04 Dilan
+Tools/test-restore.sh Avance01Correccion04
 ```
 
 El paquete contiene dumps completo, estructura y datos, manifiesto, SHA-256 y
@@ -147,4 +152,6 @@ python3 Tests/documentation_test.py
 - El tipo es una columna controlada, no un catálogo.
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.
-- SQL directo puede crear huérfanos o duplicados en tablas sin llave.
+- SQL directo puede crear huérfanos, duplicados y valores fuera del dominio.
+- `tbproductorId` no tiene garantía de unicidad en MySQL; el consecutivo solo se
+  serializa dentro del flujo PHP.

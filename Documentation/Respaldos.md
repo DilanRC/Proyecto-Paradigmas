@@ -2,88 +2,51 @@
 
 ## Entrega vigente
 
-Corrección 03 no modifica `Avance01/`, `Avance01Correccion01/` ni
-`Avance01Correccion02/`. El paquete vigente se genera en
-`Database/Backups/Avance01Correccion03/` y corresponde a la etiqueta
-`avance-01-correccion-03`.
+Corrección 04 no modifica los respaldos históricos hasta Corrección 03. El
+paquete vigente se genera en `Database/Backups/Avance01Correccion04/` y usa la
+etiqueta `avance-01-correccion-04`.
 
 ```bash
-Tools/backup-database.sh Avance01Correccion03 Dilan
-Tools/test-restore.sh Avance01Correccion03
+Tools/backup-database.sh Avance01Correccion04 Dilan
+Tools/test-restore.sh Avance01Correccion04
 ```
 
-PowerShell ofrece el mismo contrato:
+PowerShell dispone de los comandos equivalentes.
 
-```powershell
-Tools/Backup-Database.ps1 -Avance Avance01Correccion03 -Responsable Dilan
-Tools/Test-Restore.ps1 -Avance Avance01Correccion03
-```
-
-## Paquete inmutable
+## Contenido
 
 ```text
-Database/Backups/Avance01Correccion03/
-├── dbtindercows_avance01_correccion03_completo.sql
-├── dbtindercows_avance01_correccion03_estructura.sql
-├── dbtindercows_avance01_correccion03_datos.sql
+Database/Backups/Avance01Correccion04/
+├── dbtindercows_avance01_correccion04_completo.sql
+├── dbtindercows_avance01_correccion04_estructura.sql
+├── dbtindercows_avance01_correccion04_datos.sql
 ├── MANIFEST.md
 └── SHA256SUMS.txt
 ```
 
-- Completo contiene estructura y datos.
-- Estructura contiene tablas, la única PK, CHECK e índices ordinarios; no contiene FK.
-- Datos contiene las filas sin instrucciones de creación.
-- El manifiesto identifica proyecto, base, entrega, fecha, MySQL, rama, commit
-  candidato, responsable, archivos, intercalación, restauraciones, cantidades y
-  resultado final.
-- `SHA256SUMS.txt` identifica los tres SQL mediante SHA-256.
+El verificador restaura el dump completo y luego estructura más datos. Compara
+tablas, columnas, metadatos de claves, CHECK, reglas referenciales, índices,
+intercalación, conteos y checksum de datos. Para Corrección 04 exige:
 
-Los generadores aceptan `AvanceNN[CorreccionNN]` y rechazan sobrescribir un
-archivo existente. El árbol Git debe estar limpio para que el manifiesto apunte
-al commit candidato exacto. Las escrituras MySQL se congelan durante los dumps y
-el estado del servidor se restaura incluso si ocurre un error.
+- cuatro tablas singulares exactas;
+- cero restricciones totales;
+- cero PRIMARY KEY, FOREIGN KEY y CHECK;
+- cero índices únicos;
+- `tbproductorId` sin `AUTO_INCREMENT`;
+- `utf8mb4/utf8mb4_unicode_ci` en base y tablas;
+- igualdad entre origen, restauración completa y restauración por partes.
 
-## Verificación de restauración
-
-El verificador crea solo estas bases temporales:
-
-- `dbtindercows_restore_test`, para el respaldo completo;
-- `dbtindercows_restore_parts_test`, para estructura seguida de datos.
-
-Antes de crearlas comprueba que no existan, por lo que nunca elimina una base
-temporal ajena. Al terminar las elimina mediante limpieza automática. Compara
-origen, restauración completa y restauración por partes en:
-
-- tablas, motor e intercalación;
-- definición y orden de columnas;
-- la única PRIMARY KEY y la ausencia total de FOREIGN KEY;
-- cláusulas CHECK;
-- índices, orden, unicidad y tipo;
-- cantidad de registros y checksum de datos por tabla;
-- intercalación de la base y de cada tabla.
-
-Para Corrección 03 el resultado válido requiere exactamente cuatro tablas,
-`utf8mb4/utf8mb4_unicode_ci`, una PRIMARY KEY en `tbproductores` y cero FOREIGN KEY.
-
-## Comprobación manual de SHA-256
+Antes de cada verificación el manifiesto vuelve a estado `Pendiente`. Solo pasa
+a `APROBADO` después de completar todas las comparaciones. Las pruebas negativas
+inyectan una consulta inválida y una diferencia real de metadatos; ambas deben
+terminar con error, conservar el manifiesto pendiente y limpiar las bases
+temporales.
 
 ```bash
-cd Database/Backups/Avance01Correccion03
-sha256sum -c SHA256SUMS.txt
-cd ../../..
+RESTORE_TEST_INJECT_INVALID_METADATA=1 Tools/test-restore.sh Avance01Correccion04
+RESTORE_TEST_INJECT_SCHEMA_DIFFERENCE=1 Tools/test-restore.sh Avance01Correccion04
+Tools/test-restore.sh Avance01Correccion04
 ```
 
-## Secuencia de cierre
-
-1. Reconstruir con `docker compose down -v` y `docker compose up --build -d`.
-2. Ejecutar todas las pruebas y consultas de evidencia.
-3. Reconstruir nuevamente para excluir residuos de prueba.
-4. Crear el commit candidato de código y documentación.
-5. Generar el paquete Corrección 03.
-6. Restaurar completo y estructura + datos.
-7. Registrar la evidencia real.
-8. Crear el commit del respaldo.
-9. Crear y subir la etiqueta sin mover etiquetas históricas.
-
-Nunca se incluyen `.env`, credenciales ni datos reales. La semilla usa datos
-académicos ficticios y dominios `example.test`.
+Los tres SQL se verifican con `sha256sum -c SHA256SUMS.txt`. Nunca se incluyen
+credenciales ni datos reales.

@@ -6,6 +6,8 @@ readonly RESTORE_DATABASE='dbtindercows_restore_test'
 readonly PARTS_DATABASE='dbtindercows_restore_parts_test'
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+readonly INJECT_INVALID_METADATA="${RESTORE_TEST_INJECT_INVALID_METADATA:-0}"
+readonly INJECT_SCHEMA_DIFFERENCE="${RESTORE_TEST_INJECT_SCHEMA_DIFFERENCE:-0}"
 
 usage() {
     echo "Uso: $0 AvanceNN[CorreccionNN]" >&2
@@ -37,7 +39,22 @@ fi
 
 cd -- "$PROJECT_ROOT"
 docker compose config --quiet
-docker compose exec -T db sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' >/dev/null
+
+manifest_pending="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest-pending.XXXXXX")"
+sed \
+    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: Pendiente/' \
+    -e 's/^- Restauración completa comprobada: .*/- Restauración completa comprobada: Pendiente/' \
+    -e 's/^- Restauración estructura + datos comprobada: .*/- Restauración estructura + datos comprobada: Pendiente/' \
+    -e 's/^- Cantidad de tablas: .*/- Cantidad de tablas: Pendiente/' \
+    -e 's/^- Cantidad de restricciones: .*/- Cantidad de restricciones: Pendiente/' \
+    -e 's/^- Cantidad de índices: .*/- Cantidad de índices: Pendiente/' \
+    -e 's/^- Cantidad de PRIMARY KEY: .*/- Cantidad de PRIMARY KEY: Pendiente/' \
+    -e 's/^- Cantidad de FOREIGN KEY: .*/- Cantidad de FOREIGN KEY: Pendiente/' \
+    -e 's/^- Cantidad de CHECK: .*/- Cantidad de CHECK: Pendiente/' \
+    -e 's/^- Resultado final: .*/- Resultado final: Pendiente/' \
+    "$manifest_file" > "$manifest_pending"
+mv -- "$manifest_pending" "$manifest_file"
 
 (
     cd -- "$backup_dir"
@@ -46,8 +63,21 @@ docker compose exec -T db sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_R
 
 mysql_query() {
     local query="$1"
-    docker compose exec -T -e "CHECK_SQL=$query" db sh -c \
-        'exec mysql -N -B -uroot -p"$MYSQL_ROOT_PASSWORD" -e "$CHECK_SQL"'
+    local error_file output
+    error_file="$(mktemp "${TMPDIR:-/tmp}/tindercows-mysql-stderr.XXXXXX")"
+    if ! output="$(docker compose exec -T -e "CHECK_SQL=$query" db sh -c \
+        'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -N -B -uroot -e "$CHECK_SQL"' 2>"$error_file")"; then
+        cat "$error_file" >&2
+        rm -f -- "$error_file"
+        return 1
+    fi
+    if [[ -s "$error_file" ]]; then
+        cat "$error_file" >&2
+        rm -f -- "$error_file"
+        return 1
+    fi
+    rm -f -- "$error_file"
+    printf '%s\n' "$output"
 }
 
 restore_created=0
@@ -73,17 +103,22 @@ fi
 mysql_query "CREATE DATABASE ${RESTORE_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 restore_created=1
 docker compose exec -T db sh -c \
-    'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dbtindercows_restore_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindercows_restore_test' \
     < "$complete_file"
 
 mysql_query "CREATE DATABASE ${PARTS_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 parts_created=1
 docker compose exec -T db sh -c \
-    'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dbtindercows_restore_parts_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindercows_restore_parts_test' \
     < "$schema_file"
 docker compose exec -T db sh -c \
-    'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dbtindercows_restore_parts_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindercows_restore_parts_test' \
     < "$data_file"
+
+if [[ "$INJECT_SCHEMA_DIFFERENCE" == '1' ]]; then
+    mysql_query "ALTER TABLE ${PARTS_DATABASE}.tbproductor
+        ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorId IS NOT NULL);" >/dev/null
+fi
 
 metadata_diff() {
     local left_database="$1"
@@ -118,8 +153,12 @@ compare_structure() {
     local label="$3"
     local differences=0
     local current=0
+    local tables_metadata='TABLES'
+    if [[ "$INJECT_INVALID_METADATA" == '1' ]]; then
+        tables_metadata='TABLES_INVALIDA'
+    fi
     local definitions=(
-        "TABLE_SCHEMA|TABLES|TABLE_NAME, ENGINE, TABLE_COLLATION|AND TABLE_TYPE = 'BASE TABLE'"
+        "TABLE_SCHEMA|${tables_metadata}|TABLE_NAME, ENGINE, TABLE_COLLATION|AND TABLE_TYPE = 'BASE TABLE'"
         "TABLE_SCHEMA|COLUMNS|TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COALESCE(COLUMN_DEFAULT, '<NULL>'), EXTRA, COALESCE(GENERATION_EXPRESSION, ''), COALESCE(CHARACTER_SET_NAME, ''), COALESCE(COLLATION_NAME, '')|"
         "CONSTRAINT_SCHEMA|TABLE_CONSTRAINTS|TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE|"
         "CONSTRAINT_SCHEMA|KEY_COLUMN_USAGE|TABLE_NAME, CONSTRAINT_NAME, ORDINAL_POSITION, COLUMN_NAME, COALESCE(REFERENCED_TABLE_NAME, ''), COALESCE(REFERENCED_COLUMN_NAME, '')|"
@@ -147,8 +186,11 @@ compare_structure "$RESTORE_DATABASE" "$PARTS_DATABASE" 'completo/estructura+dat
     || { echo 'Error: estructura+datos difiere del respaldo completo.' >&2; exit 1; }
 
 for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
-    read -r database_charset database_collation < <(mysql_query "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
-        FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${database}';")
+    if ! database_settings="$(mysql_query "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+        FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${database}';")"; then
+        exit 1
+    fi
+    read -r database_charset database_collation <<< "$database_settings"
     if [[ "$database_charset" != 'utf8mb4' || "$database_collation" != 'utf8mb4_unicode_ci' ]]; then
         echo "Error: ${database} usa ${database_charset}/${database_collation}." >&2
         exit 1
@@ -160,10 +202,10 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         echo "Error: ${database} contiene ${invalid_collations} tablas con intercalación incorrecta." >&2
         exit 1
     fi
-    primary_key="$(mysql_query "SELECT CONCAT(TABLE_NAME, '.', CONSTRAINT_NAME) FROM information_schema.TABLE_CONSTRAINTS
-        WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
-    if [[ "$primary_key" != 'tbproductores.PRIMARY' ]]; then
-        echo "Error: ${database} debe tener una única PRIMARY KEY en tbproductores." >&2
+    constraint_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = '${database}';")"
+    if [[ "$constraint_count" -ne 0 ]]; then
+        echo "Error: ${database} contiene ${constraint_count} restricciones." >&2
         exit 1
     fi
     foreign_key_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
@@ -172,10 +214,39 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         echo "Error: ${database} contiene ${foreign_key_count} FOREIGN KEY." >&2
         exit 1
     fi
+    primary_key_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
+    check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'CHECK';")"
+    if [[ "$primary_key_count" -ne 0 || "$check_count" -ne 0 ]]; then
+        echo "Error: ${database} contiene PK=${primary_key_count} o CHECK=${check_count}." >&2
+        exit 1
+    fi
+    tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE';")"
+    if [[ "$tables_csv" != 'tbbitacora,tbproductor,tbproductordireccion,tbproductorfinca' ]]; then
+        echo "Error: ${database} contiene tablas inesperadas: ${tables_csv}." >&2
+        exit 1
+    fi
+    invalid_indexes="$(mysql_query "SELECT COUNT(*) FROM information_schema.STATISTICS
+        WHERE TABLE_SCHEMA = '${database}' AND NON_UNIQUE = 0;")"
+    if [[ "$invalid_indexes" -ne 0 ]]; then
+        echo "Error: ${database} contiene ${invalid_indexes} índices únicos." >&2
+        exit 1
+    fi
+    productor_id_extra="$(mysql_query "SELECT EXTRA FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = '${database}' AND TABLE_NAME = 'tbproductor' AND COLUMN_NAME = 'tbproductorId';")"
+    if [[ -n "$productor_id_extra" ]]; then
+        echo "Error: ${database}.tbproductorId usa EXTRA=${productor_id_extra}." >&2
+        exit 1
+    fi
 done
 
 printf '%-38s %10s %10s %10s\n' 'Tabla' 'Origen' 'Completo' 'Partes'
-mapfile -t tables < <(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")
+if ! tables_output="$(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")"; then
+    exit 1
+fi
+mapfile -t tables <<< "$tables_output"
 for table in "${tables[@]}"; do
     source_count="$(mysql_query "SELECT COUNT(*) FROM ${SOURCE_DATABASE}.${table};")"
     restored_count="$(mysql_query "SELECT COUNT(*) FROM ${RESTORE_DATABASE}.${table};")"
@@ -185,26 +256,20 @@ for table in "${tables[@]}"; do
         echo "Error: el conteo difiere para $table." >&2
         exit 1
     fi
-    source_checksum="$(mysql_query "CHECKSUM TABLE ${SOURCE_DATABASE}.${table};" | awk '{print $2}')"
-    restored_checksum="$(mysql_query "CHECKSUM TABLE ${RESTORE_DATABASE}.${table};" | awk '{print $2}')"
-    parts_checksum="$(mysql_query "CHECKSUM TABLE ${PARTS_DATABASE}.${table};" | awk '{print $2}')"
+    source_checksum_output="$(mysql_query "CHECKSUM TABLE ${SOURCE_DATABASE}.${table};")"
+    restored_checksum_output="$(mysql_query "CHECKSUM TABLE ${RESTORE_DATABASE}.${table};")"
+    parts_checksum_output="$(mysql_query "CHECKSUM TABLE ${PARTS_DATABASE}.${table};")"
+    source_checksum="$(awk '{print $2}' <<< "$source_checksum_output")"
+    restored_checksum="$(awk '{print $2}' <<< "$restored_checksum_output")"
+    parts_checksum="$(awk '{print $2}' <<< "$parts_checksum_output")"
     if [[ "$source_checksum" != "$restored_checksum" || "$restored_checksum" != "$parts_checksum" ]]; then
         echo "Error: los datos difieren para ${table}." >&2
         exit 1
     fi
 done
 
-if [[ " ${tables[*]} " == *' tbproductores '* ]]; then
-    mysql_query "SELECT tbproductoresIdentificacionNumero, tbproductoresNombre
-        FROM ${RESTORE_DATABASE}.tbproductores
-        ORDER BY tbproductoresIdentificacionNumero LIMIT 1;" >/dev/null
-else
-    mysql_query "SELECT p.tbparticipanteId, p.tbparticipanteNombre
-        FROM ${RESTORE_DATABASE}.tbparticipante p
-        INNER JOIN ${RESTORE_DATABASE}.tbparticipanterol pr ON pr.tbparticipanteId = p.tbparticipanteId
-        INNER JOIN ${RESTORE_DATABASE}.tbrol r ON r.tbrolId = pr.tbrolId
-        WHERE r.tbrolCodigo = 'PRODUCTOR' LIMIT 1;" >/dev/null
-fi
+mysql_query "SELECT tbproductorId, tbproductorIdentificacionNumero, tbproductorNombre
+    FROM ${RESTORE_DATABASE}.tbproductor ORDER BY tbproductorId LIMIT 1;" >/dev/null
 
 source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
 source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"
@@ -214,6 +279,8 @@ source_primary_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABL
     WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
 source_foreign_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
     WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'FOREIGN KEY';")"
+source_check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'CHECK';")"
 
 manifest_temp="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest.XXXXXX")"
 sed \
@@ -225,8 +292,9 @@ sed \
     -e "s/^- Cantidad de índices: .*/- Cantidad de índices: ${source_indexes}/" \
     -e "s/^- Cantidad de PRIMARY KEY: .*/- Cantidad de PRIMARY KEY: ${source_primary_keys}/" \
     -e "s/^- Cantidad de FOREIGN KEY: .*/- Cantidad de FOREIGN KEY: ${source_foreign_keys}/" \
+    -e "s/^- Cantidad de CHECK: .*/- Cantidad de CHECK: ${source_check_count}/" \
     -e 's/^- Resultado final: .*/- Resultado final: APROBADO/' \
-    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, única PK de productores, cero FK, CHECK, índices, intercalación y conteos sin diferencias.|" \
+    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, índices no únicos, intercalación y conteos sin diferencias.|" \
     "$manifest_file" > "$manifest_temp"
 mv -- "$manifest_temp" "$manifest_file"
 

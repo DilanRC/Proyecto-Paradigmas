@@ -1,27 +1,28 @@
-# DER - Modelo simplificado de productores
+# DER - Modelo docente sin restricciones
 
 ```mermaid
 erDiagram
-    tbproductores {
-        VARCHAR tbproductoresIdentificacionNumero PK
-        VARCHAR tbproductoresIdentificacionTipo
-        VARCHAR tbproductoresNombre
-        VARCHAR tbproductoresTelefono
-        VARCHAR tbproductoresCorreoElectronico
-        TINYINT tbproductoresEstado
+    tbproductor {
+        INT tbproductorId
+        VARCHAR tbproductorIdentificacionNumero
+        VARCHAR tbproductorIdentificacionTipo
+        VARCHAR tbproductorNombre
+        VARCHAR tbproductorTelefono
+        VARCHAR tbproductorCorreoElectronico
+        TINYINT tbproductorEstado
     }
-    tbproductoresdireccion {
-        VARCHAR tbproductoresIdentificacionNumero
-        VARCHAR tbproductoresdireccionProvincia
-        VARCHAR tbproductoresdireccionCanton
-        VARCHAR tbproductoresdireccionDistrito
-        VARCHAR tbproductoresdireccionPueblo
-        VARCHAR tbproductoresdireccionSenas
+    tbproductordireccion {
+        INT tbproductorId
+        VARCHAR tbproductordireccionProvincia
+        VARCHAR tbproductordireccionCanton
+        VARCHAR tbproductordireccionDistrito
+        VARCHAR tbproductordireccionPueblo
+        VARCHAR tbproductordireccionSenas
     }
-    tbproductoresfinca {
-        VARCHAR tbproductoresIdentificacionNumero
-        VARCHAR tbproductoresfincaNombre
-        TINYINT tbproductoresfincaEstado
+    tbproductorfinca {
+        INT tbproductorId
+        VARCHAR tbproductorfincaNombre
+        TINYINT tbproductorfincaEstado
     }
     tbbitacora {
         BIGINT tbbitacoraId
@@ -32,20 +33,17 @@ erDiagram
         JSON tbbitacoraDatosAnteriores
         JSON tbbitacoraDatosNuevos
         VARCHAR tbbitacoraActorTipo
-        BIGINT tbusuarioId
+        BIGINT tbbitacoraUsuarioId
         VARCHAR tbbitacoraOrigen
         VARCHAR tbbitacoraSolicitudId
     }
-    tbproductores ||--|| tbproductoresdireccion : "relación lógica de aplicación"
-    tbproductores ||--o{ tbproductoresfinca : "relación lógica de aplicación"
-    tbproductores ||--o{ tbbitacora : "referencia lógica"
+    tbproductor ||--|| tbproductordireccion : "asociación lógica por tbproductorId"
+    tbproductor ||--o{ tbproductorfinca : "asociación lógica por tbproductorId"
+    tbproductor ||--o{ tbbitacora : "referencia lógica por identificación"
 ```
 
-La única PRIMARY KEY es
-`tbproductores.tbproductoresIdentificacionNumero`. Dirección, finca y bitácora
-no tienen PRIMARY KEY. El esquema no contiene ninguna FOREIGN KEY. Las líneas
-del diagrama representan cardinalidades lógicas controladas por la aplicación,
-no restricciones referenciales de MySQL.
-
-`tbbitacoraId` conserva `AUTO_INCREMENT` mediante un índice ordinario no único;
-ese índice no es una PRIMARY KEY ni una FOREIGN KEY.
+Las líneas muestran asociaciones usadas por PHP, no restricciones de MySQL.
+El esquema define cero `PRIMARY KEY`, cero `FOREIGN KEY` y cero `CHECK`.
+`tbproductorId` es `INT NOT NULL`, no es clave y no usa `AUTO_INCREMENT`; PHP
+calcula el siguiente valor bajo un bloqueo de alta. `tbbitacoraId` conserva
+`AUTO_INCREMENT` mediante un índice ordinario no único.

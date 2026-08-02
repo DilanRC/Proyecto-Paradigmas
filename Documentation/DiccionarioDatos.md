@@ -1,52 +1,51 @@
 # Diccionario de datos
 
-## `tbproductores`
+Ninguna columna es PK o FK y no existen CHECK. Todos los índices son ordinarios
+no únicos. Las reglas indicadas como validación pertenecen a PHP.
 
-| Columna | Tipo | Clave | Regla |
-|---|---|---|---|
-| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | PK | Identificación canónica, inmutable y no vacía. |
-| `tbproductoresIdentificacionTipo` | `VARCHAR(40)` | | Tipo permitido por CHECK. |
-| `tbproductoresNombre` | `VARCHAR(150)` | índice | Entre 3 y 150 caracteres. |
-| `tbproductoresTelefono` | `VARCHAR(20)` | | Entre 8 y 15 dígitos efectivos. |
-| `tbproductoresCorreoElectronico` | `VARCHAR(150)` | índice no único | Contacto en minúsculas. |
-| `tbproductoresEstado` | `TINYINT(1)` | índice | `1` activo, `0` inactivo. |
+## tbproductor
 
-## `tbproductoresdireccion`
+| Columna | Tipo | Uso |
+|---|---|---|
+| `tbproductorId` | `INT NOT NULL` | Consecutivo calculado por PHP; sin clave y sin AUTO_INCREMENT. |
+| `tbproductorIdentificacionNumero` | `VARCHAR(250)` | Identificación canónica e inmutable por aplicación. |
+| `tbproductorIdentificacionTipo` | `VARCHAR(40)` | Tipo validado por aplicación. |
+| `tbproductorNombre` | `VARCHAR(150)` | Nombre del productor. |
+| `tbproductorTelefono` | `VARCHAR(20)` | Teléfono. |
+| `tbproductorCorreoElectronico` | `VARCHAR(150)` | Correo, no único. |
+| `tbproductorEstado` | `TINYINT(1)` | Desactivación lógica. |
 
-| Columna | Tipo | Clave | Regla |
-|---|---|---|---|
-| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | | Referencia lógica; sin PK ni FK. La aplicación mantiene una dirección. |
-| `tbproductoresdireccionProvincia` | `VARCHAR(100)` | | Obligatoria. |
-| `tbproductoresdireccionCanton` | `VARCHAR(100)` | | Obligatorio. |
-| `tbproductoresdireccionDistrito` | `VARCHAR(100)` | | Obligatorio. |
-| `tbproductoresdireccionPueblo` | `VARCHAR(150)` | | Opcional. |
-| `tbproductoresdireccionSenas` | `VARCHAR(500)` | | Opcional. |
+## tbproductordireccion
 
-## `tbproductoresfinca`
+| Columna | Tipo | Uso |
+|---|---|---|
+| `tbproductorId` | `INT` | Asociación lógica con productor, sin FK. |
+| `tbproductordireccionProvincia` | `VARCHAR(100)` | Provincia. |
+| `tbproductordireccionCanton` | `VARCHAR(100)` | Cantón. |
+| `tbproductordireccionDistrito` | `VARCHAR(100)` | Distrito. |
+| `tbproductordireccionPueblo` | `VARCHAR(150) NULL` | Pueblo opcional. |
+| `tbproductordireccionSenas` | `VARCHAR(500) NULL` | Señas opcionales. |
 
-| Columna | Tipo | Clave | Regla |
-|---|---|---|---|
-| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | | Referencia lógica al productor; sin FK. |
-| `tbproductoresfincaNombre` | `VARCHAR(150)` | índice no único | Nombre no vacío; no forma una PK. |
-| `tbproductoresfincaEstado` | `TINYINT(1)` | | Estado lógico de la finca del productor. |
+## tbproductorfinca
 
-## `tbbitacora`
+| Columna | Tipo | Uso |
+|---|---|---|
+| `tbproductorId` | `INT` | Asociación lógica con productor, sin FK. |
+| `tbproductorfincaNombre` | `VARCHAR(150)` | Nombre validado por aplicación. |
+| `tbproductorfincaEstado` | `TINYINT(1)` | Estado lógico. |
 
-| Columna | Tipo | Clave | Regla |
-|---|---|---|---|
-| `tbbitacoraId` | `BIGINT UNSIGNED AUTO_INCREMENT` | índice no único | Secuencia técnica; no es PK. |
-| `tbbitacoraEntidad` | `VARCHAR(80)` | índice | `PRODUCTOR`. |
-| `tbbitacoraRegistroIdentificacionNumero` | `VARCHAR(250)` | índice | Identificación textual auditada. |
-| `tbbitacoraAccion` | `VARCHAR(30)` | | `CREAR`, `ACTUALIZAR`, `DESACTIVAR` o `REACTIVAR`. |
-| `tbbitacoraFecha` | `DATETIME` | índice | Fecha del servidor. |
-| `tbbitacoraDatosAnteriores` | `JSON` | | Estado anterior o NULL. |
-| `tbbitacoraDatosNuevos` | `JSON` | | Estado nuevo o NULL. |
-| `tbbitacoraActorTipo` | `VARCHAR(30)` | | `NO_AUTENTICADO`. |
-| `tbusuarioId` | `BIGINT UNSIGNED` | | NULL antes de autenticación. |
-| `tbbitacoraOrigen` | `VARCHAR(100)` | | `API_PRODUCTORES`. |
-| `tbbitacoraSolicitudId` | `VARCHAR(100)` | índice | Correlación técnica. |
+## tbbitacora
 
-## Juego de caracteres e intercalación
-
-La base `dbtindercows` y sus cuatro tablas usan `utf8mb4` y
-`utf8mb4_unicode_ci`.
+| Columna | Tipo | Uso |
+|---|---|---|
+| `tbbitacoraId` | `BIGINT UNSIGNED AUTO_INCREMENT` | Secuencia con índice ordinario no único. |
+| `tbbitacoraEntidad` | `VARCHAR(80)` | Entidad auditada. |
+| `tbbitacoraRegistroIdentificacionNumero` | `VARCHAR(250)` | Identificación lógica auditada. |
+| `tbbitacoraAccion` | `VARCHAR(30)` | Acción. |
+| `tbbitacoraFecha` | `DATETIME` | Fecha del evento. |
+| `tbbitacoraDatosAnteriores` | `JSON NULL` | Estado anterior. |
+| `tbbitacoraDatosNuevos` | `JSON NULL` | Estado nuevo. |
+| `tbbitacoraActorTipo` | `VARCHAR(30)` | Tipo de actor. |
+| `tbbitacoraUsuarioId` | `BIGINT UNSIGNED NULL` | Usuario, nulo antes de autenticación. |
+| `tbbitacoraOrigen` | `VARCHAR(100)` | Origen técnico. |
+| `tbbitacoraSolicitudId` | `VARCHAR(100)` | Correlación de solicitud. |

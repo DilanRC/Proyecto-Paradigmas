@@ -12,43 +12,43 @@ final class ProductorDireccion
     {
     }
 
-    public function crear(string $identificacionNumero, array $direccion): void
+    public function crear(int $productorId, array $direccion): void
     {
         $comprobar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
+            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :productorId'
         );
-        $comprobar->execute(['identificacionNumero' => $identificacionNumero]);
+        $comprobar->execute(['productorId' => $productorId]);
         if ((int) $comprobar->fetchColumn() !== 0) {
             throw new \RuntimeException('El productor ya tiene una dirección registrada.');
         }
         $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbproductoresdireccion
-             (tbproductoresIdentificacionNumero, tbproductoresdireccionProvincia,
-              tbproductoresdireccionCanton, tbproductoresdireccionDistrito,
-              tbproductoresdireccionPueblo, tbproductoresdireccionSenas)
-             VALUES (:identificacionNumero, :provincia, :canton, :distrito, :pueblo, :senas)'
+            'INSERT INTO tbproductordireccion
+             (tbproductorId, tbproductordireccionProvincia,
+              tbproductordireccionCanton, tbproductordireccionDistrito,
+              tbproductordireccionPueblo, tbproductordireccionSenas)
+             VALUES (:productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
         );
-        $sentencia->execute(['identificacionNumero' => $identificacionNumero, ...$direccion]);
+        $sentencia->execute(['productorId' => $productorId, ...$direccion]);
     }
 
-    public function actualizar(string $identificacionNumero, array $direccion): void
+    public function actualizar(int $productorId, array $direccion): void
     {
         $comprobar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
+            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :productorId'
         );
-        $comprobar->execute(['identificacionNumero' => $identificacionNumero]);
+        $comprobar->execute(['productorId' => $productorId]);
         if ((int) $comprobar->fetchColumn() !== 1) {
             throw new \RuntimeException('El productor no conserva exactamente una dirección.');
         }
         $sentencia = $this->conexion->prepare(
-            'UPDATE tbproductoresdireccion
-             SET tbproductoresdireccionProvincia = :provincia,
-                 tbproductoresdireccionCanton = :canton,
-                 tbproductoresdireccionDistrito = :distrito,
-                 tbproductoresdireccionPueblo = :pueblo,
-                 tbproductoresdireccionSenas = :senas
-             WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
+            'UPDATE tbproductordireccion
+             SET tbproductordireccionProvincia = :provincia,
+                 tbproductordireccionCanton = :canton,
+                 tbproductordireccionDistrito = :distrito,
+                 tbproductordireccionPueblo = :pueblo,
+                 tbproductordireccionSenas = :senas
+             WHERE tbproductorId = :productorId'
         );
-        $sentencia->execute(['identificacionNumero' => $identificacionNumero, ...$direccion]);
+        $sentencia->execute(['productorId' => $productorId, ...$direccion]);
     }
 }
