@@ -12,17 +12,17 @@ function readJsonBody(): array
     $content = file_get_contents('php://input');
 
     if ($content === false || trim($content) === '') {
-        return [];
+        throw new \UnexpectedValueException('El cuerpo JSON no puede estar vacío.');
     }
 
     try {
         $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
     } catch (\JsonException $exception) {
-        throw new \UnexpectedValueException('The request body does not contain valid JSON.', 0, $exception);
+        throw new \UnexpectedValueException('El cuerpo no contiene JSON válido.', 0, $exception);
     }
 
     if (!is_array($data) || array_is_list($data)) {
-        throw new \UnexpectedValueException('The request body must be a JSON object.');
+        throw new \UnexpectedValueException('El cuerpo debe ser un objeto JSON.');
     }
 
     return $data;

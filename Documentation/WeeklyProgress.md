@@ -1,5 +1,8 @@
-# Avance semanal - CRUD de productores
+# Historical filename
 
-El módulo de productores entregado permite crear, buscar, filtrar por estado, actualizar, desactivar y reactivar registros mediante una interfaz AJAX adaptable. Las capas MVC son `Application/Model/Producer.php`, `Application/Controller/ProducerController.php` y `Application/View/producers/index.php`. El punto de entrada HTTP es `Public/api/producers.php`.
+This filename is retained to avoid breaking links created before the Spanish
+naming refactor. The current weekly report is
+[`AvanceSemanal.md`](AvanceSemanal.md).
 
-La eliminación se implementa como una desactivación lógica, lo que conserva los datos para futuras relaciones con ganado, lotes, subastas y pujas. Las consultas preparadas de PDO protegen las operaciones de base de datos y los errores internos no se exponen al navegador.
+Do not use this file as evidence of execution. Real commands, outputs and
+screenshots belong in [`EvidenciasPruebas.md`](EvidenciasPruebas.md).
