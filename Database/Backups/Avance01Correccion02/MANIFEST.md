@@ -1,0 +1,23 @@
+# Respaldo — Avance01Correccion02
+
+- Proyecto: TinderCows
+- Base de datos: dbtindercows
+- Entrega: Avance01Correccion02
+- Fecha y hora: 2026-08-02T12:34-06:00
+- Motor: MySQL 8.0.46
+- Rama: correccion/avance-01-modelo-profesor
+- Commit candidato de código: 12ca8b871c9136ba0cf752a030adac60852f3b53
+- Etiqueta oficial: avance-01-correccion-02
+- Responsable de exportación: Dilan
+- Archivo completo: dbtindercows_avance01_correccion02_completo.sql
+- Archivo de estructura: dbtindercows_avance01_correccion02_estructura.sql
+- Archivo de datos: dbtindercows_avance01_correccion02_datos.sql
+- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y cuatro tablas
+- Restauración completa comprobada: Sí
+- Restauración estructura + datos comprobada: Sí
+- Bases temporales utilizadas: dbtindercows_restore_test, dbtindercows_restore_parts_test
+- Cantidad de tablas: 4
+- Cantidad de restricciones: 21
+- Cantidad de índices: 11
+- Resultado final: APROBADO
+- Observaciones: Estructura, datos, PK, FK, CHECK, índices, reglas RESTRICT, intercalación y conteos sin diferencias.

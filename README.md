@@ -1,52 +1,157 @@
-# Proyecto Paradigmas - TinderCows
+# TinderCows — CRUD de Productores
 
-Aplicación web académica para administrar productores, con módulos futuros para ganado y subastas.
+Aplicación académica PHP 8.3, MVC, MySQL 8, AJAX y JSON. La corrección del
+Avance 01 aplica el modelo simplificado indicado por el profesor.
 
-## Entorno de desarrollo con Docker
+## Modelo vigente
 
-Docker proporciona el mismo entorno de PHP 8.3, Apache y MySQL 8.0 para cada integrante del equipo.
+La base `dbtindercows` contiene exactamente:
+
+1. `tbproductor`
+2. `tbproductordireccion`
+3. `tbproductorfinca`
+4. `tbbitacora`
+
+El esquema no contiene `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE` ni `CHECK`.
+`tbproductorId` es `INT NOT NULL`, no es clave y no usa `AUTO_INCREMENT`.
+PHP calcula su consecutivo y dirección/finca lo usan como asociación lógica.
+No existen tablas de participante, roles, tipos de identificación ni `tbfinca`.
+
+## Requisitos e inicio
+
+- Docker
+- Docker Compose
 
 ```bash
 cp .env.example .env
 docker compose up --build -d
+docker compose ps
 ```
 
-En Windows PowerShell, use `Copy-Item .env.example .env`. Abra la aplicación en `http://localhost:8080` y Adminer en `http://localhost:8081`.
+- Aplicación: <http://localhost:8080>
+- Adminer: <http://localhost:8081>, servidor `db`
+- MySQL desde host: `localhost:3307`
+- MySQL entre contenedores: `db:3306`
+- Base: `dbtindercows`
 
-Datos de conexión de Adminer: sistema `MySQL`, servidor `db`, usuario `DB_USER`, contraseña `DB_PASS` y base de datos `DB_NAME`.
-
-Comandos útiles:
+Reinicio limpio, únicamente después de verificar un respaldo:
 
 ```bash
-docker compose ps
-docker compose logs -f app
-docker compose logs -f db
-docker compose down
+docker compose down -v
+docker compose up --build -d
 ```
 
-Reconstruya después de modificar el Dockerfile o la configuración de Apache con `docker compose up --build -d`. Los scripts de inicialización se ejecutan solamente cuando se crea el volumen de MySQL por primera vez. `docker compose down -v` elimina ese volumen de base de datos; úselo con cuidado y luego ejecute `docker compose up --build -d` para crear una base de datos de desarrollo limpia.
+## Scripts
 
-## Ejecución local
+```text
+Database/SqlScripts/001_create_database.sql
+Database/SqlScripts/002_create_productores.sql
+Database/SqlScripts/003_create_productores_direccion.sql
+Database/SqlScripts/004_create_productores_finca.sql
+Database/SqlScripts/005_create_audit.sql
+Database/SeedData/103_example_productores.sql
+```
 
-1. Ejecute `Database/SqlScripts/001_create_producers.sql` en MySQL.
-2. Opcionalmente cargue `Database/SeedData/001_example_producers.sql`.
-3. Inicie PHP con `php -S localhost:8000 -t Public`.
-4. Abra `http://localhost:8000`.
+La semilla usa datos ficticios y correos `example.test`.
 
-Valores predeterminados de conexión: `DB_HOST=127.0.0.1`, `DB_PORT=3306`, `DB_NAME=tinder_cows`, `DB_USER=root` y `DB_PASS` vacío.
+## API JSON
 
-## Estructura
+Endpoint: `/api/productores.php`
 
-`Application/` contiene el código MVC, `Configuration/` contiene los auxiliares de base de datos y HTTP, `Public/` es la raíz pública, `Database/` contiene el esquema y los datos iniciales, `Documentation/` contiene los documentos del proyecto y `Tests/` contiene los scripts de validación.
+| Método | Operación |
+|---|---|
+| GET | Listar, buscar, filtrar o consultar por `identificacionNumero` |
+| POST | Crear productor, dirección, fincas y bitácora |
+| PUT | Actualizar por `identificacionNumeroOriginal` |
+| DELETE | Desactivar por `identificacionNumero` |
+| PATCH | Reactivar por `identificacionNumero` |
 
-## API de productores
+```json
+{
+  "identificacion": {"tipoCodigo": "CEDULA_FISICA", "numero": "1-1111-1111"},
+  "nombre": "Persona de ejemplo",
+  "telefono": "88888888",
+  "correoElectronico": "contacto@example.test",
+  "direccionPrincipal": {
+    "provincia": "Heredia",
+    "canton": "Heredia",
+    "distrito": "Mercedes",
+    "pueblo": null,
+    "senas": null
+  },
+  "fincas": [{"nombre": "Finca El Roble"}]
+}
+```
 
-| Método | Ruta | Acción |
-|---|---|---|
-| `GET` | `/api/producers.php` | Listar o buscar productores |
-| `GET` | `/api/producers.php?id=1` | Consultar un productor |
-| `POST` | `/api/producers.php` | Crear un productor |
-| `PUT` | `/api/producers.php` | Actualizar un productor |
-| `DELETE` | `/api/producers.php` | Desactivar un productor |
+La identificación se almacena sin espacios ni guiones y con letras mayúsculas.
+PUT no puede cambiarla por contrato de aplicación, no por una clave MySQL. El
+correo no es único. DELETE cambia el estado y PATCH reutiliza la misma fila.
 
-Todos los cuerpos de solicitud y las respuestas usan `application/json`. La API usa los campos de respuesta `success`, `message`, `data` y, opcionalmente, `errors`.
+Si una identificación fue digitada incorrectamente, se desactiva el registro
+incorrecto, se conserva su bitácora y se crea el registro correcto. La
+identificación existente no se modifica directamente.
+
+POST y PUT mantienen una dirección y evitan fincas duplicadas como políticas de
+aplicación. Sin PK, FK, UNIQUE ni CHECK, SQL directo puede insertar duplicados,
+huérfanos o valores fuera del dominio.
+
+Los modelos usan `PDO::prepare()` con parámetros enlazados y preparadas nativas.
+Ningún valor recibido por HTTP se concatena al SQL. Para crear un productor,
+PHP adquiere un bloqueo nombrado, consulta `MAX(tbproductorId) + 1`, inserta y
+libera el bloqueo después del commit o rollback.
+
+La base y las cuatro tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+intercalación en MySQL y `001_create_database.sql` altera también una base que
+`MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
+
+## Interfaz
+
+La vista usa `fetch()` con JSON y actualiza la tabla sin recargar. Incluye
+paginación, búsqueda, filtros, errores por campo, bloqueo de doble envío,
+reactivación, ARIA y escritura segura con `textContent`.
+
+## Pruebas
+
+```bash
+docker compose exec -T app php Tests/naming_gate.php
+docker compose exec -T app php Tests/schema_test.php
+docker compose exec -T app php Tests/api_productores_test.php
+docker compose exec -T app php Tests/transaction_test.php
+docker compose exec -T app php Tests/address_policy_test.php
+docker compose exec -T app php Tests/audit_test.php
+docker compose exec -T app php Tests/concurrency_test.php
+docker compose exec -T app php Tests/naming_eval.php
+node Tests/ui_test.js
+python3 Tests/documentation_test.py
+```
+
+## Respaldos
+
+Los respaldos hasta `Avance01Correccion03/` son históricos e inmutables. La
+entrega vigente usa `Database/Backups/Avance01Correccion04/` y
+`avance-01-correccion-04`.
+
+```bash
+Tools/backup-database.sh Avance01Correccion04 Dilan
+Tools/test-restore.sh Avance01Correccion04
+```
+
+El paquete contiene dumps completo, estructura y datos, manifiesto, SHA-256 y
+evidencia de restauración. No se versionan `.env`, credenciales ni datos reales.
+
+Los PDF obligatorios se generan desde sus Markdown, sin contenido paralelo:
+
+```bash
+python3 Tools/generate-documentation-pdfs.py
+python3 Tests/documentation_test.py
+```
+
+## Limitaciones
+
+- No hay autenticación ni autorización.
+- El tipo es una columna controlada, no un catálogo.
+- El nombre de finca se repite si corresponde a varios productores.
+- No se determina la relación jurídica con una finca.
+- SQL directo puede crear huérfanos, duplicados y valores fuera del dominio.
+- `tbproductorId` no tiene garantía de unicidad en MySQL; el consecutivo solo se
+  serializa dentro del flujo PHP.

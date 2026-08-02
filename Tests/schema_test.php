@@ -1,0 +1,118 @@
+<?php
+
+declare(strict_types=1);
+require __DIR__ . '/bootstrap.php';
+
+$db = test_db();
+$schemaStatement = $db->prepare("SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+    FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE() LIMIT 1");
+$schemaStatement->execute();
+$schema = $schemaStatement->fetch();
+test_same('utf8mb4', $schema['DEFAULT_CHARACTER_SET_NAME'] ?? null, 'La base debe usar utf8mb4');
+test_same('utf8mb4_unicode_ci', $schema['DEFAULT_COLLATION_NAME'] ?? null, 'La base debe usar utf8mb4_unicode_ci');
+
+$tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
+$tablesStatement->execute();
+$tableRows = $tablesStatement->fetchAll();
+test_same(['tbbitacora', 'tbproductor', 'tbproductordireccion', 'tbproductorfinca'],
+    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente cuatro tablas singulares');
+foreach ($tableRows as $table) {
+    test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
+}
+
+$constraints = $db->prepare("SELECT CONSTRAINT_TYPE, COUNT(*) AS cantidad
+    FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()
+    GROUP BY CONSTRAINT_TYPE ORDER BY CONSTRAINT_TYPE");
+$constraints->execute();
+test_same([], $constraints->fetchAll(), 'El esquema no debe contener PRIMARY KEY, FOREIGN KEY, UNIQUE ni CHECK');
+foreach (['KEY_COLUMN_USAGE', 'REFERENTIAL_CONSTRAINTS', 'CHECK_CONSTRAINTS'] as $metadataTable) {
+    $metadata = $db->prepare("SELECT COUNT(*) FROM information_schema.{$metadataTable}
+        WHERE CONSTRAINT_SCHEMA = DATABASE()");
+    $metadata->execute();
+    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para dbtindercows");
+}
+
+$productorIdColumn = $db->prepare("SELECT DATA_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA
+    FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'tbproductor' AND COLUMN_NAME = 'tbproductorId'");
+$productorIdColumn->execute();
+test_same(['DATA_TYPE' => 'int', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => 'MUL', 'EXTRA' => ''],
+    $productorIdColumn->fetch(), 'tbproductorId debe ser INT ordinario sin clave ni AUTO_INCREMENT');
+
+$auditColumn = $db->prepare("SELECT EXTRA FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbbitacora' AND COLUMN_NAME = 'tbbitacoraId'");
+$auditColumn->execute();
+test_same('auto_increment', $auditColumn->fetchColumn(), 'Solo tbbitacoraId conserva AUTO_INCREMENT con índice ordinario');
+
+$indexStatement = $db->prepare("SELECT TABLE_NAME, INDEX_NAME, NON_UNIQUE
+    FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()
+    GROUP BY TABLE_NAME, INDEX_NAME, NON_UNIQUE ORDER BY TABLE_NAME, INDEX_NAME");
+$indexStatement->execute();
+$indexes = $indexStatement->fetchAll();
+test_same(12, count($indexes), 'El modelo debe conservar doce índices ordinarios de consulta');
+foreach ($indexes as $index) {
+    test_same(1, (int) $index['NON_UNIQUE'], "{$index['TABLE_NAME']}.{$index['INDEX_NAME']} no debe ser único");
+}
+
+$expectedColumns = [
+    'tbproductor' => ['tbproductorId', 'tbproductorIdentificacionNumero', 'tbproductorIdentificacionTipo',
+        'tbproductorNombre', 'tbproductorTelefono', 'tbproductorCorreoElectronico', 'tbproductorEstado'],
+    'tbproductordireccion' => ['tbproductorId', 'tbproductordireccionProvincia',
+        'tbproductordireccionCanton', 'tbproductordireccionDistrito', 'tbproductordireccionPueblo',
+        'tbproductordireccionSenas'],
+    'tbproductorfinca' => ['tbproductorId', 'tbproductorfincaNombre', 'tbproductorfincaEstado'],
+    'tbbitacora' => ['tbbitacoraId', 'tbbitacoraEntidad', 'tbbitacoraRegistroIdentificacionNumero',
+        'tbbitacoraAccion', 'tbbitacoraFecha', 'tbbitacoraDatosAnteriores', 'tbbitacoraDatosNuevos',
+        'tbbitacoraActorTipo', 'tbbitacoraUsuarioId', 'tbbitacoraOrigen', 'tbbitacoraSolicitudId'],
+];
+foreach ($expectedColumns as $table => $expected) {
+    $statement = $db->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :tableName ORDER BY ORDINAL_POSITION');
+    $statement->execute(['tableName' => $table]);
+    test_same($expected, $statement->fetchAll(PDO::FETCH_COLUMN), "Columnas inesperadas en {$table}");
+}
+
+$apiIds = [test_document(), test_document()];
+$directIdentification = test_document();
+$directProductorIds = [-random_int(100000, 999999), -random_int(1000000, 1999999)];
+$orphanId = -random_int(2000000, 2999999);
+try {
+    $first = test_create([], $apiIds[0]);
+    $second = test_create([], $apiIds[1]);
+    test_same($first['productorId'] + 1, $second['productorId'],
+        'PHP debe calcular el siguiente tbproductorId bajo el bloqueo de alta');
+    test_same(409, test_controller()->procesar('POST', [], test_payload($apiIds[0]))['status'],
+        'La aplicación debe rechazar una identificación repetida aunque MySQL no tenga claves');
+
+    $directInsert = $db->prepare("INSERT INTO tbproductor
+        (tbproductorId,tbproductorIdentificacionNumero,tbproductorIdentificacionTipo,tbproductorNombre,
+         tbproductorTelefono,tbproductorCorreoElectronico,tbproductorEstado)
+        VALUES (:productorId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
+    foreach ($directProductorIds as $directId) {
+        $directInsert->execute(['productorId' => $directId, 'identificacion' => $directIdentification]);
+    }
+    $directCount = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbproductorIdentificacionNumero = :identificacion');
+    $directCount->execute(['identificacion' => $directIdentification]);
+    test_same(2, (int) $directCount->fetchColumn(), 'Sin PK, UNIQUE ni CHECK, SQL directo acepta duplicados y dominio inválido');
+
+    $db->prepare("INSERT INTO tbproductordireccion
+        (tbproductorId,tbproductordireccionProvincia,tbproductordireccionCanton,tbproductordireccionDistrito)
+        VALUES (:id,'X','X','X')")->execute(['id' => $orphanId]);
+    $db->prepare("INSERT INTO tbproductorfinca
+        (tbproductorId,tbproductorfincaNombre,tbproductorfincaEstado)
+        VALUES (:id,'Finca sin productor',1)")->execute(['id' => $orphanId]);
+    foreach (['tbproductordireccion', 'tbproductorfinca'] as $table) {
+        $orphanCount = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE tbproductorId = :id");
+        $orphanCount->execute(['id' => $orphanId]);
+        test_same(1, (int) $orphanCount->fetchColumn(), "Sin FK, MySQL acepta la relación lógica huérfana en {$table}");
+    }
+} finally {
+    $db->prepare('DELETE FROM tbproductorfinca WHERE tbproductorId = :id')->execute(['id' => $orphanId]);
+    $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorId = :id')->execute(['id' => $orphanId]);
+    $deleteDirect = $db->prepare('DELETE FROM tbproductor WHERE tbproductorId IN (?, ?)');
+    $deleteDirect->execute($directProductorIds);
+    test_cleanup_productores($apiIds);
+}
+
+echo "OK schema_test: cuatro tablas singulares, cero PK/FK/CHECK y tbproductorId asignado por PHP.\n";

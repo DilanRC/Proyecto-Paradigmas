@@ -2,4 +2,4 @@
 
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/Application/View/producers/index.php';
+require_once dirname(__DIR__) . '/Application/View/productores/index.php';
