@@ -12,16 +12,21 @@ $evaluate = static function (string $criterio, bool $cumple, string $evidencia) 
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
 $evaluate('cuatro_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 4, 'SQL crea exactamente cuatro tablas');
-$evaluate('pk_identificacion', str_contains($schema, 'PRIMARY KEY (tbproductoresIdentificacionNumero)'), 'Identificación es PK del productor');
-$evaluate('direccion_1_1', str_contains($schema, 'pk_tbproductoresdireccion') && str_contains($schema, 'fk_tbproductoresdireccion_productor'), 'Dirección comparte PK/FK');
+$evaluate('unica_pk_identificacion', substr_count($schema, 'PRIMARY KEY') === 1
+    && str_contains($schema, 'PRIMARY KEY (tbproductoresIdentificacionNumero)'),
+    'La única PK es la identificación del productor');
+$evaluate('cero_fk', !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'REFERENCES tbproductores'),
+    'El esquema no contiene FOREIGN KEY');
+$evaluate('direccion_politica_aplicacion', !str_contains($schema, 'pk_tbproductoresdireccion')
+    && str_contains($docs, 'política de aplicación'), 'Dirección no tiene llave y su relación 1:1 pertenece a la aplicación');
 $evaluate('finca_sin_entidad_separada', str_contains($schema, 'tbproductoresfinca') && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca'), 'Finca queda dentro de productoresFinca');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraRegistroIdentificacionNumero VARCHAR'), 'Bitácora usa la PK textual');
 $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindercows')
     && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 5,
     'Base y sesiones declaran utf8mb4_unicode_ci');
-$evaluate('fk_restrict', substr_count($schema, 'ON UPDATE RESTRICT ON DELETE RESTRICT') === 2
-    && !str_contains($schema, 'ON UPDATE CASCADE'), 'Las dos FK restringen UPDATE y DELETE');
+$evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
+    'No existen reglas referenciales porque no existen FK');
 $evaluate('decision_docente', str_contains($docs, 'instrucción docente') && str_contains($docs, 'tbproductores'), 'Decisión de corrección documentada');
 $evaluate('protocolo_identificacion', str_contains($docs, 'desactivar el registro incorrecto')
     && str_contains($docs, 'conservar su bitácora') && str_contains($docs, 'crear el registro correcto'),
@@ -33,6 +38,10 @@ $evaluate('pdf_obligatorios', count(array_filter(['AvanceSemanal.pdf', 'DAplicac
 $evaluate('restauracion_sin_falso_positivo', str_contains($restoreTool, 'AS signature')
     && str_contains($restoreTool, 'if ! output=') && str_contains($restoreTool, 'return 1'),
     'El comparador propaga errores SQL y agrupa metadatos por una firma con alias');
+$evaluate('restauracion_modelo_sin_fk', str_contains($restoreTool, "tbproductores.PRIMARY")
+    && str_contains($restoreTool, "CONSTRAINT_TYPE = 'FOREIGN KEY'")
+    && str_contains($restoreTool, 'foreign_key_count'),
+    'La restauración exige una sola PK en productores y cero FK');
 $score = (int) round(100 * count(array_filter($checks, fn ($c) => $c['cumple'])) / count($checks));
 echo json_encode(['eval' => 'modelo_simplificado_profesor', 'score' => $score, 'threshold' => 100, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
 if ($score < 100) exit(1);

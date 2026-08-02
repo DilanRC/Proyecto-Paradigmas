@@ -35,11 +35,14 @@ foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificacionti
 if (!preg_match('/PRIMARY KEY \(tbproductoresIdentificacionNumero\)/', $sql)) {
     throw new RuntimeException('La identificación no es PK natural.');
 }
+if (substr_count($sql, 'PRIMARY KEY') !== 1 || str_contains($sql, 'FOREIGN KEY')
+    || str_contains($sql, 'REFERENCES tbproductores') || str_contains($sql, 'ON UPDATE')
+    || str_contains($sql, 'ON DELETE')) {
+    throw new RuntimeException('Solo puede existir la PRIMARY KEY de tbproductores y no puede haber FOREIGN KEY.');
+}
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 5
-    || !str_contains($sql, 'ALTER DATABASE dbtindercows')
-    || substr_count($sql, 'ON UPDATE RESTRICT ON DELETE RESTRICT') !== 2
-    || str_contains($sql, 'ON UPDATE CASCADE')) {
-    throw new RuntimeException('SQL no fija utf8mb4_unicode_ci y RESTRICT de forma consistente.');
+    || !str_contains($sql, 'ALTER DATABASE dbtindercows')) {
+    throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 $controller = file_get_contents("{$root}/Application/Controller/ProductorController.php");
 if (str_contains($controller, 'participanteId') || str_contains($controller, 'tbrol')) {
@@ -67,4 +70,4 @@ foreach (['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'] as $pdf) {
     }
 }
 
-echo "OK naming_gate: cuatro tablas, PK natural, collation, RESTRICT, PDFs y ausencia del modelo descartado.\n";
+echo "OK naming_gate: cuatro tablas, una sola PK, cero FK, collation, PDFs y ausencia del modelo descartado.\n";

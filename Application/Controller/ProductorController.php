@@ -70,9 +70,6 @@ final class ProductorController
                     'identificacion.numero' => 'El número de identificación ya existe.',
                 ]);
             }
-            if ($codigoMotor === 1452) {
-                return $this->respuesta(false, 'La referencia enviada no es válida.', null, 422);
-            }
             throw $excepcion;
         }
     }

@@ -31,14 +31,29 @@ final class ProductorFinca
         );
         $desactivar->execute([$identificacionNumero, ...$nombres]);
 
+        $contar = $this->conexion->prepare(
+            'SELECT COUNT(*) FROM tbproductoresfinca
+             WHERE tbproductoresIdentificacionNumero = :identificacionNumero
+               AND tbproductoresfincaNombre = :nombre'
+        );
+        $reactivar = $this->conexion->prepare(
+            'UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 1
+             WHERE tbproductoresIdentificacionNumero = :identificacionNumero
+               AND tbproductoresfincaNombre = :nombre'
+        );
         $asociar = $this->conexion->prepare(
             'INSERT INTO tbproductoresfinca
              (tbproductoresIdentificacionNumero, tbproductoresfincaNombre, tbproductoresfincaEstado)
-             VALUES (:identificacionNumero, :nombre, 1)
-             ON DUPLICATE KEY UPDATE tbproductoresfincaEstado = 1'
+             VALUES (:identificacionNumero, :nombre, 1)'
         );
         foreach ($nombres as $nombre) {
-            $asociar->execute(['identificacionNumero' => $identificacionNumero, 'nombre' => $nombre]);
+            $parametros = ['identificacionNumero' => $identificacionNumero, 'nombre' => $nombre];
+            $contar->execute($parametros);
+            $coincidencias = (int) $contar->fetchColumn();
+            if ($coincidencias > 1) {
+                throw new \RuntimeException('Existen fincas duplicadas para el productor.');
+            }
+            ($coincidencias === 1 ? $reactivar : $asociar)->execute($parametros);
         }
     }
 

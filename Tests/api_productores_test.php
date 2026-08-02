@@ -28,6 +28,13 @@ try {
     test_same('Heredia', $actualizado['body']['data']['direccionPrincipal']['provincia'], 'Actualiza dirección');
     test_same([['nombre' => 'Finca Tres']], $actualizado['body']['data']['fincas'], 'Sincroniza fincas');
 
+    $repetido = test_controller()->procesar('PUT', [], $actualizadoPayload);
+    test_same(200, $repetido['status'], 'PUT repetido debe ser idempotente');
+    $conteoFincas = test_db()->prepare('SELECT COUNT(*) FROM tbproductoresfinca
+        WHERE tbproductoresIdentificacionNumero = :id');
+    $conteoFincas->execute(['id' => $creado['identificacionNumero']]);
+    test_same(3, (int) $conteoFincas->fetchColumn(), 'PUT repetido no debe duplicar fincas sin depender de una PK compuesta');
+
     $identificacionModificada = $actualizadoPayload;
     $identificacionModificada['identificacion']['numero'] = test_document();
     test_same(422, test_controller()->procesar('PUT', [], $identificacionModificada)['status'],

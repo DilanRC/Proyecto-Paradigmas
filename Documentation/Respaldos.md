@@ -2,36 +2,36 @@
 
 ## Entrega vigente
 
-Corrección 02 no modifica los paquetes históricos `Avance01/` y
-`Avance01Correccion01/`. El paquete vigente se genera en
-`Database/Backups/Avance01Correccion02/` y corresponde a la etiqueta
-`avance-01-correccion-02`.
+Corrección 03 no modifica `Avance01/`, `Avance01Correccion01/` ni
+`Avance01Correccion02/`. El paquete vigente se genera en
+`Database/Backups/Avance01Correccion03/` y corresponde a la etiqueta
+`avance-01-correccion-03`.
 
 ```bash
-Tools/backup-database.sh Avance01Correccion02 Dilan
-Tools/test-restore.sh Avance01Correccion02
+Tools/backup-database.sh Avance01Correccion03 Dilan
+Tools/test-restore.sh Avance01Correccion03
 ```
 
 PowerShell ofrece el mismo contrato:
 
 ```powershell
-Tools/Backup-Database.ps1 -Avance Avance01Correccion02 -Responsable Dilan
-Tools/Test-Restore.ps1 -Avance Avance01Correccion02
+Tools/Backup-Database.ps1 -Avance Avance01Correccion03 -Responsable Dilan
+Tools/Test-Restore.ps1 -Avance Avance01Correccion03
 ```
 
 ## Paquete inmutable
 
 ```text
-Database/Backups/Avance01Correccion02/
-├── dbtindercows_avance01_correccion02_completo.sql
-├── dbtindercows_avance01_correccion02_estructura.sql
-├── dbtindercows_avance01_correccion02_datos.sql
+Database/Backups/Avance01Correccion03/
+├── dbtindercows_avance01_correccion03_completo.sql
+├── dbtindercows_avance01_correccion03_estructura.sql
+├── dbtindercows_avance01_correccion03_datos.sql
 ├── MANIFEST.md
 └── SHA256SUMS.txt
 ```
 
 - Completo contiene estructura y datos.
-- Estructura contiene tablas, PK, FK, CHECK e índices.
+- Estructura contiene tablas, la única PK, CHECK e índices ordinarios; no contiene FK.
 - Datos contiene las filas sin instrucciones de creación.
 - El manifiesto identifica proyecto, base, entrega, fecha, MySQL, rama, commit
   candidato, responsable, archivos, intercalación, restauraciones, cantidades y
@@ -56,20 +56,19 @@ origen, restauración completa y restauración por partes en:
 
 - tablas, motor e intercalación;
 - definición y orden de columnas;
-- PRIMARY KEY, FOREIGN KEY y columnas referenciadas;
+- la única PRIMARY KEY y la ausencia total de FOREIGN KEY;
 - cláusulas CHECK;
-- reglas `ON UPDATE` y `ON DELETE`;
 - índices, orden, unicidad y tipo;
 - cantidad de registros y checksum de datos por tabla;
 - intercalación de la base y de cada tabla.
 
-Para Corrección 02 el resultado válido requiere exactamente cuatro tablas,
-`utf8mb4/utf8mb4_unicode_ci` y las dos FK con `RESTRICT/RESTRICT`.
+Para Corrección 03 el resultado válido requiere exactamente cuatro tablas,
+`utf8mb4/utf8mb4_unicode_ci`, una PRIMARY KEY en `tbproductores` y cero FOREIGN KEY.
 
 ## Comprobación manual de SHA-256
 
 ```bash
-cd Database/Backups/Avance01Correccion02
+cd Database/Backups/Avance01Correccion03
 sha256sum -c SHA256SUMS.txt
 cd ../../..
 ```
@@ -80,7 +79,7 @@ cd ../../..
 2. Ejecutar todas las pruebas y consultas de evidencia.
 3. Reconstruir nuevamente para excluir residuos de prueba.
 4. Crear el commit candidato de código y documentación.
-5. Generar el paquete Corrección 02.
+5. Generar el paquete Corrección 03.
 6. Restaurar completo y estructura + datos.
 7. Registrar la evidencia real.
 8. Crear el commit del respaldo.

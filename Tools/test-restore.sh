@@ -160,15 +160,19 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         echo "Error: ${database} contiene ${invalid_collations} tablas con intercalación incorrecta." >&2
         exit 1
     fi
+    primary_key="$(mysql_query "SELECT CONCAT(TABLE_NAME, '.', CONSTRAINT_NAME) FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
+    if [[ "$primary_key" != 'tbproductores.PRIMARY' ]]; then
+        echo "Error: ${database} debe tener una única PRIMARY KEY en tbproductores." >&2
+        exit 1
+    fi
+    foreign_key_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+        WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'FOREIGN KEY';")"
+    if [[ "$foreign_key_count" -ne 0 ]]; then
+        echo "Error: ${database} contiene ${foreign_key_count} FOREIGN KEY." >&2
+        exit 1
+    fi
 done
-
-invalid_fk_rules="$(mysql_query "SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
-    WHERE CONSTRAINT_SCHEMA IN ('${SOURCE_DATABASE}', '${RESTORE_DATABASE}', '${PARTS_DATABASE}')
-      AND (UPDATE_RULE <> 'RESTRICT' OR DELETE_RULE <> 'RESTRICT');")"
-if [[ "$invalid_fk_rules" -ne 0 ]]; then
-    echo "Error: se encontraron ${invalid_fk_rules} FK sin reglas RESTRICT." >&2
-    exit 1
-fi
 
 printf '%-38s %10s %10s %10s\n' 'Tabla' 'Origen' 'Completo' 'Partes'
 mapfile -t tables < <(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")
@@ -206,6 +210,10 @@ source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHE
 source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"
 source_indexes="$(mysql_query "SELECT COUNT(DISTINCT TABLE_NAME, INDEX_NAME)
     FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}';")"
+source_primary_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
+source_foreign_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'FOREIGN KEY';")"
 
 manifest_temp="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest.XXXXXX")"
 sed \
@@ -215,8 +223,10 @@ sed \
     -e "s/^- Cantidad de tablas: .*/- Cantidad de tablas: ${source_tables}/" \
     -e "s/^- Cantidad de restricciones: .*/- Cantidad de restricciones: ${source_constraints}/" \
     -e "s/^- Cantidad de índices: .*/- Cantidad de índices: ${source_indexes}/" \
+    -e "s/^- Cantidad de PRIMARY KEY: .*/- Cantidad de PRIMARY KEY: ${source_primary_keys}/" \
+    -e "s/^- Cantidad de FOREIGN KEY: .*/- Cantidad de FOREIGN KEY: ${source_foreign_keys}/" \
     -e 's/^- Resultado final: .*/- Resultado final: APROBADO/' \
-    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, PK, FK, CHECK, índices, reglas RESTRICT, intercalación y conteos sin diferencias.|" \
+    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, única PK de productores, cero FK, CHECK, índices, intercalación y conteos sin diferencias.|" \
     "$manifest_file" > "$manifest_temp"
 mv -- "$manifest_temp" "$manifest_file"
 

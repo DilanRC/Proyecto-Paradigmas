@@ -11,17 +11,14 @@ try {
     $productor = test_create([], $id);
     $conteo = $db = test_db()->prepare('SELECT COUNT(*) FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :id');
     $conteo->execute(['id' => $productor['identificacionNumero']]);
-    test_same(1, (int) $conteo->fetchColumn(), 'Debe existir exactamente una dirección por PK compartida');
-    try {
-        test_db()->prepare('INSERT INTO tbproductoresdireccion
-            (tbproductoresIdentificacionNumero,tbproductoresdireccionProvincia,tbproductoresdireccionCanton,tbproductoresdireccionDistrito)
-            VALUES (:id,\'Otra\',\'Otra\',\'Otra\')')->execute(['id' => $productor['identificacionNumero']]);
-        throw new RuntimeException('Se aceptó una segunda dirección.');
-    } catch (PDOException $exception) {
-        test_same(1062, (int) ($exception->errorInfo[1] ?? 0), 'La PK compartida debe impedir segunda dirección');
-    }
+    test_same(1, (int) $conteo->fetchColumn(), 'POST debe crear exactamente una dirección por política de aplicación');
+    $actualizacion = test_payload($id, ['direccionPrincipal' => ['provincia' => 'Cartago']]);
+    $actualizacion['identificacionNumeroOriginal'] = $productor['identificacionNumero'];
+    test_same(200, test_controller()->procesar('PUT', [], $actualizacion)['status'], 'PUT actualiza la dirección existente');
+    $conteo->execute(['id' => $productor['identificacionNumero']]);
+    test_same(1, (int) $conteo->fetchColumn(), 'PUT debe conservar una sola dirección por política de aplicación');
 } finally {
     test_cleanup_productores([$id]);
 }
 
-echo "OK address_policy_test: dirección obligatoria y relación 1:1 por PK/FK compartida.\n";
+echo "OK address_policy_test: dirección obligatoria y relación 1:1 controlada por la aplicación.\n";

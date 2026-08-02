@@ -1,4 +1,4 @@
-# DER — Modelo simplificado de productores
+# DER - Modelo simplificado de productores
 
 ```mermaid
 erDiagram
@@ -11,7 +11,7 @@ erDiagram
         TINYINT tbproductoresEstado
     }
     tbproductoresdireccion {
-        VARCHAR tbproductoresIdentificacionNumero PK,FK
+        VARCHAR tbproductoresIdentificacionNumero
         VARCHAR tbproductoresdireccionProvincia
         VARCHAR tbproductoresdireccionCanton
         VARCHAR tbproductoresdireccionDistrito
@@ -19,12 +19,12 @@ erDiagram
         VARCHAR tbproductoresdireccionSenas
     }
     tbproductoresfinca {
-        VARCHAR tbproductoresIdentificacionNumero PK,FK
-        VARCHAR tbproductoresfincaNombre PK
+        VARCHAR tbproductoresIdentificacionNumero
+        VARCHAR tbproductoresfincaNombre
         TINYINT tbproductoresfincaEstado
     }
     tbbitacora {
-        BIGINT tbbitacoraId PK
+        BIGINT tbbitacoraId
         VARCHAR tbbitacoraEntidad
         VARCHAR tbbitacoraRegistroIdentificacionNumero
         VARCHAR tbbitacoraAccion
@@ -36,14 +36,16 @@ erDiagram
         VARCHAR tbbitacoraOrigen
         VARCHAR tbbitacoraSolicitudId
     }
-    tbproductores ||--|| tbproductoresdireccion : "tiene"
-    tbproductores ||--o{ tbproductoresfinca : "registra"
+    tbproductores ||--|| tbproductoresdireccion : "relación lógica de aplicación"
+    tbproductores ||--o{ tbproductoresfinca : "relación lógica de aplicación"
     tbproductores ||--o{ tbbitacora : "referencia lógica"
 ```
 
-En `tbproductoresfinca`, ambas columnas marcadas `PK` forman una única PRIMARY
-KEY compuesta. La dirección es obligatoria 1:1 por la transacción de la
-aplicación; la PK/FK compartida impide más de una dirección y evita huérfanos.
-Las fincas son 0:N. La línea de bitácora es una referencia lógica, no una FK,
-para conservar el historial. Las FK de dirección y finca aplican
-`ON UPDATE RESTRICT` y `ON DELETE RESTRICT`.
+La única PRIMARY KEY es
+`tbproductores.tbproductoresIdentificacionNumero`. Dirección, finca y bitácora
+no tienen PRIMARY KEY. El esquema no contiene ninguna FOREIGN KEY. Las líneas
+del diagrama representan cardinalidades lógicas controladas por la aplicación,
+no restricciones referenciales de MySQL.
+
+`tbbitacoraId` conserva `AUTO_INCREMENT` mediante un índice ordinario no único;
+ese índice no es una PRIMARY KEY ni una FOREIGN KEY.

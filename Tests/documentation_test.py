@@ -10,9 +10,9 @@ ROOT = Path(__file__).resolve().parents[1]
 subprocess.run(["python3", "Tools/generate-documentation-pdfs.py", "--check"], cwd=ROOT, check=True)
 
 required = {
-    "DER.pdf": ["tbproductores", "tbproductoresdireccion", "tbproductoresfinca", "tbbitacora", "RESTRICT"],
+    "DER.pdf": ["tbproductores", "tbproductoresdireccion", "tbproductoresfinca", "tbbitacora", "única PRIMARY KEY", "ninguna FOREIGN KEY"],
     "DAplicacion.pdf": ["JavaScript", "fetch/AJAX", "ProductorController", "respuesta HTTP JSON", "sin recargar"],
-    "AvanceSemanal.pdf": ["Cristian Brenes", "cuatro tablas", "utf8mb4_unicode_ci", "ON UPDATE RESTRICT"],
+    "AvanceSemanal.pdf": ["Cristian Brenes", "cuatro tablas", "una PRIMARY KEY global", "cero FOREIGN KEY"],
 }
 for pdf_name, terms in required.items():
     pdf = ROOT / "Documentation" / pdf_name

@@ -19,54 +19,52 @@ endobj
 << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents 7 0 R >>
 endobj
 7 0 obj
-<< /Length 3920 >>
+<< /Length 3576 >>
 stream
 BT /F2 8 Tf 1 0 0 1 500 820 Tm (1/1) Tj ET
-BT /F2 17 Tf 1 0 0 1 44 802.0 Tm (Avance semanal - Corrección 02 del Avance 01) Tj ET
+BT /F2 17 Tf 1 0 0 1 44 802.0 Tm (Avance semanal - Corrección 03 del Avance 01) Tj ET
 BT /F1 10 Tf 1 0 0 1 44 779.0 Tm () Tj ET
-BT /F2 14 Tf 1 0 0 1 44 771.0 Tm (Problema detectado y observación docente) Tj ET
+BT /F2 14 Tf 1 0 0 1 44 771.0 Tm (Nueva aclaración docente) Tj ET
 BT /F1 10 Tf 1 0 0 1 44 751.0 Tm () Tj ET
-BT /F1 10 Tf 1 0 0 1 44 743.0 Tm (El respaldo anterior reveló una contradicción: los scripts solicitaban) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 729.0 Tm (utf8mb4_unicode_ci, pero Docker creaba la base antes de ejecutarlos y las) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 715.0 Tm (tablas terminaban con utf8mb4_0900_ai_ci. El profesor Cristian Brenes también) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 701.0 Tm (indicó que el modelo de nueve tablas excedía el alcance del avance.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 687.0 Tm () Tj ET
-BT /F2 14 Tf 1 0 0 1 44 679.0 Tm (Modelo vigente) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 659.0 Tm () Tj ET
-BT /F1 10 Tf 1 0 0 1 44 651.0 Tm (Se eliminó del modelo activo la propuesta de participante, roles, tipos de) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 637.0 Tm (identificación, identificaciones separadas y finca independiente. La entrega) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 623.0 Tm (conserva exactamente cuatro tablas:) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 609.0 Tm () Tj ET
-BT /F1 10 Tf 1 0 0 1 44 601.0 Tm (- tbproductores, con tbproductoresIdentificacionNumero como PRIMARY KEY natural VARCHAR;) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 587.0 Tm (- tbproductoresdireccion, con la identificación como PRIMARY KEY y FOREIGN KEY, una ) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 573.0 Tm (  dirección por productor;) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 559.0 Tm (- tbproductoresfinca, con PRIMARY KEY compuesta por identificación y nombre, varias fincas ) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 545.0 Tm (  por productor;) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 531.0 Tm (- tbbitacora, con eventos CREAR, ACTUALIZAR, DESACTIVAR y REACTIVAR dentro de la ) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 517.0 Tm (  transacción.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 503.0 Tm () Tj ET
-BT /F2 14 Tf 1 0 0 1 44 495.0 Tm (Correcciones verificables) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 475.0 Tm () Tj ET
-BT /F1 10 Tf 1 0 0 1 44 467.0 Tm (- 001_create_database.sql altera la base existente a utf8mb4_unicode_ci.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 453.0 Tm (- Compose fija el juego de caracteres y la intercalación del servidor MySQL.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 439.0 Tm (- Las FK de dirección y finca cambiaron de ON UPDATE CASCADE a) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 425.0 Tm (  ON UPDATE RESTRICT; ambas conservan ON DELETE RESTRICT.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 411.0 Tm (- PUT rechaza modificar la identificación.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 397.0 Tm (- La desactivación es lógica y la reactivación conserva la misma PK.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 383.0 Tm () Tj ET
-BT /F2 14 Tf 1 0 0 1 44 375.0 Tm (Pruebas y respaldo) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 355.0 Tm () Tj ET
-BT /F1 10 Tf 1 0 0 1 44 347.0 Tm (La aceptación exige los gates PHP y Node, consultas de information_schema,) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 333.0 Tm (restauración completa, restauración de estructura + datos y SHA-256 de los tres) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 319.0 Tm (dumps. La evidencia ejecutada se registra en) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 305.0 Tm (EvidenciasPruebasAvance01Correccion02.md; el paquete nuevo vive en) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 291.0 Tm (Database/Backups/Avance01Correccion02/. Los respaldos anteriores no se modifican.) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 277.0 Tm () Tj ET
-BT /F2 14 Tf 1 0 0 1 44 269.0 Tm (Limitaciones pendientes) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 249.0 Tm () Tj ET
-BT /F1 10 Tf 1 0 0 1 44 241.0 Tm (No existen autenticación ni autorización. El tipo de identificación sigue como) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 227.0 Tm (columna controlada. No se implementa una operación para cambiar la PK: una) Tj ET
-BT /F1 10 Tf 1 0 0 1 44 213.0 Tm (identificación incorrecta se desactiva y se crea nuevamente de forma trazable.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 743.0 Tm (El profesor Cristian Brenes aclaró que el modelo no debe contener PRIMARY KEY) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 729.0 Tm (ni FOREIGN KEY en dirección, finca o bitácora. La única PRIMARY KEY permitida) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 715.0 Tm (es tbproductoresIdentificacionNumero dentro de tbproductores.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 701.0 Tm () Tj ET
+BT /F2 14 Tf 1 0 0 1 44 693.0 Tm (Modelo vigente) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 673.0 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 44 665.0 Tm (La entrega conserva exactamente cuatro tablas:) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 651.0 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 44 643.0 Tm (- tbproductores, con la única PRIMARY KEY del modelo;) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 629.0 Tm (- tbproductoresdireccion, sin PRIMARY KEY y sin FOREIGN KEY;) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 615.0 Tm (- tbproductoresfinca, sin PRIMARY KEY compuesta y sin FOREIGN KEY;) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 601.0 Tm (- tbbitacora, sin PRIMARY KEY y sin FOREIGN KEY.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 587.0 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 44 579.0 Tm (No existen participante, roles, catálogo de tipos, identificaciones separadas,) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 565.0 Tm (tbfinca ni tablas adicionales. tbbitacoraId sigue siendo AUTO_INCREMENT) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 551.0 Tm (mediante un índice ordinario no único.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 537.0 Tm () Tj ET
+BT /F2 14 Tf 1 0 0 1 44 529.0 Tm (Comportamiento de aplicación) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 509.0 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 44 501.0 Tm (- POST y PUT mantienen una dirección por productor como política de aplicación.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 487.0 Tm (- La sincronización de fincas usa consulta, actualización e inserción explícitas;) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 473.0 Tm (  no depende de ON DUPLICATE KEY ni de una PK compuesta.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 459.0 Tm (- PUT continúa rechazando cambios de identificación.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 445.0 Tm (- La desactivación es lógica y la reactivación usa la misma identificación.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 431.0 Tm (- La bitácora permanece dentro de la transacción.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 417.0 Tm () Tj ET
+BT /F2 14 Tf 1 0 0 1 44 409.0 Tm (Pruebas y respaldo) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 389.0 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 44 381.0 Tm (La aceptación exige exactamente una PRIMARY KEY global, cero FOREIGN KEY,) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 367.0 Tm (cuatro tablas, utf8mb4_unicode_ci, pruebas PHP/Node/PDF y restauraciones sin) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 353.0 Tm (diferencias. La evidencia se registra en) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 339.0 Tm (EvidenciasPruebasAvance01Correccion03.md y el paquete nuevo en) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 325.0 Tm (Database/Backups/Avance01Correccion03/. Las correcciones anteriores permanecen) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 311.0 Tm (históricas e intactas.) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 297.0 Tm () Tj ET
+BT /F2 14 Tf 1 0 0 1 44 289.0 Tm (Limitación consciente) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 269.0 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 44 261.0 Tm (MySQL acepta filas huérfanas y duplicados en las tablas sin llave. La aplicación) Tj ET
+BT /F1 10 Tf 1 0 0 1 44 247.0 Tm (evita generarlos en sus flujos normales, pero SQL directo no tiene esa garantía.) Tj ET
 endstream
 endobj
 xref
@@ -82,5 +80,5 @@ xref
 trailer
 << /Size 8 /Root 1 0 R >>
 startxref
-4532
+4188
 %%EOF

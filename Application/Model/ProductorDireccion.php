@@ -14,6 +14,13 @@ final class ProductorDireccion
 
     public function crear(string $identificacionNumero, array $direccion): void
     {
+        $comprobar = $this->conexion->prepare(
+            'SELECT COUNT(*) FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
+        );
+        $comprobar->execute(['identificacionNumero' => $identificacionNumero]);
+        if ((int) $comprobar->fetchColumn() !== 0) {
+            throw new \RuntimeException('El productor ya tiene una dirección registrada.');
+        }
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbproductoresdireccion
              (tbproductoresIdentificacionNumero, tbproductoresdireccionProvincia,
@@ -26,6 +33,13 @@ final class ProductorDireccion
 
     public function actualizar(string $identificacionNumero, array $direccion): void
     {
+        $comprobar = $this->conexion->prepare(
+            'SELECT COUNT(*) FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
+        );
+        $comprobar->execute(['identificacionNumero' => $identificacionNumero]);
+        if ((int) $comprobar->fetchColumn() !== 1) {
+            throw new \RuntimeException('El productor no conserva exactamente una dirección.');
+        }
         $sentencia = $this->conexion->prepare(
             'UPDATE tbproductoresdireccion
              SET tbproductoresdireccionProvincia = :provincia,
@@ -36,14 +50,5 @@ final class ProductorDireccion
              WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero, ...$direccion]);
-        if ($sentencia->rowCount() === 0) {
-            $comprobar = $this->conexion->prepare(
-                'SELECT 1 FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
-            );
-            $comprobar->execute(['identificacionNumero' => $identificacionNumero]);
-            if ($comprobar->fetchColumn() === false) {
-                throw new \RuntimeException('El productor no conserva su dirección obligatoria.');
-            }
-        }
     }
 }

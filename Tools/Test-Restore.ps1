@@ -89,9 +89,11 @@ try {
         if ($collation -ne 'utf8mb4/utf8mb4_unicode_ci') { throw "$database usa $collation." }
         $invalidTables = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE' AND TABLE_COLLATION<>'utf8mb4_unicode_ci';"
         if ($invalidTables -ne '0') { throw "$database contiene tablas con intercalación incorrecta." }
+        $primaryKey = Invoke-MySqlQuery "SELECT CONCAT(TABLE_NAME,'.',CONSTRAINT_NAME) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$database' AND CONSTRAINT_TYPE='PRIMARY KEY';"
+        if ($primaryKey -ne 'tbproductores.PRIMARY') { throw "$database debe tener una única PRIMARY KEY en tbproductores." }
+        $foreignKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$database' AND CONSTRAINT_TYPE='FOREIGN KEY';"
+        if ($foreignKeyCount -ne '0') { throw "$database contiene $foreignKeyCount FOREIGN KEY." }
     }
-    $invalidFkRules = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN ('$SourceDatabase','$RestoreDatabase','$PartsDatabase') AND (UPDATE_RULE<>'RESTRICT' OR DELETE_RULE<>'RESTRICT');"
-    if ($invalidFkRules -ne '0') { throw 'Hay FK restauradas sin reglas RESTRICT.' }
 
     $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
     foreach ($table in $Tables) {
@@ -115,6 +117,8 @@ try {
     $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
     $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
     $indexCount = Invoke-MySqlQuery "SELECT COUNT(DISTINCT TABLE_NAME,INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
+    $primaryKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='PRIMARY KEY';"
+    $foreignKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='FOREIGN KEY';"
     $manifest = [IO.File]::ReadAllText($ManifestFile)
     $manifest = $manifest -replace '(?m)^- Intercalación comprobada: .*$', '- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y cuatro tablas'
     $manifest = $manifest -replace '(?m)^- Restauración completa comprobada: .*$', '- Restauración completa comprobada: Sí'
@@ -122,8 +126,10 @@ try {
     $manifest = $manifest -replace '(?m)^- Cantidad de tablas: .*$', "- Cantidad de tablas: $tableCount"
     $manifest = $manifest -replace '(?m)^- Cantidad de restricciones: .*$', "- Cantidad de restricciones: $constraintCount"
     $manifest = $manifest -replace '(?m)^- Cantidad de índices: .*$', "- Cantidad de índices: $indexCount"
+    $manifest = $manifest -replace '(?m)^- Cantidad de PRIMARY KEY: .*$', "- Cantidad de PRIMARY KEY: $primaryKeyCount"
+    $manifest = $manifest -replace '(?m)^- Cantidad de FOREIGN KEY: .*$', "- Cantidad de FOREIGN KEY: $foreignKeyCount"
     $manifest = $manifest -replace '(?m)^- Resultado final: .*$', '- Resultado final: APROBADO'
-    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', '- Observaciones: Estructura, datos, PK, FK, CHECK, índices, reglas RESTRICT, intercalación y conteos sin diferencias.'
+    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', '- Observaciones: Estructura, datos, única PK de productores, cero FK, CHECK, índices, intercalación y conteos sin diferencias.'
     [IO.File]::WriteAllText($ManifestFile, $manifest, [Text.UTF8Encoding]::new($false))
     Write-Host "Restauración correcta: tablas=$tableCount, restricciones=$constraintCount."
 }

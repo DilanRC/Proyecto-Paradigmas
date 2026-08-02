@@ -135,6 +135,8 @@ cat > "$manifest_file" <<EOF
 - Cantidad de tablas: Pendiente
 - Cantidad de restricciones: Pendiente
 - Cantidad de índices: Pendiente
+- Cantidad de PRIMARY KEY: Pendiente
+- Cantidad de FOREIGN KEY: Pendiente
 - Resultado final: Pendiente
 - Observaciones: Ejecutar Tools/test-restore.sh $advance y registrar el resultado antes de etiquetar.
 EOF

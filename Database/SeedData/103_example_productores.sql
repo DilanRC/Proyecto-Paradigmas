@@ -1,7 +1,7 @@
 USE dbtindercows;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Datos académicos ficticios. La PK natural hace el script idempotente.
+-- Datos académicos ficticios. Las comprobaciones explícitas hacen el script idempotente.
 START TRANSACTION;
 
 INSERT INTO tbproductores (
@@ -20,6 +20,22 @@ ON DUPLICATE KEY UPDATE
     tbproductoresCorreoElectronico = VALUES(tbproductoresCorreoElectronico),
     tbproductoresEstado = VALUES(tbproductoresEstado);
 
+UPDATE tbproductoresdireccion SET
+    tbproductoresdireccionProvincia = 'Alajuela',
+    tbproductoresdireccionCanton = 'San Carlos',
+    tbproductoresdireccionDistrito = 'Quesada',
+    tbproductoresdireccionPueblo = 'Centro',
+    tbproductoresdireccionSenas = 'Datos ficticios para demostracion.'
+WHERE tbproductoresIdentificacionNumero = '101110111';
+
+UPDATE tbproductoresdireccion SET
+    tbproductoresdireccionProvincia = 'Guanacaste',
+    tbproductoresdireccionCanton = 'Tilaran',
+    tbproductoresdireccionDistrito = 'Tilaran',
+    tbproductoresdireccionPueblo = NULL,
+    tbproductoresdireccionSenas = 'Datos ficticios para demostracion.'
+WHERE tbproductoresIdentificacionNumero = '3101111111';
+
 INSERT INTO tbproductoresdireccion (
     tbproductoresIdentificacionNumero,
     tbproductoresdireccionProvincia,
@@ -27,24 +43,40 @@ INSERT INTO tbproductoresdireccion (
     tbproductoresdireccionDistrito,
     tbproductoresdireccionPueblo,
     tbproductoresdireccionSenas
-) VALUES
-    ('101110111', 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'),
-    ('3101111111', 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.')
-ON DUPLICATE KEY UPDATE
-    tbproductoresdireccionProvincia = VALUES(tbproductoresdireccionProvincia),
-    tbproductoresdireccionCanton = VALUES(tbproductoresdireccionCanton),
-    tbproductoresdireccionDistrito = VALUES(tbproductoresdireccionDistrito),
-    tbproductoresdireccionPueblo = VALUES(tbproductoresdireccionPueblo),
-    tbproductoresdireccionSenas = VALUES(tbproductoresdireccionSenas);
+) SELECT '101110111', 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = '101110111'
+)
+UNION ALL
+SELECT '3101111111', 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = '3101111111'
+);
+
+UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 1
+WHERE (tbproductoresIdentificacionNumero = '101110111' AND tbproductoresfincaNombre IN ('Finca El Roble', 'Finca Valle Verde'))
+   OR (tbproductoresIdentificacionNumero = '3101111111' AND tbproductoresfincaNombre = 'Finca Valle Verde');
 
 INSERT INTO tbproductoresfinca (
     tbproductoresIdentificacionNumero,
     tbproductoresfincaNombre,
     tbproductoresfincaEstado
-) VALUES
-    ('101110111', 'Finca El Roble', 1),
-    ('101110111', 'Finca Valle Verde', 1),
-    ('3101111111', 'Finca Valle Verde', 1)
-ON DUPLICATE KEY UPDATE tbproductoresfincaEstado = VALUES(tbproductoresfincaEstado);
+) SELECT '101110111', 'Finca El Roble', 1
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductoresfinca
+    WHERE tbproductoresIdentificacionNumero = '101110111' AND tbproductoresfincaNombre = 'Finca El Roble'
+)
+UNION ALL
+SELECT '101110111', 'Finca Valle Verde', 1
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductoresfinca
+    WHERE tbproductoresIdentificacionNumero = '101110111' AND tbproductoresfincaNombre = 'Finca Valle Verde'
+)
+UNION ALL
+SELECT '3101111111', 'Finca Valle Verde', 1
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductoresfinca
+    WHERE tbproductoresIdentificacionNumero = '3101111111' AND tbproductoresfincaNombre = 'Finca Valle Verde'
+);
 
 COMMIT;

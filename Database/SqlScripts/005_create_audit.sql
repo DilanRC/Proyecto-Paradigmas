@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     tbusuarioId BIGINT UNSIGNED NULL,
     tbbitacoraOrigen VARCHAR(100) NOT NULL,
     tbbitacoraSolicitudId VARCHAR(100) NOT NULL,
-    CONSTRAINT pk_tbbitacora PRIMARY KEY (tbbitacoraId),
     CONSTRAINT ck_tbbitacora_entidad_no_vacia CHECK (CHAR_LENGTH(TRIM(tbbitacoraEntidad)) > 0),
     CONSTRAINT ck_tbbitacora_accion_no_vacia CHECK (CHAR_LENGTH(TRIM(tbbitacoraAccion)) > 0),
     CONSTRAINT ck_tbbitacora_actor_no_vacio CHECK (CHAR_LENGTH(TRIM(tbbitacoraActorTipo)) > 0),
@@ -22,6 +21,7 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     ),
     CONSTRAINT ck_tbbitacora_origen_no_vacio CHECK (CHAR_LENGTH(TRIM(tbbitacoraOrigen)) > 0),
     CONSTRAINT ck_tbbitacora_solicitud_no_vacia CHECK (CHAR_LENGTH(TRIM(tbbitacoraSolicitudId)) > 0),
+    INDEX idx_tbbitacora_id (tbbitacoraId),
     INDEX idx_tbbitacora_entidad_registro_fecha (
         tbbitacoraEntidad,
         tbbitacoraRegistroIdentificacionNumero,
