@@ -28,12 +28,10 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./Database/SqlScripts/001_create_database.sql:/docker-entrypoint-initdb.d/001_create_database.sql:ro
-      - ./Database/SqlScripts/002_create_catalogs.sql:/docker-entrypoint-initdb.d/002_create_catalogs.sql:ro
-      - ./Database/SqlScripts/003_create_participante_schema.sql:/docker-entrypoint-initdb.d/003_create_participante_schema.sql:ro
-      - ./Database/SqlScripts/004_create_productor_finca.sql:/docker-entrypoint-initdb.d/004_create_productor_finca.sql:ro
+      - ./Database/SqlScripts/002_create_productores.sql:/docker-entrypoint-initdb.d/002_create_productores.sql:ro
+      - ./Database/SqlScripts/003_create_productores_direccion.sql:/docker-entrypoint-initdb.d/003_create_productores_direccion.sql:ro
+      - ./Database/SqlScripts/004_create_productores_finca.sql:/docker-entrypoint-initdb.d/004_create_productores_finca.sql:ro
       - ./Database/SqlScripts/005_create_audit.sql:/docker-entrypoint-initdb.d/005_create_audit.sql:ro
-      - ./Database/SeedData/101_identification_types.sql:/docker-entrypoint-initdb.d/101_identification_types.sql:ro
-      - ./Database/SeedData/102_roles.sql:/docker-entrypoint-initdb.d/102_roles.sql:ro
       - ./Database/SeedData/103_example_productores.sql:/docker-entrypoint-initdb.d/103_example_productores.sql:ro
     healthcheck:
       # TCP no está disponible en el servidor temporal de inicialización. Esto

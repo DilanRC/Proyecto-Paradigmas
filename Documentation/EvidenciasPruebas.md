@@ -1,4 +1,9 @@
-# Evidencias de pruebas — Avance 01
+# Evidencias de pruebas — Avance 01 (histórico)
+
+Este archivo demuestra la entrega etiquetada `avance-01` y no describe el
+modelo vigente después de la corrección docente. La evidencia nueva se registra
+en `EvidenciasPruebasAvance01Correccion01.md`. Los resultados y hashes
+históricos se conservan sin reescribirlos.
 
 ## Identificación
 

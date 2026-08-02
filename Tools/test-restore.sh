@@ -8,17 +8,21 @@ readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
-    echo "Uso: $0 AvanceNN" >&2
+    echo "Uso: $0 AvanceNN[CorreccionNN]" >&2
 }
 
 advance="${1:-}"
-if [[ ! "$advance" =~ ^Avance[0-9]{2}$ ]]; then
+if [[ ! "$advance" =~ ^Avance([0-9]{2})(Correccion([0-9]{2}))?$ ]]; then
     usage
     exit 2
 fi
 
-advance_number="${advance#Avance}"
+advance_number="${BASH_REMATCH[1]}"
+correction_number="${BASH_REMATCH[3]:-}"
 advance_slug="avance${advance_number}"
+if [[ -n "$correction_number" ]]; then
+    advance_slug+="_correccion${correction_number}"
+fi
 backup_dir="$PROJECT_ROOT/Database/Backups/$advance"
 complete_file="$backup_dir/${SOURCE_DATABASE}_${advance_slug}_completo.sql"
 schema_file="$backup_dir/${SOURCE_DATABASE}_${advance_slug}_estructura.sql"
@@ -33,7 +37,7 @@ fi
 
 cd -- "$PROJECT_ROOT"
 docker compose config --quiet
-docker compose exec -T db sh -c 'mysqladmin ping -h localhost -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null
+docker compose exec -T db sh -c 'mysqladmin ping -h 127.0.0.1 -uroot -p"$MYSQL_ROOT_PASSWORD" --silent' >/dev/null
 
 (
     cd -- "$backup_dir"
@@ -145,8 +149,8 @@ if [[ "$parts_table_diff" -ne 0 || "$parts_constraint_diff" -ne 0 || "$parts_ind
     exit 1
 fi
 
-tables=(tbparticipante tbrol tbparticipanterol tbidentificaciontipo tbparticipanteidentificacion tbparticipantedireccion tbfinca tbproductorfinca tbbitacora)
 printf '%-38s %10s %10s %10s\n' 'Tabla' 'Origen' 'Completo' 'Partes'
+mapfile -t tables < <(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")
 for table in "${tables[@]}"; do
     source_count="$(mysql_query "SELECT COUNT(*) FROM ${SOURCE_DATABASE}.${table};")"
     restored_count="$(mysql_query "SELECT COUNT(*) FROM ${RESTORE_DATABASE}.${table};")"
@@ -158,15 +162,17 @@ for table in "${tables[@]}"; do
     fi
 done
 
-mysql_query "
-    SELECT p.tbparticipanteId, p.tbparticipanteNombre
-    FROM ${RESTORE_DATABASE}.tbparticipante p
-    INNER JOIN ${RESTORE_DATABASE}.tbparticipanterol pr ON pr.tbparticipanteId = p.tbparticipanteId
-    INNER JOIN ${RESTORE_DATABASE}.tbrol r ON r.tbrolId = pr.tbrolId
-    WHERE r.tbrolCodigo = 'PRODUCTOR'
-    ORDER BY p.tbparticipanteId
-    LIMIT 1;
-" >/dev/null
+if [[ " ${tables[*]} " == *' tbproductores '* ]]; then
+    mysql_query "SELECT tbproductoresIdentificacionNumero, tbproductoresNombre
+        FROM ${RESTORE_DATABASE}.tbproductores
+        ORDER BY tbproductoresIdentificacionNumero LIMIT 1;" >/dev/null
+else
+    mysql_query "SELECT p.tbparticipanteId, p.tbparticipanteNombre
+        FROM ${RESTORE_DATABASE}.tbparticipante p
+        INNER JOIN ${RESTORE_DATABASE}.tbparticipanterol pr ON pr.tbparticipanteId = p.tbparticipanteId
+        INNER JOIN ${RESTORE_DATABASE}.tbrol r ON r.tbrolId = pr.tbrolId
+        WHERE r.tbrolCodigo = 'PRODUCTOR' LIMIT 1;" >/dev/null
+fi
 
 source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
 source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"

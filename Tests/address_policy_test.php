@@ -1,50 +1,27 @@
 <?php
 
 declare(strict_types=1);
+require __DIR__ . '/bootstrap.php';
 
-require_once __DIR__ . '/bootstrap.php';
-
-$participantIds = [];
+$id = test_document();
 try {
-    $missing = test_controller()->procesar('POST', [], array_diff_key(test_payload(), ['direccionPrincipal' => true]));
-    test_same(422, $missing['status'], 'Un participante activo sin dirección principal debe rechazarse');
-
-    $producer = test_create();
-    $participantIds[] = $id = $producer['participanteId'];
-    $db = test_db();
-    $additional = $db->prepare(
-        'INSERT INTO tbparticipantedireccion
-         (tbparticipanteId, tbparticipantedireccionProvincia, tbparticipantedireccionCanton,
-          tbparticipantedireccionDistrito, tbparticipantedireccionEsPrincipal, tbparticipantedireccionEstado)
-         VALUES (:id, \'Otra Provincia\', \'Otro Cantón\', \'Otro Distrito\', :principal, 1)'
-    );
-    $additional->execute(['id' => $id, 'principal' => 0]);
-
-    $statement = $db->prepare('SELECT COUNT(*) FROM tbparticipantedireccion WHERE tbparticipanteId = :id');
-    $statement->execute(['id' => $id]);
-    test_same(2, (int) $statement->fetchColumn(), 'La estructura permite una dirección adicional no principal');
-
-    $secondPrimaryRejected = false;
+    $sinDireccion = test_payload($id);
+    unset($sinDireccion['direccionPrincipal']);
+    test_same(422, test_controller()->procesar('POST', [], $sinDireccion)['status'], 'Dirección obligatoria');
+    $productor = test_create([], $id);
+    $conteo = $db = test_db()->prepare('SELECT COUNT(*) FROM tbproductoresdireccion WHERE tbproductoresIdentificacionNumero = :id');
+    $conteo->execute(['id' => $productor['identificacionNumero']]);
+    test_same(1, (int) $conteo->fetchColumn(), 'Debe existir exactamente una dirección por PK compartida');
     try {
-        $additional->execute(['id' => $id, 'principal' => 1]);
-    } catch (PDOException) {
-        $secondPrimaryRejected = true;
+        test_db()->prepare('INSERT INTO tbproductoresdireccion
+            (tbproductoresIdentificacionNumero,tbproductoresdireccionProvincia,tbproductoresdireccionCanton,tbproductoresdireccionDistrito)
+            VALUES (:id,\'Otra\',\'Otra\',\'Otra\')')->execute(['id' => $productor['identificacionNumero']]);
+        throw new RuntimeException('Se aceptó una segunda dirección.');
+    } catch (PDOException $exception) {
+        test_same(1062, (int) ($exception->errorInfo[1] ?? 0), 'La PK compartida debe impedir segunda dirección');
     }
-    test_assert($secondPrimaryRejected, 'MySQL debe rechazar dos direcciones principales activas.');
-
-    $statement = $db->prepare(
-        'UPDATE tbparticipantedireccion SET tbparticipantedireccionEstado = 0
-         WHERE tbparticipanteId = :id AND tbparticipantedireccionEsPrincipal = 1'
-    );
-    $statement->execute(['id' => $id]);
-    $update = test_payload($producer['identificacion']['numero'], ['participanteId' => $id]);
-    $response = test_controller()->procesar('PUT', [], $update);
-    test_same(409, $response['status'], 'No se puede actualizar un activo sin dirección principal válida');
-    $statement = $db->prepare('SELECT tbparticipanteTelefono FROM tbparticipante WHERE tbparticipanteId = :id');
-    $statement->execute(['id' => $id]);
-    test_same('+50688887777', $statement->fetchColumn(), 'La validación ocurre antes de modificar contacto');
 } finally {
-    test_cleanup_participants($participantIds);
+    test_cleanup_productores([$id]);
 }
 
-echo "OK address_policy_test: dirección obligatoria, adicional y principal única.\n";
+echo "OK address_policy_test: dirección obligatoria y relación 1:1 por PK/FK compartida.\n";

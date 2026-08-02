@@ -3,7 +3,7 @@ USE dbtindercows;
 CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacoraId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     tbbitacoraEntidad VARCHAR(80) NOT NULL,
-    tbbitacoraRegistroId BIGINT UNSIGNED NOT NULL,
+    tbbitacoraRegistroIdentificacionNumero VARCHAR(250) NOT NULL,
     tbbitacoraAccion VARCHAR(30) NOT NULL,
     tbbitacoraFecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     tbbitacoraDatosAnteriores JSON NULL,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     CONSTRAINT ck_tbbitacora_solicitud_no_vacia CHECK (CHAR_LENGTH(TRIM(tbbitacoraSolicitudId)) > 0),
     INDEX idx_tbbitacora_entidad_registro_fecha (
         tbbitacoraEntidad,
-        tbbitacoraRegistroId,
+        tbbitacoraRegistroIdentificacionNumero,
         tbbitacoraFecha
     ),
     INDEX idx_tbbitacora_solicitud (tbbitacoraSolicitudId),

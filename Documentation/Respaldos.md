@@ -1,5 +1,19 @@
 # Respaldos versionados y restauración
 
+## Corrección del Avance 01
+
+La corrección docente no modifica `Database/Backups/Avance01/`. Su paquete vive
+en `Database/Backups/Avance01Correccion01/`, se vincula con un commit candidato
+y se etiqueta `avance-01-correccion-01`.
+
+```bash
+Tools/backup-database.sh Avance01Correccion01 Dilan
+Tools/test-restore.sh Avance01Correccion01
+```
+
+Los scripts aceptan entregas y correcciones, congelan escrituras durante el
+dump y descubren las tablas del esquema para comparar el modelo vigente.
+
 ## Objetivo
 
 Una entrega es reproducible cuando el commit identifica el código y el paquete
@@ -103,9 +117,10 @@ estructura+datos en `dbtindercows_restore_parts_test`, nunca sobre
 - conjunto de tablas;
 - nombre y tipo de restricciones PK, FK y UK;
 - índices, secuencia de columnas, unicidad y tipo;
-- cantidad de filas en las nueve tablas;
+- cantidad de filas en todas las tablas descubiertas en el esquema;
 - equivalencia entre el respaldo completo y la reconstrucción estructura+datos;
-- una consulta funcional de participantes con rol `PRODUCTOR`.
+- una consulta funcional sobre `tbproductores` para la corrección o sobre
+  participante y rol `PRODUCTOR` para el paquete histórico.
 
 La base temporal se elimina mediante limpieza final aun si una comprobación
 falla. Antes de ejecutar manualmente un `DROP DATABASE`, confirme que el nombre

@@ -6,14 +6,17 @@ readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
-    echo "Uso: $0 AvanceNN [responsable]" >&2
+    echo "Uso: $0 AvanceNN[CorreccionNN] [responsable]" >&2
 }
 
 advance="${1:-}"
-if [[ ! "$advance" =~ ^Avance[0-9]{2}$ ]]; then
+if [[ ! "$advance" =~ ^Avance([0-9]{2})(Correccion([0-9]{2}))?$ ]]; then
     usage
     exit 2
 fi
+
+advance_number="${BASH_REMATCH[1]}"
+correction_number="${BASH_REMATCH[3]:-}"
 
 responsible="${2:-$(git -C "$PROJECT_ROOT" config user.name || true)}"
 if [[ -z "$responsible" ]]; then
@@ -21,8 +24,12 @@ if [[ -z "$responsible" ]]; then
     exit 2
 fi
 
-advance_number="${advance#Avance}"
 advance_slug="avance${advance_number}"
+official_tag="avance-${advance_number}"
+if [[ -n "$correction_number" ]]; then
+    advance_slug+="_correccion${correction_number}"
+    official_tag+="-correccion-${correction_number}"
+fi
 target_dir="$PROJECT_ROOT/Database/Backups/$advance"
 complete_file="$target_dir/${DATABASE_NAME}_${advance_slug}_completo.sql"
 schema_file="$target_dir/${DATABASE_NAME}_${advance_slug}_estructura.sql"
@@ -52,7 +59,6 @@ fi
 candidate_commit="$(git rev-parse HEAD)"
 branch="$(git branch --show-current)"
 mysql_version="$(docker compose exec -T db sh -c 'mysql -N -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SELECT VERSION()"' | tr -d '\r')"
-official_tag="avance-${advance_number}"
 generated_at="$(date --iso-8601=minutes)"
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/tindercows-backup.XXXXXX")"
 success=0

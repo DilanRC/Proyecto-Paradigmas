@@ -19,7 +19,7 @@
 
     <main class="container">
         <section class="page-header" aria-labelledby="page-title">
-            <div><span class="label">Participantes y roles</span><h1 id="page-title">Productores</h1><p>Administre participantes con el rol PRODUCTOR, su identificación, contacto, dirección principal y fincas asociadas.</p></div>
+            <div><span class="label">Registro de productores</span><h1 id="page-title">Productores</h1><p>Administre productores identificados por su número, contacto, dirección y fincas.</p></div>
             <button class="button button--primary" id="crear-productor" type="button"><span aria-hidden="true">＋</span>Crear productor</button>
         </section>
 
@@ -49,9 +49,9 @@
         <form id="formulario-productor" novalidate aria-busy="false">
             <div class="modal__header"><div><span class="label" id="subtitulo-modal">Nuevo registro</span><h2 id="titulo-modal">Crear productor</h2></div><button class="close-button" id="cerrar-modal" type="button" aria-label="Cerrar formulario">×</button></div>
             <div class="modal__content">
-                <input type="hidden" id="participante-id" name="participanteId">
+                <input type="hidden" id="identificacion-original" name="identificacionNumeroOriginal">
                 <fieldset><legend>Identificación</legend><div class="form-grid">
-                    <label class="field"><span>Tipo <b aria-hidden="true">*</b></span><select id="identificacion-tipo" name="identificacion.tipoId" required aria-describedby="error-identificacion-tipo"><option value="">Seleccione un tipo</option></select><small class="field__error" id="error-identificacion-tipo" data-error-for="identificacion.tipoId"></small></label>
+                    <label class="field"><span>Tipo <b aria-hidden="true">*</b></span><select id="identificacion-tipo" name="identificacion.tipoCodigo" required aria-describedby="error-identificacion-tipo"><option value="">Seleccione un tipo</option></select><small class="field__error" id="error-identificacion-tipo" data-error-for="identificacion.tipoCodigo"></small></label>
                     <label class="field"><span>Número <b aria-hidden="true">*</b></span><input id="identificacion-numero" name="identificacion.numero" type="text" maxlength="250" autocomplete="off" required aria-describedby="error-identificacion-numero"><small class="field__error" id="error-identificacion-numero" data-error-for="identificacion.numero"></small></label>
                 </div></fieldset>
                 <fieldset><legend>Datos de contacto</legend><div class="form-grid">
@@ -66,14 +66,14 @@
                     <label class="field"><span>Pueblo</span><input id="direccion-pueblo" name="direccionPrincipal.pueblo" maxlength="150" aria-describedby="error-direccion-pueblo"><small class="field__error" id="error-direccion-pueblo" data-error-for="direccionPrincipal.pueblo"></small></label>
                     <label class="field field--full"><span>Señas</span><textarea id="direccion-senas" name="direccionPrincipal.senas" maxlength="500" rows="3" aria-describedby="error-direccion-senas"></textarea><small class="field__error" id="error-direccion-senas" data-error-for="direccionPrincipal.senas"></small></label>
                 </div></fieldset>
-                <fieldset><legend>Fincas asociadas</legend><p class="fieldset-help" id="ayuda-fincas">Puede seleccionar cero, una o varias fincas activas.</p><div class="farm-options" id="opciones-fincas" tabindex="-1" aria-describedby="ayuda-fincas error-fincas"></div><small class="field__error" id="error-fincas" data-error-for="fincas"></small></fieldset>
+                <fieldset><legend>Fincas del productor</legend><p class="fieldset-help" id="ayuda-fincas">Escriba una finca por línea. Puede dejar el campo vacío.</p><label class="field field--full"><span>Nombres de fincas</span><textarea id="fincas-nombres" name="fincas" maxlength="2000" rows="4" aria-describedby="ayuda-fincas error-fincas"></textarea><small class="field__error" id="error-fincas" data-error-for="fincas"></small></label></fieldset>
                 <p class="form-note"><b aria-hidden="true">*</b> Campos obligatorios</p>
             </div>
             <div class="modal__actions"><button class="button button--secondary" id="cancelar-formulario" type="button">Cancelar</button><button class="button button--reactivate" id="reactivar-existente" type="button" hidden>Reactivar registro existente</button><button class="button button--primary" id="guardar-productor" type="submit">Guardar productor</button></div>
         </form>
     </dialog>
 
-    <dialog class="modal modal--confirmation" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar productor</h2><p id="mensaje-desactivar">El productor dejará de estar activo, pero conservará sus datos y relaciones.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
+    <dialog class="modal modal--confirmation" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar productor</h2><p id="mensaje-desactivar">El productor dejará de estar activo, pero conservará su dirección, fincas y bitácora.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
     <div class="notification" id="notificacion" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

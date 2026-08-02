@@ -1,99 +1,45 @@
 <?php
 
 declare(strict_types=1);
-
-require_once __DIR__ . '/bootstrap.php';
+require __DIR__ . '/bootstrap.php';
 
 $db = test_db();
-$database = (string) $db->query('SELECT DATABASE()')->fetchColumn();
-test_same('dbtindercows', $database, 'Las pruebas deben ejecutarse contra la base oficial');
+$tablas = $db->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME")->fetchAll(PDO::FETCH_COLUMN);
+test_same(['tbbitacora', 'tbproductores', 'tbproductoresdireccion', 'tbproductoresfinca'], $tablas, 'El modelo debe tener exactamente cuatro tablas');
 
-$expectedTables = ['tbbitacora', 'tbfinca', 'tbidentificaciontipo', 'tbparticipante',
-    'tbparticipantedireccion', 'tbparticipanteidentificacion', 'tbparticipanterol', 'tbproductorfinca', 'tbrol'];
-$statement = $db->prepare(
-    'SELECT TABLE_NAME FROM information_schema.TABLES
-     WHERE TABLE_SCHEMA = :schema AND TABLE_TYPE = \'BASE TABLE\''
-);
-$statement->execute(['schema' => $database]);
-$actualTables = $statement->fetchAll(PDO::FETCH_COLUMN);
-foreach ($expectedTables as $table) {
-    test_assert(in_array($table, $actualTables, true), "Falta la tabla {$table}.");
-}
+$pk = $db->query("SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbproductores' AND CONSTRAINT_NAME = 'PRIMARY' ORDER BY ORDINAL_POSITION")->fetchAll(PDO::FETCH_COLUMN);
+test_same(['tbproductoresIdentificacionNumero'], $pk, 'La identificación debe ser la PK de productores');
 
-$requiredConstraints = [
-    'uq_tbparticipanteidentificacion_tipo_numero_normalizado' => 'UNIQUE',
-    'uq_tbparticipanteidentificacion_principal_activa' => 'UNIQUE',
-    'uq_tbparticipantedireccion_principal_activa' => 'UNIQUE',
-    'fk_tbparticipanterol_participante' => 'FOREIGN KEY',
-    'fk_tbproductorfinca_finca' => 'FOREIGN KEY',
-];
-$statement = $db->prepare(
-    'SELECT CONSTRAINT_NAME, CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS
-     WHERE CONSTRAINT_SCHEMA = :schema'
-);
-$statement->execute(['schema' => $database]);
-$constraints = [];
-foreach ($statement->fetchAll() as $row) {
-    $constraints[$row['CONSTRAINT_NAME']] = $row['CONSTRAINT_TYPE'];
-}
-foreach ($requiredConstraints as $name => $type) {
-    test_same($type, $constraints[$name] ?? null, "Restricción {$name}");
-}
+$pkDireccion = $db->query("SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbproductoresdireccion' AND CONSTRAINT_NAME = 'PRIMARY'")->fetchAll(PDO::FETCH_COLUMN);
+test_same(['tbproductoresIdentificacionNumero'], $pkDireccion, 'Dirección debe compartir la PK natural');
 
-$statement = $db->prepare(
-    'SELECT tbidentificaciontipoNombre FROM tbidentificaciontipo WHERE tbidentificaciontipoCodigo = \'CEDULA_FISICA\''
-);
-$statement->execute();
-test_same('Cédula física', $statement->fetchColumn(), 'El catálogo debe conservar tildes en UTF-8');
+$pkFinca = $db->query("SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbproductoresfinca' AND CONSTRAINT_NAME = 'PRIMARY' ORDER BY ORDINAL_POSITION")->fetchAll(PDO::FETCH_COLUMN);
+test_same(['tbproductoresIdentificacionNumero', 'tbproductoresfincaNombre'], $pkFinca, 'Finca debe usar PK natural compuesta');
 
-$db->beginTransaction();
+$fks = (int) $db->query("SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME IN ('tbproductoresdireccion','tbproductoresfinca')")->fetchColumn();
+test_same(2, $fks, 'Las dos tablas hijas deben proteger al productor con FK');
+
+$ids = [test_document(), test_document()];
 try {
-    $insertParticipant = $db->prepare(
-        'INSERT INTO tbparticipante
-         (tbparticipanteNombre, tbparticipanteTelefono, tbparticipanteCorreoElectronico, tbparticipanteEstado)
-         VALUES (:nombre, \'88887777\', \'correo.compartido.tests@example.test\', 1)'
-    );
-    $insertParticipant->execute(['nombre' => 'Participante Ficticio Uno']);
-    $firstId = (int) $db->lastInsertId();
-    $insertParticipant->execute(['nombre' => 'Participante Ficticio Dos']);
-    $secondId = (int) $db->lastInsertId();
-    test_assert($firstId !== $secondId, 'El mismo correo de contacto debe permitirse para participantes distintos.');
-
-    $typeId = test_type_id();
-    $insertIdentification = $db->prepare(
-        'INSERT INTO tbparticipanteidentificacion
-         (tbparticipanteId, tbidentificaciontipoId, tbparticipanteidentificacionNumero,
-          tbparticipanteidentificacionNumeroNormalizado, tbparticipanteidentificacionEsPrincipal,
-          tbparticipanteidentificacionEstado)
-         VALUES (:participanteId, :tipoId, :numero, :normalizado, 1, 1)'
-    );
-    $normalized = test_token('schema_identity');
-    $insertIdentification->execute([
-        'participanteId' => $firstId, 'tipoId' => $typeId, 'numero' => $normalized, 'normalizado' => $normalized,
-    ]);
-    $duplicateRejected = false;
-    try {
-        $insertIdentification->execute([
-            'participanteId' => $secondId, 'tipoId' => $typeId, 'numero' => $normalized, 'normalizado' => $normalized,
-        ]);
-    } catch (PDOException) {
-        $duplicateRejected = true;
+    foreach ($ids as $id) {
+        test_create(['correoElectronico' => 'compartido@example.test'], $id);
     }
-    test_assert($duplicateRejected, 'MySQL debe rechazar tipo + número normalizado duplicados.');
-
-    $invalidForeignKeyRejected = false;
+    $duplicado = test_controller()->procesar('POST', [], test_payload($ids[0]));
+    test_same(409, $duplicado['status'], 'La PK debe rechazar identificación duplicada');
     try {
-        $db->prepare(
-            'INSERT INTO tbparticipanterol (tbparticipanteId, tbrolId, tbparticipanterolEstado) VALUES (?, ?, 1)'
-        )->execute([$firstId, 65535]);
-    } catch (PDOException) {
-        $invalidForeignKeyRejected = true;
+        $db->prepare("INSERT INTO tbproductoresdireccion
+            (tbproductoresIdentificacionNumero,tbproductoresdireccionProvincia,tbproductoresdireccionCanton,tbproductoresdireccionDistrito)
+            VALUES ('NOEXISTE','X','X','X')")->execute();
+        throw new RuntimeException('La FK inválida fue aceptada.');
+    } catch (PDOException $exception) {
+        test_same(1452, (int) ($exception->errorInfo[1] ?? 0), 'La FK debe rechazar huérfanos');
     }
-    test_assert($invalidForeignKeyRejected, 'MySQL debe rechazar llaves foráneas inválidas.');
 } finally {
-    if ($db->inTransaction()) {
-        $db->rollBack();
-    }
+    test_cleanup_productores($ids);
 }
 
-echo "OK schema_test: tablas, restricciones, correo compartido, unicidad y FK.\n";
+echo "OK schema_test: cuatro tablas, PK natural, PK compuesta, FK y correo compartido.\n";

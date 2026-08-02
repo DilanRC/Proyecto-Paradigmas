@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidatePattern('^Avance[0-9]{2}$')]
+    [ValidatePattern('^Avance[0-9]{2}(Correccion[0-9]{2})?$')]
     [string]$Avance,
 
     [Parameter(Position = 1)]
@@ -11,8 +11,15 @@ param(
 $ErrorActionPreference = 'Stop'
 $DatabaseName = 'dbtindercows'
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$AdvanceNumber = $Avance.Substring(6)
+$AdvanceMatch = [regex]::Match($Avance, '^Avance(?<avance>[0-9]{2})(Correccion(?<correccion>[0-9]{2}))?$')
+$AdvanceNumber = $AdvanceMatch.Groups['avance'].Value
+$CorrectionNumber = $AdvanceMatch.Groups['correccion'].Value
 $AdvanceSlug = "avance$AdvanceNumber"
+$OfficialTag = "avance-$AdvanceNumber"
+if ($CorrectionNumber) {
+    $AdvanceSlug += "_correccion$CorrectionNumber"
+    $OfficialTag += "-correccion-$CorrectionNumber"
+}
 $TargetDirectory = Join-Path $ProjectRoot "Database/Backups/$Avance"
 $WritesFrozen = $false
 $ReadOnlyState = '0'
@@ -122,7 +129,7 @@ try {
 - Motor: MySQL $MySqlVersion
 - Rama: $Branch
 - Commit candidato de código: $CandidateCommit
-- Etiqueta oficial: avance-$AdvanceNumber
+- Etiqueta oficial: $OfficialTag
 - Responsable de exportación: $Responsable
 - Archivo completo: $([IO.Path]::GetFileName($CompleteFile))
 - Archivo de estructura: $([IO.Path]::GetFileName($SchemaFile))

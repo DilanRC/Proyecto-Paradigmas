@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidatePattern('^Avance[0-9]{2}$')]
+    [ValidatePattern('^Avance[0-9]{2}(Correccion[0-9]{2})?$')]
     [string]$Avance
 )
 
@@ -10,8 +10,11 @@ $SourceDatabase = 'dbtindercows'
 $RestoreDatabase = 'dbtindercows_restore_test'
 $PartsDatabase = 'dbtindercows_restore_parts_test'
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$AdvanceNumber = $Avance.Substring(6)
+$AdvanceMatch = [regex]::Match($Avance, '^Avance(?<avance>[0-9]{2})(Correccion(?<correccion>[0-9]{2}))?$')
+$AdvanceNumber = $AdvanceMatch.Groups['avance'].Value
+$CorrectionNumber = $AdvanceMatch.Groups['correccion'].Value
 $AdvanceSlug = "avance$AdvanceNumber"
+if ($CorrectionNumber) { $AdvanceSlug += "_correccion$CorrectionNumber" }
 $BackupDirectory = Join-Path $ProjectRoot "Database/Backups/$Avance"
 $CompleteFile = Join-Path $BackupDirectory "${SourceDatabase}_${AdvanceSlug}_completo.sql"
 $SchemaFile = Join-Path $BackupDirectory "${SourceDatabase}_${AdvanceSlug}_estructura.sql"
@@ -72,7 +75,7 @@ try {
     $PartsIndexDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$RestoreDatabase' UNION ALL SELECT TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$PartsDatabase') x GROUP BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE HAVING COUNT(*)<>2;"
     if ($PartsTableDiff -or $PartsConstraintDiff -or $PartsIndexDiff) { throw 'Estructura+datos difiere del respaldo completo.' }
 
-    $Tables = @('tbparticipante','tbrol','tbparticipanterol','tbidentificaciontipo','tbparticipanteidentificacion','tbparticipantedireccion','tbfinca','tbproductorfinca','tbbitacora')
+    $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
     foreach ($table in $Tables) {
         $sourceCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $SourceDatabase.$table;"
         $restoreCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $RestoreDatabase.$table;"
@@ -81,7 +84,12 @@ try {
         if ($sourceCount -ne $restoreCount -or $restoreCount -ne $partsCount) { throw "El conteo difiere para $table." }
     }
 
-    Invoke-MySqlQuery "SELECT p.tbparticipanteId FROM $RestoreDatabase.tbparticipante p INNER JOIN $RestoreDatabase.tbparticipanterol pr ON pr.tbparticipanteId=p.tbparticipanteId INNER JOIN $RestoreDatabase.tbrol r ON r.tbrolId=pr.tbrolId WHERE r.tbrolCodigo='PRODUCTOR' LIMIT 1;" | Out-Null
+    if ($Tables -contains 'tbproductores') {
+        Invoke-MySqlQuery "SELECT tbproductoresIdentificacionNumero FROM $RestoreDatabase.tbproductores ORDER BY tbproductoresIdentificacionNumero LIMIT 1;" | Out-Null
+    }
+    else {
+        Invoke-MySqlQuery "SELECT p.tbparticipanteId FROM $RestoreDatabase.tbparticipante p INNER JOIN $RestoreDatabase.tbparticipanterol pr ON pr.tbparticipanteId=p.tbparticipanteId INNER JOIN $RestoreDatabase.tbrol r ON r.tbrolId=pr.tbrolId WHERE r.tbrolCodigo='PRODUCTOR' LIMIT 1;" | Out-Null
+    }
     $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
     $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
     $indexCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"

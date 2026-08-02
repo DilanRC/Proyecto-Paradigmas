@@ -12,64 +12,67 @@ final class ProductorFinca
     {
     }
 
-    public function sincronizar(int $participanteId, array $fincaIds): void
+    public function sincronizar(string $identificacionNumero, array $nombres): void
     {
-        if ($fincaIds === []) {
+        if ($nombres === []) {
             $sentencia = $this->conexion->prepare(
-                'UPDATE tbproductorfinca SET tbproductorfincaEstado = 0 WHERE tbparticipanteId = :participanteId'
+                'UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 0
+                 WHERE tbproductoresIdentificacionNumero = :identificacionNumero'
             );
-            $sentencia->execute(['participanteId' => $participanteId]);
+            $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
             return;
         }
 
-        $marcadores = implode(',', array_fill(0, count($fincaIds), '?'));
+        $marcadores = implode(',', array_fill(0, count($nombres), '?'));
         $desactivar = $this->conexion->prepare(
-            "UPDATE tbproductorfinca SET tbproductorfincaEstado = 0
-             WHERE tbparticipanteId = ? AND tbfincaId NOT IN ({$marcadores})"
+            "UPDATE tbproductoresfinca SET tbproductoresfincaEstado = 0
+             WHERE tbproductoresIdentificacionNumero = ?
+               AND tbproductoresfincaNombre NOT IN ({$marcadores})"
         );
-        $desactivar->execute([$participanteId, ...$fincaIds]);
+        $desactivar->execute([$identificacionNumero, ...$nombres]);
 
         $asociar = $this->conexion->prepare(
-            'INSERT INTO tbproductorfinca (tbparticipanteId, tbfincaId, tbproductorfincaEstado)
-             VALUES (:participanteId, :fincaId, 1)
-             ON DUPLICATE KEY UPDATE tbproductorfincaEstado = VALUES(tbproductorfincaEstado)'
+            'INSERT INTO tbproductoresfinca
+             (tbproductoresIdentificacionNumero, tbproductoresfincaNombre, tbproductoresfincaEstado)
+             VALUES (:identificacionNumero, :nombre, 1)
+             ON DUPLICATE KEY UPDATE tbproductoresfincaEstado = 1'
         );
-        foreach ($fincaIds as $fincaId) {
-            $asociar->execute(['participanteId' => $participanteId, 'fincaId' => $fincaId]);
+        foreach ($nombres as $nombre) {
+            $asociar->execute(['identificacionNumero' => $identificacionNumero, 'nombre' => $nombre]);
         }
     }
 
-    public function listarIdsAsociadosActivos(int $participanteId): array
+    public function listarActivas(string $identificacionNumero): array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbfincaId FROM tbproductorfinca
-             WHERE tbparticipanteId = :participanteId AND tbproductorfincaEstado = 1'
+            'SELECT tbproductoresfincaNombre AS nombre
+             FROM tbproductoresfinca
+             WHERE tbproductoresIdentificacionNumero = :identificacionNumero
+               AND tbproductoresfincaEstado = 1
+             ORDER BY tbproductoresfincaNombre'
         );
-        $sentencia->execute(['participanteId' => $participanteId]);
+        $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
 
-        return array_map('intval', $sentencia->fetchAll(PDO::FETCH_COLUMN));
+        return $sentencia->fetchAll();
     }
 
-    public function listarPorParticipantes(array $participanteIds): array
+    public function listarPorProductores(array $identificaciones): array
     {
-        if ($participanteIds === []) {
+        if ($identificaciones === []) {
             return [];
         }
-        $marcadores = implode(',', array_fill(0, count($participanteIds), '?'));
+        $marcadores = implode(',', array_fill(0, count($identificaciones), '?'));
         $sentencia = $this->conexion->prepare(
-            "SELECT pf.tbparticipanteId, f.tbfincaId AS fincaId, f.tbfincaNombre AS nombre
-             FROM tbproductorfinca pf
-             INNER JOIN tbfinca f ON f.tbfincaId = pf.tbfincaId
-             WHERE pf.tbparticipanteId IN ({$marcadores}) AND pf.tbproductorfincaEstado = 1
-             ORDER BY f.tbfincaNombre"
+            "SELECT tbproductoresIdentificacionNumero, tbproductoresfincaNombre AS nombre
+             FROM tbproductoresfinca
+             WHERE tbproductoresIdentificacionNumero IN ({$marcadores})
+               AND tbproductoresfincaEstado = 1
+             ORDER BY tbproductoresfincaNombre"
         );
-        $sentencia->execute($participanteIds);
+        $sentencia->execute($identificaciones);
         $resultado = [];
         foreach ($sentencia->fetchAll() as $fila) {
-            $resultado[(int) $fila['tbparticipanteId']][] = [
-                'fincaId' => (int) $fila['fincaId'],
-                'nombre' => $fila['nombre'],
-            ];
+            $resultado[$fila['tbproductoresIdentificacionNumero']][] = ['nombre' => $fila['nombre']];
         }
 
         return $resultado;
