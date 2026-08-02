@@ -60,8 +60,13 @@ final class ProductorController
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
         } catch (ProductorHttpException $excepcion) {
-            return $this->respuesta(false, $excepcion->getMessage(), $excepcion->datos,
-                $excepcion->estadoHttp, $excepcion->errores);
+            return $this->respuesta(
+                false,
+                $excepcion->getMessage(),
+                $excepcion->datos,
+                $excepcion->estadoHttp,
+                $excepcion->errores
+            );
         }
     }
 
@@ -122,7 +127,7 @@ final class ProductorController
                     );
                 }
                 $productorId = $this->productor->crear($datos);
-                $this->direccion->crear($productorId, $datos['direccion']);
+                $this->direccion->crearVacia($productorId);
                 $this->fincas->sincronizar($productorId, $datos['fincas']);
                 $nuevo = $this->productor->buscar($datos['identificacionNumero']);
                 if ($nuevo === null) {
@@ -175,6 +180,44 @@ final class ProductorController
         return $this->respuesta(true, 'Productor actualizado correctamente.', $nuevo);
     }
 
+    /**
+     * Ruta de reparación: crea la dirección de un productor que quedó sin fila
+     * (por ejemplo, datos heredados). Para el flujo normal de alta, la dirección
+     * ya se instancia vacía en crear() y se completa con PUT /productores.php.
+     */
+    public function crearDireccion(array $cuerpo): array
+    {
+        $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero', 'direccionPrincipal']);
+        $errores = [];
+        $identificacion = is_string($cuerpo['identificacionNumero'] ?? null)
+            ? $this->normalizarIdentificacion($cuerpo['identificacionNumero']) : '';
+        if ($identificacion === '') {
+            $errores['identificacionNumero'] = 'La identificación es obligatoria.';
+        }
+        $direccion = $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores);
+        if ($errores !== []) {
+            throw new ProductorHttpException('Revise los campos indicados.', 422, null, $errores);
+        }
+
+        $nuevo = $this->transaccion(function () use ($identificacion, $direccion): array {
+            $bloqueado = $this->productor->bloquear($identificacion);
+            if ($bloqueado === null) {
+                throw new ProductorHttpException('Productor no encontrado.', 404);
+            }
+            $productorId = (int) $bloqueado['tbproductorId'];
+            try {
+                $this->direccion->crear($productorId, $direccion);
+            } catch (\RuntimeException $excepcion) {
+                throw new ProductorHttpException($excepcion->getMessage(), 409);
+            }
+            $nuevo = $this->productor->buscar($identificacion);
+            $this->bitacora->registrar('CREAR_DIRECCION', $identificacion, null, $nuevo, $this->solicitudId);
+            return $nuevo ?? throw new \RuntimeException('No fue posible leer el productor tras crear la dirección.');
+        });
+
+        return $this->respuesta(true, 'Dirección creada correctamente.', $nuevo, 201);
+    }
+
     private function desactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
@@ -219,8 +262,9 @@ final class ProductorController
 
     private function validarProductor(array $cuerpo, bool $actualizacion): array
     {
-        $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];
+        $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico', 'fincas'];
         if ($actualizacion) {
+            $permitidos[] = 'direccionPrincipal';
             $permitidos[] = 'identificacionNumeroOriginal';
         }
         $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
@@ -229,7 +273,11 @@ final class ProductorController
         $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
         $telefono = $this->validarTelefono($cuerpo['telefono'] ?? null, $errores);
         $correo = $this->validarCorreo($cuerpo['correoElectronico'] ?? null, $errores);
-        $direccion = $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores);
+        // En el alta la dirección se instancia vacía automáticamente (ver crear()).
+        // Solo se valida/exige cuando se actualiza, que es cuando se completa o edita.
+        $direccion = $actualizacion
+            ? $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores)
+            : [];
         $fincas = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
         $original = null;
         if ($actualizacion) {
