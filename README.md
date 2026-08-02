@@ -87,6 +87,15 @@ La identificación se almacena sin espacios ni guiones y con letras mayúsculas.
 Como es la PK, PUT no puede cambiarla. El correo no es único. DELETE cambia el
 estado y PATCH reutiliza la misma fila.
 
+Las FK de dirección y finca usan `ON UPDATE RESTRICT` y `ON DELETE RESTRICT`.
+Si una identificación fue digitada incorrectamente, se desactiva el registro
+incorrecto, se conserva su bitácora y se crea el registro correcto. La PRIMARY
+KEY no se modifica directamente.
+
+La base y las cuatro tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+intercalación en MySQL y `001_create_database.sql` altera también una base que
+`MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
+
 ## Interfaz
 
 La vista usa `fetch()` con JSON y actualiza la tabla sin recargar. Incluye
@@ -105,20 +114,29 @@ docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
 docker compose exec -T app php Tests/naming_eval.php
 node Tests/ui_test.js
+python3 Tests/documentation_test.py
 ```
 
 ## Respaldos
 
-`Database/Backups/Avance01/` es histórico e inmutable. La corrección usa
-`Database/Backups/Avance01Correccion01/` y `avance-01-correccion-01`.
+`Database/Backups/Avance01/` y `Avance01Correccion01/` son históricos e
+inmutables. La entrega vigente usa `Database/Backups/Avance01Correccion02/` y
+`avance-01-correccion-02`.
 
 ```bash
-Tools/backup-database.sh Avance01Correccion01 Dilan
-Tools/test-restore.sh Avance01Correccion01
+Tools/backup-database.sh Avance01Correccion02 Dilan
+Tools/test-restore.sh Avance01Correccion02
 ```
 
 El paquete contiene dumps completo, estructura y datos, manifiesto, SHA-256 y
 evidencia de restauración. No se versionan `.env`, credenciales ni datos reales.
+
+Los PDF obligatorios se generan desde sus Markdown, sin contenido paralelo:
+
+```bash
+python3 Tools/generate-documentation-pdfs.py
+python3 Tests/documentation_test.py
+```
 
 ## Limitaciones
 

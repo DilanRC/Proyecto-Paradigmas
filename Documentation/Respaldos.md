@@ -1,197 +1,90 @@
 # Respaldos versionados y restauración
 
-## Corrección del Avance 01
+## Entrega vigente
 
-La corrección docente no modifica `Database/Backups/Avance01/`. Su paquete vive
-en `Database/Backups/Avance01Correccion01/`, se vincula con un commit candidato
-y se etiqueta `avance-01-correccion-01`.
+Corrección 02 no modifica los paquetes históricos `Avance01/` y
+`Avance01Correccion01/`. El paquete vigente se genera en
+`Database/Backups/Avance01Correccion02/` y corresponde a la etiqueta
+`avance-01-correccion-02`.
 
 ```bash
-Tools/backup-database.sh Avance01Correccion01 Dilan
-Tools/test-restore.sh Avance01Correccion01
+Tools/backup-database.sh Avance01Correccion02 Dilan
+Tools/test-restore.sh Avance01Correccion02
 ```
 
-Los scripts aceptan entregas y correcciones, congelan escrituras durante el
-dump y descubren las tablas del esquema para comparar el modelo vigente.
+PowerShell ofrece el mismo contrato:
 
-## Objetivo
-
-Una entrega es reproducible cuando el commit identifica el código y el paquete
-SQL identifica el estado persistente que ese código produjo. Un `.sql` sin
-manifiesto, suma y restauración no es un respaldo comprobado.
+```powershell
+Tools/Backup-Database.ps1 -Avance Avance01Correccion02 -Responsable Dilan
+Tools/Test-Restore.ps1 -Avance Avance01Correccion02
+```
 
 ## Paquete inmutable
 
 ```text
-Database/Backups/AvanceNN/
-├── dbtindercows_avanceNN_completo.sql
-├── dbtindercows_avanceNN_estructura.sql
-├── dbtindercows_avanceNN_datos.sql
+Database/Backups/Avance01Correccion02/
+├── dbtindercows_avance01_correccion02_completo.sql
+├── dbtindercows_avance01_correccion02_estructura.sql
+├── dbtindercows_avance01_correccion02_datos.sql
 ├── MANIFEST.md
 └── SHA256SUMS.txt
 ```
 
-- Completo: estructura y filas; es el insumo de restauración.
-- Estructura: tablas, claves, restricciones, índices, rutinas, disparadores y
-  eventos existentes.
-- Datos: filas sin instrucciones de creación ni disparadores.
-- Manifiesto: procedencia y estado de verificación.
-- SHA-256: identidad de los tres archivos SQL.
+- Completo contiene estructura y datos.
+- Estructura contiene tablas, PK, FK, CHECK e índices.
+- Datos contiene las filas sin instrucciones de creación.
+- El manifiesto identifica proyecto, base, entrega, fecha, MySQL, rama, commit
+  candidato, responsable, archivos, intercalación, restauraciones, cantidades y
+  resultado final.
+- `SHA256SUMS.txt` identifica los tres SQL mediante SHA-256.
 
-No se sobrescribe un paquete previo. Una corrección formal usa una carpeta como
-`Avance01Correccion01` y otra etiqueta.
+Los generadores aceptan `AvanceNN[CorreccionNN]` y rechazan sobrescribir un
+archivo existente. El árbol Git debe estar limpio para que el manifiesto apunte
+al commit candidato exacto. Las escrituras MySQL se congelan durante los dumps y
+el estado del servidor se restaura incluso si ocurre un error.
 
-## Precondiciones
+## Verificación de restauración
 
-1. Docker y MySQL están saludables.
-2. Las pruebas del commit candidato están registradas.
-3. No hay cambios funcionales después de congelar el candidato.
-4. `git rev-parse HEAD` devuelve el SHA que se anotará.
-5. La base contiene solo datos académicos ficticios.
-6. `.env`, secretos y usuarios internos de MySQL quedan fuera del respaldo.
+El verificador crea solo estas bases temporales:
 
-## Generación automatizada
+- `dbtindercows_restore_test`, para el respaldo completo;
+- `dbtindercows_restore_parts_test`, para estructura seguida de datos.
 
-Linux/Git Bash:
+Antes de crearlas comprueba que no existan, por lo que nunca elimina una base
+temporal ajena. Al terminar las elimina mediante limpieza automática. Compara
+origen, restauración completa y restauración por partes en:
 
-```bash
-Tools/backup-database.sh Avance01 "Nombre responsable"
-```
+- tablas, motor e intercalación;
+- definición y orden de columnas;
+- PRIMARY KEY, FOREIGN KEY y columnas referenciadas;
+- cláusulas CHECK;
+- reglas `ON UPDATE` y `ON DELETE`;
+- índices, orden, unicidad y tipo;
+- cantidad de registros y checksum de datos por tabla;
+- intercalación de la base y de cada tabla.
 
-PowerShell:
+Para Corrección 02 el resultado válido requiere exactamente cuatro tablas,
+`utf8mb4/utf8mb4_unicode_ci` y las dos FK con `RESTRICT/RESTRICT`.
 
-```powershell
-Tools/Backup-Database.ps1 -Avance Avance01 -Responsable "Nombre responsable"
-```
-
-El argumento debe cumplir `AvanceNN`. Los scripts:
-
-1. rechazan sobrescribir cualquier archivo destino;
-2. validan Compose y disponibilidad de `db`;
-3. leen rama, commit candidato y versión real de MySQL;
-4. ejecutan `mysqldump` dentro del contenedor, usando
-   `MYSQL_ROOT_PASSWORD` sin escribirla en el repositorio;
-5. activan temporalmente `read_only` y `super_read_only` para que los tres dumps
-   describan el mismo estado y restauran siempre el estado anterior al terminar;
-6. comprueban que cada SQL sea no vacío y tenga encabezado de MySQL dump;
-7. crean `MANIFEST.md` con restauración pendiente;
-8. generan y verifican `SHA256SUMS.txt`.
-
-Verificación manual en Linux/Git Bash:
+## Comprobación manual de SHA-256
 
 ```bash
-cd Database/Backups/Avance01
+cd Database/Backups/Avance01Correccion02
 sha256sum -c SHA256SUMS.txt
 cd ../../..
 ```
 
-En PowerShell:
+## Secuencia de cierre
 
-```powershell
-$folder = "Database/Backups/Avance01"
-Get-Content "$folder/SHA256SUMS.txt" | ForEach-Object {
-    $parts = $_ -split '  ', 2
-    $actual = (Get-FileHash -Algorithm SHA256 "$folder/$($parts[1])").Hash.ToLower()
-    if ($actual -ne $parts[0].ToLower()) { throw "SHA-256 incorrecto: $($parts[1])" }
-}
-```
+1. Reconstruir con `docker compose down -v` y `docker compose up --build -d`.
+2. Ejecutar todas las pruebas y consultas de evidencia.
+3. Reconstruir nuevamente para excluir residuos de prueba.
+4. Crear el commit candidato de código y documentación.
+5. Generar el paquete Corrección 02.
+6. Restaurar completo y estructura + datos.
+7. Registrar la evidencia real.
+8. Crear el commit del respaldo.
+9. Crear y subir la etiqueta sin mover etiquetas históricas.
 
-## Restauración obligatoria
-
-Linux/Git Bash:
-
-```bash
-Tools/test-restore.sh Avance01
-```
-
-PowerShell:
-
-```powershell
-Tools/Test-Restore.ps1 -Avance Avance01
-```
-
-Los scripts restauran el dump completo en `dbtindercows_restore_test` y el par
-estructura+datos en `dbtindercows_restore_parts_test`, nunca sobre
-`dbtindercows`. Comparan:
-
-- conjunto de tablas;
-- nombre y tipo de restricciones PK, FK y UK;
-- índices, secuencia de columnas, unicidad y tipo;
-- cantidad de filas en todas las tablas descubiertas en el esquema;
-- equivalencia entre el respaldo completo y la reconstrucción estructura+datos;
-- una consulta funcional sobre `tbproductores` para la corrección o sobre
-  participante y rol `PRODUCTOR` para el paquete histórico.
-
-La base temporal se elimina mediante limpieza final aun si una comprobación
-falla. Antes de ejecutar manualmente un `DROP DATABASE`, confirme que el nombre
-es exactamente `dbtindercows_restore_test`.
-
-## Manifiesto mínimo
-
-```markdown
-# Respaldo — AvanceNN
-
-- Proyecto: TinderCows
-- Base de datos: dbtindercows
-- Entrega: AvanceNN
-- Fecha y hora: PENDIENTE
-- Motor: MySQL PENDIENTE
-- Rama: PENDIENTE
-- Commit candidato de código: PENDIENTE
-- Etiqueta oficial: avance-NN
-- Responsable de exportación: PENDIENTE
-- Archivo completo: dbtindercows_avanceNN_completo.sql
-- Archivo de estructura: dbtindercows_avanceNN_estructura.sql
-- Archivo de datos: dbtindercows_avanceNN_datos.sql
-- Restauración probada: Pendiente
-- Base temporal utilizada: dbtindercows_restore_test
-- Resultado de integridad: Pendiente
-- Observaciones: PENDIENTE
-```
-
-Después de una restauración real, cambie “Pendiente” por el resultado exacto y
-registre la salida en `Documentation/EvidenciasPruebas.md`. No anticipe el
-resultado.
-
-## Cierre Git
-
-```bash
-git status
-git add .
-git commit -m "Preparar código candidato del Avance 01"
-git rev-parse HEAD
-```
-
-Genere y restaure el respaldo, complete evidencias y luego:
-
-```bash
-git add Database/Backups/Avance01 Documentation
-git commit -m "Agregar respaldo verificado del Avance 01"
-git tag -a avance-01 -m "Entrega oficial del Avance 01"
-git push origin HEAD
-git push origin avance-01
-```
-
-La etiqueta apunta al paquete final; el manifiesto apunta al commit candidato
-que produjo el estado. Confirme la etiqueta sin inventar evidencia:
-
-```bash
-git show-ref --tags avance-01
-git tag -n --list avance-01
-```
-
-## Lista de cierre
-
-- [ ] Los tres SQL existen y no están vacíos.
-- [ ] Los nombres usan `dbtindercows_avanceNN_<tipo>.sql`.
-- [ ] El manifiesto contiene commit completo, responsable, hora y MySQL real.
-- [ ] `sha256sum -c` o su equivalente pasó.
-- [ ] Se restauró el archivo completo en la base temporal.
-- [ ] Tablas, restricciones, índices y conteos coinciden.
-- [ ] Se ejecutó la consulta funcional.
-- [ ] La salida real está en `EvidenciasPruebas.md`.
-- [ ] La base temporal se eliminó después de registrar el resultado.
-- [ ] No hay secretos ni datos personales reales.
-- [ ] El commit final solo agrega respaldo/evidencia al candidato probado.
-- [ ] La etiqueta anotada existe y apunta al paquete final.
-- [ ] La rama y la etiqueta se subieron.
+Nunca se incluyen `.env`, credenciales ni datos reales. La semilla usa datos
+académicos ficticios y dominios `example.test`.

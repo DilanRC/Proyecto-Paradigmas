@@ -15,7 +15,7 @@
 
 | Columna | Tipo | Clave | Regla |
 |---|---|---|---|
-| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | PK, FK | Una dirección por productor. |
+| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | PK, FK | Una dirección por productor; FK `ON UPDATE RESTRICT`, `ON DELETE RESTRICT`. |
 | `tbproductoresdireccionProvincia` | `VARCHAR(100)` | | Obligatoria. |
 | `tbproductoresdireccionCanton` | `VARCHAR(100)` | | Obligatorio. |
 | `tbproductoresdireccionDistrito` | `VARCHAR(100)` | | Obligatorio. |
@@ -26,7 +26,7 @@
 
 | Columna | Tipo | Clave | Regla |
 |---|---|---|---|
-| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | PK, FK | Productor al que pertenece el registro. |
+| `tbproductoresIdentificacionNumero` | `VARCHAR(250)` | PK, FK | Productor al que pertenece; FK `ON UPDATE RESTRICT`, `ON DELETE RESTRICT`. |
 | `tbproductoresfincaNombre` | `VARCHAR(150)` | PK | Nombre no vacío; completa la PK compuesta. |
 | `tbproductoresfincaEstado` | `TINYINT(1)` | | Estado lógico de la finca del productor. |
 
@@ -37,7 +37,7 @@
 | `tbbitacoraId` | `BIGINT UNSIGNED AUTO_INCREMENT` | PK | Secuencia técnica del evento. |
 | `tbbitacoraEntidad` | `VARCHAR(80)` | índice | `PRODUCTOR`. |
 | `tbbitacoraRegistroIdentificacionNumero` | `VARCHAR(250)` | índice | Identificación textual auditada. |
-| `tbbitacoraAccion` | `VARCHAR(30)` | | Acción CRUD. |
+| `tbbitacoraAccion` | `VARCHAR(30)` | | `CREAR`, `ACTUALIZAR`, `DESACTIVAR` o `REACTIVAR`. |
 | `tbbitacoraFecha` | `DATETIME` | índice | Fecha del servidor. |
 | `tbbitacoraDatosAnteriores` | `JSON` | | Estado anterior o NULL. |
 | `tbbitacoraDatosNuevos` | `JSON` | | Estado nuevo o NULL. |
@@ -45,3 +45,8 @@
 | `tbusuarioId` | `BIGINT UNSIGNED` | | NULL antes de autenticación. |
 | `tbbitacoraOrigen` | `VARCHAR(100)` | | `API_PRODUCTORES`. |
 | `tbbitacoraSolicitudId` | `VARCHAR(100)` | índice | Correlación técnica. |
+
+## Juego de caracteres e intercalación
+
+La base `dbtindercows` y sus cuatro tablas usan `utf8mb4` y
+`utf8mb4_unicode_ci`.

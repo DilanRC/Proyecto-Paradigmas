@@ -14,6 +14,15 @@ participante, roles y catálogos. El modelo activo tendrá únicamente
 espacios y guiones y convierte letras a mayúsculas antes de persistirla. La PK
 no se puede modificar mediante PUT porque identifica al registro y a sus hijos.
 
+Si una identificación fue digitada incorrectamente, se debe:
+
+1. desactivar el registro incorrecto;
+2. conservar su bitácora;
+3. crear el registro correcto;
+4. no modificar directamente la PRIMARY KEY.
+
+No se implementa una función para cambiar la identificación en este avance.
+
 ## DEC-C01-003 — Tipo de identificación sin catálogo
 
 El tipo se almacena directamente en `tbproductoresIdentificacionTipo`. El
@@ -44,14 +53,24 @@ bitácora forma parte de la misma transacción que el cambio.
 Las tablas de dirección y finca conservan FOREIGN KEY hacia productores. Una FK
 no es una tabla adicional ni un identificador artificial; impide registros
 huérfanos. MySQL mostrará correctamente PRIMARY KEY y FOREIGN KEY en esas tablas.
+La identificación es la llave natural e inmutable y las tablas dependientes
+usan esa misma identificación como referencia. Por ello MySQL aplica
+`ON UPDATE RESTRICT` y `ON DELETE RESTRICT`, en concordancia con PUT.
 
-## DEC-C01-008 — Versionado de la corrección
+## DEC-C01-008 — Intercalación explícita
 
-La corrección se respalda en `Database/Backups/Avance01Correccion01/` y se
-etiqueta como `avance-01-correccion-01`. No se sobrescribe `Avance01/` ni se
-mueve la etiqueta `avance-01`.
+La base y las cuatro tablas usan `utf8mb4` con `utf8mb4_unicode_ci`. Compose
+fija los valores del servidor y `001_create_database.sql` ejecuta tanto
+`CREATE DATABASE IF NOT EXISTS` como `ALTER DATABASE`, porque `MYSQL_DATABASE`
+puede crear la base antes de los scripts de inicialización.
+
+## DEC-C01-009 — Versionado de la corrección
+
+La nueva corrección se respalda en `Database/Backups/Avance01Correccion02/` y se
+etiqueta como `avance-01-correccion-02`. No se sobrescriben `Avance01/` ni
+`Avance01Correccion01/`, y no se mueven las etiquetas históricas.
 
 ## Pendientes
 
-- Confirmar si en una entrega futura el profesor desea limitar cada productor a una sola finca.
 - Confirmar si deben admitirse nuevos tipos de identificación.
+- Definir autenticación y autorización en un avance posterior.

@@ -85,67 +85,88 @@ docker compose exec -T db sh -c \
     'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dbtindercows_restore_parts_test' \
     < "$data_file"
 
-table_diff="$(mysql_query "
-    SELECT COUNT(*) FROM (
-        SELECT TABLE_NAME FROM information_schema.TABLES
-        WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE'
-        UNION ALL
-        SELECT TABLE_NAME FROM information_schema.TABLES
-        WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE'
-    ) all_tables
-    GROUP BY TABLE_NAME HAVING COUNT(*) <> 2;
-" | wc -l)"
+metadata_diff() {
+    local left_database="$1"
+    local right_database="$2"
+    local schema_column="$3"
+    local information_table="$4"
+    local columns="$5"
+    local extra_filter="${6:-}"
+    local output=''
+    if ! output="$(mysql_query "
+        SELECT COUNT(*) FROM (
+            SELECT CONCAT_WS(CHAR(31), ${columns}) AS signature FROM information_schema.${information_table}
+            WHERE ${schema_column} = '${left_database}' ${extra_filter}
+            UNION ALL
+            SELECT CONCAT_WS(CHAR(31), ${columns}) AS signature FROM information_schema.${information_table}
+            WHERE ${schema_column} = '${right_database}' ${extra_filter}
+        ) compared
+        GROUP BY signature HAVING COUNT(*) <> 2;
+    ")"; then
+        return 1
+    fi
+    if [[ -z "$output" ]]; then
+        echo 0
+    else
+        awk 'END { print NR }' <<< "$output"
+    fi
+}
 
-constraint_diff="$(mysql_query "
-    SELECT COUNT(*) FROM (
-        SELECT TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE
-        FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}'
-        UNION ALL
-        SELECT TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE
-        FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${RESTORE_DATABASE}'
-    ) all_constraints
-    GROUP BY TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE HAVING COUNT(*) <> 2;
-" | wc -l)"
+compare_structure() {
+    local left_database="$1"
+    local right_database="$2"
+    local label="$3"
+    local differences=0
+    local current=0
+    local definitions=(
+        "TABLE_SCHEMA|TABLES|TABLE_NAME, ENGINE, TABLE_COLLATION|AND TABLE_TYPE = 'BASE TABLE'"
+        "TABLE_SCHEMA|COLUMNS|TABLE_NAME, ORDINAL_POSITION, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COALESCE(COLUMN_DEFAULT, '<NULL>'), EXTRA, COALESCE(GENERATION_EXPRESSION, ''), COALESCE(CHARACTER_SET_NAME, ''), COALESCE(COLLATION_NAME, '')|"
+        "CONSTRAINT_SCHEMA|TABLE_CONSTRAINTS|TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE|"
+        "CONSTRAINT_SCHEMA|KEY_COLUMN_USAGE|TABLE_NAME, CONSTRAINT_NAME, ORDINAL_POSITION, COLUMN_NAME, COALESCE(REFERENCED_TABLE_NAME, ''), COALESCE(REFERENCED_COLUMN_NAME, '')|"
+        "CONSTRAINT_SCHEMA|CHECK_CONSTRAINTS|CONSTRAINT_NAME, CHECK_CLAUSE|"
+        "CONSTRAINT_SCHEMA|REFERENTIAL_CONSTRAINTS|TABLE_NAME, CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME, MATCH_OPTION, UPDATE_RULE, DELETE_RULE|"
+        "TABLE_SCHEMA|STATISTICS|TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE|"
+    )
+    for definition in "${definitions[@]}"; do
+        IFS='|' read -r schema_column information_table columns extra_filter <<< "$definition"
+        if ! current="$(metadata_diff "$left_database" "$right_database" "$schema_column" "$information_table" "$columns" "$extra_filter")"; then
+            echo "Falló la consulta de comparación ${label} en ${information_table}." >&2
+            return 1
+        fi
+        if [[ "$current" -ne 0 ]]; then
+            echo "Diferencia ${label} en ${information_table}: ${current}" >&2
+            differences=$((differences + current))
+        fi
+    done
+    [[ "$differences" -eq 0 ]]
+}
 
-index_diff="$(mysql_query "
-    SELECT COUNT(*) FROM (
-        SELECT TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE
-        FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}'
-        UNION ALL
-        SELECT TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE
-        FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}'
-    ) all_indexes
-    GROUP BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE HAVING COUNT(*) <> 2;
-" | wc -l)"
+compare_structure "$SOURCE_DATABASE" "$RESTORE_DATABASE" 'origen/completo' \
+    || { echo 'Error: la estructura restaurada completa difiere del origen.' >&2; exit 1; }
+compare_structure "$RESTORE_DATABASE" "$PARTS_DATABASE" 'completo/estructura+datos' \
+    || { echo 'Error: estructura+datos difiere del respaldo completo.' >&2; exit 1; }
 
-if [[ "$table_diff" -ne 0 || "$constraint_diff" -ne 0 || "$index_diff" -ne 0 ]]; then
-    echo "Error de integridad: tablas=$table_diff, restricciones=$constraint_diff, indices=$index_diff" >&2
-    exit 1
-fi
+for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
+    read -r database_charset database_collation < <(mysql_query "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
+        FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${database}';")
+    if [[ "$database_charset" != 'utf8mb4' || "$database_collation" != 'utf8mb4_unicode_ci' ]]; then
+        echo "Error: ${database} usa ${database_charset}/${database_collation}." >&2
+        exit 1
+    fi
+    invalid_collations="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE'
+          AND TABLE_COLLATION <> 'utf8mb4_unicode_ci';")"
+    if [[ "$invalid_collations" -ne 0 ]]; then
+        echo "Error: ${database} contiene ${invalid_collations} tablas con intercalación incorrecta." >&2
+        exit 1
+    fi
+done
 
-parts_table_diff="$(mysql_query "
-    SELECT COUNT(*) FROM (
-        SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE'
-        UNION ALL
-        SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${PARTS_DATABASE}' AND TABLE_TYPE = 'BASE TABLE'
-    ) x GROUP BY TABLE_NAME HAVING COUNT(*) <> 2;
-" | wc -l)"
-parts_constraint_diff="$(mysql_query "
-    SELECT COUNT(*) FROM (
-        SELECT TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${RESTORE_DATABASE}'
-        UNION ALL
-        SELECT TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${PARTS_DATABASE}'
-    ) x GROUP BY TABLE_NAME, CONSTRAINT_NAME, CONSTRAINT_TYPE HAVING COUNT(*) <> 2;
-" | wc -l)"
-parts_index_diff="$(mysql_query "
-    SELECT COUNT(*) FROM (
-        SELECT TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}'
-        UNION ALL
-        SELECT TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${PARTS_DATABASE}'
-    ) x GROUP BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX, COLUMN_NAME, NON_UNIQUE, INDEX_TYPE HAVING COUNT(*) <> 2;
-" | wc -l)"
-if [[ "$parts_table_diff" -ne 0 || "$parts_constraint_diff" -ne 0 || "$parts_index_diff" -ne 0 ]]; then
-    echo "Error: estructura+datos difiere del respaldo completo." >&2
+invalid_fk_rules="$(mysql_query "SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA IN ('${SOURCE_DATABASE}', '${RESTORE_DATABASE}', '${PARTS_DATABASE}')
+      AND (UPDATE_RULE <> 'RESTRICT' OR DELETE_RULE <> 'RESTRICT');")"
+if [[ "$invalid_fk_rules" -ne 0 ]]; then
+    echo "Error: se encontraron ${invalid_fk_rules} FK sin reglas RESTRICT." >&2
     exit 1
 fi
 
@@ -158,6 +179,13 @@ for table in "${tables[@]}"; do
     printf '%-38s %10s %10s %10s\n' "$table" "$source_count" "$restored_count" "$parts_count"
     if [[ "$source_count" != "$restored_count" || "$restored_count" != "$parts_count" ]]; then
         echo "Error: el conteo difiere para $table." >&2
+        exit 1
+    fi
+    source_checksum="$(mysql_query "CHECKSUM TABLE ${SOURCE_DATABASE}.${table};" | awk '{print $2}')"
+    restored_checksum="$(mysql_query "CHECKSUM TABLE ${RESTORE_DATABASE}.${table};" | awk '{print $2}')"
+    parts_checksum="$(mysql_query "CHECKSUM TABLE ${PARTS_DATABASE}.${table};" | awk '{print $2}')"
+    if [[ "$source_checksum" != "$restored_checksum" || "$restored_checksum" != "$parts_checksum" ]]; then
+        echo "Error: los datos difieren para ${table}." >&2
         exit 1
     fi
 done
@@ -176,17 +204,23 @@ fi
 
 source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
 source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"
-source_indexes="$(mysql_query "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}';")"
+source_indexes="$(mysql_query "SELECT COUNT(DISTINCT TABLE_NAME, INDEX_NAME)
+    FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}';")"
 
 manifest_temp="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest.XXXXXX")"
 sed \
-    -e 's/^- Restauración probada: .*/- Restauración probada: Sí/' \
-    -e 's/^- Resultado de integridad: .*/- Resultado de integridad: Correcto/' \
-    -e "s|^- Observaciones: .*|- Observaciones: Restauración completa y estructura+datos verificadas; tablas=${source_tables}, restricciones=${source_constraints}, filas de índice=${source_indexes}.|" \
+    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: utf8mb4\/utf8mb4_unicode_ci en base y cuatro tablas/' \
+    -e 's/^- Restauración completa comprobada: .*/- Restauración completa comprobada: Sí/' \
+    -e 's/^- Restauración estructura + datos comprobada: .*/- Restauración estructura + datos comprobada: Sí/' \
+    -e "s/^- Cantidad de tablas: .*/- Cantidad de tablas: ${source_tables}/" \
+    -e "s/^- Cantidad de restricciones: .*/- Cantidad de restricciones: ${source_constraints}/" \
+    -e "s/^- Cantidad de índices: .*/- Cantidad de índices: ${source_indexes}/" \
+    -e 's/^- Resultado final: .*/- Resultado final: APROBADO/' \
+    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, PK, FK, CHECK, índices, reglas RESTRICT, intercalación y conteos sin diferencias.|" \
     "$manifest_file" > "$manifest_temp"
 mv -- "$manifest_temp" "$manifest_file"
 
-echo "Restauración correcta: tablas=$source_tables, restricciones=$source_constraints, filas_de_indice=$source_indexes."
+echo "Restauración correcta: tablas=$source_tables, restricciones=$source_constraints, indices=$source_indexes."
 echo "La consulta funcional de productores se ejecutó correctamente."
 echo "La base temporal ${RESTORE_DATABASE} se eliminará al finalizar."
 echo "La base temporal ${PARTS_DATABASE} se eliminará al finalizar."

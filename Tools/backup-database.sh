@@ -128,9 +128,14 @@ cat > "$manifest_file" <<EOF
 - Archivo completo: $(basename -- "$complete_file")
 - Archivo de estructura: $(basename -- "$schema_file")
 - Archivo de datos: $(basename -- "$data_file")
-- Restauración probada: Pendiente
-- Base temporal utilizada: dbtindercows_restore_test
-- Resultado de integridad: Pendiente
+- Intercalación comprobada: Pendiente
+- Restauración completa comprobada: Pendiente
+- Restauración estructura + datos comprobada: Pendiente
+- Bases temporales utilizadas: dbtindercows_restore_test, dbtindercows_restore_parts_test
+- Cantidad de tablas: Pendiente
+- Cantidad de restricciones: Pendiente
+- Cantidad de índices: Pendiente
+- Resultado final: Pendiente
 - Observaciones: Ejecutar Tools/test-restore.sh $advance y registrar el resultado antes de etiquetar.
 EOF
 

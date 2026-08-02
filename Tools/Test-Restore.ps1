@@ -28,6 +28,22 @@ function Invoke-MySqlQuery([string]$Sql) {
     return ($result -join "`n").Trim()
 }
 
+function Compare-MySqlMetadata([string]$LeftDatabase, [string]$RightDatabase, [string]$Label) {
+    $definitions = @(
+        @{ Schema = 'TABLE_SCHEMA'; Table = 'TABLES'; Columns = 'TABLE_NAME,ENGINE,TABLE_COLLATION'; Filter = "AND TABLE_TYPE='BASE TABLE'" },
+        @{ Schema = 'TABLE_SCHEMA'; Table = 'COLUMNS'; Columns = "TABLE_NAME,ORDINAL_POSITION,COLUMN_NAME,COLUMN_TYPE,IS_NULLABLE,COALESCE(COLUMN_DEFAULT,'<NULL>'),EXTRA,COALESCE(GENERATION_EXPRESSION,''),COALESCE(CHARACTER_SET_NAME,''),COALESCE(COLLATION_NAME,'')"; Filter = '' },
+        @{ Schema = 'CONSTRAINT_SCHEMA'; Table = 'TABLE_CONSTRAINTS'; Columns = 'TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE'; Filter = '' },
+        @{ Schema = 'CONSTRAINT_SCHEMA'; Table = 'KEY_COLUMN_USAGE'; Columns = "TABLE_NAME,CONSTRAINT_NAME,ORDINAL_POSITION,COLUMN_NAME,COALESCE(REFERENCED_TABLE_NAME,''),COALESCE(REFERENCED_COLUMN_NAME,'')"; Filter = '' },
+        @{ Schema = 'CONSTRAINT_SCHEMA'; Table = 'CHECK_CONSTRAINTS'; Columns = 'CONSTRAINT_NAME,CHECK_CLAUSE'; Filter = '' },
+        @{ Schema = 'CONSTRAINT_SCHEMA'; Table = 'REFERENTIAL_CONSTRAINTS'; Columns = 'TABLE_NAME,CONSTRAINT_NAME,UNIQUE_CONSTRAINT_NAME,MATCH_OPTION,UPDATE_RULE,DELETE_RULE'; Filter = '' },
+        @{ Schema = 'TABLE_SCHEMA'; Table = 'STATISTICS'; Columns = 'TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE'; Filter = '' }
+    )
+    foreach ($definition in $definitions) {
+        $sql = "SELECT COUNT(*) FROM (SELECT CONCAT_WS(CHAR(31),$($definition.Columns)) AS signature FROM information_schema.$($definition.Table) WHERE $($definition.Schema)='$LeftDatabase' $($definition.Filter) UNION ALL SELECT CONCAT_WS(CHAR(31),$($definition.Columns)) AS signature FROM information_schema.$($definition.Table) WHERE $($definition.Schema)='$RightDatabase' $($definition.Filter)) compared GROUP BY signature HAVING COUNT(*)<>2;"
+        if (Invoke-MySqlQuery $sql) { throw "Diferencia $Label en $($definition.Table)." }
+    }
+}
+
 $RestoreCreated = $false
 $PartsCreated = $false
 Push-Location $ProjectRoot
@@ -66,14 +82,16 @@ try {
     Get-Content -Raw $DataFile | & docker compose exec -T db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" dbtindercows_restore_parts_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo de datos.' }
 
-    $TableDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' UNION ALL SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$RestoreDatabase' AND TABLE_TYPE='BASE TABLE') x GROUP BY TABLE_NAME HAVING COUNT(*)<>2;"
-    $ConstraintDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' UNION ALL SELECT TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$RestoreDatabase') x GROUP BY TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE HAVING COUNT(*)<>2;"
-    $IndexDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase' UNION ALL SELECT TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$RestoreDatabase') x GROUP BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE HAVING COUNT(*)<>2;"
-    if ($TableDiff -or $ConstraintDiff -or $IndexDiff) { throw 'La estructura restaurada difiere del origen.' }
-    $PartsTableDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$RestoreDatabase' AND TABLE_TYPE='BASE TABLE' UNION ALL SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$PartsDatabase' AND TABLE_TYPE='BASE TABLE') x GROUP BY TABLE_NAME HAVING COUNT(*)<>2;"
-    $PartsConstraintDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$RestoreDatabase' UNION ALL SELECT TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$PartsDatabase') x GROUP BY TABLE_NAME,CONSTRAINT_NAME,CONSTRAINT_TYPE HAVING COUNT(*)<>2;"
-    $PartsIndexDiff = Invoke-MySqlQuery "SELECT COUNT(*) FROM (SELECT TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$RestoreDatabase' UNION ALL SELECT TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$PartsDatabase') x GROUP BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX,COLUMN_NAME,NON_UNIQUE,INDEX_TYPE HAVING COUNT(*)<>2;"
-    if ($PartsTableDiff -or $PartsConstraintDiff -or $PartsIndexDiff) { throw 'Estructura+datos difiere del respaldo completo.' }
+    Compare-MySqlMetadata $SourceDatabase $RestoreDatabase 'origen/completo'
+    Compare-MySqlMetadata $RestoreDatabase $PartsDatabase 'completo/estructura+datos'
+    foreach ($database in @($SourceDatabase, $RestoreDatabase, $PartsDatabase)) {
+        $collation = Invoke-MySqlQuery "SELECT CONCAT(DEFAULT_CHARACTER_SET_NAME,'/',DEFAULT_COLLATION_NAME) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$database';"
+        if ($collation -ne 'utf8mb4/utf8mb4_unicode_ci') { throw "$database usa $collation." }
+        $invalidTables = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE' AND TABLE_COLLATION<>'utf8mb4_unicode_ci';"
+        if ($invalidTables -ne '0') { throw "$database contiene tablas con intercalación incorrecta." }
+    }
+    $invalidFkRules = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.REFERENTIAL_CONSTRAINTS WHERE CONSTRAINT_SCHEMA IN ('$SourceDatabase','$RestoreDatabase','$PartsDatabase') AND (UPDATE_RULE<>'RESTRICT' OR DELETE_RULE<>'RESTRICT');"
+    if ($invalidFkRules -ne '0') { throw 'Hay FK restauradas sin reglas RESTRICT.' }
 
     $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
     foreach ($table in $Tables) {
@@ -82,6 +100,10 @@ try {
         $partsCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $PartsDatabase.$table;"
         Write-Host ("{0,-38} origen={1} completo={2} partes={3}" -f $table, $sourceCount, $restoreCount, $partsCount)
         if ($sourceCount -ne $restoreCount -or $restoreCount -ne $partsCount) { throw "El conteo difiere para $table." }
+        $sourceChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $SourceDatabase.$table;") -split "\s+" | Select-Object -Last 1
+        $restoreChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $RestoreDatabase.$table;") -split "\s+" | Select-Object -Last 1
+        $partsChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $PartsDatabase.$table;") -split "\s+" | Select-Object -Last 1
+        if ($sourceChecksum -ne $restoreChecksum -or $restoreChecksum -ne $partsChecksum) { throw "Los datos difieren para $table." }
     }
 
     if ($Tables -contains 'tbproductores') {
@@ -92,11 +114,16 @@ try {
     }
     $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
     $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
-    $indexCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
+    $indexCount = Invoke-MySqlQuery "SELECT COUNT(DISTINCT TABLE_NAME,INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
     $manifest = [IO.File]::ReadAllText($ManifestFile)
-    $manifest = $manifest -replace '(?m)^- Restauración probada: .*$', '- Restauración probada: Sí'
-    $manifest = $manifest -replace '(?m)^- Resultado de integridad: .*$', '- Resultado de integridad: Correcto'
-    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', "- Observaciones: Restauración completa y estructura+datos verificadas; tablas=$tableCount, restricciones=$constraintCount, filas de índice=$indexCount."
+    $manifest = $manifest -replace '(?m)^- Intercalación comprobada: .*$', '- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y cuatro tablas'
+    $manifest = $manifest -replace '(?m)^- Restauración completa comprobada: .*$', '- Restauración completa comprobada: Sí'
+    $manifest = $manifest -replace '(?m)^- Restauración estructura \+ datos comprobada: .*$', '- Restauración estructura + datos comprobada: Sí'
+    $manifest = $manifest -replace '(?m)^- Cantidad de tablas: .*$', "- Cantidad de tablas: $tableCount"
+    $manifest = $manifest -replace '(?m)^- Cantidad de restricciones: .*$', "- Cantidad de restricciones: $constraintCount"
+    $manifest = $manifest -replace '(?m)^- Cantidad de índices: .*$', "- Cantidad de índices: $indexCount"
+    $manifest = $manifest -replace '(?m)^- Resultado final: .*$', '- Resultado final: APROBADO'
+    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', '- Observaciones: Estructura, datos, PK, FK, CHECK, índices, reglas RESTRICT, intercalación y conteos sin diferencias.'
     [IO.File]::WriteAllText($ManifestFile, $manifest, [Text.UTF8Encoding]::new($false))
     Write-Host "Restauración correcta: tablas=$tableCount, restricciones=$constraintCount."
 }

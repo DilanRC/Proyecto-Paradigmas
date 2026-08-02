@@ -134,9 +134,14 @@ try {
 - Archivo completo: $([IO.Path]::GetFileName($CompleteFile))
 - Archivo de estructura: $([IO.Path]::GetFileName($SchemaFile))
 - Archivo de datos: $([IO.Path]::GetFileName($DataFile))
-- Restauración probada: Pendiente
-- Base temporal utilizada: dbtindercows_restore_test
-- Resultado de integridad: Pendiente
+- Intercalación comprobada: Pendiente
+- Restauración completa comprobada: Pendiente
+- Restauración estructura + datos comprobada: Pendiente
+- Bases temporales utilizadas: dbtindercows_restore_test, dbtindercows_restore_parts_test
+- Cantidad de tablas: Pendiente
+- Cantidad de restricciones: Pendiente
+- Cantidad de índices: Pendiente
+- Resultado final: Pendiente
 - Observaciones: Ejecutar Tools/Test-Restore.ps1 $Avance y registrar el resultado antes de etiquetar.
 "@
     [IO.File]::WriteAllText($ManifestFile, $Manifest, [Text.UTF8Encoding]::new($false))

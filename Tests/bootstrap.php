@@ -89,6 +89,32 @@ function test_create(array $overrides = [], ?string $number = null): array
     return $response['body']['data'];
 }
 
+function test_http_json(string $method, ?string $body = null, string $contentType = 'application/json'): array
+{
+    $headers = ['Accept: application/json'];
+    if ($body !== null) {
+        $headers[] = "Content-Type: {$contentType}";
+    }
+    $context = stream_context_create(['http' => [
+        'method' => $method,
+        'header' => implode("\r\n", $headers),
+        'content' => $body ?? '',
+        'ignore_errors' => true,
+        'timeout' => 10,
+    ]]);
+    $responseBody = file_get_contents('http://127.0.0.1/api/productores.php', false, $context);
+    $responseHeaders = $http_response_header ?? [];
+    test_assert($responseBody !== false, "No fue posible ejecutar HTTP {$method}.");
+    preg_match('/\s(\d{3})\s/', $responseHeaders[0] ?? '', $statusMatch);
+    $contentHeader = current(array_filter($responseHeaders,
+        static fn (string $header): bool => str_starts_with(strtolower($header), 'content-type:')));
+    test_assert(is_string($contentHeader) && str_contains(strtolower($contentHeader), 'application/json'),
+        "HTTP {$method} debe responder application/json.");
+    $decoded = json_decode($responseBody, true, 512, JSON_THROW_ON_ERROR);
+    test_assert(is_array($decoded), "HTTP {$method} debe responder un objeto JSON.");
+    return ['status' => (int) ($statusMatch[1] ?? 0), 'body' => $decoded];
+}
+
 function test_cleanup_productores(array $identificaciones): void
 {
     $ids = array_values(array_unique(array_filter(array_map('strval', $identificaciones))));

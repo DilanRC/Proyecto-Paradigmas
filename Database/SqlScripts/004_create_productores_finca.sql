@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS tbproductoresfinca (
     ),
     CONSTRAINT fk_tbproductoresfinca_productor FOREIGN KEY (tbproductoresIdentificacionNumero)
         REFERENCES tbproductores (tbproductoresIdentificacionNumero)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT ck_tbproductoresfinca_nombre CHECK (CHAR_LENGTH(TRIM(tbproductoresfincaNombre)) > 0),
     CONSTRAINT ck_tbproductoresfinca_estado CHECK (tbproductoresfincaEstado IN (0, 1)),
     INDEX idx_tbproductoresfinca_nombre (tbproductoresfincaNombre)

@@ -28,13 +28,44 @@ try {
     test_same('Heredia', $actualizado['body']['data']['direccionPrincipal']['provincia'], 'Actualiza dirección');
     test_same([['nombre' => 'Finca Tres']], $actualizado['body']['data']['fincas'], 'Sincroniza fincas');
 
+    $identificacionModificada = $actualizadoPayload;
+    $identificacionModificada['identificacion']['numero'] = test_document();
+    test_same(422, test_controller()->procesar('PUT', [], $identificacionModificada)['status'],
+        'PUT debe rechazar cambios de identificación');
+
+    $fincaDuplicada = test_payload(test_document(), [
+        'fincas' => [['nombre' => 'Finca Repetida'], ['nombre' => 'finca repetida']],
+    ]);
+    test_same(422, test_controller()->procesar('POST', [], $fincaDuplicada)['status'],
+        'La misma finca no puede repetirse para un productor');
+
+    $physicalCounts = [];
+    foreach (['tbproductores', 'tbproductoresdireccion', 'tbproductoresfinca'] as $tabla) {
+        $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE tbproductoresIdentificacionNumero = :id");
+        $statement->execute(['id' => $creado['identificacionNumero']]);
+        $physicalCounts[$tabla] = (int) $statement->fetchColumn();
+    }
     $desactivado = test_controller()->procesar('DELETE', [], ['identificacionNumero' => $visible]);
     test_same('INACTIVO', $desactivado['body']['data']['estado'], 'Desactivación lógica');
+    foreach (['tbproductores', 'tbproductoresdireccion', 'tbproductoresfinca'] as $tabla) {
+        $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE tbproductoresIdentificacionNumero = :id");
+        $statement->execute(['id' => $creado['identificacionNumero']]);
+        test_same($physicalCounts[$tabla], (int) $statement->fetchColumn(),
+            "Desactivar no debe borrar físicamente {$tabla}");
+    }
     $conflicto = test_controller()->procesar('POST', [], test_payload($visible));
     test_same(409, $conflicto['status'], 'Una PK inactiva permanece reservada');
     test_same($creado['identificacionNumero'], $conflicto['body']['data']['reactivacion']['identificacionNumero'], 'Indica la PK para reactivar');
     $reactivado = test_controller()->procesar('PATCH', [], ['identificacionNumero' => $visible]);
     test_same('ACTIVO', $reactivado['body']['data']['estado'], 'Reactiva la misma fila');
+    test_same($creado['identificacionNumero'], $reactivado['body']['data']['identificacionNumero'],
+        'La reactivación debe conservar la identificación');
+    foreach ($physicalCounts as $tabla => $expectedCount) {
+        $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE tbproductoresIdentificacionNumero = :id");
+        $statement->execute(['id' => $creado['identificacionNumero']]);
+        test_same($expectedCount, (int) $statement->fetchColumn(),
+            "Reactivar no debe crear ni borrar filas físicas en {$tabla}");
+    }
 
     $invalido = test_controller()->procesar('POST', [], test_payload(test_document(), ['identificacion' => ['tipoCodigo' => 'INVENTADO']]));
     test_same(422, $invalido['status'], 'Rechaza tipo no admitido');
@@ -42,6 +73,10 @@ try {
     test_same(404, $sinId['status'], 'PK inexistente');
     $metodo = test_controller()->procesar('TRACE', [], []);
     test_same(405, $metodo['status'], 'Método no permitido');
+
+    test_same(405, test_http_json('TRACE')['status'], 'HTTP 405 debe ser JSON');
+    test_same(415, test_http_json('POST', '{}', 'text/plain')['status'], 'HTTP 415 debe ser JSON');
+    test_same(400, test_http_json('POST', '{')['status'], 'HTTP 400 debe ser JSON');
 } finally {
     test_cleanup_productores($ids);
 }

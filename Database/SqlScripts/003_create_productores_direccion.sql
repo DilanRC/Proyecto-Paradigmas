@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS tbproductoresdireccion (
     CONSTRAINT pk_tbproductoresdireccion PRIMARY KEY (tbproductoresIdentificacionNumero),
     CONSTRAINT fk_tbproductoresdireccion_productor FOREIGN KEY (tbproductoresIdentificacionNumero)
         REFERENCES tbproductores (tbproductoresIdentificacionNumero)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT ck_tbproductoresdireccion_provincia CHECK (CHAR_LENGTH(TRIM(tbproductoresdireccionProvincia)) > 0),
     CONSTRAINT ck_tbproductoresdireccion_canton CHECK (CHAR_LENGTH(TRIM(tbproductoresdireccionCanton)) > 0),
     CONSTRAINT ck_tbproductoresdireccion_distrito CHECK (CHAR_LENGTH(TRIM(tbproductoresdireccionDistrito)) > 0)

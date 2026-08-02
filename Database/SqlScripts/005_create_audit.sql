@@ -1,4 +1,5 @@
 USE dbtindercows;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacoraId BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
