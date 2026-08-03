@@ -80,7 +80,7 @@ $orphanId = -random_int(2000000, 2999999);
 try {
     $first = test_create([], $apiIds[0]);
     $second = test_create([], $apiIds[1]);
-    $third = test_create(['fincas' => ['Finca Norte', 'Finca Sur']], $apiIds[2]);
+    $third = test_create(['fincas' => [['nombre' => 'Finca Norte'], ['nombre' => 'Finca Sur']]], $apiIds[2]);
     test_same($first['productorId'] + 1, $second['productorId'],
         'PHP debe calcular el siguiente tbproductorId bajo el bloqueo de alta');
     test_same(409, test_controller()->procesar('POST', [], test_payload($apiIds[0]))['status'],
@@ -93,8 +93,9 @@ try {
     $idDireccion1 = (int) $direccionId->fetchColumn();
     $direccionId->execute(['id' => $second['productorId']]);
     $idDireccion2 = (int) $direccionId->fetchColumn();
-    test_assert($idDireccion1 > 0 && $idDireccion2 > 0 && $idDireccion1 !== $idDireccion2,
-        'Cada dirección debe generar su propio tbproductordireccionId, distinto entre productores');
+    test_assert($idDireccion1 > 0, 'La dirección debe generar un tbproductordireccionId propio');
+    test_same($idDireccion1 + 1, $idDireccion2,
+        'Las direcciones consecutivas deben generar tbproductordireccionId consecutivos');
     $direccionesPorProductor = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :id');
     $direccionesPorProductor->execute(['id' => $first['productorId']]);
     test_same(1, (int) $direccionesPorProductor->fetchColumn(), 'Cada productor conserva exactamente una dirección');
@@ -105,7 +106,7 @@ try {
     $fincasCreadas->execute(['id' => $third['productorId']]);
     $idsFincas = array_map('intval', $fincasCreadas->fetchAll(PDO::FETCH_COLUMN));
     test_same(2, count($idsFincas), 'Deben crearse dos fincas con su propio identificador');
-    test_assert($idsFincas[0] !== $idsFincas[1], 'Las fincas de un mismo productor deben tener IDs distintos entre sí');
+    test_same($idsFincas[0] + 1, $idsFincas[1], 'Las fincas deben generar tbproductorfincaId consecutivos');
 
     $directInsert = $db->prepare("INSERT INTO tbproductor
         (tbproductorId,tbproductorIdentificacionNumero,tbproductorIdentificacionTipo,tbproductorNombre,

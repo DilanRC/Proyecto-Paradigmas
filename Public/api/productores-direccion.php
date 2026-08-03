@@ -45,11 +45,6 @@ try {
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
-} catch (\Application\Controller\ProductorHttpException $excepcion) {
-    sendJsonResponse(
-        ['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos, 'errors' => $excepcion->errores],
-        $excepcion->estadoHttp,
-    );
 } catch (Throwable $excepcion) {
     error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(), $excepcion->getFile(), $excepcion->getLine()));
     sendJsonResponse([

@@ -9,6 +9,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 subprocess.run(["python3", "Tools/generate-documentation-pdfs.py", "--check"], cwd=ROOT, check=True)
 
+readme = (ROOT / "README.md").read_text(encoding="utf-8")
+assert "POST no acepta `direccionPrincipal`" in readme
+assert "La dirección se completa en un PUT posterior" in readme
+
 required = {
     "DER.pdf": ["tbproductor", "tbproductordireccion", "tbproductorfinca", "tbbitacora", "cero PRIMARY KEY", "cero FOREIGN KEY", "cero CHECK"],
     "DAplicacion.pdf": ["JavaScript", "fetch/AJAX", "ProductorController", "PDO::prepare()", "respuesta HTTP JSON", "sin recargar"],

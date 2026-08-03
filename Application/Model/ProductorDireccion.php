@@ -10,6 +10,16 @@ final class ProductorDireccion
 {
     public function __construct(private readonly PDO $conexion) {}
 
+    public function ejecutarConBloqueoAlta(callable $operacion): mixed
+    {
+        $this->adquirirBloqueoAlta();
+        try {
+            return $operacion();
+        } finally {
+            $this->liberarBloqueoAlta();
+        }
+    }
+
     /**
      * Se ejecuta automáticamente dentro de la transacción de alta del productor.
      * Instancia la fila 1:1 con valores en blanco; el detalle se completa después con actualizar().
@@ -66,20 +76,15 @@ final class ProductorDireccion
 
     private function insertar(int $productorId, array $direccion): void
     {
-        $this->adquirirBloqueoAlta();
-        try {
-            $direccionId = $this->siguienteId();
-            $sentencia = $this->conexion->prepare(
-                'INSERT INTO tbproductordireccion
-                 (tbproductordireccionId, tbproductorId, tbproductordireccionProvincia,
-                  tbproductordireccionCanton, tbproductordireccionDistrito,
-                  tbproductordireccionPueblo, tbproductordireccionSenas)
-                 VALUES (:direccionId, :productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
-            );
-            $sentencia->execute(['direccionId' => $direccionId, 'productorId' => $productorId, ...$direccion]);
-        } finally {
-            $this->liberarBloqueoAlta();
-        }
+        $direccionId = $this->siguienteId();
+        $sentencia = $this->conexion->prepare(
+            'INSERT INTO tbproductordireccion
+             (tbproductordireccionId, tbproductorId, tbproductordireccionProvincia,
+              tbproductordireccionCanton, tbproductordireccionDistrito,
+              tbproductordireccionPueblo, tbproductordireccionSenas)
+             VALUES (:direccionId, :productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
+        );
+        $sentencia->execute(['direccionId' => $direccionId, 'productorId' => $productorId, ...$direccion]);
     }
 
     private function siguienteId(): int
@@ -91,6 +96,7 @@ final class ProductorDireccion
 
         return (int) $sentencia->fetchColumn();
     }
+
     private function adquirirBloqueoAlta(): void
     {
         $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_direccion_alta', 10)");
