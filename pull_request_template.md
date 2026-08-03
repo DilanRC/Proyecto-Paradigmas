@@ -17,17 +17,8 @@ Describa concretamente qué modifica este Pull Request y qué problema resuelve 
 
 ### Descripción
 
-> Como **[tipo de usuario]**, quiero **[funcionalidad]**, para **[beneficio o necesidad que se satisface]**.
+> Como **[programador]**, realice **[funcionalidad]**, para **[beneficio o necesidad que se satisface]**.
 
-### Criterios de aceptación
-
-- [ ] El usuario puede realizar la operación indicada.
-- [ ] Los datos obligatorios se validan antes de enviarse.
-- [ ] La solicitud se envía mediante AJAX.
-- [ ] El servidor recibe y responde exclusivamente con JSON.
-- [ ] La interfaz se actualiza sin recargar completamente la página.
-- [ ] Los errores se muestran de forma comprensible.
-- [ ] La operación conserva la integridad de los datos relacionados.
 
 ---
 
