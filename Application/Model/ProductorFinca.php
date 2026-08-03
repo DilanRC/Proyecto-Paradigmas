@@ -10,14 +10,19 @@ final class ProductorFinca
 {
     public function __construct(private readonly PDO $conexion) {}
 
-    public function sincronizar(int $productorId, array $nombres): void
+    public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
         try {
-            $this->sincronizarBloqueado($productorId, $nombres);
+            return $operacion();
         } finally {
             $this->liberarBloqueoAlta();
         }
+    }
+
+    public function sincronizar(int $productorId, array $nombres): void
+    {
+        $this->sincronizarBloqueado($productorId, $nombres);
     }
 
     private function sincronizarBloqueado(int $productorId, array $nombres): void
@@ -78,6 +83,7 @@ final class ProductorFinca
 
         return (int) $sentencia->fetchColumn();
     }
+
     private function adquirirBloqueoAlta(): void
     {
         $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_finca_alta', 10)");

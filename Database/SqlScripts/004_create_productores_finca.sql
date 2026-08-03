@@ -1,3 +1,6 @@
+USE dbtindercows;
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS tbproductorfinca (
     tbproductorfincaId INT NOT NULL,
     tbproductorId INT NOT NULL,

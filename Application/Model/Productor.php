@@ -89,7 +89,17 @@ final class Productor
         return $filas[0] ?? null;
     }
 
-    public function adquirirBloqueoAlta(): void
+    public function ejecutarConBloqueoAlta(callable $operacion): mixed
+    {
+        $this->adquirirBloqueoAlta();
+        try {
+            return $operacion();
+        } finally {
+            $this->liberarBloqueoAlta();
+        }
+    }
+
+    private function adquirirBloqueoAlta(): void
     {
         $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_productor_alta', 10)");
         $sentencia->execute();
@@ -98,7 +108,7 @@ final class Productor
         }
     }
 
-    public function liberarBloqueoAlta(): void
+    private function liberarBloqueoAlta(): void
     {
         $sentencia = $this->conexion->prepare("SELECT RELEASE_LOCK('tindercows_productor_alta')");
         $sentencia->execute();
@@ -106,9 +116,7 @@ final class Productor
 
     public function crear(array $datos): int
     {
-        $secuencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbproductorId), 0) + 1 FROM tbproductor');
-        $secuencia->execute();
-        $productorId = (int) $secuencia->fetchColumn();
+        $productorId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbproductor
              (tbproductorId, tbproductorIdentificacionNumero, tbproductorIdentificacionTipo,
@@ -127,6 +135,14 @@ final class Productor
         ]);
 
         return $productorId;
+    }
+
+    private function siguienteId(): int
+    {
+        $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbproductorId), 0) + 1 FROM tbproductor');
+        $sentencia->execute();
+
+        return (int) $sentencia->fetchColumn();
     }
 
     public function actualizar(string $identificacionNumero, array $datos): void

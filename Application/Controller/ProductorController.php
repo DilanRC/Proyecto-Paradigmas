@@ -112,33 +112,45 @@ final class ProductorController
     private function crear(array $cuerpo): array
     {
         $datos = $this->validarProductor($cuerpo, false);
-        $this->productor->adquirirBloqueoAlta();
-        try {
-            $nuevo = $this->transaccion(function () use ($datos): array {
-                $existente = $this->productor->buscar($datos['identificacionNumero']);
-                if ($existente !== null) {
-                    $inactivo = $existente['estado'] === 'INACTIVO';
-                    throw new ProductorHttpException(
-                        $inactivo ? 'La identificación pertenece a un productor inactivo.' : 'La identificación ya está registrada.',
-                        409,
-                        $inactivo ? ['reactivacion' => ['identificacionNumero' => $datos['identificacionNumero']]] : null,
-                        ['identificacion.numero' => $inactivo
-                            ? 'Debe reactivarse el productor existente.' : 'El número de identificación ya existe.'],
-                    );
-                }
-                $productorId = $this->productor->crear($datos);
-                $this->direccion->crearVacia($productorId);
-                $this->fincas->sincronizar($productorId, $datos['fincas']);
-                $nuevo = $this->productor->buscar($datos['identificacionNumero']);
-                if ($nuevo === null) {
-                    throw new \RuntimeException('No fue posible leer el productor recién creado.');
-                }
-                $this->bitacora->registrar('CREAR', $datos['identificacionNumero'], null, $nuevo, $this->solicitudId);
-                return $nuevo;
-            });
-        } finally {
-            $this->productor->liberarBloqueoAlta();
-        }
+        $nuevo = $this->productor->ejecutarConBloqueoAlta(
+            fn (): array => $this->direccion->ejecutarConBloqueoAlta(
+                fn (): array => $this->fincas->ejecutarConBloqueoAlta(
+                    fn (): array => $this->transaccion(function () use ($datos): array {
+                        $existente = $this->productor->buscar($datos['identificacionNumero']);
+                        if ($existente !== null) {
+                            $inactivo = $existente['estado'] === 'INACTIVO';
+                            throw new ProductorHttpException(
+                                $inactivo
+                                    ? 'La identificación pertenece a un productor inactivo.'
+                                    : 'La identificación ya está registrada.',
+                                409,
+                                $inactivo
+                                    ? ['reactivacion' => ['identificacionNumero' => $datos['identificacionNumero']]]
+                                    : null,
+                                ['identificacion.numero' => $inactivo
+                                    ? 'Debe reactivarse el productor existente.'
+                                    : 'El número de identificación ya existe.'],
+                            );
+                        }
+                        $productorId = $this->productor->crear($datos);
+                        $this->direccion->crearVacia($productorId);
+                        $this->fincas->sincronizar($productorId, $datos['fincas']);
+                        $nuevo = $this->productor->buscar($datos['identificacionNumero']);
+                        if ($nuevo === null) {
+                            throw new \RuntimeException('No fue posible leer el productor recién creado.');
+                        }
+                        $this->bitacora->registrar(
+                            'CREAR',
+                            $datos['identificacionNumero'],
+                            null,
+                            $nuevo,
+                            $this->solicitudId,
+                        );
+                        return $nuevo;
+                    }),
+                ),
+            ),
+        );
 
         return $this->respuesta(true, 'Productor creado correctamente.', $nuevo, 201);
     }
@@ -153,29 +165,34 @@ final class ProductorController
             ]);
         }
 
-        $nuevo = $this->transaccion(function () use ($datos, $identificacion): array {
-            $bloqueado = $this->productor->bloquear($identificacion);
-            if ($bloqueado === null) {
-                throw new ProductorHttpException('Productor no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbproductorEstado'] !== 1) {
-                throw new ProductorHttpException('El productor está inactivo. Debe reactivarlo antes de actualizarlo.', 409);
-            }
-            $anterior = $this->productor->buscar($identificacion);
-            if ($anterior === null) {
-                throw new ProductorHttpException('El productor no conserva su dirección obligatoria.', 409);
-            }
-            $this->productor->actualizar($identificacion, $datos);
-            $productorId = (int) $bloqueado['tbproductorId'];
-            $this->direccion->actualizar($productorId, $datos['direccion']);
-            $this->fincas->sincronizar($productorId, $datos['fincas']);
-            $nuevo = $this->productor->buscar($identificacion);
-            if ($nuevo === null) {
-                throw new \RuntimeException('No fue posible leer el productor actualizado.');
-            }
-            $this->bitacora->registrar('ACTUALIZAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
-            return $nuevo;
-        });
+        $nuevo = $this->fincas->ejecutarConBloqueoAlta(
+            fn (): array => $this->transaccion(function () use ($datos, $identificacion): array {
+                $bloqueado = $this->productor->bloquear($identificacion);
+                if ($bloqueado === null) {
+                    throw new ProductorHttpException('Productor no encontrado.', 404);
+                }
+                if ((int) $bloqueado['tbproductorEstado'] !== 1) {
+                    throw new ProductorHttpException(
+                        'El productor está inactivo. Debe reactivarlo antes de actualizarlo.',
+                        409,
+                    );
+                }
+                $anterior = $this->productor->buscar($identificacion);
+                if ($anterior === null) {
+                    throw new ProductorHttpException('El productor no conserva su dirección obligatoria.', 409);
+                }
+                $this->productor->actualizar($identificacion, $datos);
+                $productorId = (int) $bloqueado['tbproductorId'];
+                $this->direccion->actualizar($productorId, $datos['direccion']);
+                $this->fincas->sincronizar($productorId, $datos['fincas']);
+                $nuevo = $this->productor->buscar($identificacion);
+                if ($nuevo === null) {
+                    throw new \RuntimeException('No fue posible leer el productor actualizado.');
+                }
+                $this->bitacora->registrar('ACTUALIZAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
+                return $nuevo;
+            }),
+        );
 
         return $this->respuesta(true, 'Productor actualizado correctamente.', $nuevo);
     }
@@ -186,47 +203,49 @@ final class ProductorController
      * ya se instancia vacía en crear() y se completa con PUT /productores.php.
      */
     public function crearDireccion(array $cuerpo): array
-{
-    try {
-        $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero', 'direccionPrincipal']);
-        $errores = [];
-        $identificacion = is_string($cuerpo['identificacionNumero'] ?? null)
-            ? $this->normalizarIdentificacion($cuerpo['identificacionNumero']) : '';
-        if ($identificacion === '') {
-            $errores['identificacionNumero'] = 'La identificación es obligatoria.';
-        }
-        $direccion = $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores);
-        if ($errores !== []) {
-            throw new ProductorHttpException('Revise los campos indicados.', 422, null, $errores);
-        }
-
-        $nuevo = $this->transaccion(function () use ($identificacion, $direccion): array {
-            $bloqueado = $this->productor->bloquear($identificacion);
-            if ($bloqueado === null) {
-                throw new ProductorHttpException('Productor no encontrado.', 404);
+    {
+        try {
+            $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero', 'direccionPrincipal']);
+            $errores = [];
+            $identificacion = is_string($cuerpo['identificacionNumero'] ?? null)
+                ? $this->normalizarIdentificacion($cuerpo['identificacionNumero']) : '';
+            if ($identificacion === '') {
+                $errores['identificacionNumero'] = 'La identificación es obligatoria.';
             }
-            $productorId = (int) $bloqueado['tbproductorId'];
-            try {
-                $this->direccion->crear($productorId, $direccion);
-            } catch (\RuntimeException $excepcion) {
-                throw new ProductorHttpException($excepcion->getMessage(), 409);
+            $direccion = $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores);
+            if ($errores !== []) {
+                throw new ProductorHttpException('Revise los campos indicados.', 422, null, $errores);
             }
-            $nuevo = $this->productor->buscar($identificacion);
-            $this->bitacora->registrar('CREAR_DIRECCION', $identificacion, null, $nuevo, $this->solicitudId);
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el productor tras crear la dirección.');
-        });
 
-        return $this->respuesta(true, 'Dirección creada correctamente.', $nuevo, 201);
-    } catch (ProductorHttpException $excepcion) {
-        return $this->respuesta(
-            false,
-            $excepcion->getMessage(),
-            $excepcion->datos,
-            $excepcion->estadoHttp,
-            $excepcion->errores
-        );
+            $nuevo = $this->direccion->ejecutarConBloqueoAlta(
+                fn (): array => $this->transaccion(function () use ($identificacion, $direccion): array {
+                    $bloqueado = $this->productor->bloquear($identificacion);
+                    if ($bloqueado === null) {
+                        throw new ProductorHttpException('Productor no encontrado.', 404);
+                    }
+                    $productorId = (int) $bloqueado['tbproductorId'];
+                    try {
+                        $this->direccion->crear($productorId, $direccion);
+                    } catch (\RuntimeException $excepcion) {
+                        throw new ProductorHttpException($excepcion->getMessage(), 409);
+                    }
+                    $nuevo = $this->productor->buscar($identificacion);
+                    $this->bitacora->registrar('CREAR_DIRECCION', $identificacion, null, $nuevo, $this->solicitudId);
+                    return $nuevo ?? throw new \RuntimeException('No fue posible leer el productor tras crear la dirección.');
+                }),
+            );
+
+            return $this->respuesta(true, 'Dirección creada correctamente.', $nuevo, 201);
+        } catch (ProductorHttpException $excepcion) {
+            return $this->respuesta(
+                false,
+                $excepcion->getMessage(),
+                $excepcion->datos,
+                $excepcion->estadoHttp,
+                $excepcion->errores
+            );
+        }
     }
-}
 
     private function desactivar(array $cuerpo): array
     {

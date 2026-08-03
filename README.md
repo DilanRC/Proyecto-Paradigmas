@@ -61,13 +61,28 @@ Endpoint: `/api/productores.php`
 | Método | Operación |
 |---|---|
 | GET | Listar, buscar, filtrar o consultar por `identificacionNumero` |
-| POST | Crear productor, dirección, fincas y bitácora |
-| PUT | Actualizar por `identificacionNumeroOriginal` |
+| POST | Crear productor, dirección vacía, fincas y bitácora |
+| PUT | Actualizar y completar la dirección por `identificacionNumeroOriginal` |
 | DELETE | Desactivar por `identificacionNumero` |
 | PATCH | Reactivar por `identificacionNumero` |
 
 ```json
 {
+  "identificacion": {"tipoCodigo": "CEDULA_FISICA", "numero": "1-1111-1111"},
+  "nombre": "Persona de ejemplo",
+  "telefono": "88888888",
+  "correoElectronico": "contacto@example.test",
+  "fincas": [{"nombre": "Finca El Roble"}]
+}
+```
+
+POST no acepta `direccionPrincipal`: crea automáticamente una fila de dirección
+vacía. La dirección se completa en un PUT posterior, que incluye
+`identificacionNumeroOriginal` y `direccionPrincipal`:
+
+```json
+{
+  "identificacionNumeroOriginal": "111111111",
   "identificacion": {"tipoCodigo": "CEDULA_FISICA", "numero": "1-1111-1111"},
   "nombre": "Persona de ejemplo",
   "telefono": "88888888",
@@ -91,14 +106,18 @@ Si una identificación fue digitada incorrectamente, se desactiva el registro
 incorrecto, se conserva su bitácora y se crea el registro correcto. La
 identificación existente no se modifica directamente.
 
-POST y PUT mantienen una dirección y evitan fincas duplicadas como políticas de
-aplicación. Sin PK, FK, UNIQUE ni CHECK, SQL directo puede insertar duplicados,
-huérfanos o valores fuera del dominio.
+POST instancia una dirección vacía y PUT completa o edita esa misma fila. Ambos
+flujos evitan fincas duplicadas como políticas de aplicación. Sin PK, FK,
+UNIQUE ni CHECK, SQL directo puede insertar duplicados, huérfanos o valores
+fuera del dominio.
 
 Los modelos usan `PDO::prepare()` con parámetros enlazados y preparadas nativas.
 Ningún valor recibido por HTTP se concatena al SQL. Para crear un productor,
-PHP adquiere un bloqueo nombrado, consulta `MAX(tbproductorId) + 1`, inserta y
-libera el bloqueo después del commit o rollback.
+PHP adquiere en orden los bloqueos nombrados de productor, dirección y finca,
+consulta los respectivos `MAX(id) + 1`, ejecuta la transacción y libera los
+bloqueos en orden inverso después del commit o rollback. Las actualizaciones
+que pueden crear fincas y la reparación de una dirección mantienen del mismo
+modo su bloqueo hasta que termina la transacción.
 
 La base y las cuatro tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `001_create_database.sql` altera también una base que
