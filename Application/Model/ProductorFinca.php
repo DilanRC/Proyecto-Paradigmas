@@ -8,11 +8,24 @@ use PDO;
 
 final class ProductorFinca
 {
-    public function __construct(private readonly PDO $conexion)
+    public function __construct(private readonly PDO $conexion) {}
+
+    public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
+        $this->adquirirBloqueoAlta();
+        try {
+            return $operacion();
+        } finally {
+            $this->liberarBloqueoAlta();
+        }
     }
 
     public function sincronizar(int $productorId, array $nombres): void
+    {
+        $this->sincronizarBloqueado($productorId, $nombres);
+    }
+
+    private function sincronizarBloqueado(int $productorId, array $nombres): void
     {
         if ($nombres === []) {
             $sentencia = $this->conexion->prepare(
@@ -43,8 +56,8 @@ final class ProductorFinca
         );
         $asociar = $this->conexion->prepare(
             'INSERT INTO tbproductorfinca
-             (tbproductorId, tbproductorfincaNombre, tbproductorfincaEstado)
-             VALUES (:productorId, :nombre, 1)'
+             (tbproductorfincaId, tbproductorId, tbproductorfincaNombre, tbproductorfincaEstado)
+             VALUES (:fincaId, :productorId, :nombre, 1)'
         );
         foreach ($nombres as $nombre) {
             $parametros = ['productorId' => $productorId, 'nombre' => $nombre];
@@ -53,8 +66,37 @@ final class ProductorFinca
             if ($coincidencias > 1) {
                 throw new \RuntimeException('Existen fincas duplicadas para el productor.');
             }
-            ($coincidencias === 1 ? $reactivar : $asociar)->execute($parametros);
+            if ($coincidencias === 1) {
+                $reactivar->execute($parametros);
+                continue;
+            }
+            $asociar->execute(['fincaId' => $this->siguienteId(), ...$parametros]);
         }
+    }
+
+    private function siguienteId(): int
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT COALESCE(MAX(tbproductorfincaId), 0) + 1 FROM tbproductorfinca'
+        );
+        $sentencia->execute();
+
+        return (int) $sentencia->fetchColumn();
+    }
+
+    private function adquirirBloqueoAlta(): void
+    {
+        $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_finca_alta', 10)");
+        $sentencia->execute();
+        if ((int) $sentencia->fetchColumn() !== 1) {
+            throw new \RuntimeException('No fue posible reservar la secuencia de fincas.');
+        }
+    }
+
+    private function liberarBloqueoAlta(): void
+    {
+        $sentencia = $this->conexion->prepare("SELECT RELEASE_LOCK('tindercows_finca_alta')");
+        $sentencia->execute();
     }
 
     public function listarActivas(int $productorId): array

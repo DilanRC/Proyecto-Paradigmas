@@ -27,6 +27,14 @@ try {
         $hijo->execute(['id' => $productorIdEsperado]);
         test_same(0, (int) $hijo->fetchColumn(), "Rollback elimina {$tabla}");
     }
+
+    $segundaConexion = test_new_db();
+    foreach (['tindercows_productor_alta', 'tindercows_direccion_alta', 'tindercows_finca_alta'] as $bloqueo) {
+        $adquirir = $segundaConexion->prepare('SELECT GET_LOCK(:bloqueo, 0)');
+        $adquirir->execute(['bloqueo' => $bloqueo]);
+        test_same(1, (int) $adquirir->fetchColumn(), "Rollback libera {$bloqueo}");
+        $segundaConexion->prepare('SELECT RELEASE_LOCK(:bloqueo)')->execute(['bloqueo' => $bloqueo]);
+    }
 } finally {
     try {
         $db->prepare('ALTER TABLE tbbitacora MODIFY tbbitacoraSolicitudId VARCHAR(100) NOT NULL')->execute();

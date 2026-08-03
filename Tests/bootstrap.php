@@ -63,6 +63,15 @@ function test_document(): string
     return 'TST' . strtoupper(bin2hex(random_bytes(8)));
 }
 
+function test_direccion_payload(array $overrides = []): array
+{
+    return array_replace([
+        'provincia' => 'Provincia Prueba', 'canton' => 'Cantón Prueba',
+        'distrito' => 'Distrito Prueba', 'pueblo' => null,
+        'senas' => 'Registro ficticio generado por Tests.',
+    ], $overrides);
+}
+
 function test_payload(?string $number = null, array $overrides = []): array
 {
     $base = [
@@ -70,11 +79,6 @@ function test_payload(?string $number = null, array $overrides = []): array
         'nombre' => 'Productor Ficticio de Prueba',
         'telefono' => '+506 8888-7777',
         'correoElectronico' => 'crud.tests@example.test',
-        'direccionPrincipal' => [
-            'provincia' => 'Provincia Prueba', 'canton' => 'Cantón Prueba',
-            'distrito' => 'Distrito Prueba', 'pueblo' => null,
-            'senas' => 'Registro ficticio generado por Tests.',
-        ],
         'fincas' => [],
     ];
     return array_replace_recursive($base, $overrides);
@@ -86,6 +90,19 @@ function test_create(array $overrides = [], ?string $number = null): array
     test_same(201, $response['status'], 'La fixture debe responder HTTP 201');
     test_assert(($response['body']['success'] ?? false) === true, 'La fixture debe ser exitosa.');
     test_assert(is_string($response['body']['data']['identificacionNumero'] ?? null), 'La API debe devolver identificación textual.');
+    return $response['body']['data'];
+}
+
+function test_create_completo(array $overrides = [], array $direccionOverrides = [], ?string $number = null): array
+{
+    $creado = test_create($overrides, $number);
+    $payloadActualizacion = test_payload($creado['identificacionNumero'], array_replace_recursive($overrides, [
+        'direccionPrincipal' => test_direccion_payload($direccionOverrides),
+        'identificacionNumeroOriginal' => $creado['identificacionNumero'],
+    ]));
+    $response = test_controller()->procesar('PUT', [], $payloadActualizacion);
+    test_same(200, $response['status'], 'La fixture debe poder completar la dirección con PUT');
+
     return $response['body']['data'];
 }
 

@@ -60,6 +60,7 @@ UPDATE tbproductordireccion SET
 WHERE tbproductorId = 2;
 
 INSERT INTO tbproductordireccion (
+    tbproductordireccionId,
     tbproductorId,
     tbproductordireccionProvincia,
     tbproductordireccionCanton,
@@ -67,10 +68,10 @@ INSERT INTO tbproductordireccion (
     tbproductordireccionPueblo,
     tbproductordireccionSenas
 )
-SELECT 1, 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
+SELECT 1, 1, 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
 WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorId = 1)
 UNION ALL
-SELECT 2, 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
+SELECT 2, 2, 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
 WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorId = 2);
 
 UPDATE tbproductorfinca SET tbproductorfincaEstado = 1
@@ -78,21 +79,22 @@ WHERE (tbproductorId = 1 AND tbproductorfincaNombre IN ('Finca El Roble', 'Finca
    OR (tbproductorId = 2 AND tbproductorfincaNombre = 'Finca Valle Verde');
 
 INSERT INTO tbproductorfinca (
+    tbproductorfincaId,
     tbproductorId,
     tbproductorfincaNombre,
     tbproductorfincaEstado
 )
-SELECT 1, 'Finca El Roble', 1
+SELECT 1, 1, 'Finca El Roble', 1
 WHERE NOT EXISTS (
     SELECT 1 FROM tbproductorfinca WHERE tbproductorId = 1 AND tbproductorfincaNombre = 'Finca El Roble'
 )
 UNION ALL
-SELECT 1, 'Finca Valle Verde', 1
+SELECT 2, 1, 'Finca Valle Verde', 1
 WHERE NOT EXISTS (
     SELECT 1 FROM tbproductorfinca WHERE tbproductorId = 1 AND tbproductorfincaNombre = 'Finca Valle Verde'
 )
 UNION ALL
-SELECT 2, 'Finca Valle Verde', 1
+SELECT 3, 2, 'Finca Valle Verde', 1
 WHERE NOT EXISTS (
     SELECT 1 FROM tbproductorfinca WHERE tbproductorId = 2 AND tbproductorfincaNombre = 'Finca Valle Verde'
 );
