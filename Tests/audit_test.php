@@ -7,7 +7,10 @@ $id = test_document();
 $requestPrefix = test_token('audit');
 try {
     $productor = test_controller($requestPrefix . '-crear')->procesar('POST', [], test_payload($id))['body']['data'];
-    $actualizar = test_payload($id, ['telefono' => '+506 2777-1111']);
+    $actualizar = test_payload($id, [
+        'telefono' => '+506 2777-1111',
+        'direccionPrincipal' => test_direccion_payload(),
+    ]);
     $actualizar['identificacionNumeroOriginal'] = $productor['identificacionNumero'];
     test_controller($requestPrefix . '-actualizar')->procesar('PUT', [], $actualizar);
     test_controller($requestPrefix . '-desactivar')->procesar('DELETE', [], ['identificacionNumero' => $id]);

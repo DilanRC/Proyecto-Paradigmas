@@ -8,9 +8,7 @@ use PDO;
 
 final class ProductorDireccion
 {
-    public function __construct(private readonly PDO $conexion)
-    {
-    }
+    public function __construct(private readonly PDO $conexion) {}
 
     /**
      * Se ejecuta automáticamente dentro de la transacción de alta del productor.
@@ -68,13 +66,43 @@ final class ProductorDireccion
 
     private function insertar(int $productorId, array $direccion): void
     {
+        $this->adquirirBloqueoAlta();
+        try {
+            $direccionId = $this->siguienteId();
+            $sentencia = $this->conexion->prepare(
+                'INSERT INTO tbproductordireccion
+                 (tbproductordireccionId, tbproductorId, tbproductordireccionProvincia,
+                  tbproductordireccionCanton, tbproductordireccionDistrito,
+                  tbproductordireccionPueblo, tbproductordireccionSenas)
+                 VALUES (:direccionId, :productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
+            );
+            $sentencia->execute(['direccionId' => $direccionId, 'productorId' => $productorId, ...$direccion]);
+        } finally {
+            $this->liberarBloqueoAlta();
+        }
+    }
+
+    private function siguienteId(): int
+    {
         $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbproductordireccion
-             (tbproductorId, tbproductordireccionProvincia,
-              tbproductordireccionCanton, tbproductordireccionDistrito,
-              tbproductordireccionPueblo, tbproductordireccionSenas)
-             VALUES (:productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
+            'SELECT COALESCE(MAX(tbproductordireccionId), 0) + 1 FROM tbproductordireccion'
         );
-        $sentencia->execute(['productorId' => $productorId, ...$direccion]);
+        $sentencia->execute();
+
+        return (int) $sentencia->fetchColumn();
+    }
+    private function adquirirBloqueoAlta(): void
+    {
+        $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_direccion_alta', 10)");
+        $sentencia->execute();
+        if ((int) $sentencia->fetchColumn() !== 1) {
+            throw new \RuntimeException('No fue posible reservar la secuencia de direcciones.');
+        }
+    }
+
+    private function liberarBloqueoAlta(): void
+    {
+        $sentencia = $this->conexion->prepare("SELECT RELEASE_LOCK('tindercows_direccion_alta')");
+        $sentencia->execute();
     }
 }

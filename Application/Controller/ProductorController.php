@@ -186,7 +186,8 @@ final class ProductorController
      * ya se instancia vacía en crear() y se completa con PUT /productores.php.
      */
     public function crearDireccion(array $cuerpo): array
-    {
+{
+    try {
         $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero', 'direccionPrincipal']);
         $errores = [];
         $identificacion = is_string($cuerpo['identificacionNumero'] ?? null)
@@ -216,7 +217,16 @@ final class ProductorController
         });
 
         return $this->respuesta(true, 'Dirección creada correctamente.', $nuevo, 201);
+    } catch (ProductorHttpException $excepcion) {
+        return $this->respuesta(
+            false,
+            $excepcion->getMessage(),
+            $excepcion->datos,
+            $excepcion->estadoHttp,
+            $excepcion->errores
+        );
     }
+}
 
     private function desactivar(array $cuerpo): array
     {
