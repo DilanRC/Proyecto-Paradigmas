@@ -1,52 +1,249 @@
 <?php
 
 declare(strict_types=1);
+
+use Application\Model\Productor;
+use Application\Model\ProductorDireccion;
+use Application\Model\ProductorFinca;
+
 require __DIR__ . '/bootstrap.php';
 
-$id = test_document();
-$normalizado = str_replace('-', '', $id);
-$productorId = -random_int(3000000, 3999999);
-$a = test_new_db();
-$b = test_new_db();
-$lockName = 'tindercows_productor_alta';
-try {
-    $insert = 'INSERT INTO tbproductor
-        (tbproductorId,tbproductorIdentificacionNumero,tbproductorIdentificacionTipo,tbproductorNombre,
-         tbproductorTelefono,tbproductorCorreoElectronico,tbproductorEstado)
-        VALUES (:productorId,:identificacion,\'PASAPORTE\',:nombre,\'88887777\',:correo,1)';
-    $a->prepare($insert)->execute([
-        'productorId' => $productorId,
-        'identificacion' => $normalizado,
-        'nombre' => 'Concurrente A',
-        'correo' => 'a@example.test',
-    ]);
-    $b->prepare($insert)->execute([
-        'productorId' => $productorId,
-        'identificacion' => $normalizado,
-        'nombre' => 'Concurrente B',
-        'correo' => 'b@example.test',
-    ]);
-    $count = $a->prepare('SELECT COUNT(*) FROM tbproductor
-        WHERE tbproductorId = :productorId AND tbproductorIdentificacionNumero = :identificacion');
-    $count->execute(['productorId' => $productorId, 'identificacion' => $normalizado]);
-    test_same(2, (int) $count->fetchColumn(), 'MySQL debe carecer de PK y UNIQUE, por lo que SQL directo acepta duplicados');
-
-    $lockA = $a->prepare('SELECT GET_LOCK(:lockName, 0)');
-    $lockB = $b->prepare('SELECT GET_LOCK(:lockName, 0)');
-    $lockA->execute(['lockName' => $lockName]);
-    test_same(1, (int) $lockA->fetchColumn(), 'La primera conexión adquiere el bloqueo de alta');
-    $lockB->execute(['lockName' => $lockName]);
-    test_same(0, (int) $lockB->fetchColumn(), 'La segunda conexión no puede calcular el consecutivo al mismo tiempo');
-    $a->prepare('SELECT RELEASE_LOCK(:lockName)')->execute(['lockName' => $lockName]);
-    $lockB->execute(['lockName' => $lockName]);
-    test_same(1, (int) $lockB->fetchColumn(), 'La segunda conexión adquiere el bloqueo después de liberarlo');
-} finally {
-    try {
-        $a->prepare('SELECT RELEASE_LOCK(:lockName)')->execute(['lockName' => $lockName]);
-        $b->prepare('SELECT RELEASE_LOCK(:lockName)')->execute(['lockName' => $lockName]);
-    } catch (Throwable) {
-    }
-    test_cleanup_productores([$normalizado]);
+function concurrency_try_lock(PDO $db, string $name): int
+{
+    $statement = $db->prepare('SELECT GET_LOCK(:name, 0)');
+    $statement->execute(['name' => $name]);
+    return (int) $statement->fetchColumn();
 }
 
-echo "OK concurrency_test: MySQL permite duplicados y PHP serializa el consecutivo con GET_LOCK.\n";
+function concurrency_release_lock(PDO $db, string $name): void
+{
+    $statement = $db->prepare('SELECT RELEASE_LOCK(:name)');
+    $statement->execute(['name' => $name]);
+}
+
+function concurrency_count(PDO $db, string $table, string $column, int|string $value): int
+{
+    $statement = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE {$column} = :value");
+    $statement->execute(['value' => $value]);
+    return (int) $statement->fetchColumn();
+}
+
+function concurrency_id(PDO $db, string $table, string $idColumn, int $productorId): int
+{
+    $statement = $db->prepare(
+        "SELECT {$idColumn} FROM {$table} WHERE tbproductorId = :productorId ORDER BY {$idColumn} DESC LIMIT 1"
+    );
+    $statement->execute(['productorId' => $productorId]);
+    return (int) $statement->fetchColumn();
+}
+
+function concurrency_productor_data(string $identification, string $suffix): array
+{
+    return [
+        'identificacionNumero' => $identification,
+        'identificacionTipo' => 'PASAPORTE',
+        'nombre' => "Concurrente {$suffix}",
+        'telefono' => '88887777',
+        'correoElectronico' => strtolower($suffix) . '@example.test',
+    ];
+}
+
+function concurrency_assert_commit_before_release(
+    object $modelA,
+    PDO $a,
+    PDO $b,
+    string $lockName,
+    callable $insertA,
+    callable $visibleFromB,
+): int {
+    $idA = $modelA->ejecutarConBloqueoAlta(function () use (
+        $a,
+        $b,
+        $lockName,
+        $insertA,
+        $visibleFromB,
+    ): int {
+        $a->beginTransaction();
+        try {
+            $id = $insertA();
+            test_same(0, concurrency_try_lock($b, $lockName), 'B no obtiene el bloqueo antes del COMMIT de A');
+            test_same(0, $visibleFromB(), 'B no observa la inserción sin confirmar de A');
+            $a->commit();
+            test_same(1, $visibleFromB(), 'B observa la inserción después del COMMIT de A');
+            test_same(0, concurrency_try_lock($b, $lockName),
+                'A conserva el bloqueo después del COMMIT y antes de salir del wrapper');
+            return $id;
+        } catch (Throwable $exception) {
+            if ($a->inTransaction()) {
+                $a->rollBack();
+            }
+            throw $exception;
+        }
+    });
+
+    test_same(1, concurrency_try_lock($b, $lockName), 'B obtiene el bloqueo después de que A lo libera');
+    concurrency_release_lock($b, $lockName);
+    return $idA;
+}
+
+$a = test_new_db();
+$b = test_new_db();
+$identificationA = test_document();
+$identificationB = test_document();
+$directionProductorIds = [-random_int(3000000, 3999999), -random_int(4000000, 4999999)];
+$farmProductorIds = [-random_int(5000000, 5999999), -random_int(6000000, 6999999)];
+$lockNames = [
+    Productor::class => 'tindercows_productor_alta',
+    ProductorDireccion::class => 'tindercows_direccion_alta',
+    ProductorFinca::class => 'tindercows_finca_alta',
+];
+
+$farmsA = new ProductorFinca($a);
+$farmsB = new ProductorFinca($b);
+$productorA = new Productor($a, $farmsA);
+$productorB = new Productor($b, $farmsB);
+$directionA = new ProductorDireccion($a);
+$directionB = new ProductorDireccion($b);
+
+try {
+    foreach (array_keys($lockNames) as $class) {
+        foreach (['ejecutarConBloqueoAlta' => true, 'adquirirBloqueoAlta' => false,
+                  'liberarBloqueoAlta' => false, 'siguienteId' => false] as $method => $public) {
+            $reflection = new ReflectionMethod($class, $method);
+            test_same($public, $reflection->isPublic(), "Visibilidad incorrecta de {$class}::{$method}");
+            test_same(!$public, $reflection->isPrivate(), "Encapsulación incorrecta de {$class}::{$method}");
+        }
+    }
+
+    $productorIdA = concurrency_assert_commit_before_release(
+        $productorA,
+        $a,
+        $b,
+        $lockNames[Productor::class],
+        fn (): int => $productorA->crear(concurrency_productor_data($identificationA, 'A')),
+        fn (): int => concurrency_count(
+            $b,
+            'tbproductor',
+            'tbproductorIdentificacionNumero',
+            $identificationA,
+        ),
+    );
+    $productorIdB = $productorB->ejecutarConBloqueoAlta(function () use (
+        $b,
+        $productorB,
+        $identificationB,
+    ): int {
+        $b->beginTransaction();
+        try {
+            $id = $productorB->crear(concurrency_productor_data($identificationB, 'B'));
+            $b->commit();
+            return $id;
+        } catch (Throwable $exception) {
+            if ($b->inTransaction()) {
+                $b->rollBack();
+            }
+            throw $exception;
+        }
+    });
+    test_same($productorIdA + 1, $productorIdB, 'B calcula tbproductorId como el ID confirmado de A + 1');
+
+    $directionIdA = concurrency_assert_commit_before_release(
+        $directionA,
+        $a,
+        $b,
+        $lockNames[ProductorDireccion::class],
+        function () use ($directionA, $directionProductorIds, $a): int {
+            $directionA->crearVacia($directionProductorIds[0]);
+            return concurrency_id($a, 'tbproductordireccion', 'tbproductordireccionId', $directionProductorIds[0]);
+        },
+        fn (): int => concurrency_count($b, 'tbproductordireccion', 'tbproductorId', $directionProductorIds[0]),
+    );
+    $directionIdB = $directionB->ejecutarConBloqueoAlta(function () use (
+        $b,
+        $directionB,
+        $directionProductorIds,
+    ): int {
+        $b->beginTransaction();
+        try {
+            $directionB->crearVacia($directionProductorIds[1]);
+            $id = concurrency_id($b, 'tbproductordireccion', 'tbproductordireccionId', $directionProductorIds[1]);
+            $b->commit();
+            return $id;
+        } catch (Throwable $exception) {
+            if ($b->inTransaction()) {
+                $b->rollBack();
+            }
+            throw $exception;
+        }
+    });
+    test_same($directionIdA + 1, $directionIdB,
+        'B calcula tbproductordireccionId como el ID confirmado de A + 1');
+
+    $farmIdA = concurrency_assert_commit_before_release(
+        $farmsA,
+        $a,
+        $b,
+        $lockNames[ProductorFinca::class],
+        function () use ($farmsA, $farmProductorIds, $a): int {
+            $farmsA->sincronizar($farmProductorIds[0], ['Finca Concurrente A']);
+            return concurrency_id($a, 'tbproductorfinca', 'tbproductorfincaId', $farmProductorIds[0]);
+        },
+        fn (): int => concurrency_count($b, 'tbproductorfinca', 'tbproductorId', $farmProductorIds[0]),
+    );
+    $farmIdB = $farmsB->ejecutarConBloqueoAlta(function () use ($b, $farmsB, $farmProductorIds): int {
+        $b->beginTransaction();
+        try {
+            $farmsB->sincronizar($farmProductorIds[1], ['Finca Concurrente B']);
+            $id = concurrency_id($b, 'tbproductorfinca', 'tbproductorfincaId', $farmProductorIds[1]);
+            $b->commit();
+            return $id;
+        } catch (Throwable $exception) {
+            if ($b->inTransaction()) {
+                $b->rollBack();
+            }
+            throw $exception;
+        }
+    });
+    test_same($farmIdA + 1, $farmIdB, 'B calcula tbproductorfincaId como el ID confirmado de A + 1');
+
+    foreach ([
+        [$productorA, $lockNames[Productor::class]],
+        [$directionA, $lockNames[ProductorDireccion::class]],
+        [$farmsA, $lockNames[ProductorFinca::class]],
+    ] as [$model, $lockName]) {
+        $token = test_token('lock_exception');
+        try {
+            $model->ejecutarConBloqueoAlta(function () use ($b, $lockName, $token): never {
+                test_same(0, concurrency_try_lock($b, $lockName), 'El bloqueo está retenido dentro del callable');
+                throw new RuntimeException($token);
+            });
+            throw new RuntimeException('El wrapper debía propagar la excepción del callable.');
+        } catch (RuntimeException $exception) {
+            test_same($token, $exception->getMessage(), 'El wrapper conserva la excepción original');
+        }
+        test_same(1, concurrency_try_lock($b, $lockName), 'El finally libera el bloqueo ante una excepción');
+        concurrency_release_lock($b, $lockName);
+        test_same($token, $model->ejecutarConBloqueoAlta(fn (): string => $token),
+            'El wrapper devuelve el resultado mixed del callable');
+    }
+} finally {
+    if ($a->inTransaction()) {
+        $a->rollBack();
+    }
+    if ($b->inTransaction()) {
+        $b->rollBack();
+    }
+    foreach (array_values($lockNames) as $lockName) {
+        try {
+            concurrency_release_lock($a, $lockName);
+            concurrency_release_lock($b, $lockName);
+        } catch (Throwable) {
+        }
+    }
+    $cleanup = test_db();
+    $cleanup->prepare('DELETE FROM tbproductordireccion WHERE tbproductorId IN (?, ?)')->execute($directionProductorIds);
+    $cleanup->prepare('DELETE FROM tbproductorfinca WHERE tbproductorId IN (?, ?)')->execute($farmProductorIds);
+    test_cleanup_productores([$identificationA, $identificationB]);
+}
+
+echo "OK concurrency_test: los tres consecutivos retienen GET_LOCK hasta después de COMMIT y liberan en finally.\n";
