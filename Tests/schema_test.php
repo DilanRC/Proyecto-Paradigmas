@@ -58,10 +58,10 @@ foreach ($indexes as $index) {
 $expectedColumns = [
     'tbproductor' => ['tbproductorId', 'tbproductorIdentificacionNumero', 'tbproductorIdentificacionTipo',
         'tbproductorNombre', 'tbproductorTelefono', 'tbproductorCorreoElectronico', 'tbproductorEstado'],
-    'tbproductordireccion' => ['tbproductorId', 'tbproductordireccionProvincia',
+    'tbproductordireccion' => ['tbproductordireccionId', 'tbproductorId', 'tbproductordireccionProvincia',
         'tbproductordireccionCanton', 'tbproductordireccionDistrito', 'tbproductordireccionPueblo',
         'tbproductordireccionSenas'],
-    'tbproductorfinca' => ['tbproductorId', 'tbproductorfincaNombre', 'tbproductorfincaEstado'],
+    'tbproductorfinca' => ['tbproductorfincaId', 'tbproductorId', 'tbproductorfincaNombre', 'tbproductorfincaEstado'],
     'tbbitacora' => ['tbbitacoraId', 'tbbitacoraEntidad', 'tbbitacoraRegistroIdentificacionNumero',
         'tbbitacoraAccion', 'tbbitacoraFecha', 'tbbitacoraDatosAnteriores', 'tbbitacoraDatosNuevos',
         'tbbitacoraActorTipo', 'tbbitacoraUsuarioId', 'tbbitacoraOrigen', 'tbbitacoraSolicitudId'],
@@ -73,17 +73,39 @@ foreach ($expectedColumns as $table => $expected) {
     test_same($expected, $statement->fetchAll(PDO::FETCH_COLUMN), "Columnas inesperadas en {$table}");
 }
 
-$apiIds = [test_document(), test_document()];
+$apiIds = [test_document(), test_document(), test_document()];
 $directIdentification = test_document();
 $directProductorIds = [-random_int(100000, 999999), -random_int(1000000, 1999999)];
 $orphanId = -random_int(2000000, 2999999);
 try {
     $first = test_create([], $apiIds[0]);
     $second = test_create([], $apiIds[1]);
+    $third = test_create(['fincas' => ['Finca Norte', 'Finca Sur']], $apiIds[2]);
     test_same($first['productorId'] + 1, $second['productorId'],
         'PHP debe calcular el siguiente tbproductorId bajo el bloqueo de alta');
     test_same(409, test_controller()->procesar('POST', [], test_payload($apiIds[0]))['status'],
         'La aplicación debe rechazar una identificación repetida aunque MySQL no tenga claves');
+
+    // Cada dirección conserva su propio tbproductordireccionId, distinto del de otros productores,
+    // y sigue relacionada mediante tbproductorId (una sola fila por productor).
+    $direccionId = $db->prepare('SELECT tbproductordireccionId FROM tbproductordireccion WHERE tbproductorId = :id');
+    $direccionId->execute(['id' => $first['productorId']]);
+    $idDireccion1 = (int) $direccionId->fetchColumn();
+    $direccionId->execute(['id' => $second['productorId']]);
+    $idDireccion2 = (int) $direccionId->fetchColumn();
+    test_assert($idDireccion1 > 0 && $idDireccion2 > 0 && $idDireccion1 !== $idDireccion2,
+        'Cada dirección debe generar su propio tbproductordireccionId, distinto entre productores');
+    $direccionesPorProductor = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :id');
+    $direccionesPorProductor->execute(['id' => $first['productorId']]);
+    test_same(1, (int) $direccionesPorProductor->fetchColumn(), 'Cada productor conserva exactamente una dirección');
+
+    // Cada finca conserva su propio tbproductorfincaId y queda relacionada mediante tbproductorId.
+    $fincasCreadas = $db->prepare('SELECT tbproductorfincaId FROM tbproductorfinca
+        WHERE tbproductorId = :id ORDER BY tbproductorfincaId');
+    $fincasCreadas->execute(['id' => $third['productorId']]);
+    $idsFincas = array_map('intval', $fincasCreadas->fetchAll(PDO::FETCH_COLUMN));
+    test_same(2, count($idsFincas), 'Deben crearse dos fincas con su propio identificador');
+    test_assert($idsFincas[0] !== $idsFincas[1], 'Las fincas de un mismo productor deben tener IDs distintos entre sí');
 
     $directInsert = $db->prepare("INSERT INTO tbproductor
         (tbproductorId,tbproductorIdentificacionNumero,tbproductorIdentificacionTipo,tbproductorNombre,
@@ -97,11 +119,12 @@ try {
     test_same(2, (int) $directCount->fetchColumn(), 'Sin PK, UNIQUE ni CHECK, SQL directo acepta duplicados y dominio inválido');
 
     $db->prepare("INSERT INTO tbproductordireccion
-        (tbproductorId,tbproductordireccionProvincia,tbproductordireccionCanton,tbproductordireccionDistrito)
-        VALUES (:id,'X','X','X')")->execute(['id' => $orphanId]);
+        (tbproductordireccionId,tbproductorId,tbproductordireccionProvincia,
+         tbproductordireccionCanton,tbproductordireccionDistrito)
+        VALUES (:direccionId,:id,'X','X','X')")->execute(['direccionId' => $orphanId, 'id' => $orphanId]);
     $db->prepare("INSERT INTO tbproductorfinca
-        (tbproductorId,tbproductorfincaNombre,tbproductorfincaEstado)
-        VALUES (:id,'Finca sin productor',1)")->execute(['id' => $orphanId]);
+        (tbproductorfincaId,tbproductorId,tbproductorfincaNombre,tbproductorfincaEstado)
+        VALUES (:fincaId,:id,'Finca sin productor',1)")->execute(['fincaId' => $orphanId, 'id' => $orphanId]);
     foreach (['tbproductordireccion', 'tbproductorfinca'] as $table) {
         $orphanCount = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE tbproductorId = :id");
         $orphanCount->execute(['id' => $orphanId]);

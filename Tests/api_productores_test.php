@@ -21,7 +21,7 @@ try {
     $actualizadoPayload = test_payload($visible, [
         'telefono' => '+506 2222-3333',
         'correoElectronico' => 'actualizado@example.test',
-        'direccionPrincipal' => ['provincia' => 'Heredia'],
+        'direccionPrincipal' => test_direccion_payload(['provincia' => 'Heredia']),
         'fincas' => [['nombre' => 'Finca Tres']],
     ]);
     $actualizadoPayload['identificacionNumeroOriginal'] = $creado['identificacionNumero'];

@@ -2,6 +2,7 @@ USE dbtindercows;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tbproductordireccion (
+    tbproductordireccionId INT NOT NULL,
     tbproductorId INT NOT NULL,
     tbproductordireccionProvincia VARCHAR(100) NOT NULL,
     tbproductordireccionCanton VARCHAR(100) NOT NULL,
