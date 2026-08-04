@@ -14,7 +14,10 @@
             <span class="brand__icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 12 6 7c-1 7 2 10 7 11m22-6 7-5c1 7-2 10-7 11"/><path d="M11 24c0-10 5-16 13-16s13 6 13 16v7c0 7-5 11-13 11S11 38 11 31Z"/><path d="M16 29c0-4 3-6 8-6s8 2 8 6-3 7-8 7-8-3-8-7Z"/><circle cx="18" cy="20" r="2"/><circle cx="30" cy="20" r="2"/><circle cx="21" cy="29" r="1.5"/><circle cx="27" cy="29" r="1.5"/></svg></span>
             <span>Tinder<strong>Cows</strong></span>
         </a>
-        <span class="top-bar__module">Módulo de productores</span>
+        <nav class="top-bar__nav">
+            <span class="top-bar__module">Módulo de productores</span>
+            <a class="top-bar__link" href="./">Inicio</a>
+        </nav>
     </header>
 
     <main class="container">
