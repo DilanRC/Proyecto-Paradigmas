@@ -9,7 +9,7 @@ MySQL y sentencias preparadas en PHP.
 
 ## Modelo vigente
 
-La base continúa llamándose `dbtindercows` para facilitar la migración y
+La base se llama `dbtindervacas` y
 conserva exactamente cuatro tablas:
 
 - `tbproductor`;

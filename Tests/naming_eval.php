@@ -25,7 +25,7 @@ $evaluate('tabla_finca', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfin
     && !str_contains($schema, 'tbproductorfinca'), 'La finca usa la tabla tbfinca solicitada');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
-$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindercows')
+$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindervacas')
     && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 5,
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
@@ -47,7 +47,7 @@ $evaluate('decision_docente', str_contains($docs, 'instrucción docente') && str
 $evaluate('protocolo_identificacion', str_contains($docs, 'desactivar el registro incorrecto')
     && str_contains($docs, 'conservar su bitácora') && str_contains($docs, 'crear el registro correcto'),
     'La corrección de identificación conserva la trazabilidad');
-$evaluate('readme_operativo', str_contains($readme, 'dbtindercows') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
+$evaluate('readme_operativo', str_contains($readme, 'dbtindervacas') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
 $evaluate('pdf_obligatorios', count(array_filter(['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'],
     fn (string $pdf): bool => is_file("{$root}/Documentation/{$pdf}") && filesize("{$root}/Documentation/{$pdf}") > 1000)) === 3,
     'Existen los tres PDF de la entrega');

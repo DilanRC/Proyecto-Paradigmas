@@ -2,7 +2,7 @@
 
 ## DEC-C04-001 - Instrucción docente vigente
 
-La instrucción docente sustituye el modelo anterior. `dbtindercows` conserva
+La instrucción docente sustituye el modelo anterior. `dbtindervacas` conserva
 cuatro tablas: `tbproductor`, `tbproductordireccion`, `tbfinca` y
 `tbbitacora`.
 
