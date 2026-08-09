@@ -1,0 +1,25 @@
+<?php
+
+declare(strict_types=1);
+
+$root = dirname(__DIR__);
+$schema = file_get_contents("{$root}/schema.sql");
+$migration = file_get_contents("{$root}/migrate.php");
+$entrypoint = file_get_contents(dirname(__DIR__, 3) . '/docker/apache/container-entrypoint.sh');
+$checks = [
+    'cuatro_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 4,
+    'incluye_tbfinca' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbfinca'),
+    'sin_automatismos' => !preg_match('/PRIMARY KEY|FOREIGN KEY|DEFAULT |CREATE INDEX|UNIQUE/', $schema),
+    'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 4,
+    'migracion_serializada' => str_contains($migration, 'pg_advisory_xact_lock'),
+    'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),
+    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready'),
+    'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
+    'arranque_vercel' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
+];
+$score = (int) round(100 * count(array_filter($checks)) / count($checks));
+echo json_encode(['eval' => 'supabase_database_schema', 'score' => $score, 'threshold' => 100,
+    'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
+if ($score < 100) {
+    exit(1);
+}

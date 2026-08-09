@@ -1,8 +1,8 @@
 FROM php:8.3-apache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libonig-dev \
-    && docker-php-ext-install pdo_mysql mbstring \
+    && apt-get install -y --no-install-recommends libonig-dev libpq-dev \
+    && docker-php-ext-install pdo_mysql pdo_pgsql mbstring \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
@@ -12,6 +12,7 @@ COPY docker/apache/container-entrypoint.sh /usr/local/bin/tindercows-entrypoint
 COPY Application /var/www/html/Application
 COPY Configuration /var/www/html/Configuration
 COPY Public /var/www/html/Public
+COPY services/supabase-database /var/www/html/services/supabase-database
 
 RUN chmod 0555 /usr/local/bin/tindercows-entrypoint
 

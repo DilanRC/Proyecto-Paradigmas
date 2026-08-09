@@ -11,3 +11,6 @@ node_modules/
 Database/Backups/*.sql
 !Database/Backups/.gitkeep
 graphify-out/
+.vercel/
+.env.local
+.env.production.local
