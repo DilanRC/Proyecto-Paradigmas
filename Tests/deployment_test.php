@@ -17,12 +17,17 @@ foreach ([$dockerfile, $vercelDockerfile] as $definition) {
         'La imagen debe incluir la configuración');
     test_assert(str_contains($definition, 'COPY Public /var/www/html/Public'),
         'La imagen debe incluir el document root');
+    test_assert(str_contains($definition, 'pdo_pgsql'), 'La imagen debe incluir el controlador PostgreSQL');
+    test_assert(str_contains($definition, 'COPY services/supabase-database'),
+        'La imagen debe incluir la migración Supabase');
     test_assert(str_contains($definition, 'CMD ["tindercows-entrypoint"]'),
         'La imagen debe iniciar mediante el adaptador de puerto');
 }
 
 test_assert(str_contains($entrypoint, '${PORT:-80}'), 'El contenedor debe respetar PORT y usar 80 localmente');
 test_assert(str_contains($entrypoint, 'exec apache2-foreground'), 'Apache debe quedar como proceso principal');
+test_assert(str_contains($entrypoint, 'services/supabase-database/migrate.php'),
+    'El arranque debe validar el esquema Supabase');
 test_assert(str_contains($fincaSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
     'El esquema debe crear tbfinca de forma idempotente');
 

@@ -13,6 +13,7 @@ $checks = [
     'imagen_vercel_detectable' => str_contains($vercelDockerfile, 'FROM php:8.3-apache'),
     'puerto_vercel' => str_contains($entrypoint, '${PORT:-80}'),
     'apache_proceso_principal' => str_contains($entrypoint, 'exec apache2-foreground'),
+    'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'procedimiento_tbfinca' => str_contains($readme, 'Aplicar `tbfinca` a una base existente'),
     'verificacion_dominio' => str_contains($readme, 'curl -fsS https://tindervacas.dpdns.org/'),
 ];

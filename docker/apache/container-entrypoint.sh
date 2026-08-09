@@ -13,6 +13,10 @@ if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
     exit 64
 fi
 
+if [ -n "${POSTGRES_URL:-}${POSTGRES_URL_NON_POOLING:-}" ]; then
+    php /var/www/html/services/supabase-database/migrate.php
+fi
+
 sed -i "s/^Listen .*/Listen ${port}/" /etc/apache2/ports.conf
 sed -i "s/<VirtualHost \*:[0-9]*>/<VirtualHost *:${port}>/" /etc/apache2/sites-available/000-default.conf
 

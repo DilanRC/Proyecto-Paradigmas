@@ -15,6 +15,8 @@ docker compose exec -T app php Tests/concurrency_eval.php
 docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
 node Tests/ui_test.js
+php services/supabase-database/tests/schema_test.php
+php services/supabase-database/evals/schema_eval.php
 ```
 
 Las pruebas generan identificaciones aleatorias y limpian únicamente sus filas.

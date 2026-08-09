@@ -95,6 +95,12 @@ desplegar `main`, se debe asociar `tindervacas.dpdns.org` al proyecto y comproba
 curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 ```
 
+Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
+antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
+La migración crea `tbproductor`, `tbproductordireccion`, `tbfinca` y
+`tbbitacora`, habilita RLS sin políticas públicas y valida las columnas. El log
+`supabase_schema_status=ready tables=4 migration=v1` confirma el resultado.
+
 ### Aplicar `tbfinca` a una base existente
 
 Los archivos de `/docker-entrypoint-initdb.d` solo se ejecutan al crear un
@@ -202,6 +208,8 @@ docker compose exec -T app php Tests/deployment_eval.php
 node Tests/ui_test.js
 python3 Tests/documentation_test.py
 cd services/supabase-server && npm test && npm run eval
+php services/supabase-database/tests/schema_test.php
+php services/supabase-database/evals/schema_eval.php
 ```
 
 ## Respaldos
