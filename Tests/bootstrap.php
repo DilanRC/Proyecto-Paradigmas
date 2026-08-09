@@ -8,7 +8,7 @@ use Configuration\Database;
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
-foreach (['ProductorFinca', 'ProductorDireccion', 'Bitacora', 'Productor'] as $testModel) {
+foreach (['NamedLock', 'ProductorFinca', 'ProductorDireccion', 'Bitacora', 'Productor'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
