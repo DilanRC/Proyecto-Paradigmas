@@ -14,6 +14,8 @@ $checks = [
     'imagen_vercel_detectable' => str_contains($vercelDockerfile, 'FROM php:8.3-apache'),
     'puerto_vercel' => str_contains($entrypoint, '${PORT:-80}'),
     'apache_proceso_principal' => str_contains($entrypoint, 'exec apache2-foreground'),
+    'apache_sin_warning_servername' => str_contains($dockerfile, 'a2enconf servername')
+        && str_contains($vercelDockerfile, 'a2enconf servername'),
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
     'procedimiento_tbfinca' => str_contains($readme, 'Aplicar `tbfinca` a una base existente'),

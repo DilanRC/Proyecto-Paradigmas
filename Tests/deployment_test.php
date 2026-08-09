@@ -21,6 +21,8 @@ foreach ([$dockerfile, $vercelDockerfile] as $definition) {
     test_assert(str_contains($definition, 'pdo_pgsql'), 'La imagen debe incluir el controlador PostgreSQL');
     test_assert(str_contains($definition, 'COPY services/supabase-database'),
         'La imagen debe incluir la migración Supabase');
+    test_assert(str_contains($definition, 'a2enconf servername'),
+        'Apache debe tener ServerName global para evitar advertencias operativas');
     test_assert(str_contains($definition, 'CMD ["tindercows-entrypoint"]'),
         'La imagen debe iniciar mediante el adaptador de puerto');
 }

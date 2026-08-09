@@ -7,6 +7,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY docker/apache/servername.conf /etc/apache2/conf-available/servername.conf
 COPY docker/apache/container-entrypoint.sh /usr/local/bin/tindercows-entrypoint
 
 COPY Application /var/www/html/Application
@@ -14,7 +15,8 @@ COPY Configuration /var/www/html/Configuration
 COPY Public /var/www/html/Public
 COPY services/supabase-database /var/www/html/services/supabase-database
 
-RUN chmod 0555 /usr/local/bin/tindercows-entrypoint
+RUN a2enconf servername \
+    && chmod 0555 /usr/local/bin/tindercows-entrypoint
 
 WORKDIR /var/www/html
 
