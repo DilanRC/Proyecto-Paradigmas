@@ -7,6 +7,7 @@ $dockerfile = file_get_contents("{$root}/Dockerfile");
 $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
 $readme = file_get_contents("{$root}/README.md");
+$vercelConfiguration = file_get_contents("{$root}/vercel.json");
 
 $checks = [
     'imagen_compose_autocontenida' => str_contains($dockerfile, 'COPY Public /var/www/html/Public'),
@@ -14,6 +15,7 @@ $checks = [
     'puerto_vercel' => str_contains($entrypoint, '${PORT:-80}'),
     'apache_proceso_principal' => str_contains($entrypoint, 'exec apache2-foreground'),
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
+    'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
     'procedimiento_tbfinca' => str_contains($readme, 'Aplicar `tbfinca` a una base existente'),
     'verificacion_dominio' => str_contains($readme, 'curl -fsS https://tindervacas.dpdns.org/'),
 ];

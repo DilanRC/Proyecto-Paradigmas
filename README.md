@@ -78,7 +78,8 @@ administrativa que la necesite.
 
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
-aplicación PHP y adapta Apache al puerto indicado por `PORT`.
+aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
+declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
 
 ```bash
 docker build -t tindercows:local .
