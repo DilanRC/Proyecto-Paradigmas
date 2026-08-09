@@ -10,8 +10,8 @@ try {
     $ids[] = $creado['identificacionNumero'];
     test_same(str_replace('-', '', $visible), $creado['identificacionNumero'], 'La identificación debe almacenarse canónica');
     test_assert(is_int($creado['productorId']) && $creado['productorId'] > 0,
-        'PHP debe asignar tbproductorId sin AUTO_INCREMENT en MySQL');
-    test_same(2, count($creado['fincas']), 'Debe admitir varias fincas sin tbfinca');
+        'PHP debe asignar tbproductorid sin AUTO_INCREMENT en MySQL');
+    test_same(2, count($creado['fincas']), 'Debe admitir varias fincas en tbfinca');
 
     $consulta = test_controller()->procesar('GET', ['identificacionNumero' => $visible], []);
     test_same(200, $consulta['status'], 'Consulta por identificación');
@@ -32,8 +32,8 @@ try {
 
     $repetido = test_controller()->procesar('PUT', [], $actualizadoPayload);
     test_same(200, $repetido['status'], 'PUT repetido debe ser idempotente');
-    $conteoFincas = test_db()->prepare('SELECT COUNT(*) FROM tbproductorfinca
-        WHERE tbproductorId = :id');
+    $conteoFincas = test_db()->prepare('SELECT COUNT(*) FROM tbfinca
+        WHERE tbproductorid = :id');
     $conteoFincas->execute(['id' => $creado['productorId']]);
     test_same(3, (int) $conteoFincas->fetchColumn(), 'PUT repetido no debe duplicar fincas sin depender de una PK compuesta');
 
@@ -49,8 +49,8 @@ try {
         'La misma finca no puede repetirse para un productor');
 
     $physicalCounts = [];
-    foreach (['tbproductor', 'tbproductordireccion', 'tbproductorfinca'] as $tabla) {
-        $columna = $tabla === 'tbproductor' ? 'tbproductorIdentificacionNumero' : 'tbproductorId';
+    foreach (['tbproductor', 'tbproductordireccion', 'tbfinca'] as $tabla) {
+        $columna = $tabla === 'tbproductor' ? 'tbproductoridentificacionnumero' : 'tbproductorid';
         $valor = $tabla === 'tbproductor' ? $creado['identificacionNumero'] : $creado['productorId'];
         $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE {$columna} = :valor");
         $statement->execute(['valor' => $valor]);
@@ -58,8 +58,8 @@ try {
     }
     $desactivado = test_controller()->procesar('DELETE', [], ['identificacionNumero' => $visible]);
     test_same('INACTIVO', $desactivado['body']['data']['estado'], 'Desactivación lógica');
-    foreach (['tbproductor', 'tbproductordireccion', 'tbproductorfinca'] as $tabla) {
-        $columna = $tabla === 'tbproductor' ? 'tbproductorIdentificacionNumero' : 'tbproductorId';
+    foreach (['tbproductor', 'tbproductordireccion', 'tbfinca'] as $tabla) {
+        $columna = $tabla === 'tbproductor' ? 'tbproductoridentificacionnumero' : 'tbproductorid';
         $valor = $tabla === 'tbproductor' ? $creado['identificacionNumero'] : $creado['productorId'];
         $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE {$columna} = :valor");
         $statement->execute(['valor' => $valor]);
@@ -74,7 +74,7 @@ try {
     test_same($creado['identificacionNumero'], $reactivado['body']['data']['identificacionNumero'],
         'La reactivación debe conservar la identificación');
     foreach ($physicalCounts as $tabla => $expectedCount) {
-        $columna = $tabla === 'tbproductor' ? 'tbproductorIdentificacionNumero' : 'tbproductorId';
+        $columna = $tabla === 'tbproductor' ? 'tbproductoridentificacionnumero' : 'tbproductorid';
         $valor = $tabla === 'tbproductor' ? $creado['identificacionNumero'] : $creado['productorId'];
         $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE {$columna} = :valor");
         $statement->execute(['valor' => $valor]);

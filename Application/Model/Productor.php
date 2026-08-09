@@ -21,15 +21,15 @@ final class Productor
         $conteo->execute($parametros);
         $total = (int) $conteo->fetchColumn();
 
-        $sql = "SELECT p.*, d.tbproductordireccionProvincia, d.tbproductordireccionCanton,
-                       d.tbproductordireccionDistrito, d.tbproductordireccionPueblo,
-                       d.tbproductordireccionSenas
+        $sql = "SELECT p.*, d.tbproductordireccionprovincia, d.tbproductordireccioncanton,
+                       d.tbproductordirecciondistrito, d.tbproductordireccionpueblo,
+                       d.tbproductordireccionsenas
                 FROM tbproductor p
                 INNER JOIN tbproductordireccion d
-                    ON d.tbproductorId = p.tbproductorId
+                    ON d.tbproductorid = p.tbproductorid
                 {$where}
-                ORDER BY p.tbproductorEstado DESC, p.tbproductorNombre,
-                         p.tbproductorIdentificacionNumero
+                ORDER BY p.tbproductorestado DESC, p.tbproductornombre,
+                         p.tbproductoridentificacionnumero
                 LIMIT :limite OFFSET :desplazamiento";
         $sentencia = $this->conexion->prepare($sql);
         foreach ($parametros as $nombre => $valor) {
@@ -39,11 +39,11 @@ final class Productor
         $sentencia->bindValue(':desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
         $sentencia->execute();
         $filas = $sentencia->fetchAll();
-        $porProductor = $this->fincas->listarPorProductores(array_map('intval', array_column($filas, 'tbproductorId')));
+        $porProductor = $this->fincas->listarPorProductores(array_map('intval', array_column($filas, 'tbproductorid')));
 
         return [
             'productores' => array_map(
-                fn (array $fila): array => $this->mapear($fila, $porProductor[(int) $fila['tbproductorId']] ?? []),
+                fn (array $fila): array => $this->mapear($fila, $porProductor[(int) $fila['tbproductorid']] ?? []),
                 $filas,
             ),
             'total' => $total,
@@ -53,13 +53,13 @@ final class Productor
     public function buscar(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT p.*, d.tbproductordireccionProvincia, d.tbproductordireccionCanton,
-                    d.tbproductordireccionDistrito, d.tbproductordireccionPueblo,
-                    d.tbproductordireccionSenas
+            'SELECT p.*, d.tbproductordireccionprovincia, d.tbproductordireccioncanton,
+                    d.tbproductordirecciondistrito, d.tbproductordireccionpueblo,
+                    d.tbproductordireccionsenas
              FROM tbproductor p
              INNER JOIN tbproductordireccion d
-                ON d.tbproductorId = p.tbproductorId
-             WHERE p.tbproductorIdentificacionNumero = :identificacionNumero'
+                ON d.tbproductorid = p.tbproductorid
+             WHERE p.tbproductoridentificacionnumero = :identificacionNumero'
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -71,14 +71,14 @@ final class Productor
         }
         $fila = $filas[0];
 
-        return $this->mapear($fila, $this->fincas->listarActivas((int) $fila['tbproductorId']));
+        return $this->mapear($fila, $this->fincas->listarActivas((int) $fila['tbproductorid']));
     }
 
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
             'SELECT * FROM tbproductor
-             WHERE tbproductorIdentificacionNumero = :identificacionNumero FOR UPDATE'
+             WHERE tbproductoridentificacionnumero = :identificacionNumero FOR UPDATE'
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -119,9 +119,9 @@ final class Productor
         $productorId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbproductor
-             (tbproductorId, tbproductorIdentificacionNumero, tbproductorIdentificacionTipo,
-              tbproductorNombre, tbproductorTelefono,
-              tbproductorCorreoElectronico, tbproductorEstado)
+             (tbproductorid, tbproductoridentificacionnumero, tbproductoridentificaciontipo,
+              tbproductornombre, tbproductortelefono,
+              tbproductorcorreoelectronico, tbproductorestado)
              VALUES (:productorId, :identificacionNumero, :identificacionTipo, :nombre, :telefono,
                      :correoElectronico, 1)'
         );
@@ -139,7 +139,7 @@ final class Productor
 
     private function siguienteId(): int
     {
-        $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbproductorId), 0) + 1 FROM tbproductor');
+        $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbproductorid), 0) + 1 FROM tbproductor');
         $sentencia->execute();
 
         return (int) $sentencia->fetchColumn();
@@ -149,11 +149,11 @@ final class Productor
     {
         $sentencia = $this->conexion->prepare(
             'UPDATE tbproductor
-             SET tbproductorIdentificacionTipo = :identificacionTipo,
-                 tbproductorNombre = :nombre,
-                 tbproductorTelefono = :telefono,
-                 tbproductorCorreoElectronico = :correoElectronico
-             WHERE tbproductorIdentificacionNumero = :identificacionNumero'
+             SET tbproductoridentificaciontipo = :identificacionTipo,
+                 tbproductornombre = :nombre,
+                 tbproductortelefono = :telefono,
+                 tbproductorcorreoelectronico = :correoElectronico
+             WHERE tbproductoridentificacionnumero = :identificacionNumero'
         );
         $sentencia->execute([
             'identificacionNumero' => $identificacionNumero,
@@ -167,8 +167,8 @@ final class Productor
     public function cambiarEstado(string $identificacionNumero, bool $activo): void
     {
         $sentencia = $this->conexion->prepare(
-            'UPDATE tbproductor SET tbproductorEstado = :estado
-             WHERE tbproductorIdentificacionNumero = :identificacionNumero'
+            'UPDATE tbproductor SET tbproductorestado = :estado
+             WHERE tbproductoridentificacionnumero = :identificacionNumero'
         );
         $sentencia->execute([
             'estado' => $activo ? 1 : 0,
@@ -181,9 +181,9 @@ final class Productor
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(p.tbproductorNombre LIKE :busquedaNombre
-                OR p.tbproductorCorreoElectronico LIKE :busquedaCorreo
-                OR p.tbproductorIdentificacionNumero LIKE :busquedaIdentificacion)';
+            $condiciones[] = '(p.tbproductornombre LIKE :busquedaNombre
+                OR p.tbproductorcorreoelectronico LIKE :busquedaCorreo
+                OR p.tbproductoridentificacionnumero LIKE :busquedaIdentificacion)';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
                 ':busquedaCorreo' => "%{$busqueda}%",
@@ -191,7 +191,7 @@ final class Productor
             ];
         }
         if ($estado !== 'TODOS') {
-            $condiciones[] = 'p.tbproductorEstado = :estado';
+            $condiciones[] = 'p.tbproductorestado = :estado';
             $parametros[':estado'] = $estado === 'ACTIVO' ? 1 : 0;
         }
 
@@ -201,22 +201,22 @@ final class Productor
     private function mapear(array $fila, array $fincas): array
     {
         return [
-            'productorId' => (int) $fila['tbproductorId'],
-            'identificacionNumero' => $fila['tbproductorIdentificacionNumero'],
+            'productorId' => (int) $fila['tbproductorid'],
+            'identificacionNumero' => $fila['tbproductoridentificacionnumero'],
             'identificacion' => [
-                'tipoCodigo' => $fila['tbproductorIdentificacionTipo'],
-                'numero' => $fila['tbproductorIdentificacionNumero'],
+                'tipoCodigo' => $fila['tbproductoridentificaciontipo'],
+                'numero' => $fila['tbproductoridentificacionnumero'],
             ],
-            'nombre' => $fila['tbproductorNombre'],
-            'telefono' => $fila['tbproductorTelefono'],
-            'correoElectronico' => $fila['tbproductorCorreoElectronico'],
-            'estado' => (int) $fila['tbproductorEstado'] === 1 ? 'ACTIVO' : 'INACTIVO',
+            'nombre' => $fila['tbproductornombre'],
+            'telefono' => $fila['tbproductortelefono'],
+            'correoElectronico' => $fila['tbproductorcorreoelectronico'],
+            'estado' => (int) $fila['tbproductorestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
             'direccionPrincipal' => [
-                'provincia' => $fila['tbproductordireccionProvincia'],
-                'canton' => $fila['tbproductordireccionCanton'],
-                'distrito' => $fila['tbproductordireccionDistrito'],
-                'pueblo' => $fila['tbproductordireccionPueblo'],
-                'senas' => $fila['tbproductordireccionSenas'],
+                'provincia' => $fila['tbproductordireccionprovincia'],
+                'canton' => $fila['tbproductordireccioncanton'],
+                'distrito' => $fila['tbproductordirecciondistrito'],
+                'pueblo' => $fila['tbproductordireccionpueblo'],
+                'senas' => $fila['tbproductordireccionsenas'],
             ],
             'fincas' => $fincas,
         ];

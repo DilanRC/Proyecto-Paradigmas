@@ -117,7 +117,7 @@ docker compose exec -T db sh -c \
 
 if [[ "$INJECT_SCHEMA_DIFFERENCE" == '1' ]]; then
     mysql_query "ALTER TABLE ${PARTS_DATABASE}.tbproductor
-        ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorId IS NOT NULL);" >/dev/null
+        ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorid IS NOT NULL);" >/dev/null
 fi
 
 metadata_diff() {
@@ -224,20 +224,20 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
     fi
     tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE';")"
-    if [[ "$tables_csv" != 'tbbitacora,tbproductor,tbproductordireccion,tbproductorfinca' ]]; then
+    if [[ "$tables_csv" != 'tbbitacora,tbfinca,tbproductor,tbproductordireccion' ]]; then
         echo "Error: ${database} contiene tablas inesperadas: ${tables_csv}." >&2
         exit 1
     fi
     invalid_indexes="$(mysql_query "SELECT COUNT(*) FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = '${database}' AND NON_UNIQUE = 0;")"
+        WHERE TABLE_SCHEMA = '${database}';")"
     if [[ "$invalid_indexes" -ne 0 ]]; then
-        echo "Error: ${database} contiene ${invalid_indexes} índices únicos." >&2
+        echo "Error: ${database} contiene ${invalid_indexes} índices." >&2
         exit 1
     fi
     productor_id_extra="$(mysql_query "SELECT EXTRA FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = '${database}' AND TABLE_NAME = 'tbproductor' AND COLUMN_NAME = 'tbproductorId';")"
+        WHERE TABLE_SCHEMA = '${database}' AND TABLE_NAME = 'tbproductor' AND COLUMN_NAME = 'tbproductorid';")"
     if [[ -n "$productor_id_extra" ]]; then
-        echo "Error: ${database}.tbproductorId usa EXTRA=${productor_id_extra}." >&2
+        echo "Error: ${database}.tbproductorid usa EXTRA=${productor_id_extra}." >&2
         exit 1
     fi
 done
@@ -268,8 +268,8 @@ for table in "${tables[@]}"; do
     fi
 done
 
-mysql_query "SELECT tbproductorId, tbproductorIdentificacionNumero, tbproductorNombre
-    FROM ${RESTORE_DATABASE}.tbproductor ORDER BY tbproductorId LIMIT 1;" >/dev/null
+mysql_query "SELECT tbproductorid, tbproductoridentificacionnumero, tbproductornombre
+    FROM ${RESTORE_DATABASE}.tbproductor ORDER BY tbproductorid LIMIT 1;" >/dev/null
 
 source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
 source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"
@@ -294,7 +294,7 @@ sed \
     -e "s/^- Cantidad de FOREIGN KEY: .*/- Cantidad de FOREIGN KEY: ${source_foreign_keys}/" \
     -e "s/^- Cantidad de CHECK: .*/- Cantidad de CHECK: ${source_check_count}/" \
     -e 's/^- Resultado final: .*/- Resultado final: APROBADO/' \
-    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, índices no únicos, intercalación y conteos sin diferencias.|" \
+    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, cero índices, cero AUTO_INCREMENT, intercalación y conteos sin diferencias.|" \
     "$manifest_file" > "$manifest_temp"
 mv -- "$manifest_temp" "$manifest_file"
 

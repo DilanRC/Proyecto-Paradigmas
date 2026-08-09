@@ -16,20 +16,49 @@ final class Bitacora
     /** @throws JsonException */
     public function registrar(string $accion, string $identificacionNumero, ?array $anteriores, ?array $nuevos, string $solicitudId): void
     {
-        $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbbitacora
-             (tbbitacoraEntidad, tbbitacoraRegistroIdentificacionNumero, tbbitacoraAccion,
-              tbbitacoraDatosAnteriores, tbbitacoraDatosNuevos, tbbitacoraActorTipo,
-              tbbitacoraUsuarioId, tbbitacoraOrigen, tbbitacoraSolicitudId)
-             VALUES (\'PRODUCTOR\', :registroId, :accion, :anteriores, :nuevos,
-                     \'NO_AUTENTICADO\', NULL, \'API_PRODUCTORES\', :solicitudId)'
-        );
-        $sentencia->execute([
-            'registroId' => $identificacionNumero,
-            'accion' => $accion,
-            'anteriores' => $anteriores === null ? null : json_encode($anteriores, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-            'nuevos' => $nuevos === null ? null : json_encode($nuevos, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-            'solicitudId' => $solicitudId,
-        ]);
+        $this->adquirirBloqueoAlta();
+        try {
+            $sentencia = $this->conexion->prepare(
+                'INSERT INTO tbbitacora
+                 (tbbitacoraid, tbbitacoraentidad, tbbitacoraregistroidentificacionnumero, tbbitacoraaccion,
+                  tbbitacoradatosanteriores, tbbitacoradatosnuevos, tbbitacoraactortipo,
+                  tbbitacorausuarioid, tbbitacoraorigen, tbbitacorasolicitudid)
+                 VALUES (:bitacoraId, \'PRODUCTOR\', :registroId, :accion, :anteriores, :nuevos,
+                         \'NO_AUTENTICADO\', NULL, \'API_PRODUCTORES\', :solicitudId)'
+            );
+            $sentencia->execute([
+                'bitacoraId' => $this->siguienteId(),
+                'registroId' => $identificacionNumero,
+                'accion' => $accion,
+                'anteriores' => $anteriores === null ? null : json_encode($anteriores, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                'nuevos' => $nuevos === null ? null : json_encode($nuevos, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                'solicitudId' => $solicitudId,
+            ]);
+        } finally {
+            $this->liberarBloqueoAlta();
+        }
+    }
+
+    private function siguienteId(): int
+    {
+        $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbbitacoraid), 0) + 1 FROM tbbitacora');
+        $sentencia->execute();
+
+        return (int) $sentencia->fetchColumn();
+    }
+
+    private function adquirirBloqueoAlta(): void
+    {
+        $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_bitacora_alta', 10)");
+        $sentencia->execute();
+        if ((int) $sentencia->fetchColumn() !== 1) {
+            throw new \RuntimeException('No fue posible reservar la secuencia de bitácora.');
+        }
+    }
+
+    private function liberarBloqueoAlta(): void
+    {
+        $sentencia = $this->conexion->prepare("SELECT RELEASE_LOCK('tindercows_bitacora_alta')");
+        $sentencia->execute();
     }
 }

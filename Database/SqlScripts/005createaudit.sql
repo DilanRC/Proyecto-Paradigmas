@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacoraaccion VARCHAR(30) NOT NULL,
     tbbitacorafecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     tbbitacoradatosanteriores JSON NULL,
-    tbbitacoraaatosnuevos JSON NULL,
+    tbbitacoradatosnuevos JSON NULL,
     tbbitacoraactortipo VARCHAR(30) NOT NULL,
     tbbitacorausuarioid BIGINT UNSIGNED NULL,
     tbbitacoraorigen VARCHAR(100) NOT NULL,
-    tbbitacorasolicitudid VARCHAR(100) NOT NULL,
+    tbbitacorasolicitudid VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;

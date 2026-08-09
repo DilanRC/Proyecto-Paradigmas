@@ -98,7 +98,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo de datos.' }
 
     if ($InjectSchemaDifference) {
-        Invoke-MySqlQuery "ALTER TABLE $PartsDatabase.tbproductor ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorId IS NOT NULL);" | Out-Null
+        Invoke-MySqlQuery "ALTER TABLE $PartsDatabase.tbproductor ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorid IS NOT NULL);" | Out-Null
     }
     Compare-MySqlMetadata $SourceDatabase $RestoreDatabase 'origen/completo'
     Compare-MySqlMetadata $RestoreDatabase $PartsDatabase 'completo/estructura+datos'
@@ -116,11 +116,11 @@ try {
         $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$database' AND CONSTRAINT_TYPE='CHECK';"
         if ($checkCount -ne '0') { throw "$database contiene $checkCount CHECK." }
         $tablesCsv = Invoke-MySqlQuery "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE';"
-        if ($tablesCsv -ne 'tbbitacora,tbproductor,tbproductordireccion,tbproductorfinca') { throw "$database contiene tablas inesperadas: $tablesCsv." }
-        $uniqueIndexes = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$database' AND NON_UNIQUE=0;"
-        if ($uniqueIndexes -ne '0') { throw "$database contiene $uniqueIndexes índices únicos." }
-        $productorIdExtra = Invoke-MySqlQuery "SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND TABLE_NAME='tbproductor' AND COLUMN_NAME='tbproductorId';"
-        if ($productorIdExtra) { throw "$database.tbproductorId usa EXTRA=$productorIdExtra." }
+        if ($tablesCsv -ne 'tbbitacora,tbfinca,tbproductor,tbproductordireccion') { throw "$database contiene tablas inesperadas: $tablesCsv." }
+        $indexCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$database';"
+        if ($indexCount -ne '0') { throw "$database contiene $indexCount índices." }
+        $productorIdExtra = Invoke-MySqlQuery "SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND TABLE_NAME='tbproductor' AND COLUMN_NAME='tbproductorid';"
+        if ($productorIdExtra) { throw "$database.tbproductorid usa EXTRA=$productorIdExtra." }
     }
 
     $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
@@ -136,7 +136,7 @@ try {
         if ($sourceChecksum -ne $restoreChecksum -or $restoreChecksum -ne $partsChecksum) { throw "Los datos difieren para $table." }
     }
 
-    Invoke-MySqlQuery "SELECT tbproductorId,tbproductorIdentificacionNumero FROM $RestoreDatabase.tbproductor ORDER BY tbproductorId LIMIT 1;" | Out-Null
+    Invoke-MySqlQuery "SELECT tbproductorid,tbproductoridentificacionnumero FROM $RestoreDatabase.tbproductor ORDER BY tbproductorid LIMIT 1;" | Out-Null
     $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
     $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
     $indexCount = Invoke-MySqlQuery "SELECT COUNT(DISTINCT TABLE_NAME,INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
@@ -154,7 +154,7 @@ try {
     $manifest = $manifest -replace '(?m)^- Cantidad de FOREIGN KEY: .*$', "- Cantidad de FOREIGN KEY: $foreignKeyCount"
     $manifest = $manifest -replace '(?m)^- Cantidad de CHECK: .*$', "- Cantidad de CHECK: $checkCount"
     $manifest = $manifest -replace '(?m)^- Resultado final: .*$', '- Resultado final: APROBADO'
-    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', '- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, índices no únicos, intercalación y conteos sin diferencias.'
+    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', '- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, cero índices, cero AUTO_INCREMENT, intercalación y conteos sin diferencias.'
     [IO.File]::WriteAllText($ManifestFile, $manifest, [Text.UTF8Encoding]::new($false))
     Write-Host "Restauración correcta: tablas=$tableCount, restricciones=$constraintCount."
 }

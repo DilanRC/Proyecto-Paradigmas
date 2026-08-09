@@ -4,10 +4,10 @@
 2. **¿Hay PRIMARY KEY?** No, el esquema tiene cero PK.
 3. **¿Hay FOREIGN KEY?** No, las asociaciones son lógicas.
 4. **¿Hay CHECK o UNIQUE?** No existe ninguna de esas restricciones.
-5. **¿Qué es `tbproductorId`?** Un `INT NOT NULL` ordinario.
+5. **¿Qué es `tbproductorid`?** Un `INT NOT NULL` ordinario.
 6. **¿Cómo obtiene su valor?** PHP mantiene un `GET_LOCK`, consulta `MAX(id)+1`, inserta y libera después de finalizar la transacción.
 7. **¿Es AUTO_INCREMENT?** No en MySQL.
-8. **¿Cómo se asocian dirección y finca?** Guardan `tbproductorId` sin FK.
+8. **¿Cómo se asocian dirección y finca?** Guardan `tbproductorid` sin FK.
 9. **¿Cómo se conserva una dirección?** POST crea una y PUT exige exactamente una como política de aplicación.
 10. **¿Cómo se evitan fincas duplicadas?** El modelo consulta, actualiza o inserta mediante sentencias preparadas.
 11. **¿La identificación es una PK?** No. Es inmutable por contrato del CRUD.

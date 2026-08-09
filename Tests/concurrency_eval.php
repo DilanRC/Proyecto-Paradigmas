@@ -53,9 +53,9 @@ $evaluate(
     'crearDireccion() retiene el bloqueo de dirección durante la transacción',
 );
 foreach ([
-    'productor' => 'tbproductorId',
-    'direccion' => 'tbproductordireccionId',
-    'finca' => 'tbproductorfincaId',
+    'productor' => 'tbproductorid',
+    'direccion' => 'tbproductordireccionid',
+    'finca' => 'tbfincaid',
 ] as $model => $id) {
     $evaluate(
         "max_{$model}",

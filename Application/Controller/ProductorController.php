@@ -171,7 +171,7 @@ final class ProductorController
                 if ($bloqueado === null) {
                     throw new ProductorHttpException('Productor no encontrado.', 404);
                 }
-                if ((int) $bloqueado['tbproductorEstado'] !== 1) {
+                if ((int) $bloqueado['tbproductorestado'] !== 1) {
                     throw new ProductorHttpException(
                         'El productor está inactivo. Debe reactivarlo antes de actualizarlo.',
                         409,
@@ -182,7 +182,7 @@ final class ProductorController
                     throw new ProductorHttpException('El productor no conserva su dirección obligatoria.', 409);
                 }
                 $this->productor->actualizar($identificacion, $datos);
-                $productorId = (int) $bloqueado['tbproductorId'];
+                $productorId = (int) $bloqueado['tbproductorid'];
                 $this->direccion->actualizar($productorId, $datos['direccion']);
                 $this->fincas->sincronizar($productorId, $datos['fincas']);
                 $nuevo = $this->productor->buscar($identificacion);
@@ -223,7 +223,7 @@ final class ProductorController
                     if ($bloqueado === null) {
                         throw new ProductorHttpException('Productor no encontrado.', 404);
                     }
-                    $productorId = (int) $bloqueado['tbproductorId'];
+                    $productorId = (int) $bloqueado['tbproductorid'];
                     try {
                         $this->direccion->crear($productorId, $direccion);
                     } catch (\RuntimeException $excepcion) {
@@ -256,7 +256,7 @@ final class ProductorController
             if ($bloqueado === null || $anterior === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbproductorEstado'] === 0) {
+            if ((int) $bloqueado['tbproductorestado'] === 0) {
                 return $anterior;
             }
             $this->productor->cambiarEstado($identificacion, false);
@@ -277,7 +277,7 @@ final class ProductorController
             if ($bloqueado === null || $anterior === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbproductorEstado'] === 1) {
+            if ((int) $bloqueado['tbproductorestado'] === 1) {
                 return $anterior;
             }
             $this->productor->cambiarEstado($identificacion, true);

@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS dbtindervacas
+CREATE DATABASE IF NOT EXISTS dbtindercows
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 

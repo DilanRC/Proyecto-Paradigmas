@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS tbproductordireccion (
     tbproductordireccioncanton VARCHAR(100) NOT NULL,
     tbproductordirecciondistrito VARCHAR(100) NOT NULL,
     tbproductordireccionpueblo VARCHAR(150) NULL,
-    tbproductordireccionseñas VARCHAR(500) NULL,
+    tbproductordireccionsenas VARCHAR(500) NULL
 ) ENGINE=InnoDB;

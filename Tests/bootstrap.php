@@ -140,17 +140,17 @@ function test_cleanup_productores(array $identificaciones): void
     $marcadores = implode(',', array_fill(0, count($ids), '?'));
     $db->beginTransaction();
     try {
-        $buscarProductorIds = $db->prepare("SELECT tbproductorId FROM tbproductor
-            WHERE tbproductorIdentificacionNumero IN ({$marcadores})");
+        $buscarProductorIds = $db->prepare("SELECT tbproductorid FROM tbproductor
+            WHERE tbproductoridentificacionnumero IN ({$marcadores})");
         $buscarProductorIds->execute($ids);
         $productorIds = array_map('intval', $buscarProductorIds->fetchAll(PDO::FETCH_COLUMN));
-        $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraRegistroIdentificacionNumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));
-            $db->prepare("DELETE FROM tbproductorfinca WHERE tbproductorId IN ({$marcadoresProductor})")->execute($productorIds);
-            $db->prepare("DELETE FROM tbproductordireccion WHERE tbproductorId IN ({$marcadoresProductor})")->execute($productorIds);
+            $db->prepare("DELETE FROM tbfinca WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
+            $db->prepare("DELETE FROM tbproductordireccion WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
         }
-        $db->prepare("DELETE FROM tbproductor WHERE tbproductorIdentificacionNumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE FROM tbproductor WHERE tbproductoridentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();
     } catch (Throwable $exception) {
         if ($db->inTransaction()) $db->rollBack();
