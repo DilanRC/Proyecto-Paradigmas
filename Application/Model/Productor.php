@@ -123,7 +123,7 @@ final class Productor
               tbproductornombre, tbproductortelefono,
               tbproductorcorreoelectronico, tbproductorestado)
              VALUES (:productorId, :identificacionNumero, :identificacionTipo, :nombre, :telefono,
-                     :correoElectronico, 1)'
+                     :correoElectronico, :estado)'
         );
         $sentencia->execute([
             'productorId' => $productorId,
@@ -132,6 +132,7 @@ final class Productor
             'nombre' => $datos['nombre'],
             'telefono' => $datos['telefono'],
             'correoElectronico' => $datos['correoElectronico'],
+            'estado' => 1,
         ]);
 
         return $productorId;

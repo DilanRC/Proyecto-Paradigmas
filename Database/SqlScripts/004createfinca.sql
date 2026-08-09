@@ -5,5 +5,5 @@ CREATE TABLE IF NOT EXISTS tbfinca (
     tbfincaid INT NOT NULL,
     tbproductorid INT NOT NULL,
     tbfincanombre VARCHAR(150) NOT NULL,
-    tbfincaestado TINYINT(1) NOT NULL DEFAULT 1
+    tbfincaestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;

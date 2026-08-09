@@ -17,6 +17,11 @@ $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
     && !str_contains($schema, 'CREATE INDEX') && !str_contains($schema, 'UNIQUE'),
     'El esquema no contiene claves, restricciones, índices ni AUTO_INCREMENT');
+$evaluate('sin_logica_motor', !str_contains($schema, 'DEFAULT ')
+    && !str_contains($schema, 'CURRENT_TIMESTAMP') && !str_contains($schema, 'CREATE TRIGGER')
+    && !str_contains($schema, 'CREATE PROCEDURE') && !str_contains($schema, 'CREATE FUNCTION')
+    && !str_contains($schema, 'CREATE EVENT'),
+    'El motor no asigna valores ni ejecuta lógica automática');
 $evaluate('productor_id_php', str_contains($schema, 'tbproductorid INT NOT NULL'),
     'tbproductorid es INT ordinario y el consecutivo pertenece a PHP');
 $evaluate('direccion_politica_aplicacion', !str_contains($schema, 'pk_tbproductordireccion')
@@ -38,6 +43,8 @@ $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
     && !str_contains($models, '->query(') && !str_contains($models, '->exec('),
     'Los modelos usan PDO prepare sin query o exec');
+$evaluate('fecha_bitacora_php', str_contains($models, "'fecha' => gmdate('Y-m-d H:i:s')")
+    && str_contains($models, ':fecha'), 'PHP asigna explícitamente la fecha de bitácora');
 $evaluate('consecutivos_php', str_contains($models, 'MAX(tbproductorid)')
     && str_contains($models, 'MAX(tbbitacoraid)') && str_contains($models, 'GET_LOCK'),
     'PHP calcula y serializa los consecutivos');
@@ -57,6 +64,9 @@ $evaluate('restauracion_sin_falso_positivo', str_contains($restoreTool, 'AS sign
 $evaluate('restauracion_cero_restricciones', str_contains($restoreTool, 'constraint_count')
     && str_contains($restoreTool, 'check_count') && str_contains($restoreTool, 'foreign_key_count'),
     'La restauración exige cero restricciones, PK, FK y CHECK');
+$evaluate('restauracion_sin_logica_motor', str_contains($restoreTool, 'automatic_columns')
+    && str_contains($restoreTool, 'programmable_objects'),
+    'La restauración exige cero defaults, generación automática y objetos programables');
 $score = (int) round(100 * count(array_filter($checks, fn ($c) => $c['cumple'])) / count($checks));
 echo json_encode(['eval' => 'modelo_simplificado_profesor', 'score' => $score, 'threshold' => 100, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
 if ($score < 100) exit(1);

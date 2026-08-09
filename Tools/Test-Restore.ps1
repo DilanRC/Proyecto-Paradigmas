@@ -121,6 +121,10 @@ try {
         if ($indexCount -ne '0') { throw "$database contiene $indexCount índices." }
         $productorIdExtra = Invoke-MySqlQuery "SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND TABLE_NAME='tbproductor' AND COLUMN_NAME='tbproductorid';"
         if ($productorIdExtra) { throw "$database.tbproductorid usa EXTRA=$productorIdExtra." }
+        $automaticColumns = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND (COLUMN_DEFAULT IS NOT NULL OR EXTRA<>'' OR GENERATION_EXPRESSION<>'');"
+        if ($automaticColumns -ne '0') { throw "$database contiene $automaticColumns columnas con generación automática." }
+        $programmableObjects = Invoke-MySqlQuery "SELECT (SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='$database')+(SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA='$database')+(SELECT COUNT(*) FROM information_schema.EVENTS WHERE EVENT_SCHEMA='$database');"
+        if ($programmableObjects -ne '0') { throw "$database contiene $programmableObjects objetos programables." }
     }
 
     $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"

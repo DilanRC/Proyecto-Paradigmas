@@ -26,9 +26,11 @@ try {
         test_same('NO_AUTENTICADO', $evento['tbbitacoraactortipo'], 'Actor real disponible');
         test_same(null, $evento['tbbitacorausuarioid'], 'Sin usuario ficticio');
         test_same('API_PRODUCTORES', $evento['tbbitacoraorigen'], 'Origen técnico');
+        test_assert(preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $evento['tbbitacorafecha']) === 1,
+            'PHP debe enviar explícitamente una fecha DATETIME válida');
     }
 } finally {
     test_cleanup_productores([$id]);
 }
 
-echo "OK audit_test: bitácora textual, cuatro acciones, JSON y actor no autenticado.\n";
+echo "OK audit_test: bitácora textual con fecha explícita de PHP, cuatro acciones, JSON y actor no autenticado.\n";

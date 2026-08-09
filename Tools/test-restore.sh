@@ -240,6 +240,17 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         echo "Error: ${database}.tbproductorid usa EXTRA=${productor_id_extra}." >&2
         exit 1
     fi
+    automatic_columns="$(mysql_query "SELECT COUNT(*) FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = '${database}'
+          AND (COLUMN_DEFAULT IS NOT NULL OR EXTRA <> '' OR GENERATION_EXPRESSION <> '');")"
+    programmable_objects="$(mysql_query "SELECT
+        (SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = '${database}') +
+        (SELECT COUNT(*) FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = '${database}') +
+        (SELECT COUNT(*) FROM information_schema.EVENTS WHERE EVENT_SCHEMA = '${database}');")"
+    if [[ "$automatic_columns" -ne 0 || "$programmable_objects" -ne 0 ]]; then
+        echo "Error: ${database} contiene columnas automáticas=${automatic_columns} u objetos programables=${programmable_objects}." >&2
+        exit 1
+    fi
 done
 
 printf '%-38s %10s %10s %10s\n' 'Tabla' 'Origen' 'Completo' 'Partes'

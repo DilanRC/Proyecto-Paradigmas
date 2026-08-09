@@ -12,11 +12,15 @@ La base `dbtindervacas` contiene exactamente:
 3. `tbfinca`
 4. `tbbitacora`
 
-El esquema no contiene claves, restricciones, índices ni columnas
-`AUTO_INCREMENT`. Todos los nombres SQL están en minúscula. PHP calcula los
+El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
+columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
 consecutivos y `tbproductordireccion`/`tbfinca` usan `tbproductorid` como
 asociación lógica. No existen tablas de participante, roles ni tipos de
 identificación.
+
+Todos los valores, incluida la fecha de bitácora y los estados iniciales, se
+envían desde PHP mediante `PDO::prepare()` y parámetros enlazados. MySQL solo
+almacena los datos.
 
 ## Requisitos e inicio
 

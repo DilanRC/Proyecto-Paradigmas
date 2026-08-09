@@ -8,5 +8,5 @@ CREATE TABLE IF NOT EXISTS tbproductor (
     tbproductornombre VARCHAR(150) NOT NULL,
     tbproductortelefono VARCHAR(20) NOT NULL,
     tbproductorcorreoelectronico VARCHAR(150) NOT NULL,
-    tbproductorestado TINYINT(1) NOT NULL DEFAULT 1
+    tbproductorestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;

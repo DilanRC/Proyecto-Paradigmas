@@ -45,5 +45,7 @@ erDiagram
 ```
 
 Las líneas muestran asociaciones usadas por PHP, no restricciones de MySQL.
-El esquema define cero claves, restricciones, índices y `AUTO_INCREMENT`. PHP
-calcula cada identificador mediante `MAX(id) + 1` bajo un bloqueo nombrado.
+El esquema define cero claves, restricciones, índices, valores `DEFAULT`,
+`AUTO_INCREMENT` y objetos programables. PHP calcula cada identificador
+mediante `MAX(id) + 1` bajo un bloqueo nombrado y envía todos los valores con
+sentencias preparadas.
