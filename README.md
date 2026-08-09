@@ -74,6 +74,43 @@ El contrato está en `contracts/supabase-auth-v1.openapi.json`. La clave secreta
 no se versiona y solo debe agregarse a `.env` cuando exista una operación
 administrativa que la necesite.
 
+## Despliegue
+
+`Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve
+para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
+aplicación PHP y adapta Apache al puerto indicado por `PORT`.
+
+```bash
+docker build -t tindercows:local .
+docker run --rm -d --name tindercows-smoke -p 18080:80 tindercows:local
+curl -fsS http://127.0.0.1:18080/ >/dev/null
+docker stop tindercows-smoke
+```
+
+En Vercel, `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` y `DB_PASS` deben apuntar
+a una base MySQL externa: los contenedores de Vercel no almacenan estado. Tras
+desplegar `main`, se debe asociar `tindervacas.dpdns.org` al proyecto y comprobar:
+
+```bash
+curl -fsS https://tindervacas.dpdns.org/ >/dev/null
+```
+
+### Aplicar `tbfinca` a una base existente
+
+Los archivos de `/docker-entrypoint-initdb.d` solo se ejecutan al crear un
+volumen MySQL vacío. Para un volumen existente, primero respalde la base y luego
+aplique el script idempotente:
+
+```bash
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/SqlScripts/004createfinca.sql
+docker compose exec -T app php Tests/schema_test.php
+```
+
+`CREATE TABLE IF NOT EXISTS` no altera una tabla incompatible que ya exista.
+Antes de usar `ALTER` o `DROP`, compare su estructura con
+`Tests/schema_test.php` y genere un respaldo.
+
 ## API JSON
 
 Endpoint: `/api/productores.php`
@@ -153,6 +190,7 @@ reactivación, ARIA y escritura segura con `textContent`.
 
 ```bash
 docker compose exec -T app php Tests/naming_gate.php
+docker compose exec -T app php Tests/deployment_test.php
 docker compose exec -T app php Tests/schema_test.php
 docker compose exec -T app php Tests/api_productores_test.php
 docker compose exec -T app php Tests/transaction_test.php
@@ -160,6 +198,7 @@ docker compose exec -T app php Tests/address_policy_test.php
 docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
 docker compose exec -T app php Tests/naming_eval.php
+docker compose exec -T app php Tests/deployment_eval.php
 node Tests/ui_test.js
 python3 Tests/documentation_test.py
 cd services/supabase-server && npm test && npm run eval
