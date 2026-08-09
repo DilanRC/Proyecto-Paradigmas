@@ -9,6 +9,7 @@ $dockerfile = file_get_contents("{$root}/Dockerfile");
 $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
 $fincaSchema = file_get_contents("{$root}/Database/SqlScripts/004createfinca.sql");
+$vercelConfiguration = json_decode(file_get_contents("{$root}/vercel.json"), true, 512, JSON_THROW_ON_ERROR);
 
 foreach ([$dockerfile, $vercelDockerfile] as $definition) {
     test_assert(str_contains($definition, 'COPY Application /var/www/html/Application'),
@@ -30,5 +31,9 @@ test_assert(str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'El arranque debe validar el esquema Supabase');
 test_assert(str_contains($fincaSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
     'El esquema debe crear tbfinca de forma idempotente');
+test_same('Dockerfile.vercel', $vercelConfiguration['services']['app']['entrypoint'] ?? null,
+    'Vercel debe construir explícitamente el contenedor');
+test_same(['service' => 'app'], $vercelConfiguration['rewrites'][0]['destination'] ?? null,
+    'Vercel debe dirigir todo el tráfico al contenedor');
 
 echo "OK deployment_test: imágenes autocontenidas, puerto configurable y tbfinca idempotente.\n";
