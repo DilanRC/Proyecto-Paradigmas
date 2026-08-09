@@ -86,17 +86,12 @@ final class ProductorFinca
 
     private function adquirirBloqueoAlta(): void
     {
-        $sentencia = $this->conexion->prepare("SELECT GET_LOCK('tindercows_finca_alta', 10)");
-        $sentencia->execute();
-        if ((int) $sentencia->fetchColumn() !== 1) {
-            throw new \RuntimeException('No fue posible reservar la secuencia de fincas.');
-        }
+        NamedLock::acquire($this->conexion, 'tindercows_finca_alta');
     }
 
     private function liberarBloqueoAlta(): void
     {
-        $sentencia = $this->conexion->prepare("SELECT RELEASE_LOCK('tindercows_finca_alta')");
-        $sentencia->execute();
+        NamedLock::release($this->conexion, 'tindercows_finca_alta');
     }
 
     public function listarActivas(int $productorId): array

@@ -198,6 +198,7 @@ reactivación, ARIA y escritura segura con `textContent`.
 ```bash
 docker compose exec -T app php Tests/naming_gate.php
 docker compose exec -T app php Tests/deployment_test.php
+docker compose exec -T app php Tests/postgres_compatibility_test.php
 docker compose exec -T app php Tests/schema_test.php
 docker compose exec -T app php Tests/api_productores_test.php
 docker compose exec -T app php Tests/transaction_test.php
@@ -206,6 +207,7 @@ docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
 docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
+docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
 python3 Tests/documentation_test.py
 cd services/supabase-server && npm test && npm run eval
