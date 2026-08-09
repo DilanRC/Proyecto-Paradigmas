@@ -1,7 +1,7 @@
 # Diccionario de datos
 
-El esquema no contiene claves, restricciones, índices ni columnas
-`AUTO_INCREMENT`. Las asociaciones, la unicidad lógica y los consecutivos son
+El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
+columnas `AUTO_INCREMENT` ni objetos programables. Las asociaciones, la unicidad lógica y los consecutivos son
 políticas de PHP. Todos los identificadores SQL están en minúscula.
 
 ## tbproductor

@@ -8,7 +8,8 @@ cuatro tablas: `tbproductor`, `tbproductordireccion`, `tbfinca` y
 
 ## DEC-C04-002 - Cero restricciones de integridad
 
-El esquema no define claves, restricciones, índices ni `AUTO_INCREMENT`. Las
+El esquema no define claves, restricciones, índices, valores `DEFAULT`,
+`AUTO_INCREMENT`, triggers, rutinas ni eventos. Las
 asociaciones y validaciones son una política de aplicación. SQL directo puede
 crear duplicados, huérfanos o valores fuera del dominio.
 
@@ -41,6 +42,8 @@ La bitácora registra CREAR, ACTUALIZAR, DESACTIVAR y REACTIVAR dentro de la
 misma transacción. Antes de autenticación usa `NO_AUTENTICADO` y
 `tbbitacorausuarioid = NULL`. PHP calcula `tbbitacoraid` con
 `MAX(tbbitacoraid) + 1` bajo un bloqueo nombrado. MySQL no genera ningún ID.
+PHP también envía la fecha, el actor y el origen como parámetros de la
+sentencia preparada; el motor no completa columnas automáticamente.
 
 ## DEC-C04-007 - Entregas históricas
 

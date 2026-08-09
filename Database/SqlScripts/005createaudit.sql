@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacoraentidad VARCHAR(80) NOT NULL,
     tbbitacoraregistroidentificacionnumero VARCHAR(250) NOT NULL,
     tbbitacoraaccion VARCHAR(30) NOT NULL,
-    tbbitacorafecha DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tbbitacorafecha DATETIME NOT NULL,
     tbbitacoradatosanteriores JSON NULL,
     tbbitacoradatosnuevos JSON NULL,
     tbbitacoraactortipo VARCHAR(30) NOT NULL,

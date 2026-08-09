@@ -41,6 +41,11 @@ foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ',
         throw new RuntimeException("El esquema no puede contener {$forbiddenSql}");
     }
 }
+foreach (['DEFAULT ', 'CURRENT_TIMESTAMP', 'CREATE TRIGGER', 'CREATE PROCEDURE', 'CREATE FUNCTION', 'CREATE EVENT'] as $engineLogic) {
+    if (str_contains($sql, $engineLogic)) {
+        throw new RuntimeException("La lógica no puede delegarse al motor mediante {$engineLogic}");
+    }
+}
 if (!preg_match('/tbproductorid INT NOT NULL/', $sql)) {
     throw new RuntimeException('tbproductorid debe ser INT ordinario sin AUTO_INCREMENT.');
 }
@@ -63,7 +68,8 @@ if (str_contains($models, '->query(') || str_contains($models, '->exec(')
     || !str_contains($models, '->prepare(') || !str_contains($models, 'GET_LOCK')
     || !str_contains($models, 'MAX(tbproductorid)')
     || !str_contains($models, 'MAX(tbbitacoraid)')
-    || !str_contains($models, 'FROM tbfinca')) {
+    || !str_contains($models, 'FROM tbfinca')
+    || !str_contains($models, "'fecha' => gmdate('Y-m-d H:i:s')")) {
     throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular los ID en PHP.');
 }
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");

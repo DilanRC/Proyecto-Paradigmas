@@ -33,6 +33,7 @@ intercalación, conteos y checksum de datos. Para Corrección 04 exige:
 - cero PRIMARY KEY, FOREIGN KEY y CHECK;
 - cero índices;
 - cero columnas `AUTO_INCREMENT`;
+- cero valores `DEFAULT`, columnas generadas, triggers, rutinas y eventos;
 - `utf8mb4/utf8mb4_unicode_ci` en base y tablas;
 - igualdad entre origen, restauración completa y restauración por partes.
 

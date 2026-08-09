@@ -20,18 +20,23 @@ final class Bitacora
         try {
             $sentencia = $this->conexion->prepare(
                 'INSERT INTO tbbitacora
-                 (tbbitacoraid, tbbitacoraentidad, tbbitacoraregistroidentificacionnumero, tbbitacoraaccion,
+                 (tbbitacoraid, tbbitacoraentidad, tbbitacoraregistroidentificacionnumero, tbbitacoraaccion, tbbitacorafecha,
                   tbbitacoradatosanteriores, tbbitacoradatosnuevos, tbbitacoraactortipo,
                   tbbitacorausuarioid, tbbitacoraorigen, tbbitacorasolicitudid)
-                 VALUES (:bitacoraId, \'PRODUCTOR\', :registroId, :accion, :anteriores, :nuevos,
-                         \'NO_AUTENTICADO\', NULL, \'API_PRODUCTORES\', :solicitudId)'
+                 VALUES (:bitacoraId, :entidad, :registroId, :accion, :fecha, :anteriores, :nuevos,
+                         :actorTipo, :usuarioId, :origen, :solicitudId)'
             );
             $sentencia->execute([
                 'bitacoraId' => $this->siguienteId(),
+                'entidad' => 'PRODUCTOR',
                 'registroId' => $identificacionNumero,
                 'accion' => $accion,
+                'fecha' => gmdate('Y-m-d H:i:s'),
                 'anteriores' => $anteriores === null ? null : json_encode($anteriores, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                 'nuevos' => $nuevos === null ? null : json_encode($nuevos, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                'actorTipo' => 'NO_AUTENTICADO',
+                'usuarioId' => null,
+                'origen' => 'API_PRODUCTORES',
                 'solicitudId' => $solicitudId,
             ]);
         } finally {

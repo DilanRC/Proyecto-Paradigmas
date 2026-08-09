@@ -29,20 +29,20 @@ final class ProductorFinca
     {
         if ($nombres === []) {
             $sentencia = $this->conexion->prepare(
-                'UPDATE tbfinca SET tbfincaestado = 0
+                'UPDATE tbfinca SET tbfincaestado = :estado
                  WHERE tbproductorid = :productorId'
             );
-            $sentencia->execute(['productorId' => $productorId]);
+            $sentencia->execute(['estado' => 0, 'productorId' => $productorId]);
             return;
         }
 
         $marcadores = implode(',', array_fill(0, count($nombres), '?'));
         $desactivar = $this->conexion->prepare(
-            "UPDATE tbfinca SET tbfincaestado = 0
+            "UPDATE tbfinca SET tbfincaestado = ?
              WHERE tbproductorid = ?
                AND tbfincanombre NOT IN ({$marcadores})"
         );
-        $desactivar->execute([$productorId, ...$nombres]);
+        $desactivar->execute([0, $productorId, ...$nombres]);
 
         $contar = $this->conexion->prepare(
             'SELECT COUNT(*) FROM tbfinca
@@ -50,14 +50,14 @@ final class ProductorFinca
                AND tbfincanombre = :nombre'
         );
         $reactivar = $this->conexion->prepare(
-            'UPDATE tbfinca SET tbfincaestado = 1
+            'UPDATE tbfinca SET tbfincaestado = :estado
              WHERE tbproductorid = :productorId
                AND tbfincanombre = :nombre'
         );
         $asociar = $this->conexion->prepare(
             'INSERT INTO tbfinca
              (tbfincaid, tbproductorid, tbfincanombre, tbfincaestado)
-             VALUES (:fincaId, :productorId, :nombre, 1)'
+             VALUES (:fincaId, :productorId, :nombre, :estado)'
         );
         foreach ($nombres as $nombre) {
             $parametros = ['productorId' => $productorId, 'nombre' => $nombre];
@@ -67,10 +67,10 @@ final class ProductorFinca
                 throw new \RuntimeException('Existen fincas duplicadas para el productor.');
             }
             if ($coincidencias === 1) {
-                $reactivar->execute($parametros);
+                $reactivar->execute(['estado' => 1, ...$parametros]);
                 continue;
             }
-            $asociar->execute(['fincaId' => $this->siguienteId(), ...$parametros]);
+            $asociar->execute(['fincaId' => $this->siguienteId(), 'estado' => 1, ...$parametros]);
         }
     }
 

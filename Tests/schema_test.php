@@ -52,6 +52,20 @@ $indexStatement->execute();
 $indexes = $indexStatement->fetchAll();
 test_same([], $indexes, 'El modelo no debe contener índices');
 
+$automaticColumns = $db->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND (COLUMN_DEFAULT IS NOT NULL OR EXTRA <> '' OR GENERATION_EXPRESSION <> '')");
+$automaticColumns->execute();
+test_same(0, (int) $automaticColumns->fetchColumn(),
+    'Ninguna columna debe tener DEFAULT, AUTO_INCREMENT ni expresión generada por MySQL');
+
+foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENTS' => 'EVENT_SCHEMA'] as $metadataTable => $schemaColumn) {
+    $automaticObjects = $db->prepare("SELECT COUNT(*) FROM information_schema.{$metadataTable}
+        WHERE {$schemaColumn} = DATABASE()");
+    $automaticObjects->execute();
+    test_same(0, (int) $automaticObjects->fetchColumn(), "El esquema no debe contener {$metadataTable}");
+}
+
 $expectedColumns = [
     'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
         'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
@@ -136,4 +150,4 @@ try {
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: cuatro tablas, identificadores minúsculos, cero claves/índices/AUTO_INCREMENT e IDs asignados por PHP.\n";
+echo "OK schema_test: cuatro tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

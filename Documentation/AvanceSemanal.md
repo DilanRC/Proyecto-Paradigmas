@@ -29,13 +29,14 @@ inmutable por contrato de aplicación, pero no es una PK.
   solicitudes no se concatenan al SQL.
 - POST y PUT mantienen una dirección y evitan fincas duplicadas como política
   de aplicación.
-- La bitácora permanece dentro de la transacción.
-- Los scripts de creación no contienen claves, índices, `AUTO_INCREMENT` ni restricciones.
+- La bitácora permanece dentro de la transacción y recibe su fecha desde PHP.
+- Los scripts de creación no contienen claves, índices, valores `DEFAULT`,
+  `AUTO_INCREMENT`, objetos programables ni restricciones.
 
 ## Validación y respaldo
 
 La aceptación comprueba cuatro tablas, identificadores minúsculos, cero
-restricciones, cero índices, cero `AUTO_INCREMENT`,
+restricciones, cero índices, cero valores `DEFAULT`, cero `AUTO_INCREMENT`,
 `utf8mb4_unicode_ci`, sentencias preparadas, pruebas PHP/Node/PDF y restauración
 sin diferencias. La evidencia corresponde a
 `EvidenciasPruebasAvance01Correccion04.md` y el respaldo a
