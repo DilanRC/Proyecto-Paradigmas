@@ -35,6 +35,7 @@ docker compose ps
 
 - Aplicación: <http://localhost:8080>
 - Adminer: <http://localhost:8081>, servidor `db`
+- Verificación JWT Supabase: <http://127.0.0.1:3001>
 - MySQL desde host: `localhost:${DB_HOST_PORT:-3307}`
 - MySQL entre contenedores: `db:3306`
 - Base: `dbtindervacas`
@@ -58,6 +59,20 @@ Database/SeedData/103exampleproductores.sql
 ```
 
 La semilla usa datos ficticios y correos `example.test`.
+
+## Servicio Supabase
+
+`services/supabase-server/` es un servicio Node independiente. Valida JWT con
+`@supabase/server` usando `auth: 'user'`; no cambia ni reemplaza el CRUD PHP.
+
+```bash
+curl http://127.0.0.1:3001/health
+curl -H "Authorization: Bearer <jwt>" http://127.0.0.1:3001/v1/auth/verify
+```
+
+El contrato está en `contracts/supabase-auth-v1.openapi.json`. La clave secreta
+no se versiona y solo debe agregarse a `.env` cuando exista una operación
+administrativa que la necesite.
 
 ## API JSON
 
@@ -147,6 +162,7 @@ docker compose exec -T app php Tests/concurrency_test.php
 docker compose exec -T app php Tests/naming_eval.php
 node Tests/ui_test.js
 python3 Tests/documentation_test.py
+cd services/supabase-server && npm test && npm run eval
 ```
 
 ## Respaldos
