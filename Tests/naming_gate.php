@@ -51,7 +51,7 @@ foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
 }
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 5
-    || !str_contains($sql, 'ALTER DATABASE dbtindercows')) {
+    || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 $controller = file_get_contents("{$root}/Application/Controller/ProductorController.php");

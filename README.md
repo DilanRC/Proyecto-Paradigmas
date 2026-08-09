@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `dbtindercows` contiene exactamente:
+La base `dbtindervacas` contiene exactamente:
 
 1. `tbproductor`
 2. `tbproductordireccion`
@@ -33,7 +33,7 @@ docker compose ps
 - Adminer: <http://localhost:8081>, servidor `db`
 - MySQL desde host: `localhost:${DB_HOST_PORT:-3307}`
 - MySQL entre contenedores: `db:3306`
-- Base: `dbtindercows`
+- Base: `dbtindervacas`
 
 Reinicio limpio, únicamente después de verificar un respaldo:
 

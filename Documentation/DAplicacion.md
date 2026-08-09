@@ -7,7 +7,7 @@ Vista de productores
   -> Public/api/productores.php
   -> ProductorController
   -> Productor + ProductorDireccion + ProductorFinca + Bitacora
-  -> MySQL (dbtindercows)
+  -> MySQL (dbtindervacas)
   -> respuesta HTTP JSON
   -> JavaScript actualiza el DOM sin recargar la página
 ```

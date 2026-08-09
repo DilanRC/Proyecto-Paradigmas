@@ -17,9 +17,9 @@ PowerShell dispone de los comandos equivalentes.
 
 ```text
 Database/Backups/Avance01Correccion04/
-├── dbtindercows_avance01_correccion04_completo.sql
-├── dbtindercows_avance01_correccion04_estructura.sql
-├── dbtindercows_avance01_correccion04_datos.sql
+├── dbtindervacas_avance01_correccion04_completo.sql
+├── dbtindervacas_avance01_correccion04_estructura.sql
+├── dbtindervacas_avance01_correccion04_datos.sql
 ├── MANIFEST.md
 └── SHA256SUMS.txt
 ```

@@ -8,9 +8,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$SourceDatabase = 'dbtindercows'
-$RestoreDatabase = 'dbtindercows_restore_test'
-$PartsDatabase = 'dbtindercows_restore_parts_test'
+$SourceDatabase = 'dbtindervacas'
+$RestoreDatabase = 'dbtindervacas_restore_test'
+$PartsDatabase = 'dbtindervacas_restore_parts_test'
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $AdvanceMatch = [regex]::Match($Avance, '^Avance(?<avance>[0-9]{2})(Correccion(?<correccion>[0-9]{2}))?$')
 $AdvanceNumber = $AdvanceMatch.Groups['avance'].Value
@@ -88,13 +88,13 @@ try {
     if ($partsExists -ne '0') { throw "$PartsDatabase ya existe; no se eliminará una base temporal ajena." }
     Invoke-MySqlQuery "CREATE DATABASE $RestoreDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | Out-Null
     $RestoreCreated = $true
-    Get-Content -Raw $CompleteFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindercows_restore_test'
+    Get-Content -Raw $CompleteFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo completo.' }
     Invoke-MySqlQuery "CREATE DATABASE $PartsDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | Out-Null
     $PartsCreated = $true
-    Get-Content -Raw $SchemaFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindercows_restore_parts_test'
+    Get-Content -Raw $SchemaFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_parts_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo de estructura.' }
-    Get-Content -Raw $DataFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindercows_restore_parts_test'
+    Get-Content -Raw $DataFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_parts_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo de datos.' }
 
     if ($InjectSchemaDifference) {
