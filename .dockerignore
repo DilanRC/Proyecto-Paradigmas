@@ -1,0 +1,11 @@
+.git
+.github
+.env
+.agents
+.codex
+Database/Backups
+Documentation
+Tests
+Tools
+graphify-out
+pull_request_template.md
