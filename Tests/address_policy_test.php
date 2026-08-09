@@ -11,7 +11,7 @@ try {
         'POST debe rechazar direccionPrincipal; se instancia vacía automáticamente');
 
     $productor = test_create([], $id);
-    $conteo = test_db()->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :id');
+    $conteo = test_db()->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
     $conteo->execute(['id' => $productor['productorId']]);
     test_same(1, (int) $conteo->fetchColumn(), 'POST debe instanciar exactamente una dirección vacía por política de aplicación');
 

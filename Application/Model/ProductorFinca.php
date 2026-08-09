@@ -29,8 +29,8 @@ final class ProductorFinca
     {
         if ($nombres === []) {
             $sentencia = $this->conexion->prepare(
-                'UPDATE tbproductorfinca SET tbproductorfincaEstado = 0
-                 WHERE tbproductorId = :productorId'
+                'UPDATE tbfinca SET tbfincaestado = 0
+                 WHERE tbproductorid = :productorId'
             );
             $sentencia->execute(['productorId' => $productorId]);
             return;
@@ -38,25 +38,25 @@ final class ProductorFinca
 
         $marcadores = implode(',', array_fill(0, count($nombres), '?'));
         $desactivar = $this->conexion->prepare(
-            "UPDATE tbproductorfinca SET tbproductorfincaEstado = 0
-             WHERE tbproductorId = ?
-               AND tbproductorfincaNombre NOT IN ({$marcadores})"
+            "UPDATE tbfinca SET tbfincaestado = 0
+             WHERE tbproductorid = ?
+               AND tbfincanombre NOT IN ({$marcadores})"
         );
         $desactivar->execute([$productorId, ...$nombres]);
 
         $contar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductorfinca
-             WHERE tbproductorId = :productorId
-               AND tbproductorfincaNombre = :nombre'
+            'SELECT COUNT(*) FROM tbfinca
+             WHERE tbproductorid = :productorId
+               AND tbfincanombre = :nombre'
         );
         $reactivar = $this->conexion->prepare(
-            'UPDATE tbproductorfinca SET tbproductorfincaEstado = 1
-             WHERE tbproductorId = :productorId
-               AND tbproductorfincaNombre = :nombre'
+            'UPDATE tbfinca SET tbfincaestado = 1
+             WHERE tbproductorid = :productorId
+               AND tbfincanombre = :nombre'
         );
         $asociar = $this->conexion->prepare(
-            'INSERT INTO tbproductorfinca
-             (tbproductorfincaId, tbproductorId, tbproductorfincaNombre, tbproductorfincaEstado)
+            'INSERT INTO tbfinca
+             (tbfincaid, tbproductorid, tbfincanombre, tbfincaestado)
              VALUES (:fincaId, :productorId, :nombre, 1)'
         );
         foreach ($nombres as $nombre) {
@@ -77,7 +77,7 @@ final class ProductorFinca
     private function siguienteId(): int
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT COALESCE(MAX(tbproductorfincaId), 0) + 1 FROM tbproductorfinca'
+            'SELECT COALESCE(MAX(tbfincaid), 0) + 1 FROM tbfinca'
         );
         $sentencia->execute();
 
@@ -102,11 +102,11 @@ final class ProductorFinca
     public function listarActivas(int $productorId): array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbproductorfincaNombre AS nombre
-             FROM tbproductorfinca
-             WHERE tbproductorId = :productorId
-               AND tbproductorfincaEstado = 1
-             ORDER BY tbproductorfincaNombre'
+            'SELECT tbfincanombre AS nombre
+             FROM tbfinca
+             WHERE tbproductorid = :productorId
+               AND tbfincaestado = 1
+             ORDER BY tbfincanombre'
         );
         $sentencia->execute(['productorId' => $productorId]);
 
@@ -120,16 +120,16 @@ final class ProductorFinca
         }
         $marcadores = implode(',', array_fill(0, count($productorIds), '?'));
         $sentencia = $this->conexion->prepare(
-            "SELECT tbproductorId, tbproductorfincaNombre AS nombre
-             FROM tbproductorfinca
-             WHERE tbproductorId IN ({$marcadores})
-               AND tbproductorfincaEstado = 1
-             ORDER BY tbproductorfincaNombre"
+            "SELECT tbproductorid, tbfincanombre AS nombre
+             FROM tbfinca
+             WHERE tbproductorid IN ({$marcadores})
+               AND tbfincaestado = 1
+             ORDER BY tbfincanombre"
         );
         $sentencia->execute($productorIds);
         $resultado = [];
         foreach ($sentencia->fetchAll() as $fila) {
-            $resultado[(int) $fila['tbproductorId']][] = ['nombre' => $fila['nombre']];
+            $resultado[(int) $fila['tbproductorid']][] = ['nombre' => $fila['nombre']];
         }
 
         return $resultado;

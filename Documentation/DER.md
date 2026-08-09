@@ -3,47 +3,47 @@
 ```mermaid
 erDiagram
     tbproductor {
-        INT tbproductorId
-        VARCHAR tbproductorIdentificacionNumero
-        VARCHAR tbproductorIdentificacionTipo
-        VARCHAR tbproductorNombre
-        VARCHAR tbproductorTelefono
-        VARCHAR tbproductorCorreoElectronico
-        TINYINT tbproductorEstado
+        INT tbproductorid
+        VARCHAR tbproductoridentificacionnumero
+        VARCHAR tbproductoridentificaciontipo
+        VARCHAR tbproductornombre
+        VARCHAR tbproductortelefono
+        VARCHAR tbproductorcorreoelectronico
+        TINYINT tbproductorestado
     }
     tbproductordireccion {
-        INT tbproductorId
-        VARCHAR tbproductordireccionProvincia
-        VARCHAR tbproductordireccionCanton
-        VARCHAR tbproductordireccionDistrito
-        VARCHAR tbproductordireccionPueblo
-        VARCHAR tbproductordireccionSenas
+        INT tbproductordireccionid
+        INT tbproductorid
+        VARCHAR tbproductordireccionprovincia
+        VARCHAR tbproductordireccioncanton
+        VARCHAR tbproductordirecciondistrito
+        VARCHAR tbproductordireccionpueblo
+        VARCHAR tbproductordireccionsenas
     }
-    tbproductorfinca {
-        INT tbproductorId
-        VARCHAR tbproductorfincaNombre
-        TINYINT tbproductorfincaEstado
+    tbfinca {
+        INT tbfincaid
+        INT tbproductorid
+        VARCHAR tbfincanombre
+        TINYINT tbfincaestado
     }
     tbbitacora {
-        BIGINT tbbitacoraId
-        VARCHAR tbbitacoraEntidad
-        VARCHAR tbbitacoraRegistroIdentificacionNumero
-        VARCHAR tbbitacoraAccion
-        DATETIME tbbitacoraFecha
-        JSON tbbitacoraDatosAnteriores
-        JSON tbbitacoraDatosNuevos
-        VARCHAR tbbitacoraActorTipo
-        BIGINT tbbitacoraUsuarioId
-        VARCHAR tbbitacoraOrigen
-        VARCHAR tbbitacoraSolicitudId
+        BIGINT tbbitacoraid
+        VARCHAR tbbitacoraentidad
+        VARCHAR tbbitacoraregistroidentificacionnumero
+        VARCHAR tbbitacoraaccion
+        DATETIME tbbitacorafecha
+        JSON tbbitacoradatosanteriores
+        JSON tbbitacoradatosnuevos
+        VARCHAR tbbitacoraactortipo
+        BIGINT tbbitacorausuarioid
+        VARCHAR tbbitacoraorigen
+        VARCHAR tbbitacorasolicitudid
     }
-    tbproductor ||--|| tbproductordireccion : "asociación lógica por tbproductorId"
-    tbproductor ||--o{ tbproductorfinca : "asociación lógica por tbproductorId"
+    tbproductor ||--|| tbproductordireccion : "asociación lógica por tbproductorid"
+    tbproductor ||--o{ tbfinca : "asociación lógica por tbproductorid"
     tbproductor ||--o{ tbbitacora : "referencia lógica por identificación"
 ```
 
 Las líneas muestran asociaciones usadas por PHP, no restricciones de MySQL.
-El esquema define cero `PRIMARY KEY`, cero `FOREIGN KEY` y cero `CHECK`.
-`tbproductorId` es `INT NOT NULL`, no es clave y no usa `AUTO_INCREMENT`; PHP
-calcula el siguiente valor bajo un bloqueo de alta. `tbbitacoraId` conserva
-`AUTO_INCREMENT` mediante un índice ordinario no único.
+El esquema define cero claves, restricciones, índices y `AUTO_INCREMENT`. PHP
+calcula cada identificador mediante `MAX(id) + 1` bajo un bloqueo nombrado.

@@ -15,7 +15,7 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
-test_same(['tbbitacora', 'tbproductor', 'tbproductordireccion', 'tbproductorfinca'],
+test_same(['tbbitacora', 'tbfinca', 'tbproductor', 'tbproductordireccion'],
     array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente cuatro tablas singulares');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
@@ -35,36 +35,33 @@ foreach (['KEY_COLUMN_USAGE', 'REFERENTIAL_CONSTRAINTS', 'CHECK_CONSTRAINTS'] as
 
 $productorIdColumn = $db->prepare("SELECT DATA_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA
     FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'tbproductor' AND COLUMN_NAME = 'tbproductorId'");
+      AND TABLE_NAME = 'tbproductor' AND COLUMN_NAME = 'tbproductorid'");
 $productorIdColumn->execute();
-test_same(['DATA_TYPE' => 'int', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => 'MUL', 'EXTRA' => ''],
-    $productorIdColumn->fetch(), 'tbproductorId debe ser INT ordinario sin clave ni AUTO_INCREMENT');
+test_same(['DATA_TYPE' => 'int', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => '', 'EXTRA' => ''],
+    $productorIdColumn->fetch(), 'tbproductorid debe ser INT ordinario sin clave ni AUTO_INCREMENT');
 
 $auditColumn = $db->prepare("SELECT EXTRA FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbbitacora' AND COLUMN_NAME = 'tbbitacoraId'");
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbbitacora' AND COLUMN_NAME = 'tbbitacoraid'");
 $auditColumn->execute();
-test_same('auto_increment', $auditColumn->fetchColumn(), 'Solo tbbitacoraId conserva AUTO_INCREMENT con índice ordinario');
+test_same('', $auditColumn->fetchColumn(), 'tbbitacoraid no debe usar AUTO_INCREMENT');
 
 $indexStatement = $db->prepare("SELECT TABLE_NAME, INDEX_NAME, NON_UNIQUE
     FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE()
     GROUP BY TABLE_NAME, INDEX_NAME, NON_UNIQUE ORDER BY TABLE_NAME, INDEX_NAME");
 $indexStatement->execute();
 $indexes = $indexStatement->fetchAll();
-test_same(12, count($indexes), 'El modelo debe conservar doce índices ordinarios de consulta');
-foreach ($indexes as $index) {
-    test_same(1, (int) $index['NON_UNIQUE'], "{$index['TABLE_NAME']}.{$index['INDEX_NAME']} no debe ser único");
-}
+test_same([], $indexes, 'El modelo no debe contener índices');
 
 $expectedColumns = [
-    'tbproductor' => ['tbproductorId', 'tbproductorIdentificacionNumero', 'tbproductorIdentificacionTipo',
-        'tbproductorNombre', 'tbproductorTelefono', 'tbproductorCorreoElectronico', 'tbproductorEstado'],
-    'tbproductordireccion' => ['tbproductordireccionId', 'tbproductorId', 'tbproductordireccionProvincia',
-        'tbproductordireccionCanton', 'tbproductordireccionDistrito', 'tbproductordireccionPueblo',
-        'tbproductordireccionSenas'],
-    'tbproductorfinca' => ['tbproductorfincaId', 'tbproductorId', 'tbproductorfincaNombre', 'tbproductorfincaEstado'],
-    'tbbitacora' => ['tbbitacoraId', 'tbbitacoraEntidad', 'tbbitacoraRegistroIdentificacionNumero',
-        'tbbitacoraAccion', 'tbbitacoraFecha', 'tbbitacoraDatosAnteriores', 'tbbitacoraDatosNuevos',
-        'tbbitacoraActorTipo', 'tbbitacoraUsuarioId', 'tbbitacoraOrigen', 'tbbitacoraSolicitudId'],
+    'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
+        'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbproductordireccionprovincia',
+        'tbproductordireccioncanton', 'tbproductordirecciondistrito', 'tbproductordireccionpueblo',
+        'tbproductordireccionsenas'],
+    'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
+    'tbbitacora' => ['tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
+        'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
+        'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid'],
 ];
 foreach ($expectedColumns as $table => $expected) {
     $statement = $db->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS
@@ -82,13 +79,13 @@ try {
     $second = test_create([], $apiIds[1]);
     $third = test_create(['fincas' => [['nombre' => 'Finca Norte'], ['nombre' => 'Finca Sur']]], $apiIds[2]);
     test_same($first['productorId'] + 1, $second['productorId'],
-        'PHP debe calcular el siguiente tbproductorId bajo el bloqueo de alta');
+        'PHP debe calcular el siguiente tbproductorid bajo el bloqueo de alta');
     test_same(409, test_controller()->procesar('POST', [], test_payload($apiIds[0]))['status'],
         'La aplicación debe rechazar una identificación repetida aunque MySQL no tenga claves');
 
     // Cada dirección conserva su propio tbproductordireccionId, distinto del de otros productores,
     // y sigue relacionada mediante tbproductorId (una sola fila por productor).
-    $direccionId = $db->prepare('SELECT tbproductordireccionId FROM tbproductordireccion WHERE tbproductorId = :id');
+    $direccionId = $db->prepare('SELECT tbproductordireccionid FROM tbproductordireccion WHERE tbproductorid = :id');
     $direccionId->execute(['id' => $first['productorId']]);
     $idDireccion1 = (int) $direccionId->fetchColumn();
     $direccionId->execute(['id' => $second['productorId']]);
@@ -96,47 +93,47 @@ try {
     test_assert($idDireccion1 > 0, 'La dirección debe generar un tbproductordireccionId propio');
     test_same($idDireccion1 + 1, $idDireccion2,
         'Las direcciones consecutivas deben generar tbproductordireccionId consecutivos');
-    $direccionesPorProductor = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :id');
+    $direccionesPorProductor = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
     $direccionesPorProductor->execute(['id' => $first['productorId']]);
     test_same(1, (int) $direccionesPorProductor->fetchColumn(), 'Cada productor conserva exactamente una dirección');
 
     // Cada finca conserva su propio tbproductorfincaId y queda relacionada mediante tbproductorId.
-    $fincasCreadas = $db->prepare('SELECT tbproductorfincaId FROM tbproductorfinca
-        WHERE tbproductorId = :id ORDER BY tbproductorfincaId');
+    $fincasCreadas = $db->prepare('SELECT tbfincaid FROM tbfinca
+        WHERE tbproductorid = :id ORDER BY tbfincaid');
     $fincasCreadas->execute(['id' => $third['productorId']]);
     $idsFincas = array_map('intval', $fincasCreadas->fetchAll(PDO::FETCH_COLUMN));
     test_same(2, count($idsFincas), 'Deben crearse dos fincas con su propio identificador');
-    test_same($idsFincas[0] + 1, $idsFincas[1], 'Las fincas deben generar tbproductorfincaId consecutivos');
+    test_same($idsFincas[0] + 1, $idsFincas[1], 'Las fincas deben generar tbfincaid consecutivos');
 
     $directInsert = $db->prepare("INSERT INTO tbproductor
-        (tbproductorId,tbproductorIdentificacionNumero,tbproductorIdentificacionTipo,tbproductorNombre,
-         tbproductorTelefono,tbproductorCorreoElectronico,tbproductorEstado)
+        (tbproductorid,tbproductoridentificacionnumero,tbproductoridentificaciontipo,tbproductornombre,
+         tbproductortelefono,tbproductorcorreoelectronico,tbproductorestado)
         VALUES (:productorId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
     foreach ($directProductorIds as $directId) {
         $directInsert->execute(['productorId' => $directId, 'identificacion' => $directIdentification]);
     }
-    $directCount = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbproductorIdentificacionNumero = :identificacion');
+    $directCount = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbproductoridentificacionnumero = :identificacion');
     $directCount->execute(['identificacion' => $directIdentification]);
     test_same(2, (int) $directCount->fetchColumn(), 'Sin PK, UNIQUE ni CHECK, SQL directo acepta duplicados y dominio inválido');
 
     $db->prepare("INSERT INTO tbproductordireccion
-        (tbproductordireccionId,tbproductorId,tbproductordireccionProvincia,
-         tbproductordireccionCanton,tbproductordireccionDistrito)
+        (tbproductordireccionid,tbproductorid,tbproductordireccionprovincia,
+         tbproductordireccioncanton,tbproductordirecciondistrito)
         VALUES (:direccionId,:id,'X','X','X')")->execute(['direccionId' => $orphanId, 'id' => $orphanId]);
-    $db->prepare("INSERT INTO tbproductorfinca
-        (tbproductorfincaId,tbproductorId,tbproductorfincaNombre,tbproductorfincaEstado)
+    $db->prepare("INSERT INTO tbfinca
+        (tbfincaid,tbproductorid,tbfincanombre,tbfincaestado)
         VALUES (:fincaId,:id,'Finca sin productor',1)")->execute(['fincaId' => $orphanId, 'id' => $orphanId]);
-    foreach (['tbproductordireccion', 'tbproductorfinca'] as $table) {
-        $orphanCount = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE tbproductorId = :id");
+    foreach (['tbproductordireccion', 'tbfinca'] as $table) {
+        $orphanCount = $db->prepare("SELECT COUNT(*) FROM {$table} WHERE tbproductorid = :id");
         $orphanCount->execute(['id' => $orphanId]);
         test_same(1, (int) $orphanCount->fetchColumn(), "Sin FK, MySQL acepta la relación lógica huérfana en {$table}");
     }
 } finally {
-    $db->prepare('DELETE FROM tbproductorfinca WHERE tbproductorId = :id')->execute(['id' => $orphanId]);
-    $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorId = :id')->execute(['id' => $orphanId]);
-    $deleteDirect = $db->prepare('DELETE FROM tbproductor WHERE tbproductorId IN (?, ?)');
+    $db->prepare('DELETE FROM tbfinca WHERE tbproductorid = :id')->execute(['id' => $orphanId]);
+    $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid = :id')->execute(['id' => $orphanId]);
+    $deleteDirect = $db->prepare('DELETE FROM tbproductor WHERE tbproductorid IN (?, ?)');
     $deleteDirect->execute($directProductorIds);
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: cuatro tablas singulares, cero PK/FK/CHECK y tbproductorId asignado por PHP.\n";
+echo "OK schema_test: cuatro tablas, identificadores minúsculos, cero claves/índices/AUTO_INCREMENT e IDs asignados por PHP.\n";

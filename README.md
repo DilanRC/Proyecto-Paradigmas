@@ -9,13 +9,14 @@ La base `dbtindercows` contiene exactamente:
 
 1. `tbproductor`
 2. `tbproductordireccion`
-3. `tbproductorfinca`
+3. `tbfinca`
 4. `tbbitacora`
 
-El esquema no contiene `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE` ni `CHECK`.
-`tbproductorId` es `INT NOT NULL`, no es clave y no usa `AUTO_INCREMENT`.
-PHP calcula su consecutivo y dirección/finca lo usan como asociación lógica.
-No existen tablas de participante, roles, tipos de identificación ni `tbfinca`.
+El esquema no contiene claves, restricciones, índices ni columnas
+`AUTO_INCREMENT`. Todos los nombres SQL están en minúscula. PHP calcula los
+consecutivos y `tbproductordireccion`/`tbfinca` usan `tbproductorid` como
+asociación lógica. No existen tablas de participante, roles ni tipos de
+identificación.
 
 ## Requisitos e inicio
 
@@ -30,7 +31,7 @@ docker compose ps
 
 - Aplicación: <http://localhost:8080>
 - Adminer: <http://localhost:8081>, servidor `db`
-- MySQL desde host: `localhost:3307`
+- MySQL desde host: `localhost:${DB_HOST_PORT:-3307}`
 - MySQL entre contenedores: `db:3306`
 - Base: `dbtindercows`
 
@@ -44,12 +45,12 @@ docker compose up --build -d
 ## Scripts
 
 ```text
-Database/SqlScripts/001_create_database.sql
-Database/SqlScripts/002_create_productores.sql
-Database/SqlScripts/003_create_productores_direccion.sql
-Database/SqlScripts/004_create_productores_finca.sql
-Database/SqlScripts/005_create_audit.sql
-Database/SeedData/103_example_productores.sql
+Database/SqlScripts/001createdatabase.sql
+Database/SqlScripts/002createproductores.sql
+Database/SqlScripts/003createproductoresdireccion.sql
+Database/SqlScripts/004createfinca.sql
+Database/SqlScripts/005createaudit.sql
+Database/SeedData/103exampleproductores.sql
 ```
 
 La semilla usa datos ficticios y correos `example.test`.
@@ -120,7 +121,7 @@ que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
 La base y las cuatro tablas usan `utf8mb4_unicode_ci`. Compose fija esta
-intercalación en MySQL y `001_create_database.sql` altera también una base que
+intercalación en MySQL y `001createdatabase.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
 ## Interfaz
@@ -172,5 +173,5 @@ python3 Tests/documentation_test.py
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.
 - SQL directo puede crear huérfanos, duplicados y valores fuera del dominio.
-- `tbproductorId` no tiene garantía de unicidad en MySQL; el consecutivo solo se
+- `tbproductorid` no tiene garantía de unicidad en MySQL; el consecutivo solo se
   serializa dentro del flujo PHP.

@@ -31,7 +31,7 @@ function concurrency_count(PDO $db, string $table, string $column, int|string $v
 function concurrency_id(PDO $db, string $table, string $idColumn, int $productorId): int
 {
     $statement = $db->prepare(
-        "SELECT {$idColumn} FROM {$table} WHERE tbproductorId = :productorId ORDER BY {$idColumn} DESC LIMIT 1"
+        "SELECT {$idColumn} FROM {$table} WHERE tbproductorid = :productorId ORDER BY {$idColumn} DESC LIMIT 1"
     );
     $statement->execute(['productorId' => $productorId]);
     return (int) $statement->fetchColumn();
@@ -124,7 +124,7 @@ try {
         fn (): int => concurrency_count(
             $b,
             'tbproductor',
-            'tbproductorIdentificacionNumero',
+            'tbproductoridentificacionnumero',
             $identificationA,
         ),
     );
@@ -145,7 +145,7 @@ try {
             throw $exception;
         }
     });
-    test_same($productorIdA + 1, $productorIdB, 'B calcula tbproductorId como el ID confirmado de A + 1');
+    test_same($productorIdA + 1, $productorIdB, 'B calcula tbproductorid como el ID confirmado de A + 1');
 
     $directionIdA = concurrency_assert_commit_before_release(
         $directionA,
@@ -154,9 +154,9 @@ try {
         $lockNames[ProductorDireccion::class],
         function () use ($directionA, $directionProductorIds, $a): int {
             $directionA->crearVacia($directionProductorIds[0]);
-            return concurrency_id($a, 'tbproductordireccion', 'tbproductordireccionId', $directionProductorIds[0]);
+            return concurrency_id($a, 'tbproductordireccion', 'tbproductordireccionid', $directionProductorIds[0]);
         },
-        fn (): int => concurrency_count($b, 'tbproductordireccion', 'tbproductorId', $directionProductorIds[0]),
+        fn (): int => concurrency_count($b, 'tbproductordireccion', 'tbproductorid', $directionProductorIds[0]),
     );
     $directionIdB = $directionB->ejecutarConBloqueoAlta(function () use (
         $b,
@@ -166,7 +166,7 @@ try {
         $b->beginTransaction();
         try {
             $directionB->crearVacia($directionProductorIds[1]);
-            $id = concurrency_id($b, 'tbproductordireccion', 'tbproductordireccionId', $directionProductorIds[1]);
+            $id = concurrency_id($b, 'tbproductordireccion', 'tbproductordireccionid', $directionProductorIds[1]);
             $b->commit();
             return $id;
         } catch (Throwable $exception) {
@@ -177,7 +177,7 @@ try {
         }
     });
     test_same($directionIdA + 1, $directionIdB,
-        'B calcula tbproductordireccionId como el ID confirmado de A + 1');
+        'B calcula tbproductordireccionid como el ID confirmado de A + 1');
 
     $farmIdA = concurrency_assert_commit_before_release(
         $farmsA,
@@ -186,15 +186,15 @@ try {
         $lockNames[ProductorFinca::class],
         function () use ($farmsA, $farmProductorIds, $a): int {
             $farmsA->sincronizar($farmProductorIds[0], ['Finca Concurrente A']);
-            return concurrency_id($a, 'tbproductorfinca', 'tbproductorfincaId', $farmProductorIds[0]);
+            return concurrency_id($a, 'tbfinca', 'tbfincaid', $farmProductorIds[0]);
         },
-        fn (): int => concurrency_count($b, 'tbproductorfinca', 'tbproductorId', $farmProductorIds[0]),
+        fn (): int => concurrency_count($b, 'tbfinca', 'tbproductorid', $farmProductorIds[0]),
     );
     $farmIdB = $farmsB->ejecutarConBloqueoAlta(function () use ($b, $farmsB, $farmProductorIds): int {
         $b->beginTransaction();
         try {
             $farmsB->sincronizar($farmProductorIds[1], ['Finca Concurrente B']);
-            $id = concurrency_id($b, 'tbproductorfinca', 'tbproductorfincaId', $farmProductorIds[1]);
+            $id = concurrency_id($b, 'tbfinca', 'tbfincaid', $farmProductorIds[1]);
             $b->commit();
             return $id;
         } catch (Throwable $exception) {
@@ -204,7 +204,7 @@ try {
             throw $exception;
         }
     });
-    test_same($farmIdA + 1, $farmIdB, 'B calcula tbproductorfincaId como el ID confirmado de A + 1');
+    test_same($farmIdA + 1, $farmIdB, 'B calcula tbfincaid como el ID confirmado de A + 1');
 
     foreach ([
         [$productorA, $lockNames[Productor::class]],
@@ -241,8 +241,8 @@ try {
         }
     }
     $cleanup = test_db();
-    $cleanup->prepare('DELETE FROM tbproductordireccion WHERE tbproductorId IN (?, ?)')->execute($directionProductorIds);
-    $cleanup->prepare('DELETE FROM tbproductorfinca WHERE tbproductorId IN (?, ?)')->execute($farmProductorIds);
+    $cleanup->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid IN (?, ?)')->execute($directionProductorIds);
+    $cleanup->prepare('DELETE FROM tbfinca WHERE tbproductorid IN (?, ?)')->execute($farmProductorIds);
     test_cleanup_productores([$identificationA, $identificationB]);
 }
 

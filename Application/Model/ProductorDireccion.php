@@ -44,7 +44,7 @@ final class ProductorDireccion
     public function crear(int $productorId, array $direccion): void
     {
         $comprobar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :productorId'
+            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :productorId'
         );
         $comprobar->execute(['productorId' => $productorId]);
         if ((int) $comprobar->fetchColumn() !== 0) {
@@ -56,7 +56,7 @@ final class ProductorDireccion
     public function actualizar(int $productorId, array $direccion): void
     {
         $comprobar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorId = :productorId'
+            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :productorId'
         );
         $comprobar->execute(['productorId' => $productorId]);
         if ((int) $comprobar->fetchColumn() !== 1) {
@@ -64,12 +64,12 @@ final class ProductorDireccion
         }
         $sentencia = $this->conexion->prepare(
             'UPDATE tbproductordireccion
-             SET tbproductordireccionProvincia = :provincia,
-                 tbproductordireccionCanton = :canton,
-                 tbproductordireccionDistrito = :distrito,
-                 tbproductordireccionPueblo = :pueblo,
-                 tbproductordireccionSenas = :senas
-             WHERE tbproductorId = :productorId'
+             SET tbproductordireccionprovincia = :provincia,
+                 tbproductordireccioncanton = :canton,
+                 tbproductordirecciondistrito = :distrito,
+                 tbproductordireccionpueblo = :pueblo,
+                 tbproductordireccionsenas = :senas
+             WHERE tbproductorid = :productorId'
         );
         $sentencia->execute(['productorId' => $productorId, ...$direccion]);
     }
@@ -79,9 +79,9 @@ final class ProductorDireccion
         $direccionId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbproductordireccion
-             (tbproductordireccionId, tbproductorId, tbproductordireccionProvincia,
-              tbproductordireccionCanton, tbproductordireccionDistrito,
-              tbproductordireccionPueblo, tbproductordireccionSenas)
+             (tbproductordireccionid, tbproductorid, tbproductordireccionprovincia,
+              tbproductordireccioncanton, tbproductordirecciondistrito,
+              tbproductordireccionpueblo, tbproductordireccionsenas)
              VALUES (:direccionId, :productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
         );
         $sentencia->execute(['direccionId' => $direccionId, 'productorId' => $productorId, ...$direccion]);
@@ -90,7 +90,7 @@ final class ProductorDireccion
     private function siguienteId(): int
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT COALESCE(MAX(tbproductordireccionId), 0) + 1 FROM tbproductordireccion'
+            'SELECT COALESCE(MAX(tbproductordireccionid), 0) + 1 FROM tbproductordireccion'
         );
         $sentencia->execute();
 

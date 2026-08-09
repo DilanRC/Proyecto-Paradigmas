@@ -17,15 +17,15 @@ try {
     test_controller($requestPrefix . '-reactivar')->procesar('PATCH', [], ['identificacionNumero' => $id]);
 
     $sentencia = test_db()->prepare('SELECT * FROM tbbitacora
-        WHERE tbbitacoraRegistroIdentificacionNumero = :id ORDER BY tbbitacoraId');
+        WHERE tbbitacoraregistroidentificacionnumero = :id ORDER BY tbbitacoraid');
     $sentencia->execute(['id' => $productor['identificacionNumero']]);
     $eventos = $sentencia->fetchAll();
-    test_same(['CREAR', 'ACTUALIZAR', 'DESACTIVAR', 'REACTIVAR'], array_column($eventos, 'tbbitacoraAccion'), 'Ciclo auditado');
+    test_same(['CREAR', 'ACTUALIZAR', 'DESACTIVAR', 'REACTIVAR'], array_column($eventos, 'tbbitacoraaccion'), 'Ciclo auditado');
     foreach ($eventos as $evento) {
-        test_same('PRODUCTOR', $evento['tbbitacoraEntidad'], 'Entidad simplificada');
-        test_same('NO_AUTENTICADO', $evento['tbbitacoraActorTipo'], 'Actor real disponible');
-        test_same(null, $evento['tbbitacoraUsuarioId'], 'Sin usuario ficticio');
-        test_same('API_PRODUCTORES', $evento['tbbitacoraOrigen'], 'Origen técnico');
+        test_same('PRODUCTOR', $evento['tbbitacoraentidad'], 'Entidad simplificada');
+        test_same('NO_AUTENTICADO', $evento['tbbitacoraactortipo'], 'Actor real disponible');
+        test_same(null, $evento['tbbitacorausuarioid'], 'Sin usuario ficticio');
+        test_same('API_PRODUCTORES', $evento['tbbitacoraorigen'], 'Origen técnico');
     }
 } finally {
     test_cleanup_productores([$id]);

@@ -22,7 +22,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     ports:
-      - "3307:3306"
+      - "${DB_HOST_PORT:-3307}:3306"
     environment:
       MYSQL_DATABASE: ${DB_NAME}
       MYSQL_USER: ${DB_USER}
@@ -30,12 +30,12 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./Database/SqlScripts/001_create_database.sql:/docker-entrypoint-initdb.d/001_create_database.sql:ro
-      - ./Database/SqlScripts/002_create_productores.sql:/docker-entrypoint-initdb.d/002_create_productores.sql:ro
-      - ./Database/SqlScripts/003_create_productores_direccion.sql:/docker-entrypoint-initdb.d/003_create_productores_direccion.sql:ro
-      - ./Database/SqlScripts/004_create_productores_finca.sql:/docker-entrypoint-initdb.d/004_create_productores_finca.sql:ro
-      - ./Database/SqlScripts/005_create_audit.sql:/docker-entrypoint-initdb.d/005_create_audit.sql:ro
-      - ./Database/SeedData/103_example_productores.sql:/docker-entrypoint-initdb.d/103_example_productores.sql:ro
+      - ./Database/SqlScripts/001createdatabase.sql:/docker-entrypoint-initdb.d/001createdatabase.sql:ro
+      - ./Database/SqlScripts/002createproductores.sql:/docker-entrypoint-initdb.d/002createproductores.sql:ro
+      - ./Database/SqlScripts/003createproductoresdireccion.sql:/docker-entrypoint-initdb.d/003createproductoresdireccion.sql:ro
+      - ./Database/SqlScripts/004createfinca.sql:/docker-entrypoint-initdb.d/004createfinca.sql:ro
+      - ./Database/SqlScripts/005createaudit.sql:/docker-entrypoint-initdb.d/005createaudit.sql:ro
+      - ./Database/SeedData/103exampleproductores.sql:/docker-entrypoint-initdb.d/103exampleproductores.sql:ro
     healthcheck:
       # TCP no está disponible en el servidor temporal de inicialización. Esto
       # evita marcar healthy antes de que las semillas terminen y MySQL reinicie.

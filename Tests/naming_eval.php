@@ -12,17 +12,19 @@ $evaluate = static function (string $criterio, bool $cumple, string $evidencia) 
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
 $evaluate('cuatro_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 4, 'SQL crea exactamente cuatro tablas');
-$evaluate('cero_restricciones', !str_contains($schema, 'PRIMARY KEY')
+$evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
-    && !str_contains($schema, 'CONSTRAINT '), 'El esquema no contiene PK, FK, UNIQUE ni CHECK');
-$evaluate('productor_id_php', str_contains($schema, 'tbproductorId INT NOT NULL')
-    && !preg_match('/tbproductorId[^,\n]*AUTO_INCREMENT/', $schema),
-    'tbproductorId es INT ordinario y el consecutivo pertenece a PHP');
+    && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
+    && !str_contains($schema, 'CREATE INDEX') && !str_contains($schema, 'UNIQUE'),
+    'El esquema no contiene claves, restricciones, índices ni AUTO_INCREMENT');
+$evaluate('productor_id_php', str_contains($schema, 'tbproductorid INT NOT NULL'),
+    'tbproductorid es INT ordinario y el consecutivo pertenece a PHP');
 $evaluate('direccion_politica_aplicacion', !str_contains($schema, 'pk_tbproductordireccion')
     && str_contains($docs, 'política de aplicación'), 'Dirección no tiene llave y su relación 1:1 pertenece a la aplicación');
-$evaluate('finca_sin_entidad_separada', str_contains($schema, 'tbproductorfinca') && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca'), 'Finca queda dentro de tbproductorfinca');
+$evaluate('tabla_finca', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca')
+    && !str_contains($schema, 'tbproductorfinca'), 'La finca usa la tabla tbfinca solicitada');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
-$evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraRegistroIdentificacionNumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
+$evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
 $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindercows')
     && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 5,
     'Base y sesiones declaran utf8mb4_unicode_ci');
@@ -30,14 +32,17 @@ $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !st
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductor ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductordireccion ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorfinca '),
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca '),
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
     && !str_contains($models, '->query(') && !str_contains($models, '->exec('),
     'Los modelos usan PDO prepare sin query o exec');
-$evaluate('consecutivo_php', str_contains($models, 'MAX(tbproductorId)') && str_contains($models, 'GET_LOCK'),
-    'PHP calcula y serializa el consecutivo de productor');
+$evaluate('consecutivos_php', str_contains($models, 'MAX(tbproductorid)')
+    && str_contains($models, 'MAX(tbbitacoraid)') && str_contains($models, 'GET_LOCK'),
+    'PHP calcula y serializa los consecutivos');
+$evaluate('identificadores_minusculos', !preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $schema),
+    'Todos los identificadores SQL están en minúscula');
 $evaluate('decision_docente', str_contains($docs, 'instrucción docente') && str_contains($docs, 'tbproductor'), 'Decisión de corrección documentada');
 $evaluate('protocolo_identificacion', str_contains($docs, 'desactivar el registro incorrecto')
     && str_contains($docs, 'conservar su bitácora') && str_contains($docs, 'crear el registro correcto'),

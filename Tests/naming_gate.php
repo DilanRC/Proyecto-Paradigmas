@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $required = [
-    'Database/SqlScripts/002_create_productores.sql',
-    'Database/SqlScripts/003_create_productores_direccion.sql',
-    'Database/SqlScripts/004_create_productores_finca.sql',
+    'Database/SqlScripts/001createdatabase.sql',
+    'Database/SqlScripts/002createproductores.sql',
+    'Database/SqlScripts/003createproductoresdireccion.sql',
+    'Database/SqlScripts/004createfinca.sql',
+    'Database/SqlScripts/005createaudit.sql',
+    'Database/SeedData/103exampleproductores.sql',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
     'Application/Model/ProductorFinca.php',
@@ -25,21 +28,24 @@ foreach ($forbiddenFiles as $file) {
     if (file_exists("{$root}/{$file}")) throw new RuntimeException("Archivo obsoleto: {$file}");
 }
 $sql = implode("\n", array_map('file_get_contents', glob("{$root}/Database/SqlScripts/*.sql")));
-foreach (['tbproductor', 'tbproductordireccion', 'tbproductorfinca', 'tbbitacora'] as $table) {
+foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora'] as $table) {
     if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
-    'tbparticipanteidentificacion ', 'CREATE TABLE IF NOT EXISTS tbfinca'] as $obsolete) {
+    'tbparticipanteidentificacion ', 'tbproductorfinca'] as $obsolete) {
     if (str_contains($sql, $obsolete)) throw new RuntimeException("Referencia obsoleta en SQL: {$obsolete}");
 }
-foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ', 'ON UPDATE', 'ON DELETE'] as $forbiddenSql) {
+foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ', 'ON UPDATE', 'ON DELETE',
+    'AUTO_INCREMENT', 'CREATE INDEX', 'CREATE UNIQUE INDEX', 'UNIQUE KEY', 'UNIQUE ('] as $forbiddenSql) {
     if (str_contains($sql, $forbiddenSql)) {
         throw new RuntimeException("El esquema no puede contener {$forbiddenSql}");
     }
 }
-if (!preg_match('/tbproductorId INT NOT NULL/', $sql)
-    || preg_match('/tbproductorId[^,\n]*AUTO_INCREMENT/', $sql)) {
-    throw new RuntimeException('tbproductorId debe ser INT ordinario sin AUTO_INCREMENT.');
+if (!preg_match('/tbproductorid INT NOT NULL/', $sql)) {
+    throw new RuntimeException('tbproductorid debe ser INT ordinario sin AUTO_INCREMENT.');
+}
+if (preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $sql, $coincidencia)) {
+    throw new RuntimeException("Identificador camelCase prohibido en SQL: {$coincidencia[0]}");
 }
 foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
@@ -55,8 +61,10 @@ if (str_contains($controller, 'participanteId') || str_contains($controller, 'tb
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 if (str_contains($models, '->query(') || str_contains($models, '->exec(')
     || !str_contains($models, '->prepare(') || !str_contains($models, 'GET_LOCK')
-    || !str_contains($models, 'MAX(tbproductorId)')) {
-    throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular tbproductorId en PHP.');
+    || !str_contains($models, 'MAX(tbproductorid)')
+    || !str_contains($models, 'MAX(tbbitacoraid)')
+    || !str_contains($models, 'FROM tbfinca')) {
+    throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular los ID en PHP.');
 }
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
 if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
