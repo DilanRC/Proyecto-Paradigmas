@@ -57,7 +57,7 @@ final class Productor
                     d.tbproductordirecciondistrito, d.tbproductordireccionpueblo,
                     d.tbproductordireccionsenas
              FROM tbproductor p
-             INNER JOIN tbproductordireccion d
+             LEFT JOIN tbproductordireccion d
                 ON d.tbproductorid = p.tbproductorid
              WHERE p.tbproductoridentificacionnumero = :identificacionNumero'
         );
