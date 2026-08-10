@@ -74,6 +74,23 @@ final class ProductorDireccion
         $sentencia->execute(['productorId' => $productorId, ...$direccion]);
     }
 
+    public function buscar(int $productorId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbproductordireccionprovincia AS provincia,
+                    tbproductordireccioncanton AS canton,
+                    tbproductordirecciondistrito AS distrito,
+                    tbproductordireccionpueblo AS pueblo,
+                    tbproductordireccionsenas AS senas
+             FROM tbproductordireccion
+             WHERE tbproductorid = :productorId'
+        );
+        $sentencia->execute(['productorId' => $productorId]);
+        $fila = $sentencia->fetch();
+
+        return $fila === false ? null : $fila;
+    }
+
     private function insertar(int $productorId, array $direccion): void
     {
         $direccionId = $this->siguienteId();

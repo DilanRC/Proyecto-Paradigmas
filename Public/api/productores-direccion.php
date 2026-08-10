@@ -16,18 +16,20 @@ foreach (['NamedLock', 'ProductorFinca', 'ProductorDireccion', 'Bitacora', 'Prod
 require_once $raiz . '/Application/Controller/ProductorController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$permitidos = ['GET', 'POST', 'PUT'];
 if ($metodo === 'OPTIONS') {
-    header('Allow: POST, OPTIONS');
+    header('Allow: GET, POST, PUT, OPTIONS');
     http_response_code(204);
     exit;
 }
-if ($metodo !== 'POST') {
-    header('Allow: POST, OPTIONS');
+if (!in_array($metodo, $permitidos, true)) {
+    header('Allow: GET, POST, PUT, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
 }
 
+$metodosConCuerpo = ['POST', 'PUT'];
 $tipoContenido = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
-if ($tipoContenido !== 'application/json') {
+if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'application/json') {
     sendJsonResponse([
         'success' => false,
         'message' => 'El cuerpo debe usar Content-Type: application/json.',
@@ -36,12 +38,12 @@ if ($tipoContenido !== 'application/json') {
 }
 
 try {
-    $cuerpo = readJsonBody();
+    $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $controlador = new ProductorController(
         Database::getConnection(),
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
     );
-    $respuesta = $controlador->crearDireccion($cuerpo);
+    $respuesta = $controlador->procesarDireccion($metodo, $_GET, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
