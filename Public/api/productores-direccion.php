@@ -16,18 +16,18 @@ foreach (['NamedLock', 'ProductorFinca', 'ProductorDireccion', 'Bitacora', 'Prod
 require_once $raiz . '/Application/Controller/ProductorController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-$permitidos = ['GET', 'POST', 'PUT'];
+$permitidos = ['GET', 'POST', 'PUT','DELETE'];
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, POST, PUT, OPTIONS');
+    header('Allow: GET, POST, PUT,DELETE, OPTIONS');
     http_response_code(204);
     exit;
 }
 if (!in_array($metodo, $permitidos, true)) {
-    header('Allow: GET, POST, PUT, OPTIONS');
+    header('Allow: GET, POST, PUT,DELETE, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
 }
 
-$metodosConCuerpo = ['POST', 'PUT'];
+$metodosConCuerpo = ['POST', 'PUT','DELETE'];
 $tipoContenido = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
 if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'application/json') {
     sendJsonResponse([

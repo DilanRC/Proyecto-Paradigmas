@@ -86,9 +86,26 @@ final class ProductorDireccion
              WHERE tbproductorid = :productorId'
         );
         $sentencia->execute(['productorId' => $productorId]);
-        $fila = $sentencia->fetch();
+        $filas = $sentencia->fetchAll();
 
-        return $fila === false ? null : $fila;
+        if (count($filas) > 1) {
+            throw new \RuntimeException(
+                'El productor tiene más de una dirección registrada; revise la integridad de los datos.'
+            );
+        }
+
+        return $filas[0] ?? null;
+    }
+
+    public function vaciar(int $productorId): void
+    {
+        $this->actualizar($productorId, [
+            'provincia' => '',
+            'canton' => '',
+            'distrito' => '',
+            'pueblo' => null,
+            'senas' => null,
+        ]);
     }
 
     private function insertar(int $productorId, array $direccion): void
