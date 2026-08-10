@@ -18,6 +18,10 @@ const EXPECTED_COLUMNS = [
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid',
     ],
+    'tbcomprador' => [
+        'tbcompradorid', 'tbcompradoridentificacionnumero', 'tbcompradoridentificaciontipo',
+        'tbcompradornombre', 'tbcompradortelefono', 'tbcompradorcorreoelectronico', 'tbcompradorestado',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -88,7 +92,7 @@ function validateSchema(PDO $connection): void
     $expected = EXPECTED_COLUMNS;
     ksort($expected);
     if ($actual !== $expected) {
-        throw new RuntimeException('El esquema Supabase no coincide con el contrato de cuatro tablas.');
+        throw new RuntimeException('El esquema Supabase no coincide con el contrato de cinco tablas.');
     }
 }
 
@@ -99,11 +103,11 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v1'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v2'))");
     $connection->exec($schema);
     validateSchema($connection);
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=4 migration=v1\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=5 migration=v2\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

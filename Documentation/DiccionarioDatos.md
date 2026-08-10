@@ -52,3 +52,15 @@ políticas de PHP. Todos los identificadores SQL están en minúscula.
 | `tbbitacorausuarioid` | `BIGINT UNSIGNED NULL` | Usuario, nulo antes de autenticación. |
 | `tbbitacoraorigen` | `VARCHAR(100)` | Origen técnico. |
 | `tbbitacorasolicitudid` | `VARCHAR(100)` | Correlación de solicitud. |
+
+## tbcomprador
+
+| Columna | Tipo | Uso |
+|---|---|---|
+| `tbcompradorid` | `INT NOT NULL` | Identificador asignado por la aplicación. |
+| `tbcompradoridentificacionnumero` | `VARCHAR(250)` | Identificación canónica. |
+| `tbcompradoridentificaciontipo` | `VARCHAR(40)` | Tipo de identificación. |
+| `tbcompradornombre` | `VARCHAR(150)` | Nombre del comprador. |
+| `tbcompradortelefono` | `VARCHAR(20)` | Teléfono. |
+| `tbcompradorcorreoelectronico` | `VARCHAR(150)` | Correo electrónico. |
+| `tbcompradorestado` | `TINYINT(1)` | Estado lógico. |

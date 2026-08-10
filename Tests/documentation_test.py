@@ -14,9 +14,9 @@ assert "POST no acepta `direccionPrincipal`" in readme
 assert "La dirección se completa en un PUT posterior" in readme
 
 required = {
-    "DER.pdf": ["tbproductor", "tbproductordireccion", "tbfinca", "tbbitacora", "cero claves", "restricciones, índices", "AUTO_INCREMENT"],
+    "DER.pdf": ["tbproductor", "tbproductordireccion", "tbfinca", "tbbitacora", "tbcomprador", "cero claves", "restricciones, índices", "AUTO_INCREMENT"],
     "DAplicacion.pdf": ["JavaScript", "fetch/AJAX", "ProductorController", "PDO::prepare()", "respuesta HTTP JSON", "sin recargar"],
-    "AvanceSemanal.pdf": ["Cristian Brenes", "cuatro tablas", "restricciones", "cero índices", "tbproductorid", "sentencias preparadas"],
+    "AvanceSemanal.pdf": ["Cristian Brenes", "cinco tablas", "tbcomprador", "restricciones", "cero índices", "tbproductorid", "sentencias preparadas"],
 }
 for pdf_name, terms in required.items():
     pdf = ROOT / "Documentation" / pdf_name

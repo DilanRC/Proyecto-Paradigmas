@@ -15,8 +15,8 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
-test_same(['tbbitacora', 'tbfinca', 'tbproductor', 'tbproductordireccion'],
-    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente cuatro tablas singulares');
+test_same(['tbbitacora', 'tbcomprador', 'tbfinca', 'tbproductor', 'tbproductordireccion'],
+    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente cinco tablas singulares');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
@@ -76,6 +76,8 @@ $expectedColumns = [
     'tbbitacora' => ['tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid'],
+    'tbcomprador' => ['tbcompradorid', 'tbcompradoridentificacionnumero', 'tbcompradoridentificaciontipo',
+        'tbcompradornombre', 'tbcompradortelefono', 'tbcompradorcorreoelectronico', 'tbcompradorestado'],
 ];
 foreach ($expectedColumns as $table => $expected) {
     $statement = $db->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS
@@ -150,4 +152,4 @@ try {
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: cuatro tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+echo "OK schema_test: cinco tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

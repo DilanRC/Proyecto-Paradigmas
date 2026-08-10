@@ -39,7 +39,18 @@ CREATE TABLE IF NOT EXISTS public.tbbitacora (
     tbbitacorasolicitudid VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbcomprador (
+    tbcompradorid INTEGER NOT NULL,
+    tbcompradoridentificacionnumero VARCHAR(250) NOT NULL,
+    tbcompradoridentificaciontipo VARCHAR(40) NOT NULL,
+    tbcompradornombre VARCHAR(150) NOT NULL,
+    tbcompradortelefono VARCHAR(20) NOT NULL,
+    tbcompradorcorreoelectronico VARCHAR(150) NOT NULL,
+    tbcompradorestado SMALLINT NOT NULL
+);
+
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductordireccion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbfinca ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbbitacora ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbcomprador ENABLE ROW LEVEL SECURITY;

@@ -11,6 +11,7 @@ La base `dbtindervacas` contiene exactamente:
 2. `tbproductordireccion`
 3. `tbfinca`
 4. `tbbitacora`
+5. `tbcomprador`
 
 El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
 columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
@@ -55,6 +56,7 @@ Database/SqlScripts/002createproductores.sql
 Database/SqlScripts/003createproductoresdireccion.sql
 Database/SqlScripts/004createfinca.sql
 Database/SqlScripts/005createaudit.sql
+Database/SqlScripts/006createcomprador.sql
 Database/SeedData/103exampleproductores.sql
 ```
 
@@ -98,9 +100,10 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-La migración crea `tbproductor`, `tbproductordireccion`, `tbfinca` y
-`tbbitacora`, habilita RLS sin políticas públicas y valida las columnas. El log
-`supabase_schema_status=ready tables=4 migration=v1` confirma el resultado.
+La migración crea `tbproductor`, `tbproductordireccion`, `tbfinca`,
+`tbbitacora` y `tbcomprador`, habilita RLS sin políticas públicas y valida las
+columnas. El log `supabase_schema_status=ready tables=5 migration=v2` confirma
+el resultado.
 
 ### Aplicar `tbfinca` a una base existente
 
@@ -117,6 +120,21 @@ docker compose exec -T app php Tests/schema_test.php
 `CREATE TABLE IF NOT EXISTS` no altera una tabla incompatible que ya exista.
 Antes de usar `ALTER` o `DROP`, compare su estructura con
 `Tests/schema_test.php` y genere un respaldo.
+
+### Aplicar `tbcomprador` a una base existente
+
+La tabla de compradores replica el perfil de identificación y contacto de
+`tbproductor`. No tiene claves, índices, defaults ni datos semilla. Para un
+volumen MySQL existente, aplique su script idempotente y valide el contrato:
+
+```bash
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/SqlScripts/006createcomprador.sql
+docker compose exec -T app php Tests/schema_test.php
+```
+
+En Vercel, el arranque ejecuta la migración v2 contra Supabase y falla antes de
+iniciar Apache si `tbcomprador` existe con columnas incompatibles.
 
 ## API JSON
 
@@ -183,7 +201,7 @@ bloqueos en orden inverso después del commit o rollback. Las actualizaciones
 que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
-La base y las cuatro tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las cinco tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `001createdatabase.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 

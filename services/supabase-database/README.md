@@ -1,7 +1,7 @@
 # Esquema Supabase
 
 Servicio de migración PostgreSQL para el proyecto Supabase conectado a Vercel.
-Mantiene en `public` el equivalente de las cuatro tablas MySQL, sin claves,
+Mantiene en `public` el equivalente de las cinco tablas MySQL, sin claves,
 índices, valores automáticos ni datos semilla.
 
 `migrate.php` se ejecuta antes de Apache cuando Vercel entrega `POSTGRES_URL` o
@@ -13,7 +13,7 @@ contenedor sin borrar ni alterar datos existentes.
 Evidencia operativa esperada en los logs de Vercel:
 
 ```text
-supabase_schema_status=ready tables=4 migration=v1
+supabase_schema_status=ready tables=5 migration=v2
 ```
 
 Pruebas:

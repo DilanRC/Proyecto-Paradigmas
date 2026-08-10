@@ -10,12 +10,13 @@ MySQL y sentencias preparadas en PHP.
 ## Modelo vigente
 
 La base se llama `dbtindervacas` y
-conserva exactamente cuatro tablas:
+conserva exactamente cinco tablas:
 
 - `tbproductor`;
 - `tbproductordireccion`;
 - `tbfinca`;
 - `tbbitacora`.
+- `tbcomprador`.
 
 Todas las columnas usan minúsculas. Los datos de dirección y finca se asocian
 lógicamente mediante `tbproductorid`, sin FK. La identificación continúa
@@ -35,7 +36,8 @@ inmutable por contrato de aplicación, pero no es una PK.
 
 ## Validación y respaldo
 
-La aceptación comprueba cuatro tablas, identificadores minúsculos, cero
+La aceptación comprueba cinco tablas, incluidas las siete columnas de
+`tbcomprador`, identificadores minúsculos, cero
 restricciones, cero índices, cero valores `DEFAULT`, cero `AUTO_INCREMENT`,
 `utf8mb4_unicode_ci`, sentencias preparadas, pruebas PHP/Node/PDF y restauración
 sin diferencias. La evidencia corresponde a
