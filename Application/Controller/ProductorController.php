@@ -254,6 +254,7 @@ final class ProductorController
                 'GET' => $this->consultarDireccion($consulta),
                 'POST' => $this->crearDireccion($cuerpo),
                 'PUT' => $this->actualizarDireccion($cuerpo),
+                'DELETE' => $this->eliminarDireccion($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
         } catch (ProductorHttpException $excepcion) {
@@ -419,7 +420,7 @@ final class ProductorController
         $productorId = (int) $productor['productorId'];
         $direccion = $this->direccion->buscar($productorId);
         if ($direccion === null) {
-            throw new ProductorHttpException('Dirección no encontrada.', 404);
+            throw new ProductorHttpException('El productor no tiene una dirección registrada.', 404);
         }
 
         return $this->respuesta(true, 'Dirección consultada correctamente.', [
@@ -455,6 +456,12 @@ final class ProductorController
             }
             $productorId = (int) $bloqueado['tbproductorid'];
             $anterior = $this->direccion->buscar($productorId);
+            if ($anterior === null) {
+                throw new ProductorHttpException(
+                    'El productor no tiene una dirección registrada; use POST para crearla.',
+                    404,
+                );
+            }
             try {
                 $this->direccion->actualizar($productorId, $direccion);
             } catch (\RuntimeException $excepcion) {
@@ -464,7 +471,7 @@ final class ProductorController
             $this->bitacora->registrar(
                 'ACTUALIZAR_DIRECCION',
                 $identificacion,
-                $anterior === null ? null : ['direccionPrincipal' => $anterior],
+                ['direccionPrincipal' => $anterior],
                 ['direccionPrincipal' => $nueva],
                 $this->solicitudId,
             );
@@ -473,6 +480,49 @@ final class ProductorController
         });
 
         return $this->respuesta(true, 'Dirección actualizada correctamente.', $resultado);
+    }
+
+    private function eliminarDireccion(array $cuerpo): array
+    {
+        $identificacion = $this->validarIdentificacionUnica($cuerpo);
+
+        $resultado = $this->transaccion(function () use ($identificacion): array {
+            $bloqueado = $this->productor->bloquear($identificacion);
+            if ($bloqueado === null) {
+                throw new ProductorHttpException('Productor no encontrado.', 404);
+            }
+            if ((int) $bloqueado['tbproductorestado'] !== 1) {
+                throw new ProductorHttpException(
+                    'El productor está inactivo. Debe reactivarlo antes de modificar su dirección.',
+                    409,
+                );
+            }
+            $productorId = (int) $bloqueado['tbproductorid'];
+            $anterior = $this->direccion->buscar($productorId);
+            if ($anterior === null) {
+                throw new ProductorHttpException(
+                    'El productor no tiene una dirección registrada; no hay nada que eliminar.',
+                    404,
+                );
+            }
+            try {
+                $this->direccion->vaciar($productorId);
+            } catch (\RuntimeException $excepcion) {
+                throw new ProductorHttpException($excepcion->getMessage(), 409);
+            }
+            $nueva = $this->direccion->buscar($productorId);
+            $this->bitacora->registrar(
+                'VACIAR_DIRECCION',
+                $identificacion,
+                ['direccionPrincipal' => $anterior],
+                ['direccionPrincipal' => $nueva],
+                $this->solicitudId,
+            );
+
+            return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
+        });
+
+        return $this->respuesta(true, 'Dirección vaciada correctamente.', $resultado);
     }
 
     private function validarFincas(mixed $valor, array &$errores): array
