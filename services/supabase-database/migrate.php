@@ -106,6 +106,7 @@ try {
     $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v2'))");
     $connection->exec($schema);
     validateSchema($connection);
+    $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
     fwrite(STDOUT, "supabase_schema_status=ready tables=5 migration=v2\n");
 } catch (Throwable $exception) {

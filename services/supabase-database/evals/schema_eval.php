@@ -15,6 +15,7 @@ $checks = [
     'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 5,
     'migracion_serializada' => str_contains($migration, 'pg_advisory_xact_lock'),
     'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),
+    'recarga_postgrest' => str_contains($migration, "NOTIFY pgrst, 'reload schema'"),
     'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready'),
     'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
     'arranque_vercel' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),

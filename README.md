@@ -133,8 +133,9 @@ docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQ
 docker compose exec -T app php Tests/schema_test.php
 ```
 
-En Vercel, el arranque ejecuta la migración v2 contra Supabase y falla antes de
-iniciar Apache si `tbcomprador` existe con columnas incompatibles.
+En Vercel, el arranque ejecuta la migración v2 contra Supabase, recarga la caché
+de esquema de PostgREST y falla antes de iniciar Apache si `tbcomprador` existe
+con columnas incompatibles.
 
 ## API JSON
 

@@ -25,6 +25,7 @@ foreach (['PRIMARY KEY', 'FOREIGN KEY', 'DEFAULT ', 'CREATE INDEX', 'UNIQUE'] as
 }
 $check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización de migración');
 $check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
+$check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
 $check(str_contains($migration, 'supabase_schema_status=ready tables=5 migration=v2'), 'Falta traza operativa');
 $check(str_contains($migration, "'tbcomprador' => ["), 'Falta validar las columnas de tbcomprador');
 $check(str_contains($migration, "\$query['sslmode']"), 'La migración debe leer sslmode desde la URL');
