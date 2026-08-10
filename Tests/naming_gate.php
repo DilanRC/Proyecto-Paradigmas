@@ -9,6 +9,7 @@ $required = [
     'Database/SqlScripts/003createproductoresdireccion.sql',
     'Database/SqlScripts/004createfinca.sql',
     'Database/SqlScripts/005createaudit.sql',
+    'Database/SqlScripts/006createcomprador.sql',
     'Database/SeedData/103exampleproductores.sql',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
@@ -28,7 +29,7 @@ foreach ($forbiddenFiles as $file) {
     if (file_exists("{$root}/{$file}")) throw new RuntimeException("Archivo obsoleto: {$file}");
 }
 $sql = implode("\n", array_map('file_get_contents', glob("{$root}/Database/SqlScripts/*.sql")));
-foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora'] as $table) {
+foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador'] as $table) {
     if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
@@ -55,7 +56,7 @@ if (preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $sql, $coincidencia)) {
 foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
 }
-if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 5
+if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 6
     || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }

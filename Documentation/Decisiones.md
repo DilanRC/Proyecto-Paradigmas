@@ -3,8 +3,8 @@
 ## DEC-C04-001 - Instrucción docente vigente
 
 La instrucción docente sustituye el modelo anterior. `dbtindervacas` conserva
-cuatro tablas: `tbproductor`, `tbproductordireccion`, `tbfinca` y
-`tbbitacora`.
+cinco tablas: `tbproductor`, `tbproductordireccion`, `tbfinca`, `tbbitacora` y
+`tbcomprador`.
 
 ## DEC-C04-002 - Cero restricciones de integridad
 
@@ -49,3 +49,10 @@ sentencia preparada; el motor no completa columnas automáticamente.
 
 Avance01 y Correcciones 01, 02 y 03 permanecen intactas. La nueva evidencia,
 respaldo y etiqueta corresponden a Corrección 04.
+
+## DEC-C04-008 - Compradores
+
+`tbcomprador` conserva identificación, nombre, teléfono, correo y estado con
+el mismo perfil de tipos de `tbproductor`. Es una tabla independiente: no se
+agregan relaciones, claves, índices, defaults ni valores automáticos. La
+migración v2 crea y valida la misma estructura en Supabase PostgreSQL.

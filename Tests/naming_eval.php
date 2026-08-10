@@ -11,7 +11,7 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('cuatro_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 4, 'SQL crea exactamente cuatro tablas');
+$evaluate('cinco_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 5, 'SQL crea exactamente cinco tablas');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -28,16 +28,20 @@ $evaluate('direccion_politica_aplicacion', !str_contains($schema, 'pk_tbproducto
     && str_contains($docs, 'política de aplicación'), 'Dirección no tiene llave y su relación 1:1 pertenece a la aplicación');
 $evaluate('tabla_finca', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca')
     && !str_contains($schema, 'tbproductorfinca'), 'La finca usa la tabla tbfinca solicitada');
+$evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador')
+    && str_contains($schema, 'tbcompradoridentificacionnumero VARCHAR(250) NOT NULL'),
+    'Comprador tiene nombre singular y perfil de identificación explícito');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
 $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindervacas')
-    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 5,
+    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 6,
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductor ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductordireccion ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca '),
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca ')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador '),
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')

@@ -19,13 +19,14 @@ $checks = [
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
     'procedimiento_tbfinca' => str_contains($readme, 'Aplicar `tbfinca` a una base existente'),
+    'procedimiento_tbcomprador' => str_contains($readme, 'Aplicar `tbcomprador` a una base existente'),
     'verificacion_dominio' => str_contains($readme, 'curl -fsS https://tindervacas.dpdns.org/'),
 ];
 $passed = count(array_filter($checks));
 $score = (int) round(100 * $passed / count($checks));
 
 echo json_encode([
-    'eval' => 'despliegue_frontend_y_tbfinca',
+    'eval' => 'despliegue_frontend_y_esquema',
     'score' => $score,
     'threshold' => 100,
     'checks' => $checks,

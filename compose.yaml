@@ -35,6 +35,7 @@ services:
       - ./Database/SqlScripts/003createproductoresdireccion.sql:/docker-entrypoint-initdb.d/003createproductoresdireccion.sql:ro
       - ./Database/SqlScripts/004createfinca.sql:/docker-entrypoint-initdb.d/004createfinca.sql:ro
       - ./Database/SqlScripts/005createaudit.sql:/docker-entrypoint-initdb.d/005createaudit.sql:ro
+      - ./Database/SqlScripts/006createcomprador.sql:/docker-entrypoint-initdb.d/006createcomprador.sql:ro
       - ./Database/SeedData/103exampleproductores.sql:/docker-entrypoint-initdb.d/103exampleproductores.sql:ro
     healthcheck:
       # TCP no está disponible en el servidor temporal de inicialización. Esto
