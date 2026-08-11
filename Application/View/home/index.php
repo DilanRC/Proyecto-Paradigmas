@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
     <link rel="stylesheet" href="css/styles.css">
+    <script src="js/home.js" defer></script>
 </head>
 <body class="rural">
     <aside class="rural__aside">
@@ -71,7 +72,7 @@
                 <div class="rural__heading">
                     <div>
                         <h1>Lucero</h1>
-                        <p class="rural__sub-identity">Finca El Roble <span aria-hidden="true">•</span> 480 kg</p>
+                        <p class="rural__sub-identity"><span data-finca>Finca El Roble</span> <span aria-hidden="true">•</span> 480 kg</p>
                     </div>
                     <div class="rural__rating" aria-label="5 de 5 estrellas">
                         <span aria-hidden="true">★★★★★</span>

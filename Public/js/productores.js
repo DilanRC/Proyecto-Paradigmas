@@ -9,10 +9,12 @@
         form: $('#formulario-productor'), modalTitle: $('#titulo-modal'), modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'), save: $('#guardar-productor'),
         reactivateExisting: $('#reactivar-existente'), types: $('#identificacion-tipo'), farms: $('#fincas-nombres'), deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
         cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'), notification: $('#notificacion'),
+        detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'), detailContent: $('#detalle-contenido'), closeDetail: $('#cerrar-detalle'), closeDetailSecondary: $('#cerrar-detalle-secundario'), editFromDetail: $('#editar-desde-detalle'),
     };
     const productores = new Map();
     let tiposIdentificacion = [];
     let productorPendiente = null;
+    let productorDetalle = null;
     let searchTimer = 0;
     let notificationTimer = 0;
     let listController = null;
@@ -45,8 +47,13 @@
         elements.body.addEventListener('click', handleTableAction);
         elements.modal.addEventListener('click', closeOnBackdropClick);
         elements.deactivateModal.addEventListener('click', closeOnBackdropClick);
+        elements.detailModal.addEventListener('click', closeOnBackdropClick);
         elements.modal.addEventListener('close', restoreFocus);
         elements.deactivateModal.addEventListener('close', restoreFocus);
+        elements.detailModal.addEventListener('close', restoreFocus);
+        elements.closeDetail.addEventListener('click', closeDetail);
+        elements.closeDetailSecondary.addEventListener('click', closeDetail);
+        elements.editFromDetail.addEventListener('click', editFromDetail);
         listProducers();
     }
 
@@ -104,12 +111,16 @@
         const number = document.createElement('span'); number.textContent = producer.identificacionNumero;
         identificationCell.append(type, number);
         const contactCell = createCell('Contacto'); contactCell.textContent = producer.telefono || 'Sin teléfono';
-        const addressCell = createCell('Dirección principal'); addressCell.textContent = formatAddress(producer.direccionPrincipal);
+        const addressCell = createCell('Dirección principal');
+        const direccion = producer.direccionPrincipal;
+        if (direccion?.provincia && direccion?.canton && direccion?.distrito) addressCell.textContent = formatAddress(direccion);
+        else addressCell.appendChild(createActionButton('editar', 'Completar dirección', producer.identificacionNumero));
         const farmCell = createCell('Fincas'); farmCell.textContent = formatFarms(producer.fincas);
         const statusCell = createCell('Estado');
         const active = producer.estado === 'ACTIVO';
         const badge = document.createElement('span'); badge.className = `badge badge--${active ? 'active' : 'inactive'}`; badge.textContent = active ? 'Activo' : 'Inactivo'; statusCell.appendChild(badge);
         const actionsCell = createCell('Acciones'); actionsCell.className = 'row-actions';
+        actionsCell.append(createActionButton('ver', 'Ver', producer.identificacionNumero));
         if (active) actionsCell.append(createActionButton('editar', 'Editar', producer.identificacionNumero), createActionButton('desactivar', 'Desactivar', producer.identificacionNumero));
         else actionsCell.append(createActionButton('reactivar', 'Reactivar', producer.identificacionNumero));
         row.append(producerCell, identificationCell, contactCell, addressCell, farmCell, statusCell, actionsCell);
@@ -124,10 +135,40 @@
         if (!button) return;
         const producer = productores.get(button.dataset.id);
         if (!producer) return showNotification('No se encontró el productor seleccionado.', 'error');
+        if (button.dataset.action === 'ver') openDetail(producer);
         if (button.dataset.action === 'editar') openEditForm(producer);
         if (button.dataset.action === 'desactivar') openDeactivation(producer);
         if (button.dataset.action === 'reactivar') reactivateProducer(producer);
     }
+
+    function openDetail(producer) {
+        productorDetalle = producer;
+        elements.detailTitle.textContent = producer.nombre || 'Productor';
+        const direccion = producer.direccionPrincipal || {};
+        const campos = [
+            ['Identificación', `${producer.identificacion?.tipoCodigo ?? 'Sin tipo'} · ${producer.identificacionNumero}`],
+            ['Estado', producer.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'],
+            ['Teléfono', producer.telefono || '—'],
+            ['Correo electrónico', producer.correoElectronico || '—'],
+            ['Provincia', direccion.provincia || '—'],
+            ['Cantón', direccion.canton || '—'],
+            ['Distrito', direccion.distrito || '—'],
+            ['Pueblo', direccion.pueblo || '—'],
+            ['Señas', direccion.senas || '—', true],
+            ['Fincas', formatFarms(producer.fincas), true],
+        ];
+        const fragment = document.createDocumentFragment();
+        campos.forEach(([etiqueta, valor, completa]) => {
+            const dt = document.createElement('dt'); dt.textContent = etiqueta;
+            const dd = document.createElement('dd'); dd.textContent = valor; if (completa) dd.className = 'detail--full';
+            fragment.append(dt, dd);
+        });
+        elements.detailContent.replaceChildren(fragment);
+        openDialog(elements.detailModal); elements.closeDetail.focus();
+    }
+
+    function closeDetail() { if (elements.detailModal.open) elements.detailModal.close(); productorDetalle = null; }
+    function editFromDetail() { if (productorDetalle) { const producer = productorDetalle; closeDetail(); openEditForm(producer); } }
 
     function openCreateForm() {
         resetForm();
