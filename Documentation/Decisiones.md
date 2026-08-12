@@ -56,3 +56,4 @@ respaldo y etiqueta corresponden a Corrección 04.
 el mismo perfil de tipos de `tbproductor`. Es una tabla independiente: no se
 agregan relaciones, claves, índices, defaults ni valores automáticos. La
 migración v2 crea y valida la misma estructura en Supabase PostgreSQL.
+ 
