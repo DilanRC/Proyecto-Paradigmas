@@ -146,5 +146,5 @@ definida.
 
 El avance modifica el esquema MySQL de `dbtindervacas`. El espejo PostgreSQL de
 `services/supabase-database` mantiene las cinco tablas del CRUD productivo:
-propagar las siete tablas nuevas exige tocar ese servicio y su migración, lo que
+propagar las seis tablas nuevas exige tocar ese servicio y su migración, lo que
 está **FUERA DEL ALCANCE DE BASE DE DATOS** de este avance.

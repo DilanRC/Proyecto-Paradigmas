@@ -77,6 +77,12 @@
     </dialog>
 
     <dialog class="modal modal--confirmation" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar productor</h2><p id="mensaje-desactivar">El productor dejará de estar activo, pero conservará su dirección, fincas y bitácora.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
+
+    <dialog class="modal" id="modal-detalle" aria-labelledby="titulo-detalle">
+        <div class="modal__header"><div><span class="label">Ficha del productor</span><h2 id="titulo-detalle">Detalle</h2></div><button class="close-button" id="cerrar-detalle" type="button" aria-label="Cerrar detalle">×</button></div>
+        <div class="modal__content"><dl class="detail-grid" id="detalle-contenido"></dl></div>
+        <div class="modal__actions"><button class="button button--secondary" id="cerrar-detalle-secundario" type="button">Cerrar</button><button class="button button--primary" id="editar-desde-detalle" type="button">Editar</button></div>
+    </dialog>
     <div class="notification" id="notificacion" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

@@ -9,13 +9,18 @@ use PDO;
 
 final class Bitacora
 {
-    public function __construct(private readonly PDO $conexion)
-    {
-    }
+    public function __construct(private readonly PDO $conexion) {}
 
     /** @throws JsonException */
-    public function registrar(string $accion, string $identificacionNumero, ?array $anteriores, ?array $nuevos, string $solicitudId): void
-    {
+    public function registrar(
+        string $accion,
+        string $identificacionNumero,
+        ?array $anteriores,
+        ?array $nuevos,
+        string $solicitudId,
+        string $entidad = 'PRODUCTOR',
+        string $origen = 'API_PRODUCTORES',
+    ): void {
         $this->adquirirBloqueoAlta();
         try {
             $sentencia = $this->conexion->prepare(
@@ -28,7 +33,7 @@ final class Bitacora
             );
             $sentencia->execute([
                 'bitacoraId' => $this->siguienteId(),
-                'entidad' => 'PRODUCTOR',
+                'entidad' => $entidad,
                 'registroId' => $identificacionNumero,
                 'accion' => $accion,
                 'fecha' => gmdate('Y-m-d H:i:s'),
@@ -36,14 +41,14 @@ final class Bitacora
                 'nuevos' => $nuevos === null ? null : json_encode($nuevos, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                 'actorTipo' => 'NO_AUTENTICADO',
                 'usuarioId' => null,
-                'origen' => 'API_PRODUCTORES',
+                'origen' => $origen,
                 'solicitudId' => $solicitudId,
             ]);
         } finally {
             $this->liberarBloqueoAlta();
         }
     }
-
+    
     private function siguienteId(): int
     {
         $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbbitacoraid), 0) + 1 FROM tbbitacora');

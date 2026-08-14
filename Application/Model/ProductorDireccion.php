@@ -74,6 +74,40 @@ final class ProductorDireccion
         $sentencia->execute(['productorId' => $productorId, ...$direccion]);
     }
 
+    public function buscar(int $productorId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbproductordireccionprovincia AS provincia,
+                    tbproductordireccioncanton AS canton,
+                    tbproductordirecciondistrito AS distrito,
+                    tbproductordireccionpueblo AS pueblo,
+                    tbproductordireccionsenas AS senas
+             FROM tbproductordireccion
+             WHERE tbproductorid = :productorId'
+        );
+        $sentencia->execute(['productorId' => $productorId]);
+        $filas = $sentencia->fetchAll();
+
+        if (count($filas) > 1) {
+            throw new \RuntimeException(
+                'El productor tiene más de una dirección registrada; revise la integridad de los datos.'
+            );
+        }
+
+        return $filas[0] ?? null;
+    }
+
+    public function vaciar(int $productorId): void
+    {
+        $this->actualizar($productorId, [
+            'provincia' => '',
+            'canton' => '',
+            'distrito' => '',
+            'pueblo' => null,
+            'senas' => null,
+        ]);
+    }
+
     private function insertar(int $productorId, array $direccion): void
     {
         $direccionId = $this->siguienteId();
