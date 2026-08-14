@@ -15,8 +15,9 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
-test_same(['tbbitacora', 'tbcomprador', 'tbfinca', 'tbproductor', 'tbproductordireccion'],
-    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente cinco tablas singulares');
+test_same(['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo',
+    'tbproductor', 'tbproductordireccion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
+    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente once tablas singulares');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
@@ -69,10 +70,19 @@ foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENT
 $expectedColumns = [
     'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
         'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
-    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbproductordireccionprovincia',
-        'tbproductordireccioncanton', 'tbproductordirecciondistrito', 'tbproductordireccionpueblo',
-        'tbproductordireccionsenas'],
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
+        'tbproductordireccionprovincia', 'tbproductordireccioncanton', 'tbproductordirecciondistrito',
+        'tbproductordireccionpueblo', 'tbproductordireccionsenas'],
+    'tbdireccion' => ['tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
+        'tbdireccionpueblo', 'tbdireccionsenas'],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
+    'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
+    'tbpagometodo' => ['tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo'],
+    'tbtransportista' => ['tbtransportistaid', 'tbtransportistaidentificacionnumero',
+        'tbtransportistaidentificaciontipo', 'tbtransportistanombre', 'tbtransportistatelefono',
+        'tbtransportistacorreoelectronico', 'tbtransportistaestado'],
+    'tbvehiculo' => ['tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado'],
+    'tbtransportistavehiculo' => ['tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid'],
     'tbbitacora' => ['tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid'],
@@ -152,4 +162,11 @@ try {
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: cinco tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+$pagoMetodo = $db->prepare('SELECT tbpagometodoid, tbpagometodonombre, tbpagometododescripcion,
+    tbpagometodoactivo FROM tbpagometodo ORDER BY tbpagometodoid');
+$pagoMetodo->execute();
+test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
+    'tbpagometododescripcion' => 'Pago realizado en efectivo', 'tbpagometodoactivo' => 1]],
+    $pagoMetodo->fetchAll(), 'Los datos iniciales deben dejar solo Efectivo en tbpagometodo');
+
+echo "OK schema_test: once tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

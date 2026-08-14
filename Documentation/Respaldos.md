@@ -28,7 +28,9 @@ El verificador restaura el dump completo y luego estructura más datos. Compara
 tablas, columnas, metadatos de claves, CHECK, reglas referenciales, índices,
 intercalación, conteos y checksum de datos. Para Corrección 04 exige:
 
-- cuatro tablas singulares exactas;
+- once tablas singulares exactas: las cinco del CRUD vigente más `tbdireccion`,
+  `tbfincadireccion`, `tbpagometodo`, `tbtransportista`, `tbvehiculo` y
+  `tbtransportistavehiculo`;
 - cero restricciones totales;
 - cero PRIMARY KEY, FOREIGN KEY y CHECK;
 - cero índices;

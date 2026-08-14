@@ -3,7 +3,11 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
-$schema = implode("\n", array_map('file_get_contents', glob("{$root}/Database/SqlScripts/*.sql")));
+$schemaFiles = glob("{$root}/Database/SqlScripts/*.sql");
+$schema = implode("\n", array_map('file_get_contents', $schemaFiles));
+$seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
+$diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
+$relaciones = file_get_contents("{$root}/Database/Tests/comprobacionrelaciones.sql");
 $docs = file_get_contents("{$root}/Documentation/Decisiones.md") . file_get_contents("{$root}/Documentation/DiccionarioDatos.md");
 $readme = file_get_contents("{$root}/README.md");
 $restoreTool = file_get_contents("{$root}/Tools/test-restore.sh");
@@ -11,7 +15,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('cinco_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 5, 'SQL crea exactamente cinco tablas');
+$evaluate('once_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 11,
+    'SQL crea exactamente once tablas: cinco del CRUD vigente y seis del avance de direcciones, pagos y transporte');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -34,14 +39,40 @@ $evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS t
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
 $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindervacas')
-    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 6,
+    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === count($schemaFiles),
     'Base y sesiones declaran utf8mb4_unicode_ci');
+$evaluate('direccion_centralizada', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfincadireccion ')
+    && str_contains($schema, 'tbdireccionid INT NULL'),
+    'La ubicación vive en tbdireccion y productor y finca la referencian por tbdireccionid');
+$evaluate('direccion_compartida_demostrada', str_contains($relaciones, 'direccion_compartida')
+    && str_contains($relaciones, 'direccion_productor') && str_contains($relaciones, 'direccion_finca'),
+    'La comprobación demuestra ubicación compartida y ubicaciones distintas');
+$evaluate('asociaciones_con_identificador', str_contains($schema, 'tbfincadireccionid INT NOT NULL')
+    && str_contains($schema, 'tbtransportistavehiculoid INT NOT NULL'),
+    'Cada asociación tiene identificador propio');
+$evaluate('transporte_confirmado', str_contains($schema, 'tbvehiculoplaca VARCHAR(20) NOT NULL')
+    && str_contains($schema, 'tbvehiculovin VARCHAR(50) NOT NULL')
+    && str_contains($schema, 'tbvehiculomodelo VARCHAR(100) NOT NULL')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportista '),
+    'Vehículo registra placa, vin y modelo y el transportista es independiente');
+$evaluate('pago_efectivo', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbpagometodo ')
+    && str_contains($seed, "'Efectivo', 'Pago realizado en efectivo', 1")
+    && stripos($seed, 'SINPE') === false,
+    'El catálogo de pago existe y solo contiene efectivo');
+$evaluate('diagnostico_sin_restriccion', str_contains($diagnostico, 'DETECTAN')
+    && str_contains($diagnostico, 'No las IMPIDEN')
+    && substr_count($diagnostico, 'HAVING COUNT') >= 5,
+    'Las consultas de diagnóstico detectan inconsistencias sin impedirlas');
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductor ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductordireccion ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador '),
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador ')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvehiculo ')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistavehiculo '),
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
