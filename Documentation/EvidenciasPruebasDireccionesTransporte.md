@@ -200,3 +200,23 @@ de la base. Corresponde al backend: **FUERA DEL ALCANCE DE BASE DE DATOS**.
 `tbproductordireccion` normalizada, RLS en todas y `Efectivo` como único dato
 inicial. La migración `v3` normaliza también el espejo PostgreSQL antes de
 validar y deja la traza `supabase_schema_status=ready tables=11 migration=v3`.
+
+La migración se aplicó al proyecto `mkxugbjvvlcyxosjjzit` con el nombre
+`v3_direcciones_pagos_transporte`. Estado comprobado después de aplicarla:
+
+| Elemento | Antes | Después |
+|---|---|---|
+| Tablas en `public` | 5 | 11 |
+| `tbproductordireccion` | 7 columnas, con la ubicación adentro | 3 columnas, `tbdireccionid NOT NULL` |
+| Filas afectadas | las cinco tablas estaban vacías | ningún dato descartado |
+| RLS | 5 de 5 | 11 de 11 |
+| Llaves, unicidad y verificaciones reales en `pg_constraint` | 0 | 0 |
+| Índices | 0 | 0 |
+| Columnas con valor automático | 0 | 0 |
+| Triggers | 0 | 0 |
+| `tbpagometodo` | no existía | 1 fila: `Efectivo` |
+
+PostgREST recargó su caché: las seis tablas nuevas responden por la API REST.
+Repetir los pasos idempotentes de `migrate.php` sobre el esquema ya migrado no
+duplica ni falla, así que el próximo despliegue en Vercel lo encontrará
+conforme. Reporte completo en `/tmp/supabase-v3/reporte.md`.
