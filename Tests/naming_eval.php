@@ -43,7 +43,7 @@ $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtinde
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('direccion_centralizada', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfincadireccion ')
-    && str_contains($schema, 'tbdireccionid INT NULL'),
+    && !str_contains($schema, 'tbproductordireccionprovincia'),
     'La ubicación vive en tbdireccion y productor y finca la referencian por tbdireccionid');
 $evaluate('direccion_compartida_demostrada', str_contains($relaciones, 'direccion_compartida')
     && str_contains($relaciones, 'direccion_productor') && str_contains($relaciones, 'direccion_finca'),

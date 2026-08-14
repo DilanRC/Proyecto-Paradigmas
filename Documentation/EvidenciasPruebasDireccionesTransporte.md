@@ -39,16 +39,11 @@ tbdireccion
 +----------------------+--------------+------+-----+---------+-------+
 
 tbproductordireccion
-+-------------------------------+--------------+------+-----+---------+-------+
-| tbproductordireccionid        | int          | NO   |     | NULL    |       |
-| tbproductorid                 | int          | NO   |     | NULL    |       |
-| tbdireccionid                 | int          | YES  |     | NULL    |       |
-| tbproductordireccionprovincia | varchar(100) | NO   |     | NULL    |       |
-| tbproductordireccioncanton    | varchar(100) | NO   |     | NULL    |       |
-| tbproductordirecciondistrito  | varchar(100) | NO   |     | NULL    |       |
-| tbproductordireccionpueblo    | varchar(150) | YES  |     | NULL    |       |
-| tbproductordireccionsenas     | varchar(500) | YES  |     | NULL    |       |
-+-------------------------------+--------------+------+-----+---------+-------+
++------------------------+------+------+-----+---------+-------+
+| tbproductordireccionid | int  | NO   |     | NULL    |       |
+| tbproductorid          | int  | NO   |     | NULL    |       |
+| tbdireccionid          | int  | NO   |     | NULL    |       |
++------------------------+------+------+-----+---------+-------+
 
 tbtransportistavehiculo
 +---------------------------+------+------+-----+---------+-------+
@@ -131,10 +126,7 @@ Limpieza
 | D-06 identificadores repetidos | 0 filas |
 | D-07 asociaciones huérfanas | 0 filas |
 | D-08 direcciones sin uso | 0 filas |
-| D-09 residencias sin `tbdireccionid` | 2 filas: los productores 1 y 2 del ejemplo |
-
-`D-09` es la lista de trabajo pendiente para la capa de aplicación, no un
-defecto del modelo. Ver `DEC-13`.
+| D-09 ubicaciones con los mismos datos | 0 filas |
 
 ## 5. Pruebas del repositorio
 
@@ -142,12 +134,69 @@ defecto del modelo. Ver `DEC-13`.
 |---|---|
 | `php Tests/naming_gate.php` | APROBADA: once tablas, cero llaves ni restricciones, enlaces del avance presentes, `Efectivo` como único método |
 | `php Tests/naming_eval.php` | APROBADA: score 100 sobre umbral 100 |
-| `php Tests/schema_test.php` | APROBADA contra base viva: once tablas, columnas exactas, cero restricciones, cero índices, cero valores automáticos y `Efectivo` en `tbpagometodo` |
-| `php Tests/transaction_test.php` | APROBADA |
-| `php Tests/address_policy_test.php` | APROBADA: el CRUD vigente sigue escribiendo la dirección sin cambios |
-| `php Tests/audit_test.php` | APROBADA |
-| `php Tests/concurrency_test.php` | APROBADA |
+| `php Tests/schema_test.php` | APROBADA la parte de base de datos contra base viva: once tablas, columnas exactas, cero restricciones, cero índices, cero valores automáticos y `Efectivo` en `tbpagometodo`. La parte que ejercita el CRUD falla: ver sección 6 |
+| `php Tests/comprador_test.php` | APROBADA |
 | `python3 Tests/documentation_test.py` | APROBADA: PDF regenerados y alineados |
 | `php Tests/deployment_test.php` | APROBADA |
-| `php services/supabase-database/tests/schema_test.php` | APROBADA: el espejo PostgreSQL conserva sus cinco tablas |
+| `php services/supabase-database/tests/schema_test.php` | APROBADA: el espejo PostgreSQL declara las once tablas y la normalización |
+| `php services/supabase-database/evals/schema_eval.php` | APROBADA: score 100 |
 | `php Tests/api_productores_test.php` | NO EJECUTADA: requiere el servidor HTTP del contenedor `app` |
+
+## 6. Migración de una base existente
+
+Comprobada sobre un contenedor MySQL inicializado con el esquema anterior al
+avance, aplicando `Database/SqlScripts/007` a `012` y después
+`Database/Migrations/001normalizadireccionproductor.sql`.
+
+Antes:
+
+```text
++------------------------+---------------+-------------------------------+----------------------------+------------------------------+----------------------------+------------------------------------+
+| tbproductordireccionid | tbproductorid | tbproductordireccionprovincia | tbproductordireccioncanton | tbproductordirecciondistrito | tbproductordireccionpueblo | tbproductordireccionsenas          |
++------------------------+---------------+-------------------------------+----------------------------+------------------------------+----------------------------+------------------------------------+
+|                      1 |             1 | Alajuela                      | San Carlos                 | Quesada                      | Centro                     | Datos ficticios para demostracion. |
+|                      2 |             2 | Guanacaste                    | Tilaran                    | Tilaran                      | NULL                       | Datos ficticios para demostracion. |
++------------------------+---------------+-------------------------------+----------------------------+------------------------------+----------------------------+------------------------------------+
+```
+
+Después:
+
+```text
++------------------------+---------------+---------------+----------------------+-------------------+---------------------+-------------------+------------------------------------+
+| tbproductordireccionid | tbproductorid | tbdireccionid | tbdireccionprovincia | tbdireccioncanton | tbdirecciondistrito | tbdireccionpueblo | tbdireccionsenas                   |
++------------------------+---------------+---------------+----------------------+-------------------+---------------------+-------------------+------------------------------------+
+|                      1 |             1 |             1 | Alajuela             | San Carlos        | Quesada             | Centro            | Datos ficticios para demostracion. |
+|                      2 |             2 |             2 | Guanacaste           | Tilaran           | Tilaran             | NULL              | Datos ficticios para demostracion. |
++------------------------+---------------+---------------+----------------------+-------------------+---------------------+-------------------+------------------------------------+
+```
+
+Las tres comprobaciones obligatorias de la migración devolvieron 0:
+`residencias_sin_enlace`, `enlaces_sin_ubicacion` y
+`ubicaciones_con_datos_distintos`. El diagnóstico posterior devolvió cero filas
+en D-01 a D-09.
+
+## 7. Contrato roto a propósito
+
+La base se normalizó según el modelo; la aplicación que la consume todavía no.
+Estas pruebas fallan hasta que se adapte
+`Application/Model/ProductorDireccion.php` y la consulta de
+`Application/Model/Productor.php:55`:
+
+| Prueba | Error |
+|---|---|
+| `Tests/schema_test.php` (parte CRUD) | `Unknown column 'd.tbproductordireccionprovincia'` |
+| `Tests/transaction_test.php` | mismo origen |
+| `Tests/address_policy_test.php` | mismo origen |
+| `Tests/audit_test.php` | mismo origen |
+| `Tests/concurrency_test.php` | `Unknown column 'tbproductordireccionprovincia'` |
+| `Tests/direccion_test.php` | mismo origen |
+
+Es el efecto esperado del cambio de contrato descrito en `DEC-13`, no un defecto
+de la base. Corresponde al backend: **FUERA DEL ALCANCE DE BASE DE DATOS**.
+
+## 8. Supabase
+
+`services/supabase-database/` quedó alineado con el mismo modelo: once tablas,
+`tbproductordireccion` normalizada, RLS en todas y `Efectivo` como único dato
+inicial. La migración `v3` normaliza también el espejo PostgreSQL antes de
+validar y deja la traza `supabase_schema_status=ready tables=11 migration=v3`.

@@ -22,6 +22,7 @@ $required = [
     'Database/Tests/comprobaciondatosiniciales.sql',
     'Database/Tests/comprobacionrelaciones.sql',
     'Database/Tests/diagnostico.sql',
+    'Database/Migrations/001normalizadireccionproductor.sql',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
     'Application/Model/ProductorFinca.php',
@@ -75,8 +76,7 @@ if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== coun
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 $avance = [
-    'tbdireccionid INT NOT NULL' => 'tbdireccion necesita su identificador lógico',
-    'tbdireccionid INT NULL' => 'tbproductordireccion enlaza la ubicación y admite nulo',
+    'tbdireccionid INT NOT NULL' => 'tbdireccion y tbproductordireccion usan el identificador de ubicación',
     'tbfincadireccionid INT NOT NULL' => 'la asociación finca-dirección necesita identificador propio',
     'tbpagometodonombre VARCHAR(100) NOT NULL' => 'el catálogo de pago necesita nombre',
     'tbtransportistaid INT NOT NULL' => 'el transportista es una persona independiente',
@@ -87,6 +87,12 @@ $avance = [
 ];
 foreach ($avance as $fragmento => $motivo) {
     if (!str_contains($sql, $fragmento)) throw new RuntimeException("Falta {$fragmento}: {$motivo}");
+}
+foreach (['tbproductordireccionprovincia', 'tbproductordireccioncanton', 'tbproductordirecciondistrito',
+    'tbproductordireccionpueblo', 'tbproductordireccionsenas'] as $duplicada) {
+    if (str_contains($sql, $duplicada)) {
+        throw new RuntimeException("La ubicación vive solo en tbdireccion: sobra {$duplicada}");
+    }
 }
 $seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
 if (!str_contains($seed, "SELECT 1, 'Efectivo', 'Pago realizado en efectivo', 1")) {

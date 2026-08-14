@@ -70,9 +70,7 @@ foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENT
 $expectedColumns = [
     'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
         'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
-    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
-        'tbproductordireccionprovincia', 'tbproductordireccioncanton', 'tbproductordirecciondistrito',
-        'tbproductordireccionpueblo', 'tbproductordireccionsenas'],
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid'],
     'tbdireccion' => ['tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
         'tbdireccionpueblo', 'tbdireccionsenas'],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
@@ -95,6 +93,20 @@ foreach ($expectedColumns as $table => $expected) {
     $statement->execute(['tableName' => $table]);
     test_same($expected, $statement->fetchAll(PDO::FETCH_COLUMN), "Columnas inesperadas en {$table}");
 }
+
+$pagoMetodoEstructura = $db->prepare('SELECT tbpagometodoid, tbpagometodonombre,
+    tbpagometododescripcion, tbpagometodoactivo FROM tbpagometodo ORDER BY tbpagometodoid');
+$pagoMetodoEstructura->execute();
+test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
+    'tbpagometododescripcion' => 'Pago realizado en efectivo', 'tbpagometodoactivo' => 1]],
+    $pagoMetodoEstructura->fetchAll(), 'Los datos iniciales deben dejar solo Efectivo en tbpagometodo');
+
+// Corte deliberado: hasta aquí se comprueba el contrato de base de datos y ya no
+// depende de la aplicación. Lo que sigue ejercita el CRUD de productores, que
+// todavía escribe la ubicación en tbproductordireccion y fallará hasta que se
+// adapte Application/Model/ProductorDireccion.php al contrato normalizado.
+echo "OK schema_test (estructura): once tablas, columnas exactas, cero claves, índices, "
+    . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
 $apiIds = [test_document(), test_document(), test_document()];
 $directIdentification = test_document();
@@ -161,12 +173,5 @@ try {
     $deleteDirect->execute($directProductorIds);
     test_cleanup_productores($apiIds);
 }
-
-$pagoMetodo = $db->prepare('SELECT tbpagometodoid, tbpagometodonombre, tbpagometododescripcion,
-    tbpagometodoactivo FROM tbpagometodo ORDER BY tbpagometodoid');
-$pagoMetodo->execute();
-test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
-    'tbpagometododescripcion' => 'Pago realizado en efectivo', 'tbpagometodoactivo' => 1]],
-    $pagoMetodo->fetchAll(), 'Los datos iniciales deben dejar solo Efectivo en tbpagometodo');
 
 echo "OK schema_test: once tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

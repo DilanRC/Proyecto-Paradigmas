@@ -89,7 +89,11 @@ duplica por tipo de entidad.
 ## DEC-06
 
 El transportista se modela como persona independiente, con `tbtransportistaid`
-propio. No se deriva de productor, comprador, usuario, finca ni empresa.
+propio. No se deriva de productor, comprador, usuario, finca ni empresa. Eso es
+lo confirmado. Identificación, tipo, nombre, teléfono, correo y estado son una
+propuesta de modelado para poder identificar y contactar a la persona, siguiendo
+el patrón de personas ya registrado en el proyecto: no fueron solicitados y
+pueden retirarse. Queda pendiente confirmar cuáles son obligatorios.
 
 ## DEC-07
 
@@ -104,10 +108,10 @@ consulta `D-05` de `Database/Tests/diagnostico.sql` lo detecta.
 
 ## DEC-09
 
-Placa, VIN y modelo son los datos confirmados actualmente para vehículo. Se
-conserva además `tbvehiculoestado` por coherencia con el patrón de estado lógico
-del resto de tablas. Cualquier otro atributo queda como PENDIENTE DE
-CONFIRMACIÓN en el diccionario de datos.
+Placa, VIN y modelo son los datos confirmados actualmente para vehículo.
+`tbvehiculoestado` es una propuesta de modelado por coherencia con el patrón de
+estado lógico del resto de tablas, no un requisito recibido. Cualquier otro
+atributo queda como PENDIENTE DE CONFIRMACIÓN en el diccionario de datos.
 
 ## DEC-10
 
@@ -126,14 +130,29 @@ Las reglas que SQL no garantiza quedan documentadas como políticas del modelo y
 deberán ser atendidas por la capa correspondiente del proyecto. Este avance no
 implementa esa capa.
 
-## DEC-13 - Enlace nuevo sin romper el CRUD vigente
+## DEC-13 - Una sola fuente de verdad para la dirección
 
-`tbproductordireccion` gana `tbdireccionid INT NULL` y conserva sus columnas
-heredadas de provincia a señas. Motivo: el modelo `ProductorDireccion.php`
-inserta esas columnas hoy y el avance no puede modificar backend. Si
-`tbdireccionid` fuera obligatorio, el INSERT vigente fallaría. Trasladar el
-detalle a `tbdireccion` y dejar de escribir las columnas heredadas es trabajo de
-aplicación: **FUERA DEL ALCANCE DE BASE DE DATOS**.
+`tbproductordireccion` queda con tres columnas:
+`tbproductordireccionid`, `tbproductorid` y `tbdireccionid INT NOT NULL`. La
+ubicación completa vive únicamente en `tbdireccion`.
+
+La respuesta a "¿dónde está almacenada la dirección del productor?" es una sola:
+en `tbdireccion`. Conservar además las columnas heredadas habría contradicho la
+DEC-05 y dejado el dato en dos lugares.
+
+`NOT NULL` no entra en las construcciones prohibidas: lo prohibido es
+`PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE`, `CHECK` y `AUTO_INCREMENT`.
+
+La migración `Database/Migrations/001normalizadireccionproductor.sql` traslada
+las direcciones existentes, comprueba que cada productor quedó enlazado y
+después elimina las cinco columnas.
+
+Consecuencia: **el contrato de base cambió**. La aplicación ya no debe escribir
+provincia, cantón, distrito, pueblo ni señas en `tbproductordireccion`; debe
+hacerlo en `tbdireccion` y guardar el enlace. Adaptar
+`Application/Model/ProductorDireccion.php` es **FUERA DEL ALCANCE DE BASE DE
+DATOS**: la base se normalizó según el modelo, y la aplicación que la consume se
+adapta al contrato actualizado.
 
 ## DEC-14 - Sin tabla puente productor-finca
 
@@ -142,9 +161,10 @@ confirmada es 1 productor a N fincas, que `tbfinca.tbproductorid` ya representa.
 Introducir una tabla puente supondría una cardinalidad N a N todavía no
 definida.
 
-## DEC-15 - Alcance MySQL
+## DEC-15 - MySQL es la entrega, Supabase es el espejo
 
-El avance modifica el esquema MySQL de `dbtindervacas`. El espejo PostgreSQL de
-`services/supabase-database` mantiene las cinco tablas del CRUD productivo:
-propagar las seis tablas nuevas exige tocar ese servicio y su migración, lo que
-está **FUERA DEL ALCANCE DE BASE DE DATOS** de este avance.
+`dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
+espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
+en la migración `v3`: once tablas, `tbproductordireccion` normalizada y el mismo
+criterio de cero llaves, restricciones, índices y valores automáticos. El espejo
+sigue a MySQL; nunca al revés.

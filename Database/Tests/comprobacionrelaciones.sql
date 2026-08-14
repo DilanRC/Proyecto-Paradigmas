@@ -19,11 +19,9 @@ INSERT INTO tbdireccion (tbdireccionid, tbdireccionprovincia, tbdireccioncanton,
 
 -- Caso B: el productor -901 vive en la misma ubicación que su finca -801.
 -- Caso A: el productor -902 vive en -9002 y su finca -802 está en -9003.
-INSERT INTO tbproductordireccion (tbproductordireccionid, tbproductorid, tbdireccionid,
-    tbproductordireccionprovincia, tbproductordireccioncanton, tbproductordirecciondistrito,
-    tbproductordireccionpueblo, tbproductordireccionsenas) VALUES
-    (-901, -901, -9001, 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Prueba.'),
-    (-902, -902, -9002, 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Prueba.');
+INSERT INTO tbproductordireccion (tbproductordireccionid, tbproductorid, tbdireccionid) VALUES
+    (-901, -901, -9001),
+    (-902, -902, -9002);
 
 -- El productor -901 posee dos fincas: la relación 1 a varias vive en tbfinca.
 INSERT INTO tbfinca (tbfincaid, tbproductorid, tbfincanombre, tbfincaestado) VALUES

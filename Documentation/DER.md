@@ -15,11 +15,6 @@ erDiagram
         INT tbproductordireccionid
         INT tbproductorid
         INT tbdireccionid
-        VARCHAR tbproductordireccionprovincia
-        VARCHAR tbproductordireccioncanton
-        VARCHAR tbproductordirecciondistrito
-        VARCHAR tbproductordireccionpueblo
-        VARCHAR tbproductordireccionsenas
     }
     tbdireccion {
         INT tbdireccionid
@@ -108,6 +103,10 @@ tbproductor 1 --- N tbfinca
 tbtransportista 1 --- N tbtransportistavehiculo N --- 1 tbvehiculo
 ```
 
+`tbproductordireccion` y `tbfincadireccion` solo enlazan: ninguna guarda datos
+de ubicación. Provincia, cantón, distrito, pueblo y señas existen una sola vez,
+en `tbdireccion`.
+
 `tbdireccion` no pertenece a productor ni a finca. Cuando la residencia del
 productor y la ubicación de la finca son el mismo lugar físico,
 `tbproductordireccion.tbdireccionid` y `tbfincadireccion.tbdireccionid` guardan
@@ -128,6 +127,17 @@ transportista por vehículo es documental, no física.
 
 `tbpagometodo` es un catálogo aislado: el alcance vigente solo registra
 `Efectivo` y todavía no se relaciona con operaciones económicas.
+
+## Atributos confirmados y atributos propuestos
+
+| Entidad | Confirmado | Propuesto por modelado |
+|---|---|---|
+| `tbvehiculo` | placa, vin, modelo | `tbvehiculoestado`, por coherencia con el estado lógico del resto de tablas |
+| `tbtransportista` | es una persona independiente, con identificador propio, y puede tener varios vehículos | identificación, tipo de identificación, nombre, teléfono, correo y estado, siguiendo el patrón de personas ya registrado en `tbproductor` y `tbcomprador` |
+
+Los atributos propuestos no fueron solicitados: se modelaron para poder
+identificar y contactar a la persona. Pueden retirarse si el dominio no los
+necesita. Queda pendiente confirmar con el profesor cuáles son obligatorios.
 
 Las líneas muestran asociaciones usadas por PHP, no restricciones de MySQL.
 `tbcomprador` es independiente y todavía no participa en el CRUD de

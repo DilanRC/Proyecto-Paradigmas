@@ -26,26 +26,20 @@ Columnas de cada ficha:
 
 ## tbproductordireccion
 
-Asocia al productor con su residencia principal. La política del modelo espera
-una sola fila por `tbproductorid`.
+Asocia al productor con su residencia principal. No almacena datos de
+ubicación: la política del modelo espera una sola fila por `tbproductorid`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbproductordireccionid` | `INT NOT NULL` | No | Identificador de la asociación, distinto del productor y de la dirección. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Identificador lógico del productor asociado. | Aplicación | `tbproductor` |
-| `tbdireccionid` | `INT NULL` | Sí | Identificador lógico de la ubicación física. Nulo mientras la aplicación no lo asigne. | Aplicación | `tbdireccion` |
-| `tbproductordireccionprovincia` | `VARCHAR(100) NOT NULL` | No | Provincia. Detalle heredado que todavía escribe el CRUD vigente. | Usuario | - |
-| `tbproductordireccioncanton` | `VARCHAR(100) NOT NULL` | No | Cantón. Detalle heredado. | Usuario | - |
-| `tbproductordirecciondistrito` | `VARCHAR(100) NOT NULL` | No | Distrito. Detalle heredado. | Usuario | - |
-| `tbproductordireccionpueblo` | `VARCHAR(150) NULL` | Sí | Pueblo opcional. Detalle heredado. | Usuario | - |
-| `tbproductordireccionsenas` | `VARCHAR(500) NULL` | Sí | Señas opcionales. Detalle heredado. | Usuario | - |
+| `tbdireccionid` | `INT NOT NULL` | No | Identificador lógico de la ubicación física. | Aplicación | `tbdireccion` |
 
-Observación: el modelo nuevo centraliza la ubicación en `tbdireccion`. Las cinco
-columnas heredadas permanecen porque el CRUD vigente las escribe; trasladar su
-contenido a `tbdireccion` y dejar de escribirlas corresponde a la capa de
-aplicación y queda **fuera del alcance de base de datos**. La consulta `D-09` de
-`Database/Tests/diagnostico.sql` lista las residencias todavía sin
-`tbdireccionid`.
+Observación: provincia, cantón, distrito, pueblo y señas vivían antes en esta
+tabla y ahora existen una sola vez en `tbdireccion`. La migración
+`Database/Migrations/001normalizadireccionproductor.sql` trasladó los datos y
+eliminó las columnas. El contrato de base cambió: la capa de aplicación escribe
+la ubicación en `tbdireccion` y aquí solamente el enlace.
 
 ## tbdireccion
 
@@ -94,8 +88,7 @@ Catálogo de métodos de pago. No se relaciona todavía con ninguna operación.
 ## tbtransportista
 
 Persona independiente responsable del transporte. No es productor, comprador,
-usuario ni empresa: tiene identificador propio. Conserva el perfil de persona
-que ya usan `tbproductor` y `tbcomprador`.
+usuario ni empresa: tiene identificador propio.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
@@ -107,9 +100,17 @@ que ya usan `tbproductor` y `tbcomprador`.
 | `tbtransportistacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo electrónico. | Usuario | - |
 | `tbtransportistaestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. | Aplicación | - |
 
-PENDIENTE DE CONFIRMACIÓN: licencia, permisos, pólizas, tarifas, capacidad,
-horarios y vínculo con empresa. Ninguno se agregó porque no forma parte del
-alcance confirmado.
+Hecho confirmado: el transportista es una persona independiente con
+identificador propio y puede tener varios vehículos.
+
+Propuesta de modelado: identificación, tipo, nombre, teléfono, correo y estado
+se agregaron para poder identificar y contactar a la persona, siguiendo el
+patrón de personas ya registrado en el proyecto. No fueron solicitados y pueden
+retirarse si el dominio no los necesita.
+
+PENDIENTE DE CONFIRMACIÓN: cuáles de esos atributos son obligatorios, y si
+hacen falta licencia, permisos, pólizas, tarifas, capacidad, horarios o vínculo
+con empresa. Ninguno de estos últimos se agregó.
 
 ## tbvehiculo
 
@@ -119,10 +120,13 @@ alcance confirmado.
 | `tbvehiculoplaca` | `VARCHAR(20) NOT NULL` | No | Placa del vehículo. Sin unicidad en el motor. | Usuario | - |
 | `tbvehiculovin` | `VARCHAR(50) NOT NULL` | No | VIN del vehículo. Sin unicidad en el motor. | Usuario | - |
 | `tbvehiculomodelo` | `VARCHAR(100) NOT NULL` | No | Modelo del vehículo. | Usuario | - |
-| `tbvehiculoestado` | `TINYINT(1) NOT NULL` | No | Estado lógico, mismo patrón que el resto de tablas. | Aplicación | - |
+| `tbvehiculoestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. Propuesta de modelado, no dato confirmado: sigue el patrón del resto de tablas. | Aplicación | - |
+
+Datos confirmados: placa, vin y modelo. `tbvehiculoestado` es una propuesta de
+modelado.
 
 PENDIENTE DE CONFIRMACIÓN: color, año, marca, peso, capacidad, combustible,
-marchamo e inspección técnica.
+marchamo e inspección técnica. Ninguno se agregó.
 
 ## tbtransportistavehiculo
 

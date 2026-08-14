@@ -20,7 +20,7 @@ docker compose exec -T db mysql -uroot -p"$DB_ROOT_PASS" < Database/Tests/diagno
 | `comprobacionestructura.sql` | `DESCRIBE` de las siete tablas del avance y ausencia de llaves, índices, valores automáticos y objetos programables | estructura declarada y cero filas en las consultas de metadatos |
 | `comprobaciondatosiniciales.sql` | contenido de `tbpagometodo` | una fila: `1`, `Efectivo`, `Pago realizado en efectivo`, `1` |
 | `comprobacionrelaciones.sql` | productor y finca compartiendo ubicación, productor y finca en ubicaciones distintas, un productor con varias fincas, un transportista con varios vehículos | cinco resultados descritos en el script y limpieza en ceros |
-| `diagnostico.sql` | duplicados, cardinalidades fuera de política y asociaciones huérfanas | cero filas en D-01 a D-08 sobre datos válidos; `D-09` lista las residencias del ejemplo que todavía no tienen `tbdireccionid` |
+| `diagnostico.sql` | duplicados, cardinalidades fuera de política y asociaciones huérfanas | cero filas en D-01 a D-09 sobre datos válidos |
 
 `comprobacionrelaciones.sql` inserta filas con identificadores negativos y las
 borra al final, de modo que no compite con los consecutivos que calcula la
