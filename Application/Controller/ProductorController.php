@@ -247,6 +247,27 @@ final class ProductorController
         }
     }
 
+    public function procesarDireccion(string $metodo, array $consulta, array $cuerpo): array
+    {
+        try {
+            return match ($metodo) {
+                'GET' => $this->consultarDireccion($consulta),
+                'POST' => $this->crearDireccion($cuerpo),
+                'PUT' => $this->actualizarDireccion($cuerpo),
+                'DELETE' => $this->eliminarDireccion($cuerpo),
+                default => $this->respuesta(false, 'Método no permitido.', null, 405),
+            };
+        } catch (ProductorHttpException $excepcion) {
+            return $this->respuesta(
+                false,
+                $excepcion->getMessage(),
+                $excepcion->datos,
+                $excepcion->estadoHttp,
+                $excepcion->errores
+            );
+        }
+    }
+
     private function desactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
@@ -377,6 +398,131 @@ final class ProductorController
             'pueblo' => $this->textoOpcional($valor['pueblo'] ?? null, 'direccionPrincipal.pueblo', 150, $errores),
             'senas' => $this->textoOpcional($valor['senas'] ?? null, 'direccionPrincipal.senas', 500, $errores),
         ];
+    }
+
+    private function consultarDireccion(array $consulta): array
+    {
+        if (!array_key_exists('identificacionNumero', $consulta)) {
+            throw new ProductorHttpException('Debe indicar identificacionNumero.', 422, null, [
+                'identificacionNumero' => 'El parámetro es obligatorio.',
+            ]);
+        }
+        $identificacion = $this->normalizarIdentificacion(
+            $this->textoConsulta($consulta['identificacionNumero'], 250)
+        );
+        if ($identificacion === '') {
+            throw new ProductorHttpException('La identificación no es válida.', 422);
+        }
+        $productor = $this->productor->buscar($identificacion);
+        if ($productor === null) {
+            throw new ProductorHttpException('Productor no encontrado.', 404);
+        }
+        $productorId = (int) $productor['productorId'];
+        $direccion = $this->direccion->buscar($productorId);
+        if ($direccion === null) {
+            throw new ProductorHttpException('El productor no tiene una dirección registrada.', 404);
+        }
+
+        return $this->respuesta(true, 'Dirección consultada correctamente.', [
+            'identificacionNumero' => $identificacion,
+            'direccionPrincipal' => $direccion,
+        ]);
+    }
+
+    private function actualizarDireccion(array $cuerpo): array
+    {
+        $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero', 'direccionPrincipal']);
+        $errores = [];
+        $identificacion = is_string($cuerpo['identificacionNumero'] ?? null)
+            ? $this->normalizarIdentificacion($cuerpo['identificacionNumero']) : '';
+        if ($identificacion === '') {
+            $errores['identificacionNumero'] = 'La identificación es obligatoria.';
+        }
+        $direccion = $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores);
+        if ($errores !== []) {
+            throw new ProductorHttpException('Revise los campos indicados.', 422, null, $errores);
+        }
+
+        $resultado = $this->transaccion(function () use ($identificacion, $direccion): array {
+            $bloqueado = $this->productor->bloquear($identificacion);
+            if ($bloqueado === null) {
+                throw new ProductorHttpException('Productor no encontrado.', 404);
+            }
+            if ((int) $bloqueado['tbproductorestado'] !== 1) {
+                throw new ProductorHttpException(
+                    'El productor está inactivo. Debe reactivarlo antes de actualizar su dirección.',
+                    409,
+                );
+            }
+            $productorId = (int) $bloqueado['tbproductorid'];
+            $anterior = $this->direccion->buscar($productorId);
+            if ($anterior === null) {
+                throw new ProductorHttpException(
+                    'El productor no tiene una dirección registrada; use POST para crearla.',
+                    404,
+                );
+            }
+            try {
+                $this->direccion->actualizar($productorId, $direccion);
+            } catch (\RuntimeException $excepcion) {
+                throw new ProductorHttpException($excepcion->getMessage(), 409);
+            }
+            $nueva = $this->direccion->buscar($productorId);
+            $this->bitacora->registrar(
+                'ACTUALIZAR_DIRECCION',
+                $identificacion,
+                ['direccionPrincipal' => $anterior],
+                ['direccionPrincipal' => $nueva],
+                $this->solicitudId,
+            );
+
+            return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
+        });
+
+        return $this->respuesta(true, 'Dirección actualizada correctamente.', $resultado);
+    }
+
+    private function eliminarDireccion(array $cuerpo): array
+    {
+        $identificacion = $this->validarIdentificacionUnica($cuerpo);
+
+        $resultado = $this->transaccion(function () use ($identificacion): array {
+            $bloqueado = $this->productor->bloquear($identificacion);
+            if ($bloqueado === null) {
+                throw new ProductorHttpException('Productor no encontrado.', 404);
+            }
+            if ((int) $bloqueado['tbproductorestado'] !== 1) {
+                throw new ProductorHttpException(
+                    'El productor está inactivo. Debe reactivarlo antes de modificar su dirección.',
+                    409,
+                );
+            }
+            $productorId = (int) $bloqueado['tbproductorid'];
+            $anterior = $this->direccion->buscar($productorId);
+            if ($anterior === null) {
+                throw new ProductorHttpException(
+                    'El productor no tiene una dirección registrada; no hay nada que eliminar.',
+                    404,
+                );
+            }
+            try {
+                $this->direccion->vaciar($productorId);
+            } catch (\RuntimeException $excepcion) {
+                throw new ProductorHttpException($excepcion->getMessage(), 409);
+            }
+            $nueva = $this->direccion->buscar($productorId);
+            $this->bitacora->registrar(
+                'VACIAR_DIRECCION',
+                $identificacion,
+                ['direccionPrincipal' => $anterior],
+                ['direccionPrincipal' => $nueva],
+                $this->solicitudId,
+            );
+
+            return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
+        });
+
+        return $this->respuesta(true, 'Dirección vaciada correctamente.', $resultado);
     }
 
     private function validarFincas(mixed $valor, array &$errores): array
