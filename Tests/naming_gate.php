@@ -10,7 +10,18 @@ $required = [
     'Database/SqlScripts/004createfinca.sql',
     'Database/SqlScripts/005createaudit.sql',
     'Database/SqlScripts/006createcomprador.sql',
+    'Database/SqlScripts/007createdireccion.sql',
+    'Database/SqlScripts/008createfincadireccion.sql',
+    'Database/SqlScripts/009createpagometodo.sql',
+    'Database/SqlScripts/010createtransportista.sql',
+    'Database/SqlScripts/011createvehiculo.sql',
+    'Database/SqlScripts/012createtransportistavehiculo.sql',
+    'Database/SeedData/101initialpagometodo.sql',
     'Database/SeedData/103exampleproductores.sql',
+    'Database/Tests/comprobacionestructura.sql',
+    'Database/Tests/comprobaciondatosiniciales.sql',
+    'Database/Tests/comprobacionrelaciones.sql',
+    'Database/Tests/diagnostico.sql',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
     'Application/Model/ProductorFinca.php',
@@ -28,8 +39,11 @@ $forbiddenFiles = [
 foreach ($forbiddenFiles as $file) {
     if (file_exists("{$root}/{$file}")) throw new RuntimeException("Archivo obsoleto: {$file}");
 }
-$sql = implode("\n", array_map('file_get_contents', glob("{$root}/Database/SqlScripts/*.sql")));
-foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador'] as $table) {
+$sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
+$sql = implode("\n", array_map('file_get_contents', $sqlFiles));
+foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador',
+    'tbdireccion', 'tbfincadireccion', 'tbpagometodo', 'tbtransportista', 'tbvehiculo',
+    'tbtransportistavehiculo'] as $table) {
     if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
@@ -56,9 +70,39 @@ if (preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $sql, $coincidencia)) {
 foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
 }
-if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== 6
+if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== count($sqlFiles)
     || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
+}
+$avance = [
+    'tbdireccionid INT NOT NULL' => 'tbdireccion necesita su identificador lógico',
+    'tbdireccionid INT NULL' => 'tbproductordireccion enlaza la ubicación y admite nulo',
+    'tbfincadireccionid INT NOT NULL' => 'la asociación finca-dirección necesita identificador propio',
+    'tbpagometodonombre VARCHAR(100) NOT NULL' => 'el catálogo de pago necesita nombre',
+    'tbtransportistaid INT NOT NULL' => 'el transportista es una persona independiente',
+    'tbvehiculoplaca VARCHAR(20) NOT NULL' => 'el vehículo registra placa',
+    'tbvehiculovin VARCHAR(50) NOT NULL' => 'el vehículo registra vin',
+    'tbvehiculomodelo VARCHAR(100) NOT NULL' => 'el vehículo registra modelo',
+    'tbtransportistavehiculoid INT NOT NULL' => 'la asociación transportista-vehículo necesita identificador propio',
+];
+foreach ($avance as $fragmento => $motivo) {
+    if (!str_contains($sql, $fragmento)) throw new RuntimeException("Falta {$fragmento}: {$motivo}");
+}
+$seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
+if (!str_contains($seed, "SELECT 1, 'Efectivo', 'Pago realizado en efectivo', 1")) {
+    throw new RuntimeException('Los datos iniciales deben registrar Efectivo.');
+}
+foreach (['transferencia', 'SINPE', 'cheque', 'tarjeta', 'PayPal'] as $fueraDeAlcance) {
+    if (stripos($seed, $fueraDeAlcance) !== false) {
+        throw new RuntimeException("Método de pago fuera del alcance: {$fueraDeAlcance}");
+    }
+}
+$diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
+foreach (['FROM tbproductordireccion', 'FROM tbfincadireccion', 'FROM tbvehiculo',
+    'FROM tbtransportistavehiculo', 'HAVING COUNT(*) > 1'] as $consulta) {
+    if (!str_contains($diagnostico, $consulta)) {
+        throw new RuntimeException("El diagnóstico debe incluir {$consulta}");
+    }
 }
 $controller = file_get_contents("{$root}/Application/Controller/ProductorController.php");
 if (str_contains($controller, 'participanteId') || str_contains($controller, 'tbrol')) {

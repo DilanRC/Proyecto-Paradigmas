@@ -9,6 +9,8 @@
 - [Avance semanal](AvanceSemanal.md) ([PDF](AvanceSemanal.pdf))
 - [Diagrama de aplicación](DAplicacion.md) ([PDF](DAplicacion.pdf))
 - [DER en PDF](DER.pdf)
+- [Evidencias del avance de direcciones, pagos y transporte](EvidenciasPruebasDireccionesTransporte.md)
+- [Comprobaciones SQL del modelo](../Database/Tests/README.md)
 - [Evidencias de Corrección 04](EvidenciasPruebasAvance01Correccion04.md)
 - [Evidencias históricas de Corrección 03](EvidenciasPruebasAvance01Correccion03.md)
 

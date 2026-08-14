@@ -14,17 +14,58 @@ erDiagram
     tbproductordireccion {
         INT tbproductordireccionid
         INT tbproductorid
+        INT tbdireccionid
         VARCHAR tbproductordireccionprovincia
         VARCHAR tbproductordireccioncanton
         VARCHAR tbproductordirecciondistrito
         VARCHAR tbproductordireccionpueblo
         VARCHAR tbproductordireccionsenas
     }
+    tbdireccion {
+        INT tbdireccionid
+        VARCHAR tbdireccionprovincia
+        VARCHAR tbdireccioncanton
+        VARCHAR tbdirecciondistrito
+        VARCHAR tbdireccionpueblo
+        VARCHAR tbdireccionsenas
+    }
     tbfinca {
         INT tbfincaid
         INT tbproductorid
         VARCHAR tbfincanombre
         TINYINT tbfincaestado
+    }
+    tbfincadireccion {
+        INT tbfincadireccionid
+        INT tbfincaid
+        INT tbdireccionid
+    }
+    tbpagometodo {
+        INT tbpagometodoid
+        VARCHAR tbpagometodonombre
+        VARCHAR tbpagometododescripcion
+        TINYINT tbpagometodoactivo
+    }
+    tbtransportista {
+        INT tbtransportistaid
+        VARCHAR tbtransportistaidentificacionnumero
+        VARCHAR tbtransportistaidentificaciontipo
+        VARCHAR tbtransportistanombre
+        VARCHAR tbtransportistatelefono
+        VARCHAR tbtransportistacorreoelectronico
+        TINYINT tbtransportistaestado
+    }
+    tbvehiculo {
+        INT tbvehiculoid
+        VARCHAR tbvehiculoplaca
+        VARCHAR tbvehiculovin
+        VARCHAR tbvehiculomodelo
+        TINYINT tbvehiculoestado
+    }
+    tbtransportistavehiculo {
+        INT tbtransportistavehiculoid
+        INT tbtransportistaid
+        INT tbvehiculoid
     }
     tbbitacora {
         BIGINT tbbitacoraid
@@ -48,10 +89,45 @@ erDiagram
         VARCHAR tbcompradorcorreoelectronico
         TINYINT tbcompradorestado
     }
-    tbproductor ||--|| tbproductordireccion : "asociación lógica por tbproductorid"
-    tbproductor ||--o{ tbfinca : "asociación lógica por tbproductorid"
+    tbproductor ||--|| tbproductordireccion : "una residencia por tbproductorid"
+    tbproductordireccion }o--|| tbdireccion : "ubicación por tbdireccionid"
+    tbproductor ||--o{ tbfinca : "varias fincas por tbproductorid"
+    tbfinca ||--|| tbfincadireccion : "una dirección por tbfincaid"
+    tbfincadireccion }o--|| tbdireccion : "ubicación por tbdireccionid"
+    tbtransportista ||--o{ tbtransportistavehiculo : "varios vehículos por tbtransportistaid"
+    tbtransportistavehiculo }o--|| tbvehiculo : "un transportista por tbvehiculoid"
     tbproductor ||--o{ tbbitacora : "referencia lógica por identificación"
 ```
+
+## Cardinalidades conceptuales
+
+```text
+tbproductor 1 --- 1 tbproductordireccion N --- 1 tbdireccion
+tbfinca     1 --- 1 tbfincadireccion     N --- 1 tbdireccion
+tbproductor 1 --- N tbfinca
+tbtransportista 1 --- N tbtransportistavehiculo N --- 1 tbvehiculo
+```
+
+`tbdireccion` no pertenece a productor ni a finca. Cuando la residencia del
+productor y la ubicación de la finca son el mismo lugar físico,
+`tbproductordireccion.tbdireccionid` y `tbfincadireccion.tbdireccionid` guardan
+el mismo valor y la ubicación existe una sola vez:
+
+```text
+Caso A - lugares distintos          Caso B - mismo lugar
+Productor -> tbdireccion 10         Productor -> tbdireccion 10
+Finca     -> tbdireccion 11         Finca     -> tbdireccion 10
+```
+
+La relación productor - finca vive en `tbfinca.tbproductorid`; el avance no
+introduce una tabla puente adicional porque la cardinalidad confirmada es
+1 productor a N fincas.
+
+`tbtransportistavehiculo` representa la asociación; la política de un solo
+transportista por vehículo es documental, no física.
+
+`tbpagometodo` es un catálogo aislado: el alcance vigente solo registra
+`Efectivo` y todavía no se relaciona con operaciones económicas.
 
 Las líneas muestran asociaciones usadas por PHP, no restricciones de MySQL.
 `tbcomprador` es independiente y todavía no participa en el CRUD de
@@ -59,4 +135,6 @@ productores.
 El esquema define cero claves, restricciones, índices, valores `DEFAULT`,
 `AUTO_INCREMENT` y objetos programables. PHP calcula cada identificador
 mediante `MAX(id) + 1` bajo un bloqueo nombrado y envía todos los valores con
-sentencias preparadas.
+sentencias preparadas. Los campos `tbdireccionid`, `tbfincaid`,
+`tbtransportistaid` y `tbvehiculoid` de las tablas de enlace son relaciones
+conceptuales: el script no declara ninguna llave foránea.

@@ -12,6 +12,18 @@ La base `dbtindervacas` contiene exactamente:
 3. `tbfinca`
 4. `tbbitacora`
 5. `tbcomprador`
+6. `tbdireccion`
+7. `tbfincadireccion`
+8. `tbpagometodo`
+9. `tbtransportista`
+10. `tbvehiculo`
+11. `tbtransportistavehiculo`
+
+Las seis últimas pertenecen al avance de direcciones, pagos y transporte. La
+ubicación física vive en `tbdireccion` y productor y finca la referencian por
+`tbdireccionid`, de modo que ambos pueden compartir el mismo lugar. Ver
+`Documentation/DER.md`, `Documentation/DiccionarioDatos.md` y
+`Database/Tests/README.md`.
 
 El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
 columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
@@ -136,6 +148,29 @@ docker compose exec -T app php Tests/schema_test.php
 En Vercel, el arranque ejecuta la migración v2 contra Supabase, recarga la caché
 de esquema de PostgREST y falla antes de iniciar Apache si `tbcomprador` existe
 con columnas incompatibles.
+
+### Aplicar el avance de direcciones, pagos y transporte a una base existente
+
+Un volumen MySQL creado antes de este avance conserva `tbproductordireccion` sin
+la columna de enlace. Respalde primero y luego aplique, en orden, los scripts
+idempotentes y la migración manual:
+
+```bash
+for script in 007createdireccion 008createfincadireccion 009createpagometodo \
+  010createtransportista 011createvehiculo 012createtransportistavehiculo; do
+  docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+    < "Database/SqlScripts/${script}.sql"
+done
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/Migrations/001agregadireccionaproductordireccion.sql
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/SeedData/101initialpagometodo.sql
+docker compose exec -T app php Tests/schema_test.php
+```
+
+La migración manual se ejecuta una sola vez: repetirla termina con el error 1060
+de MySQL. Una base limpia ya recibe la columna desde
+`Database/SqlScripts/003createproductoresdireccion.sql` y no debe ejecutarla.
 
 ## API JSON
 

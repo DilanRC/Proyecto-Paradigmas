@@ -224,7 +224,7 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
     fi
     tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE';")"
-    if [[ "$tables_csv" != 'tbbitacora,tbfinca,tbproductor,tbproductordireccion' ]]; then
+    if [[ "$tables_csv" != 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbproductor,tbproductordireccion,tbtransportista,tbtransportistavehiculo,tbvehiculo' ]]; then
         echo "Error: ${database} contiene tablas inesperadas: ${tables_csv}." >&2
         exit 1
     fi
@@ -295,7 +295,7 @@ source_check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE
 
 manifest_temp="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest.XXXXXX")"
 sed \
-    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: utf8mb4\/utf8mb4_unicode_ci en base y cuatro tablas/' \
+    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: utf8mb4\/utf8mb4_unicode_ci en base y once tablas/' \
     -e 's/^- Restauración completa comprobada: .*/- Restauración completa comprobada: Sí/' \
     -e 's/^- Restauración estructura + datos comprobada: .*/- Restauración estructura + datos comprobada: Sí/' \
     -e "s/^- Cantidad de tablas: .*/- Cantidad de tablas: ${source_tables}/" \
