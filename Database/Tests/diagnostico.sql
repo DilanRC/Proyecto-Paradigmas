@@ -81,7 +81,7 @@ UNION ALL
 SELECT 'tbproductordireccion.tbdireccionid', pd.tbproductordireccionid, pd.tbdireccionid
 FROM tbproductordireccion pd
 LEFT JOIN tbdireccion d ON d.tbdireccionid = pd.tbdireccionid
-WHERE pd.tbdireccionid IS NOT NULL AND d.tbdireccionid IS NULL
+WHERE d.tbdireccionid IS NULL
 UNION ALL
 SELECT 'tbfincadireccion.tbfincaid', fd.tbfincadireccionid, fd.tbfincaid
 FROM tbfincadireccion fd
@@ -117,13 +117,14 @@ LEFT JOIN tbproductordireccion pd ON pd.tbdireccionid = d.tbdireccionid
 LEFT JOIN tbfincadireccion fd ON fd.tbdireccionid = d.tbdireccionid
 WHERE pd.tbdireccionid IS NULL AND fd.tbdireccionid IS NULL;
 
--- D-09: enlaces de productor pendientes de trasladar a tbdireccion.
--- Mientras la aplicación no asigne tbdireccionid, la residencia solo existe en
--- las columnas heredadas de tbproductordireccion. Sobre una base recién
--- inicializada con los datos de ejemplo devuelve las dos filas de
--- 103exampleproductores.sql: es la lista de trabajo pendiente para la capa de
--- aplicación, no un error del modelo.
-SELECT 'D-09 residencias sin tbdireccionid' AS diagnostico;
-SELECT tbproductordireccionid, tbproductorid
-FROM tbproductordireccion
-WHERE tbdireccionid IS NULL;
+-- D-09: ubicaciones repetidas fila por fila. No es un error: dos lugares
+-- distintos pueden compartir provincia, cantón y distrito. Sirve para revisar si
+-- la aplicación está creando una ubicación nueva en lugar de reutilizar la
+-- existente cuando productor y finca están en el mismo sitio.
+SELECT 'D-09 ubicaciones con los mismos datos' AS diagnostico;
+SELECT tbdireccionprovincia, tbdireccioncanton, tbdirecciondistrito,
+       COALESCE(tbdireccionpueblo, ''), COALESCE(tbdireccionsenas, ''), COUNT(*) AS repeticiones
+FROM tbdireccion
+GROUP BY tbdireccionprovincia, tbdireccioncanton, tbdirecciondistrito,
+         COALESCE(tbdireccionpueblo, ''), COALESCE(tbdireccionsenas, '')
+HAVING COUNT(*) > 1;

@@ -20,8 +20,9 @@ La base `dbtindervacas` contiene exactamente:
 11. `tbtransportistavehiculo`
 
 Las seis últimas pertenecen al avance de direcciones, pagos y transporte. La
-ubicación física vive en `tbdireccion` y productor y finca la referencian por
-`tbdireccionid`, de modo que ambos pueden compartir el mismo lugar. Ver
+ubicación física vive **únicamente** en `tbdireccion`: `tbproductordireccion` y
+`tbfincadireccion` solo guardan el enlace `tbdireccionid`, de modo que productor
+y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
 `Documentation/DER.md`, `Documentation/DiccionarioDatos.md` y
 `Database/Tests/README.md`.
 
@@ -69,10 +70,25 @@ Database/SqlScripts/003createproductoresdireccion.sql
 Database/SqlScripts/004createfinca.sql
 Database/SqlScripts/005createaudit.sql
 Database/SqlScripts/006createcomprador.sql
+Database/SqlScripts/007createdireccion.sql
+Database/SqlScripts/008createfincadireccion.sql
+Database/SqlScripts/009createpagometodo.sql
+Database/SqlScripts/010createtransportista.sql
+Database/SqlScripts/011createvehiculo.sql
+Database/SqlScripts/012createtransportistavehiculo.sql
+Database/SeedData/101initialpagometodo.sql
 Database/SeedData/103exampleproductores.sql
+Database/Migrations/001normalizadireccionproductor.sql
+Database/Tests/comprobacionestructura.sql
+Database/Tests/comprobaciondatosiniciales.sql
+Database/Tests/comprobacionrelaciones.sql
+Database/Tests/diagnostico.sql
 ```
 
-La semilla usa datos ficticios y correos `example.test`.
+La semilla usa datos ficticios y correos `example.test`. `101initialpagometodo`
+registra el único método de pago del alcance vigente. `Database/Migrations/`
+solo se aplica a bases creadas antes del avance y `Database/Tests/` contiene
+comprobaciones SQL, descritas en `Database/Tests/README.md`.
 
 ## Servicio Supabase
 
@@ -112,10 +128,11 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-La migración crea `tbproductor`, `tbproductordireccion`, `tbfinca`,
-`tbbitacora` y `tbcomprador`, habilita RLS sin políticas públicas y valida las
-columnas. El log `supabase_schema_status=ready tables=5 migration=v2` confirma
-el resultado.
+La migración `v3` crea las once tablas, normaliza `tbproductordireccion`
+trasladando la ubicación a `tbdireccion`, registra `Efectivo` en
+`tbpagometodo`, habilita RLS sin políticas públicas y valida las columnas. El
+log `supabase_schema_status=ready tables=11 migration=v3` confirma el
+resultado.
 
 ### Aplicar `tbfinca` a una base existente
 
@@ -145,15 +162,15 @@ docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQ
 docker compose exec -T app php Tests/schema_test.php
 ```
 
-En Vercel, el arranque ejecuta la migración v2 contra Supabase, recarga la caché
-de esquema de PostgREST y falla antes de iniciar Apache si `tbcomprador` existe
+En Vercel, el arranque ejecuta la migración v3 contra Supabase, recarga la caché
+de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
 con columnas incompatibles.
 
 ### Aplicar el avance de direcciones, pagos y transporte a una base existente
 
-Un volumen MySQL creado antes de este avance conserva `tbproductordireccion` sin
-la columna de enlace. Respalde primero y luego aplique, en orden, los scripts
-idempotentes y la migración manual:
+Un volumen MySQL creado antes de este avance conserva la ubicación dentro de
+`tbproductordireccion`. Respalde primero y luego aplique, en orden, los scripts
+idempotentes y la migración que normaliza la dirección:
 
 ```bash
 for script in 007createdireccion 008createfincadireccion 009createpagometodo \
@@ -162,15 +179,23 @@ for script in 007createdireccion 008createfincadireccion 009createpagometodo \
     < "Database/SqlScripts/${script}.sql"
 done
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
-  < Database/Migrations/001agregadireccionaproductordireccion.sql
+  < Database/Migrations/001normalizadireccionproductor.sql
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
   < Database/SeedData/101initialpagometodo.sql
 docker compose exec -T app php Tests/schema_test.php
 ```
 
-La migración manual se ejecuta una sola vez: repetirla termina con el error 1060
-de MySQL. Una base limpia ya recibe la columna desde
+La migración se ejecuta una sola vez: copia cada residencia a `tbdireccion`,
+comprueba que ningún productor quedó sin enlace y después elimina las cinco
+columnas heredadas. Repetirla termina con el error 1091 de MySQL. Una base
+limpia ya nace normalizada desde
 `Database/SqlScripts/003createproductoresdireccion.sql` y no debe ejecutarla.
+
+Tras la migración, el contrato de base cambió: la aplicación debe escribir
+provincia, cantón, distrito, pueblo y señas en `tbdireccion`, no en
+`tbproductordireccion`. Hasta que `Application/Model/ProductorDireccion.php` se
+adapte, el CRUD de productores falla con `Unknown column
+'tbproductordireccionprovincia'`.
 
 ## API JSON
 

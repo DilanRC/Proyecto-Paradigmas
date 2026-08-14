@@ -43,35 +43,49 @@ WHERE NOT EXISTS (
     SELECT 1 FROM tbproductor WHERE tbproductoridentificacionnumero = '3101111111'
 );
 
-UPDATE tbproductordireccion SET
-    tbproductordireccionprovincia = 'Alajuela',
-    tbproductordireccioncanton = 'San Carlos',
-    tbproductordirecciondistrito = 'Quesada',
-    tbproductordireccionpueblo = 'Centro',
-    tbproductordireccionsenas = 'Datos ficticios para demostracion.'
-WHERE tbproductorid = 1;
+-- La ubicación vive en tbdireccion. tbproductordireccion solamente enlaza.
+UPDATE tbdireccion SET
+    tbdireccionprovincia = 'Alajuela',
+    tbdireccioncanton = 'San Carlos',
+    tbdirecciondistrito = 'Quesada',
+    tbdireccionpueblo = 'Centro',
+    tbdireccionsenas = 'Datos ficticios para demostracion.'
+WHERE tbdireccionid = 1;
 
-UPDATE tbproductordireccion SET
-    tbproductordireccionprovincia = 'Guanacaste',
-    tbproductordireccioncanton = 'Tilaran',
-    tbproductordirecciondistrito = 'Tilaran',
-    tbproductordireccionpueblo = NULL,
-    tbproductordireccionsenas = 'Datos ficticios para demostracion.'
-WHERE tbproductorid = 2;
+UPDATE tbdireccion SET
+    tbdireccionprovincia = 'Guanacaste',
+    tbdireccioncanton = 'Tilaran',
+    tbdirecciondistrito = 'Tilaran',
+    tbdireccionpueblo = NULL,
+    tbdireccionsenas = 'Datos ficticios para demostracion.'
+WHERE tbdireccionid = 2;
+
+INSERT INTO tbdireccion (
+    tbdireccionid,
+    tbdireccionprovincia,
+    tbdireccioncanton,
+    tbdirecciondistrito,
+    tbdireccionpueblo,
+    tbdireccionsenas
+)
+SELECT 1, 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
+WHERE NOT EXISTS (SELECT 1 FROM tbdireccion WHERE tbdireccionid = 1)
+UNION ALL
+SELECT 2, 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
+WHERE NOT EXISTS (SELECT 1 FROM tbdireccion WHERE tbdireccionid = 2);
+
+UPDATE tbproductordireccion SET tbdireccionid = 1 WHERE tbproductorid = 1;
+UPDATE tbproductordireccion SET tbdireccionid = 2 WHERE tbproductorid = 2;
 
 INSERT INTO tbproductordireccion (
     tbproductordireccionid,
     tbproductorid,
-    tbproductordireccionprovincia,
-    tbproductordireccioncanton,
-    tbproductordirecciondistrito,
-    tbproductordireccionpueblo,
-    tbproductordireccionsenas
+    tbdireccionid
 )
-SELECT 1, 1, 'Alajuela', 'San Carlos', 'Quesada', 'Centro', 'Datos ficticios para demostracion.'
+SELECT 1, 1, 1
 WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorid = 1)
 UNION ALL
-SELECT 2, 2, 'Guanacaste', 'Tilaran', 'Tilaran', NULL, 'Datos ficticios para demostracion.'
+SELECT 2, 2, 2
 WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorid = 2);
 
 UPDATE tbfinca SET tbfincaestado = 1

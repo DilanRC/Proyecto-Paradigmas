@@ -7,12 +7,27 @@ const EXPECTED_COLUMNS = [
         'tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
         'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado',
     ],
-    'tbproductordireccion' => [
-        'tbproductordireccionid', 'tbproductorid', 'tbproductordireccionprovincia',
-        'tbproductordireccioncanton', 'tbproductordirecciondistrito', 'tbproductordireccionpueblo',
-        'tbproductordireccionsenas',
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid'],
+    'tbdireccion' => [
+        'tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
+        'tbdireccionpueblo', 'tbdireccionsenas',
     ],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
+    'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
+    'tbpagometodo' => [
+        'tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo',
+    ],
+    'tbtransportista' => [
+        'tbtransportistaid', 'tbtransportistaidentificacionnumero', 'tbtransportistaidentificaciontipo',
+        'tbtransportistanombre', 'tbtransportistatelefono', 'tbtransportistacorreoelectronico',
+        'tbtransportistaestado',
+    ],
+    'tbvehiculo' => [
+        'tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado',
+    ],
+    'tbtransportistavehiculo' => [
+        'tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid',
+    ],
     'tbbitacora' => [
         'tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
@@ -92,8 +107,73 @@ function validateSchema(PDO $connection): void
     $expected = EXPECTED_COLUMNS;
     ksort($expected);
     if ($actual !== $expected) {
-        throw new RuntimeException('El esquema Supabase no coincide con el contrato de cinco tablas.');
+        throw new RuntimeException('El esquema Supabase no coincide con el contrato de once tablas.');
     }
+}
+
+/**
+ * Traslada la residencia del productor a tbdireccion y deja tbproductordireccion
+ * como enlace de tres columnas. Idempotente: si las columnas heredadas ya no
+ * existen, solamente confirma que el enlace es obligatorio.
+ */
+function normalizeProductorAddress(PDO $connection): void
+{
+    $connection->exec('ALTER TABLE public.tbproductordireccion
+        ADD COLUMN IF NOT EXISTS tbdireccionid INTEGER NULL');
+
+    $legacy = $connection->prepare("SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'tbproductordireccion'
+          AND column_name = 'tbproductordireccionprovincia'");
+    $legacy->execute();
+
+    if ((int) $legacy->fetchColumn() === 1) {
+        // Desplazamiento fijo: cada residencia recibe un tbdireccionid propio y
+        // estable. Se calcula una sola vez, antes de insertar.
+        $maximo = $connection->prepare('SELECT COALESCE(MAX(tbdireccionid), 0) FROM public.tbdireccion');
+        $maximo->execute();
+        $offset = (int) $maximo->fetchColumn();
+
+        $insertar = $connection->prepare('INSERT INTO public.tbdireccion (
+                tbdireccionid, tbdireccionprovincia, tbdireccioncanton,
+                tbdirecciondistrito, tbdireccionpueblo, tbdireccionsenas)
+            SELECT :offset + tbproductordireccionid,
+                   tbproductordireccionprovincia, tbproductordireccioncanton,
+                   tbproductordirecciondistrito, tbproductordireccionpueblo,
+                   tbproductordireccionsenas
+            FROM public.tbproductordireccion
+            WHERE tbdireccionid IS NULL');
+        $insertar->execute(['offset' => $offset]);
+
+        $enlazar = $connection->prepare('UPDATE public.tbproductordireccion
+            SET tbdireccionid = :offset + tbproductordireccionid
+            WHERE tbdireccionid IS NULL');
+        $enlazar->execute(['offset' => $offset]);
+        $huerfanas = $connection->prepare('SELECT COUNT(*) FROM public.tbproductordireccion pd
+            LEFT JOIN public.tbdireccion d ON d.tbdireccionid = pd.tbdireccionid
+            WHERE d.tbdireccionid IS NULL');
+        $huerfanas->execute();
+        if ((int) $huerfanas->fetchColumn() !== 0) {
+            throw new RuntimeException('La normalización dejó residencias sin ubicación en tbdireccion.');
+        }
+        $connection->exec('ALTER TABLE public.tbproductordireccion
+            DROP COLUMN tbproductordireccionprovincia,
+            DROP COLUMN tbproductordireccioncanton,
+            DROP COLUMN tbproductordirecciondistrito,
+            DROP COLUMN tbproductordireccionpueblo,
+            DROP COLUMN tbproductordireccionsenas');
+    }
+
+    $connection->exec('ALTER TABLE public.tbproductordireccion
+        ALTER COLUMN tbdireccionid SET NOT NULL');
+}
+
+/** Registra el único método de pago del alcance vigente sin duplicarlo. */
+function seedInitialData(PDO $connection): void
+{
+    $connection->exec("INSERT INTO public.tbpagometodo (
+            tbpagometodoid, tbpagometodonombre, tbpagometododescripcion, tbpagometodoactivo)
+        SELECT 1, 'Efectivo', 'Pago realizado en efectivo', 1
+        WHERE NOT EXISTS (SELECT 1 FROM public.tbpagometodo WHERE tbpagometodoid = 1)");
 }
 
 try {
@@ -103,12 +183,14 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v2'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v3'))");
     $connection->exec($schema);
+    normalizeProductorAddress($connection);
+    seedInitialData($connection);
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=5 migration=v2\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=11 migration=v3\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();
