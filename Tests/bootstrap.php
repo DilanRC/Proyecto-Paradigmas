@@ -2,16 +2,18 @@
 
 declare(strict_types=1);
 
+use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
 use Configuration\Database;
 
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
-foreach (['NamedLock', 'ProductorFinca', 'ProductorDireccion', 'Bitacora', 'Productor'] as $testModel) {
+foreach (['NamedLock', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
+require_once $testRoot . '/Application/Controller/FincaController.php';
 
 function test_assert(bool $condition, string $message): void
 {
@@ -50,6 +52,11 @@ function test_new_db(): PDO
 function test_controller(?string $requestId = null): ProductorController
 {
     return new ProductorController(test_db(), $requestId ?? test_token('request'));
+}
+
+function test_finca_controller(?string $requestId = null): FincaController
+{
+    return new FincaController(test_db(), $requestId ?? test_token('request'));
 }
 
 function test_token(string $label): string
@@ -132,6 +139,13 @@ function test_http_json(string $method, ?string $body = null, string $contentTyp
     return ['status' => (int) ($statusMatch[1] ?? 0), 'body' => $decoded];
 }
 
+/**
+ * Limpia productor, fincas, enlaces de dirección (productor y finca) y las
+ * filas de tbdireccion que quedaron huérfanas por la prueba. Con el esquema
+ * normalizado (DEC-13) tbdireccion es independiente y nadie más la borra
+ * automáticamente, así que esta limpieza es la única forma de no dejar
+ * basura acumulándose entre corridas de test.
+ */
 function test_cleanup_productores(array $identificaciones): void
 {
     $ids = array_values(array_unique(array_filter(array_map('strval', $identificaciones))));
@@ -145,10 +159,36 @@ function test_cleanup_productores(array $identificaciones): void
         $buscarProductorIds->execute($ids);
         $productorIds = array_map('intval', $buscarProductorIds->fetchAll(PDO::FETCH_COLUMN));
         $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
+
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));
+
+            $buscarFincaIds = $db->prepare("SELECT tbfincaid FROM tbfinca WHERE tbproductorid IN ({$marcadoresProductor})");
+            $buscarFincaIds->execute($productorIds);
+            $fincaIds = array_map('intval', $buscarFincaIds->fetchAll(PDO::FETCH_COLUMN));
+
+            $direccionIds = [];
+            $buscarDireccionProductor = $db->prepare("SELECT tbdireccionid FROM tbproductordireccion WHERE tbproductorid IN ({$marcadoresProductor})");
+            $buscarDireccionProductor->execute($productorIds);
+            $direccionIds = array_merge($direccionIds, array_map('intval', $buscarDireccionProductor->fetchAll(PDO::FETCH_COLUMN)));
+
+            if ($fincaIds !== []) {
+                $marcadoresFinca = implode(',', array_fill(0, count($fincaIds), '?'));
+                $buscarDireccionFinca = $db->prepare("SELECT tbdireccionid FROM tbfincadireccion WHERE tbfincaid IN ({$marcadoresFinca})");
+                $buscarDireccionFinca->execute($fincaIds);
+                $direccionIds = array_merge($direccionIds, array_map('intval', $buscarDireccionFinca->fetchAll(PDO::FETCH_COLUMN)));
+
+                $db->prepare("DELETE FROM tbfincadireccion WHERE tbfincaid IN ({$marcadoresFinca})")->execute($fincaIds);
+            }
+
             $db->prepare("DELETE FROM tbfinca WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
             $db->prepare("DELETE FROM tbproductordireccion WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
+
+            $direccionIds = array_values(array_unique($direccionIds));
+            if ($direccionIds !== []) {
+                $marcadoresDireccion = implode(',', array_fill(0, count($direccionIds), '?'));
+                $db->prepare("DELETE FROM tbdireccion WHERE tbdireccionid IN ({$marcadoresDireccion})")->execute($direccionIds);
+            }
         }
         $db->prepare("DELETE FROM tbproductor WHERE tbproductoridentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();

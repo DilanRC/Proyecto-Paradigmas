@@ -8,7 +8,10 @@ use PDO;
 
 final class ProductorDireccion
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(
+        private readonly PDO $conexion,
+        private readonly Direccion $direccion,
+    ) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -22,11 +25,12 @@ final class ProductorDireccion
 
     /**
      * Se ejecuta automáticamente dentro de la transacción de alta del productor.
-     * Instancia la fila 1:1 con valores en blanco; el detalle se completa después con actualizar().
+     * Crea la fila real en tbdireccion (vía Direccion::crear) y el enlace en
+     * tbproductordireccion. El detalle se completa después con actualizar().
      */
     public function crearVacia(int $productorId): void
     {
-        $this->insertar($productorId, [
+        $this->insertarEnlace($productorId, [
             'provincia' => '',
             'canton' => '',
             'distrito' => '',
@@ -37,9 +41,9 @@ final class ProductorDireccion
 
     /**
      * Creación explícita de reparación: solo permitida cuando el productor
-     * todavía no tiene ninguna fila de dirección (por ejemplo, datos heredados
-     * o corrupción manual). El flujo normal para un productor nuevo es
-     * crearVacia() + actualizar(); este método NO se usa en el alta estándar.
+     * todavía no tiene ninguna fila de enlace. El flujo normal para un
+     * productor nuevo es crearVacia() + actualizar(); este método NO se usa
+     * en el alta estándar.
      */
     public function crear(int $productorId, array $direccion): void
     {
@@ -50,51 +54,33 @@ final class ProductorDireccion
         if ((int) $comprobar->fetchColumn() !== 0) {
             throw new \RuntimeException('El productor ya tiene una dirección registrada; use actualizar.');
         }
-        $this->insertar($productorId, $direccion);
+        $this->insertarEnlace($productorId, $direccion);
     }
 
     public function actualizar(int $productorId, array $direccion): void
     {
-        $comprobar = $this->conexion->prepare(
-            'SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :productorId'
-        );
-        $comprobar->execute(['productorId' => $productorId]);
-        if ((int) $comprobar->fetchColumn() !== 1) {
-            throw new \RuntimeException('El productor no conserva exactamente una dirección.');
-        }
-        $sentencia = $this->conexion->prepare(
-            'UPDATE tbproductordireccion
-             SET tbproductordireccionprovincia = :provincia,
-                 tbproductordireccioncanton = :canton,
-                 tbproductordirecciondistrito = :distrito,
-                 tbproductordireccionpueblo = :pueblo,
-                 tbproductordireccionsenas = :senas
-             WHERE tbproductorid = :productorId'
-        );
-        $sentencia->execute(['productorId' => $productorId, ...$direccion]);
+        $direccionId = $this->obtenerDireccionId($productorId);
+        $this->direccion->actualizar($direccionId, $direccion);
     }
 
     public function buscar(int $productorId): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbproductordireccionprovincia AS provincia,
-                    tbproductordireccioncanton AS canton,
-                    tbproductordirecciondistrito AS distrito,
-                    tbproductordireccionpueblo AS pueblo,
-                    tbproductordireccionsenas AS senas
-             FROM tbproductordireccion
-             WHERE tbproductorid = :productorId'
+            'SELECT tbdireccionid FROM tbproductordireccion WHERE tbproductorid = :productorId'
         );
         $sentencia->execute(['productorId' => $productorId]);
-        $filas = $sentencia->fetchAll();
+        $filas = $sentencia->fetchAll(PDO::FETCH_COLUMN);
 
         if (count($filas) > 1) {
             throw new \RuntimeException(
                 'El productor tiene más de una dirección registrada; revise la integridad de los datos.'
             );
         }
+        if ($filas === []) {
+            return null;
+        }
 
-        return $filas[0] ?? null;
+        return $this->direccion->buscar((int) $filas[0]);
     }
 
     public function vaciar(int $productorId): void
@@ -108,20 +94,43 @@ final class ProductorDireccion
         ]);
     }
 
-    private function insertar(int $productorId, array $direccion): void
+    /**
+     * Resuelve el tbdireccionid enlazado al productor. Exige exactamente una
+     * fila de enlace.
+     */
+    private function obtenerDireccionId(int $productorId): int
     {
-        $direccionId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbproductordireccion
-             (tbproductordireccionid, tbproductorid, tbproductordireccionprovincia,
-              tbproductordireccioncanton, tbproductordirecciondistrito,
-              tbproductordireccionpueblo, tbproductordireccionsenas)
-             VALUES (:direccionId, :productorId, :provincia, :canton, :distrito, :pueblo, :senas)'
+            'SELECT tbdireccionid FROM tbproductordireccion WHERE tbproductorid = :productorId'
         );
-        $sentencia->execute(['direccionId' => $direccionId, 'productorId' => $productorId, ...$direccion]);
+        $sentencia->execute(['productorId' => $productorId]);
+        $filas = $sentencia->fetchAll(PDO::FETCH_COLUMN);
+
+        if (count($filas) !== 1) {
+            throw new \RuntimeException('El productor no conserva exactamente una dirección.');
+        }
+
+        return (int) $filas[0];
     }
 
-    private function siguienteId(): int
+    private function insertarEnlace(int $productorId, array $direccion): void
+    {
+        $direccionId = $this->direccion->crear($direccion);
+
+        $enlaceId = $this->siguienteEnlaceId();
+        $sentencia = $this->conexion->prepare(
+            'INSERT INTO tbproductordireccion
+             (tbproductordireccionid, tbproductorid, tbdireccionid)
+             VALUES (:enlaceId, :productorId, :direccionId)'
+        );
+        $sentencia->execute([
+            'enlaceId' => $enlaceId,
+            'productorId' => $productorId,
+            'direccionId' => $direccionId,
+        ]);
+    }
+
+    private function siguienteEnlaceId(): int
     {
         $sentencia = $this->conexion->prepare(
             'SELECT COALESCE(MAX(tbproductordireccionid), 0) + 1 FROM tbproductordireccion'
@@ -133,11 +142,11 @@ final class ProductorDireccion
 
     private function adquirirBloqueoAlta(): void
     {
-        NamedLock::acquire($this->conexion, 'tindercows_direccion_alta');
+        NamedLock::acquire($this->conexion, 'tindercows_productor_direccion_alta');
     }
 
     private function liberarBloqueoAlta(): void
     {
-        NamedLock::release($this->conexion, 'tindercows_direccion_alta');
+        NamedLock::release($this->conexion, 'tindercows_productor_direccion_alta');
     }
 }

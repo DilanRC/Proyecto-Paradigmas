@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Application\Model\Direccion;
 use Application\Model\Productor;
 use Application\Model\ProductorDireccion;
 use Application\Model\ProductorFinca;
@@ -94,7 +95,7 @@ $directionProductorIds = [-random_int(3000000, 3999999), -random_int(4000000, 49
 $farmProductorIds = [-random_int(5000000, 5999999), -random_int(6000000, 6999999)];
 $lockNames = [
     Productor::class => 'tindercows_productor_alta',
-    ProductorDireccion::class => 'tindercows_direccion_alta',
+    ProductorDireccion::class => 'tindercows_productor_direccion_alta',
     ProductorFinca::class => 'tindercows_finca_alta',
 ];
 
@@ -102,13 +103,22 @@ $farmsA = new ProductorFinca($a);
 $farmsB = new ProductorFinca($b);
 $productorA = new Productor($a, $farmsA);
 $productorB = new Productor($b, $farmsB);
-$directionA = new ProductorDireccion($a);
-$directionB = new ProductorDireccion($b);
+$direccionModeloA = new Direccion($a);
+$direccionModeloB = new Direccion($b);
+$directionA = new ProductorDireccion($a, $direccionModeloA);
+$directionB = new ProductorDireccion($b, $direccionModeloB);
 
 try {
-    foreach (array_keys($lockNames) as $class) {
-        foreach (['ejecutarConBloqueoAlta' => true, 'adquirirBloqueoAlta' => false,
-                  'liberarBloqueoAlta' => false, 'siguienteId' => false] as $method => $public) {
+    $expectedMethods = [
+        Productor::class => ['ejecutarConBloqueoAlta' => true, 'adquirirBloqueoAlta' => false,
+            'liberarBloqueoAlta' => false, 'siguienteId' => false],
+        ProductorDireccion::class => ['ejecutarConBloqueoAlta' => true, 'adquirirBloqueoAlta' => false,
+            'liberarBloqueoAlta' => false, 'siguienteEnlaceId' => false],
+        ProductorFinca::class => ['ejecutarConBloqueoAlta' => true, 'adquirirBloqueoAlta' => false,
+            'liberarBloqueoAlta' => false, 'siguienteId' => false],
+    ];
+    foreach ($expectedMethods as $class => $metodos) {
+        foreach ($metodos as $method => $public) {
             $reflection = new ReflectionMethod($class, $method);
             test_same($public, $reflection->isPublic(), "Visibilidad incorrecta de {$class}::{$method}");
             test_same(!$public, $reflection->isPrivate(), "Encapsulación incorrecta de {$class}::{$method}");
@@ -241,6 +251,13 @@ try {
         }
     }
     $cleanup = test_db();
+    $direccionIdsStmt = $cleanup->prepare('SELECT tbdireccionid FROM tbproductordireccion WHERE tbproductorid IN (?, ?)');
+    $direccionIdsStmt->execute($directionProductorIds);
+    $idsDireccion = $direccionIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+    if ($idsDireccion !== []) {
+        $marcadores = implode(',', array_fill(0, count($idsDireccion), '?'));
+        $cleanup->prepare("DELETE FROM tbdireccion WHERE tbdireccionid IN ({$marcadores})")->execute($idsDireccion);
+    }
     $cleanup->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid IN (?, ?)')->execute($directionProductorIds);
     $cleanup->prepare('DELETE FROM tbfinca WHERE tbproductorid IN (?, ?)')->execute($farmProductorIds);
     test_cleanup_productores([$identificationA, $identificationB]);

@@ -10,6 +10,11 @@ try {
     $siguiente->execute();
     $productorIdEsperado = (int) $siguiente->fetchColumn();
 
+    // Purga residuos de corridas anteriores: si tbbitacora ya tiene filas con
+    // solicitudId mas largo que 5 caracteres, el ALTER TABLE siguiente truena
+    // por truncamiento de datos existentes antes de llegar al escenario que
+    // este test realmente quiere forzar.
+    $db->prepare('DELETE FROM tbbitacora WHERE LENGTH(tbbitacorasolicitudid) > 5')->execute();
     $db->prepare('ALTER TABLE tbbitacora MODIFY tbbitacorasolicitudid VARCHAR(5) NOT NULL')->execute();
     try {
         test_controller('FORZAR_FALLO')->procesar('POST', [], test_payload($idFallaBitacora));
@@ -29,7 +34,7 @@ try {
     }
 
     $segundaConexion = test_new_db();
-    foreach (['tindercows_productor_alta', 'tindercows_direccion_alta', 'tindercows_finca_alta'] as $bloqueo) {
+    foreach (['tindercows_productor_alta', 'tindercows_productor_direccion_alta', 'tindercows_finca_alta'] as $bloqueo) {
         $adquirir = $segundaConexion->prepare('SELECT GET_LOCK(:bloqueo, 0)');
         $adquirir->execute(['bloqueo' => $bloqueo]);
         test_same(1, (int) $adquirir->fetchColumn(), "Rollback libera {$bloqueo}");
