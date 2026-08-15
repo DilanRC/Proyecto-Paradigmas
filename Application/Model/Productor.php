@@ -21,12 +21,16 @@ final class Productor
         $conteo->execute($parametros);
         $total = (int) $conteo->fetchColumn();
 
-        $sql = "SELECT p.*, d.tbproductordireccionprovincia, d.tbproductordireccioncanton,
-                       d.tbproductordirecciondistrito, d.tbproductordireccionpueblo,
-                       d.tbproductordireccionsenas
+        $sql = "SELECT p.*, d.tbdireccionprovincia AS tbproductordireccionprovincia,
+                       d.tbdireccioncanton AS tbproductordireccioncanton,
+                       d.tbdirecciondistrito AS tbproductordirecciondistrito,
+                       d.tbdireccionpueblo AS tbproductordireccionpueblo,
+                       d.tbdireccionsenas AS tbproductordireccionsenas
                 FROM tbproductor p
-                INNER JOIN tbproductordireccion d
-                    ON d.tbproductorid = p.tbproductorid
+                INNER JOIN tbproductordireccion pd
+                    ON pd.tbproductorid = p.tbproductorid
+                INNER JOIN tbdireccion d
+                    ON d.tbdireccionid = pd.tbdireccionid
                 {$where}
                 ORDER BY p.tbproductorestado DESC, p.tbproductornombre,
                          p.tbproductoridentificacionnumero
@@ -53,12 +57,16 @@ final class Productor
     public function buscar(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT p.*, d.tbproductordireccionprovincia, d.tbproductordireccioncanton,
-                    d.tbproductordirecciondistrito, d.tbproductordireccionpueblo,
-                    d.tbproductordireccionsenas
+            'SELECT p.*, d.tbdireccionprovincia AS tbproductordireccionprovincia,
+                    d.tbdireccioncanton AS tbproductordireccioncanton,
+                    d.tbdirecciondistrito AS tbproductordirecciondistrito,
+                    d.tbdireccionpueblo AS tbproductordireccionpueblo,
+                    d.tbdireccionsenas AS tbproductordireccionsenas
              FROM tbproductor p
-             LEFT JOIN tbproductordireccion d
-                ON d.tbproductorid = p.tbproductorid
+             LEFT JOIN tbproductordireccion pd
+                ON pd.tbproductorid = p.tbproductorid
+             LEFT JOIN tbdireccion d
+                ON d.tbdireccionid = pd.tbdireccionid
              WHERE p.tbproductoridentificacionnumero = :identificacionNumero'
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);

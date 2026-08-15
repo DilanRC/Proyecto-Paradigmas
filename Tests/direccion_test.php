@@ -4,6 +4,7 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 
 use Application\Model\ProductorDireccion;
+use Application\Model\Direccion;
 
 $id = test_document();
 
@@ -20,7 +21,7 @@ try {
     $productor = test_create([], $id);
     $productorId = $productor['productorId'];
     $db = test_db();
-    $modeloDireccion = new ProductorDireccion($db);
+    $modeloDireccion = new ProductorDireccion($db, new Direccion($db));
 
     // ============================================================
     // GET /productores-direccion — consultarDireccion()
@@ -47,7 +48,6 @@ try {
 
     // Productor existente SIN fila de dirección (la política de aplicación no permite este
     // estado en un flujo normal; lo forzamos para probar la rama de código).
-    // Requiere el fix de INNER JOIN -> LEFT JOIN en Productor::buscar() para funcionar.
     $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid = :id')->execute(['id' => $productorId]);
 
     $sinDireccion = test_controller()->procesarDireccion('GET', ['identificacionNumero' => $id], []);
@@ -175,18 +175,24 @@ try {
     // buscar() — no debe ocultar más de una dirección por productor
     // ============================================================
     // crear()/crearVacia() rechazan insertar si ya existe una fila (validación de negocio
-    // real), así que para forzar el duplicado usamos SQL directo, reutilizando la MISMA
-    // consulta que ProductorDireccion::siguienteId() usa internamente (no es una suposición:
-    // es el código real que ya vimos en el modelo).
-    $siguienteId = (int) $db->query(
+    // real), así que para forzar el duplicado usamos SQL directo. Con el esquema
+    // normalizado necesitamos una fila real en tbdireccion además del enlace.
+    $direccionDuplicadaId = (int) $db->query(
+        'SELECT COALESCE(MAX(tbdireccionid), 0) + 1 FROM tbdireccion'
+    )->fetchColumn();
+    $db->prepare('INSERT INTO tbdireccion
+            (tbdireccionid, tbdireccionprovincia, tbdireccioncanton, tbdirecciondistrito,
+             tbdireccionpueblo, tbdireccionsenas)
+        VALUES (:direccionId, \'Duplicada\', \'Duplicada\', \'Duplicada\', NULL, NULL)')
+        ->execute(['direccionId' => $direccionDuplicadaId]);
+
+    $enlaceDuplicadoId = (int) $db->query(
         'SELECT COALESCE(MAX(tbproductordireccionid), 0) + 1 FROM tbproductordireccion'
     )->fetchColumn();
     $db->prepare('INSERT INTO tbproductordireccion
-            (tbproductordireccionid, tbproductorid, tbproductordireccionprovincia,
-             tbproductordireccioncanton, tbproductordirecciondistrito,
-             tbproductordireccionpueblo, tbproductordireccionsenas)
-        VALUES (:direccionId, :productorId, \'Duplicada\', \'Duplicada\', \'Duplicada\', NULL, NULL)')
-        ->execute(['direccionId' => $siguienteId, 'productorId' => $productorId]);
+            (tbproductordireccionid, tbproductorid, tbdireccionid)
+        VALUES (:enlaceId, :productorId, :direccionId)')
+        ->execute(['enlaceId' => $enlaceDuplicadoId, 'productorId' => $productorId, 'direccionId' => $direccionDuplicadaId]);
 
     $lanzoExcepcion = false;
     try {
@@ -204,8 +210,10 @@ try {
         'Un duplicado de dirección debe hacer explotar la consulta, no devolver la primera fila silenciosamente'
     );
     // Limpiamos el duplicado que insertamos, dejando la fila original.
-    $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductordireccionid = :direccionId')
-        ->execute(['direccionId' => $siguienteId]);
+    $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductordireccionid = :enlaceId')
+        ->execute(['enlaceId' => $enlaceDuplicadoId]);
+    $db->prepare('DELETE FROM tbdireccion WHERE tbdireccionid = :direccionId')
+        ->execute(['direccionId' => $direccionDuplicadaId]);
     $conteoFinal = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
     $conteoFinal->execute(['id' => $productorId]);
     test_same(1, (int) $conteoFinal->fetchColumn(), 'Debe quedar exactamente una fila tras la limpieza del duplicado');

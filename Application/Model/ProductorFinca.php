@@ -129,4 +129,22 @@ final class ProductorFinca
 
         return $resultado;
     }
+
+    public function buscarIdActivo(int $productorId, string $nombre): ?int
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbfincaid FROM tbfinca
+             WHERE tbproductorid = :productorId
+               AND tbfincanombre = :nombre
+               AND tbfincaestado = 1'
+        );
+        $sentencia->execute(['productorId' => $productorId, 'nombre' => $nombre]);
+        $filas = $sentencia->fetchAll(PDO::FETCH_COLUMN);
+
+        if (count($filas) > 1) {
+            throw new \RuntimeException('Existen fincas duplicadas para el productor.');
+        }
+
+        return $filas === [] ? null : (int) $filas[0];
+    }
 }
