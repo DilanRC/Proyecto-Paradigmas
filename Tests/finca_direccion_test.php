@@ -39,9 +39,13 @@ try {
     test_same($fincaId, $fincaIdReactivada, 'Reactivar debe conservar el mismo tbfincaid, no crear uno nuevo');
 
     // ============================================================
-    // Direccion (unitario) — dirección suelta, sin enlace todavía
+    // Direccion (unitario) — dirección suelta, sin enlace todavía.
+    // crear() ya NO se autobloquea: exige ejecutarConBloqueoAlta() explícito
+    // para que el lock cubra el cálculo de MAX(id)+1 hasta después del uso.
     // ============================================================
-    $direccionSueltaId = $direccion->crear(test_direccion_payload(['provincia' => 'Cartago']));
+    $direccionSueltaId = $direccion->ejecutarConBloqueoAlta(
+        fn (): int => $direccion->crear(test_direccion_payload(['provincia' => 'Cartago']))
+    );
     test_assert($direccionSueltaId > 0, 'Direccion::crear debe devolver un id positivo');
     test_same('Cartago', $direccion->buscar($direccionSueltaId)['provincia'], 'Direccion::buscar debe reflejar lo insertado');
     $direccion->actualizar($direccionSueltaId, test_direccion_payload(['provincia' => 'Alajuela']));
@@ -50,15 +54,21 @@ try {
     $db->prepare('DELETE FROM tbdireccion WHERE tbdireccionid = :id')->execute(['id' => $direccionSueltaId]);
 
     // ============================================================
-    // FincaDireccion (unitario)
+    // FincaDireccion (unitario) — crear()/actualizar()/vaciar() ya delegan
+    // en Direccion, cuyo lock ahora vive dentro de
+    // FincaDireccion::ejecutarConBloqueoAlta(); por eso crear() se envuelve así.
     // ============================================================
-    $fincaDireccion->crear($fincaId, test_direccion_payload(['provincia' => 'Puntarenas']));
+   $fincaDireccion->ejecutarConBloqueoAlta(function () use ($fincaDireccion, $fincaId): void {
+        $fincaDireccion->crear($fincaId, test_direccion_payload(['provincia' => 'Puntarenas']));
+    });
     test_same('Puntarenas', $fincaDireccion->buscar($fincaId)['provincia'],
         'FincaDireccion::crear + buscar debe reflejar el valor insertado');
 
     $creacionDuplicada = false;
     try {
-        $fincaDireccion->crear($fincaId, test_direccion_payload());
+        $fincaDireccion->ejecutarConBloqueoAlta(function () use ($fincaDireccion, $fincaId): void {
+            $fincaDireccion->crear($fincaId, test_direccion_payload());
+        });
     } catch (RuntimeException $excepcion) {
         $creacionDuplicada = true;
         test_same('La finca ya tiene una dirección registrada; use actualizar.', $excepcion->getMessage(),
@@ -216,7 +226,9 @@ try {
     // ============================================================
     // buscar() — no debe ocultar más de un enlace por finca
     // ============================================================
-    $direccionDuplicadaId = $direccion->crear(test_direccion_payload(['provincia' => 'Duplicada']));
+    $direccionDuplicadaId = $direccion->ejecutarConBloqueoAlta(
+        fn (): int => $direccion->crear(test_direccion_payload(['provincia' => 'Duplicada']))
+    );
     $enlaceDuplicadoId = (int) $db->query(
         'SELECT COALESCE(MAX(tbfincadireccionid), 0) + 1 FROM tbfincadireccion'
     )->fetchColumn();

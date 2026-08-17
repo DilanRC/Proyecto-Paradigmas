@@ -17,7 +17,7 @@ final class ProductorDireccion
     {
         $this->adquirirBloqueoAlta();
         try {
-            return $operacion();
+            return $this->direccion->ejecutarConBloqueoAlta($operacion);
         } finally {
             $this->liberarBloqueoAlta();
         }

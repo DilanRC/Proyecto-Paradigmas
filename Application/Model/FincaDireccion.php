@@ -13,11 +13,11 @@ final class FincaDireccion
         private readonly Direccion $direccion,
     ) {}
 
-    public function ejecutarConBloqueoAlta(callable $operacion): mixed
+  public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
         try {
-            return $operacion();
+            return $this->direccion->ejecutarConBloqueoAlta($operacion);
         } finally {
             $this->liberarBloqueoAlta();
         }

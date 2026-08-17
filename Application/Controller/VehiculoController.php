@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Application\Controller;
 
 use Application\Model\Bitacora;
-use Application\Model\PagoMetodo;
+use Application\Model\Vehiculo;
 use PDO;
 use Throwable;
 
-final class PagoMetodoHttpException extends \RuntimeException
+final class VehiculoHttpException extends \RuntimeException
 {
     public function __construct(
         string $message,
@@ -21,15 +21,15 @@ final class PagoMetodoHttpException extends \RuntimeException
     }
 }
 
-final class PagoMetodoController
+final class VehiculoController
 {
-    private PagoMetodo $pagoMetodo;
+    private Vehiculo $vehiculo;
     private Bitacora $bitacora;
     private string $solicitudId;
 
     public function __construct(private readonly PDO $conexion, ?string $solicitudId = null)
     {
-        $this->pagoMetodo = new PagoMetodo($conexion);
+        $this->vehiculo = new Vehiculo($conexion);
         $this->bitacora = new Bitacora($conexion);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
     }
@@ -45,32 +45,28 @@ final class PagoMetodoController
                 'PATCH' => $this->reactivar($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
-        } catch (PagoMetodoHttpException $excepcion) {
+        } catch (VehiculoHttpException $excepcion) {
             return $this->respuesta(
-                false,
-                $excepcion->getMessage(),
-                $excepcion->datos,
-                $excepcion->estadoHttp,
-                $excepcion->errores
+                false, $excepcion->getMessage(), $excepcion->datos, $excepcion->estadoHttp, $excepcion->errores
             );
         }
     }
 
     private function consultar(array $consulta): array
     {
-        if (array_key_exists('id', $consulta)) {
-            $id = $this->enteroConsulta($consulta['id'], 'id');
-            $pagoMetodo = $this->pagoMetodo->buscarPorId($id);
-            if ($pagoMetodo === null) {
-                throw new PagoMetodoHttpException('Método de pago no encontrado.', 404);
+        if (array_key_exists('vehiculoId', $consulta)) {
+            $id = $this->enteroConsulta($consulta['vehiculoId'], 'vehiculoId');
+            $vehiculo = $this->vehiculo->buscarPorId($id);
+            if ($vehiculo === null) {
+                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
             }
-            return $this->respuesta(true, 'Método de pago consultado correctamente.', $pagoMetodo);
+            return $this->respuesta(true, 'Vehículo consultado correctamente.', $vehiculo);
         }
 
         $busqueda = $this->textoConsulta($consulta['q'] ?? '', 150);
         $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? 'TODOS', 10), 'UTF-8');
         if (!in_array($estado, ['TODOS', 'ACTIVO', 'INACTIVO'], true)) {
-            throw new PagoMetodoHttpException('El filtro de estado no es válido.', 422, null, [
+            throw new VehiculoHttpException('El filtro de estado no es válido.', 422, null, [
                 'estado' => 'Use TODOS, ACTIVO o INACTIVO.',
             ]);
         }
@@ -78,195 +74,154 @@ final class PagoMetodoController
         $tamano = array_key_exists('tamanoPagina', $consulta)
             ? $this->enteroConsulta($consulta['tamanoPagina'], 'tamanoPagina') : 25;
         if ($tamano > 100) {
-            throw new PagoMetodoHttpException('El tamaño de página no es válido.', 422, null, [
+            throw new VehiculoHttpException('El tamaño de página no es válido.', 422, null, [
                 'tamanoPagina' => 'Debe estar entre 1 y 100.',
             ]);
         }
-        $resultado = $this->pagoMetodo->listar($busqueda, $estado, $pagina, $tamano);
+        $resultado = $this->vehiculo->listar($busqueda, $estado, $pagina, $tamano);
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;
 
-        return $this->respuesta(true, 'Métodos de pago consultados correctamente.', $resultado);
+        return $this->respuesta(true, 'Vehículos consultados correctamente.', $resultado);
     }
 
     private function crear(array $cuerpo): array
     {
-        $datos = $this->validarPagoMetodo($cuerpo, false);
-        $nuevo = $this->pagoMetodo->ejecutarConBloqueoAlta(
+        $datos = $this->validarVehiculo($cuerpo, false);
+        $nuevo = $this->vehiculo->ejecutarConBloqueoAlta(
             fn (): array => $this->transaccion(function () use ($datos): array {
-                $nuevoId = $this->pagoMetodo->crear($datos);
-                $nuevo = $this->pagoMetodo->buscarPorId($nuevoId);
+                $vehiculoId = $this->vehiculo->crear($datos);
+                $nuevo = $this->vehiculo->buscarPorId($vehiculoId);
                 if ($nuevo === null) {
-                    throw new \RuntimeException('No fue posible leer el método de pago recién creado.');
+                    throw new \RuntimeException('No fue posible leer el vehículo recién creado.');
                 }
                 $this->bitacora->registrar(
-                    'CREAR',
-                    (string) $nuevoId,
-                    null,
-                    $nuevo,
-                    $this->solicitudId,
-                    entidad: 'PAGOMETODO',
-                    origen: 'API_PAGOMETODOS',
+                    'CREAR', (string) $vehiculoId, null, $nuevo, $this->solicitudId,
+                    entidad: 'VEHICULO', origen: 'API_VEHICULOS',
                 );
                 return $nuevo;
             }),
         );
 
-        return $this->respuesta(true, 'Método de pago creado correctamente.', $nuevo, 201);
+        return $this->respuesta(true, 'Vehículo creado correctamente.', $nuevo, 201);
     }
 
     private function actualizar(array $cuerpo): array
     {
-        $datos = $this->validarPagoMetodo($cuerpo, true);
-        $id = $datos['id'];
+        $datos = $this->validarVehiculo($cuerpo, true);
+        $id = $datos['vehiculoId'];
 
         $nuevo = $this->transaccion(function () use ($datos, $id): array {
-            $bloqueado = $this->pagoMetodo->bloquearPorId($id);
+            $bloqueado = $this->vehiculo->bloquearPorId($id);
             if ($bloqueado === null) {
-                throw new PagoMetodoHttpException('Método de pago no encontrado.', 404);
+                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbpagometodoactivo'] !== 1) {
-                throw new PagoMetodoHttpException(
-                    'El método de pago está inactivo. Debe reactivarlo antes de actualizarlo.',
-                    409,
+            if ((int) $bloqueado['tbvehiculoestado'] !== 1) {
+                throw new VehiculoHttpException(
+                    'El vehículo está inactivo. Debe reactivarlo antes de actualizarlo.', 409,
                 );
             }
-            $anterior = $this->pagoMetodo->buscarPorId($id);
-            $this->pagoMetodo->actualizar($id, $datos);
-            $nuevo = $this->pagoMetodo->buscarPorId($id);
+            $anterior = $this->vehiculo->buscarPorId($id);
+            $this->vehiculo->actualizar($id, $datos);
+            $nuevo = $this->vehiculo->buscarPorId($id);
             if ($nuevo === null) {
-                throw new \RuntimeException('No fue posible leer el método de pago actualizado.');
+                throw new \RuntimeException('No fue posible leer el vehículo actualizado.');
             }
             $this->bitacora->registrar(
-                'ACTUALIZAR',
-                (string) $id,
-                $anterior,
-                $nuevo,
-                $this->solicitudId,
-                entidad: 'PAGOMETODO',
-                origen: 'API_PAGOMETODOS',
+                'ACTUALIZAR', (string) $id, $anterior, $nuevo, $this->solicitudId,
+                entidad: 'VEHICULO', origen: 'API_VEHICULOS',
             );
             return $nuevo;
         });
 
-        return $this->respuesta(true, 'Método de pago actualizado correctamente.', $nuevo);
+        return $this->respuesta(true, 'Vehículo actualizado correctamente.', $nuevo);
     }
 
     private function desactivar(array $cuerpo): array
     {
         $id = $this->validarIdUnico($cuerpo);
         $nuevo = $this->transaccion(function () use ($id): array {
-            $bloqueado = $this->pagoMetodo->bloquearPorId($id);
-            $anterior = $this->pagoMetodo->buscarPorId($id);
+            $bloqueado = $this->vehiculo->bloquearPorId($id);
+            $anterior = $this->vehiculo->buscarPorId($id);
             if ($bloqueado === null || $anterior === null) {
-                throw new PagoMetodoHttpException('Método de pago no encontrado.', 404);
+                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbpagometodoactivo'] === 0) {
+            if ((int) $bloqueado['tbvehiculoestado'] === 0) {
                 return $anterior;
             }
-            $this->pagoMetodo->cambiarEstado($id, false);
-            $nuevo = $this->pagoMetodo->buscarPorId($id);
+            $this->vehiculo->cambiarEstado($id, false);
+            $nuevo = $this->vehiculo->buscarPorId($id);
             $this->bitacora->registrar(
-                'DESACTIVAR',
-                (string) $id,
-                $anterior,
-                $nuevo,
-                $this->solicitudId,
-                entidad: 'PAGOMETODO',
-                origen: 'API_PAGOMETODOS',
+                'DESACTIVAR', (string) $id, $anterior, $nuevo, $this->solicitudId,
+                entidad: 'VEHICULO', origen: 'API_VEHICULOS',
             );
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el método de pago desactivado.');
+            return $nuevo ?? throw new \RuntimeException('No fue posible leer el vehículo desactivado.');
         });
 
-        return $this->respuesta(true, 'Método de pago desactivado correctamente.', $nuevo);
+        return $this->respuesta(true, 'Vehículo desactivado correctamente.', $nuevo);
     }
 
     private function reactivar(array $cuerpo): array
     {
         $id = $this->validarIdUnico($cuerpo);
         $nuevo = $this->transaccion(function () use ($id): array {
-            $bloqueado = $this->pagoMetodo->bloquearPorId($id);
-            $anterior = $this->pagoMetodo->buscarPorId($id);
+            $bloqueado = $this->vehiculo->bloquearPorId($id);
+            $anterior = $this->vehiculo->buscarPorId($id);
             if ($bloqueado === null || $anterior === null) {
-                throw new PagoMetodoHttpException('Método de pago no encontrado.', 404);
+                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbpagometodoactivo'] === 1) {
+            if ((int) $bloqueado['tbvehiculoestado'] === 1) {
                 return $anterior;
             }
-            $this->pagoMetodo->cambiarEstado($id, true);
-            $nuevo = $this->pagoMetodo->buscarPorId($id);
+            $this->vehiculo->cambiarEstado($id, true);
+            $nuevo = $this->vehiculo->buscarPorId($id);
             $this->bitacora->registrar(
-                'REACTIVAR',
-                (string) $id,
-                $anterior,
-                $nuevo,
-                $this->solicitudId,
-                entidad: 'PAGOMETODO',
-                origen: 'API_PAGOMETODOS',
+                'REACTIVAR', (string) $id, $anterior, $nuevo, $this->solicitudId,
+                entidad: 'VEHICULO', origen: 'API_VEHICULOS',
             );
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el método de pago reactivado.');
+            return $nuevo ?? throw new \RuntimeException('No fue posible leer el vehículo reactivado.');
         });
 
-        return $this->respuesta(true, 'Método de pago reactivado correctamente.', $nuevo);
+        return $this->respuesta(true, 'Vehículo reactivado correctamente.', $nuevo);
     }
 
-    private function validarPagoMetodo(array $cuerpo, bool $actualizacion): array
+    private function validarVehiculo(array $cuerpo, bool $actualizacion): array
     {
-        $permitidos = ['nombre', 'descripcion', 'activo'];
+        $permitidos = ['placa', 'vin', 'modelo'];
         if ($actualizacion) {
-            $permitidos[] = 'id';
+            $permitidos[] = 'vehiculoId';
         }
         $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
         $errores = [];
-        
-        $id = null;
+
+        $vehiculoId = null;
         if ($actualizacion) {
-            $id = $this->enteroCampo($cuerpo['id'] ?? null, 'id', $errores);
+            $vehiculoId = $this->enteroCampo($cuerpo['vehiculoId'] ?? null, 'vehiculoId', $errores);
         }
-        
-        $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 100, $errores, 1);
-        $descripcion = $this->textoCampo($cuerpo['descripcion'] ?? null, 'descripcion', 250, $errores, 1);
-        $activo = $this->validarActivo($cuerpo['activo'] ?? null, $errores, !$actualizacion);
+
+        $placa = $this->textoCampo($cuerpo['placa'] ?? null, 'placa', 20, $errores, 1);
+        $vin = $this->textoCampo($cuerpo['vin'] ?? null, 'vin', 50, $errores, 1);
+        $modelo = $this->textoCampo($cuerpo['modelo'] ?? null, 'modelo', 100, $errores, 1);
 
         if ($errores !== []) {
-            throw new PagoMetodoHttpException('Revise los campos indicados.', 422, null, $errores);
+            throw new VehiculoHttpException('Revise los campos indicados.', 422, null, $errores);
         }
 
-        $resultado = [
-            'nombre' => $nombre,
-            'descripcion' => $descripcion,
-            'activo' => $activo,
-        ];
-        
+        $resultado = ['placa' => $placa, 'vin' => $vin, 'modelo' => $modelo];
         if ($actualizacion) {
-            $resultado['id'] = $id;
+            $resultado['vehiculoId'] = $vehiculoId;
         }
 
         return $resultado;
     }
 
-    private function validarActivo(mixed $valor, array &$errores, bool $requerido): bool
-    {
-        if ($valor === null) {
-            if ($requerido) {
-                $errores['activo'] = 'El campo activo es obligatorio.';
-            }
-            return true; // Por defecto activo al crear
-        }
-        if (!is_bool($valor)) {
-            $errores['activo'] = 'El campo activo debe ser verdadero o falso.';
-            return true;
-        }
-        return $valor;
-    }
-
     private function validarIdUnico(array $cuerpo): int
     {
-        $this->rechazarCamposDesconocidos($cuerpo, ['id']);
+        $this->rechazarCamposDesconocidos($cuerpo, ['vehiculoId']);
         $errores = [];
-        $id = $this->enteroCampo($cuerpo['id'] ?? null, 'id', $errores);
+        $id = $this->enteroCampo($cuerpo['vehiculoId'] ?? null, 'vehiculoId', $errores);
         if ($errores !== []) {
-            throw new PagoMetodoHttpException('Revise los campos indicados.', 422, null, $errores);
+            throw new VehiculoHttpException('Revise los campos indicados.', 422, null, $errores);
         }
         return $id;
     }
@@ -303,7 +258,7 @@ final class PagoMetodoController
     private function textoConsulta(mixed $valor, int $maximo): string
     {
         if (!is_string($valor) || mb_strlen($valor) > $maximo) {
-            throw new PagoMetodoHttpException('La consulta no es válida.', 422);
+            throw new VehiculoHttpException('La consulta no es válida.', 422);
         }
         return trim($valor);
     }
@@ -312,7 +267,7 @@ final class PagoMetodoController
     {
         $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($entero === false) {
-            throw new PagoMetodoHttpException("{$campo} debe ser un entero positivo.", 422);
+            throw new VehiculoHttpException("{$campo} debe ser un entero positivo.", 422);
         }
         return $entero;
     }
@@ -327,7 +282,7 @@ final class PagoMetodoController
         foreach ($desconocidos as $campo) {
             $errores[$prefijo . $campo] = 'Campo no permitido.';
         }
-        throw new PagoMetodoHttpException('Revise los campos indicados.', 422, null, $errores);
+        throw new VehiculoHttpException('Revise los campos indicados.', 422, null, $errores);
     }
 
     private function transaccion(callable $operacion): mixed
