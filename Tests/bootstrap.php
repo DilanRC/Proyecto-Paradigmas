@@ -113,8 +113,12 @@ function test_create_completo(array $overrides = [], array $direccionOverrides =
     return $response['body']['data'];
 }
 
-function test_http_json(string $method, ?string $body = null, string $contentType = 'application/json'): array
-{
+function test_http_json(
+    string $method,
+    ?string $body = null,
+    string $contentType = 'application/json',
+    string $url = 'http://127.0.0.1/api/productores.php',
+): array {
     $headers = ['Accept: application/json'];
     if ($body !== null) {
         $headers[] = "Content-Type: {$contentType}";
@@ -126,7 +130,7 @@ function test_http_json(string $method, ?string $body = null, string $contentTyp
         'ignore_errors' => true,
         'timeout' => 10,
     ]]);
-    $responseBody = file_get_contents('http://127.0.0.1/api/productores.php', false, $context);
+    $responseBody = file_get_contents($url, false, $context);
     $responseHeaders = $http_response_header ?? [];
     test_assert($responseBody !== false, "No fue posible ejecutar HTTP {$method}.");
     preg_match('/\s(\d{3})\s/', $responseHeaders[0] ?? '', $statusMatch);

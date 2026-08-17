@@ -11,28 +11,41 @@ final class Direccion
     public function __construct(private readonly PDO $conexion) {}
 
     /**
-     * Crea una fila nueva en tbdireccion y devuelve su tbdireccionid.
-     * Se autobloquea: adquiere y libera el lock en la misma llamada, por lo
-     * que es seguro invocarlo desde cualquier flujo (productor, finca, etc.)
-     * sin que el llamador deba coordinar el lock por fuera.
+     * Envuelve la operación bajo el lock 'tindercows_direccion_alta'. Debe
+     * usarse siempre que la operación incluya crear() en algún punto, y el
+     * lock debe cubrir la transacción completa (incluyendo el commit), no
+     * solo el INSERT puntual — de lo contrario dos transacciones concurrentes
+     * pueden calcular el mismo MAX(tbdireccionid)+1 antes de que ninguna
+     * haga commit.
      */
-    public function crear(array $direccion): int
+    public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
         try {
-            $direccionId = $this->siguienteId();
-            $sentencia = $this->conexion->prepare(
-                'INSERT INTO tbdireccion
-                 (tbdireccionid, tbdireccionprovincia, tbdireccioncanton,
-                  tbdirecciondistrito, tbdireccionpueblo, tbdireccionsenas)
-                 VALUES (:direccionId, :provincia, :canton, :distrito, :pueblo, :senas)'
-            );
-            $sentencia->execute(['direccionId' => $direccionId, ...$direccion]);
-
-            return $direccionId;
+            return $operacion();
         } finally {
             $this->liberarBloqueoAlta();
         }
+    }
+
+    /**
+     * Crea una fila nueva en tbdireccion y devuelve su tbdireccionid.
+     * PRECONDICIÓN: debe invocarse dentro de ejecutarConBloqueoAlta() (propio
+     * o heredado de un llamador que ya adquirió este mismo lock), para que el
+     * cálculo de MAX(tbdireccionid)+1 quede protegido hasta el commit.
+     */
+    public function crear(array $direccion): int
+    {
+        $direccionId = $this->siguienteId();
+        $sentencia = $this->conexion->prepare(
+            'INSERT INTO tbdireccion
+             (tbdireccionid, tbdireccionprovincia, tbdireccioncanton,
+              tbdirecciondistrito, tbdireccionpueblo, tbdireccionsenas)
+             VALUES (:direccionId, :provincia, :canton, :distrito, :pueblo, :senas)'
+        );
+        $sentencia->execute(['direccionId' => $direccionId, ...$direccion]);
+
+        return $direccionId;
     }
 
     public function actualizar(int $direccionId, array $direccion): void
