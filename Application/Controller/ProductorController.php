@@ -8,6 +8,7 @@ use Application\Model\Bitacora;
 use Application\Model\Productor;
 use Application\Model\ProductorDireccion;
 use Application\Model\ProductorFinca;
+use Application\Model\Direccion;
 use PDO;
 use Throwable;
 
@@ -43,7 +44,7 @@ final class ProductorController
     {
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
-        $this->direccion = new ProductorDireccion($conexion);
+        $this->direccion = new ProductorDireccion($conexion, new Direccion($conexion));
         $this->bitacora = new Bitacora($conexion);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
     }
