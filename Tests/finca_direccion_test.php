@@ -40,13 +40,11 @@ try {
 
     // ============================================================
     // Direccion (unitario) — dirección suelta, sin enlace todavía.
-    // crear() ya NO se autobloquea: exige ejecutarConBloqueoAlta() explícito
-    // para que el lock cubra el cálculo de MAX(id)+1 hasta después del uso.
+    // CORRECCIÓN: crear() es private; usar crearConBloqueo() que es la API
+    // pública segura para creación de direcciones desde código externo.
     // ============================================================
-    $direccionSueltaId = $direccion->ejecutarConBloqueoAlta(
-        fn (): int => $direccion->crear(test_direccion_payload(['provincia' => 'Cartago']))
-    );
-    test_assert($direccionSueltaId > 0, 'Direccion::crear debe devolver un id positivo');
+    $direccionSueltaId = $direccion->crearConBloqueo(test_direccion_payload(['provincia' => 'Cartago']));
+    test_assert($direccionSueltaId > 0, 'Direccion::crearConBloqueo debe devolver un id positivo');
     test_same('Cartago', $direccion->buscar($direccionSueltaId)['provincia'], 'Direccion::buscar debe reflejar lo insertado');
     $direccion->actualizar($direccionSueltaId, test_direccion_payload(['provincia' => 'Alajuela']));
     test_same('Alajuela', $direccion->buscar($direccionSueltaId)['provincia'], 'Direccion::actualizar debe persistir el cambio');
@@ -226,9 +224,10 @@ try {
     // ============================================================
     // buscar() — no debe ocultar más de un enlace por finca
     // ============================================================
-    $direccionDuplicadaId = $direccion->ejecutarConBloqueoAlta(
-        fn (): int => $direccion->crear(test_direccion_payload(['provincia' => 'Duplicada']))
-    );
+    // CORRECCIÓN: crear() es private; usar crearConBloqueo() para la dirección duplicada.
+    // El enlace duplicado sigue usando SQL directo porque simula corrupción de datos,
+    // no una operación legítima.
+    $direccionDuplicadaId = $direccion->crearConBloqueo(test_direccion_payload(['provincia' => 'Duplicada']));
     $enlaceDuplicadoId = (int) $db->query(
         'SELECT COALESCE(MAX(tbfincadireccionid), 0) + 1 FROM tbfincadireccion'
     )->fetchColumn();

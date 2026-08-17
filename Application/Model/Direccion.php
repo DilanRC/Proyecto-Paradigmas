@@ -29,12 +29,31 @@ final class Direccion
     }
 
     /**
-     * Crea una fila nueva en tbdireccion y devuelve su tbdireccionid.
-     * PRECONDICIÓN: debe invocarse dentro de ejecutarConBloqueoAlta() (propio
-     * o heredado de un llamador que ya adquirió este mismo lock), para que el
-     * cálculo de MAX(tbdireccionid)+1 quede protegido hasta el commit.
+     * Crea una dirección de forma segura, adquiriendo automáticamente el lock
+     * de alta y liberándolo al finalizar (incluso si hay excepción).
+     * Este es el ÚNICO método público permitido para crear direcciones
+     * desde código externo que NO posee ya el lock.
      */
-    public function crear(array $direccion): int
+    public function crearConBloqueo(array $direccion): int
+    {
+        return $this->ejecutarConBloqueoAlta(fn (): int => $this->crear($direccion));
+    }
+
+    /**
+     * @internal Solo para uso de ProductorDireccion y FincaDireccion cuando
+     *           YA adquirieron el lock de direccion vía ejecutarConBloqueoAlta()
+     *           anidado. NO llamar directamente desde controllers ni otros modelos.
+     *           Si se llama sin el lock activo, se generarán IDs duplicados.
+     */
+    public function crearSinBloqueo(array $direccion): int
+    {
+        return $this->crear($direccion);
+    }
+
+    /**
+     * Implementación interna. Toda creación pasa por aquí.
+     */
+    private function crear(array $direccion): int
     {
         $direccionId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
