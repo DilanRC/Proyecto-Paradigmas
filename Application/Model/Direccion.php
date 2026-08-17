@@ -8,15 +8,14 @@ use PDO;
 
 final class Direccion
 {
+    private const LOCK_ALTA = 'tindercows_direccion_alta';
+
     public function __construct(private readonly PDO $conexion) {}
 
     /**
-     * Envuelve la operación bajo el lock 'tindercows_direccion_alta'. Debe
-     * usarse siempre que la operación incluya crear() en algún punto, y el
-     * lock debe cubrir la transacción completa (incluyendo el commit), no
-     * solo el INSERT puntual — de lo contrario dos transacciones concurrentes
-     * pueden calcular el mismo MAX(tbdireccionid)+1 antes de que ninguna
-     * haga commit.
+     * Envuelve la operación bajo el lock global de alta de direcciones.
+     * El llamador debe incluir dentro del callback toda la transacción que
+     * contiene el cálculo MAX(tbdireccionid)+1, el INSERT y su COMMIT/ROLLBACK.
      */
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -29,30 +28,40 @@ final class Direccion
     }
 
     /**
-     * Crea una dirección de forma segura, adquiriendo automáticamente el lock
-     * de alta y liberándolo al finalizar (incluso si hay excepción).
-     * Este es el ÚNICO método público permitido para crear direcciones
-     * desde código externo que NO posee ya el lock.
+     * Crea una dirección de forma segura cuando no existe una transacción
+     * exterior. Si ya hay una transacción abierta, el lock no puede liberarse
+     * antes de su COMMIT/ROLLBACK, por lo que se obliga a usar
+     * ejecutarConBloqueoAlta() alrededor de la transacción completa.
      */
     public function crearConBloqueo(array $direccion): int
     {
+        if ($this->conexion->inTransaction()) {
+            throw new \LogicException(
+                'No use crearConBloqueo() dentro de una transacción ya abierta; '
+                . 'envuelva la transacción completa con ejecutarConBloqueoAlta().'
+            );
+        }
+
         return $this->ejecutarConBloqueoAlta(fn (): int => $this->crear($direccion));
     }
 
     /**
-     * @internal Solo para uso de ProductorDireccion y FincaDireccion cuando
-     *           YA adquirieron el lock de direccion vía ejecutarConBloqueoAlta()
-     *           anidado. NO llamar directamente desde controllers ni otros modelos.
-     *           Si se llama sin el lock activo, se generarán IDs duplicados.
+     * Crea usando un lock que ya debe pertenecer a esta misma conexión.
+     * Se mantiene público porque ProductorDireccion y FincaDireccion son
+     * colaboradores separados, pero no permite continuar si el lock requerido
+     * no está realmente adquirido por la conexión actual.
      */
-    public function crearSinBloqueo(array $direccion): int
+    public function crearConBloqueoExistente(array $direccion): int
     {
+        if (!$this->conexionPoseeBloqueoAlta()) {
+            throw new \LogicException(
+                'La conexión debe poseer el lock de alta de dirección antes de crear la fila.'
+            );
+        }
+
         return $this->crear($direccion);
     }
 
-    /**
-     * Implementación interna. Toda creación pasa por aquí.
-     */
     private function crear(array $direccion): int
     {
         $direccionId = $this->siguienteId();
@@ -108,13 +117,23 @@ final class Direccion
         return (int) $sentencia->fetchColumn();
     }
 
+    private function conexionPoseeBloqueoAlta(): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT IS_USED_LOCK(:nombreLock) = CONNECTION_ID()'
+        );
+        $sentencia->execute(['nombreLock' => self::LOCK_ALTA]);
+
+        return (int) $sentencia->fetchColumn() === 1;
+    }
+
     private function adquirirBloqueoAlta(): void
     {
-        NamedLock::acquire($this->conexion, 'tindercows_direccion_alta');
+        NamedLock::acquire($this->conexion, self::LOCK_ALTA);
     }
 
     private function liberarBloqueoAlta(): void
     {
-        NamedLock::release($this->conexion, 'tindercows_direccion_alta');
+        NamedLock::release($this->conexion, self::LOCK_ALTA);
     }
 }
