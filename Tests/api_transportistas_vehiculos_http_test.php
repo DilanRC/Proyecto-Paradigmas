@@ -8,39 +8,49 @@ foreach (['NamedLock', 'Vehiculo', 'Transportista', 'TransportistaVehiculo'] as 
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 
-use Application\Model\TransportistaVehiculo;
 use Application\Model\Transportista;
+use Application\Model\TransportistaVehiculo;
 use Application\Model\Vehiculo;
 
 $url = 'http://127.0.0.1/api/transportistas-vehiculos.php';
-
-// Crear fixtures vía modelo para tener IDs válidos
 $conn = \Configuration\Database::getConnection();
 $tvModel = new TransportistaVehiculo($conn);
 $transportistaModel = new Transportista($conn, $tvModel);
 $vehiculoModel = new Vehiculo($conn);
 
-$identificacionFix = 'FIXTV' . bin2hex(random_bytes(3));
-$transportistaId = $transportistaModel->ejecutarConBloqueoAlta(
-    fn () => $transportistaModel->crear([
-        'identificacionNumero' => $identificacionFix,
-        'identificacionTipo' => 'CEDULA_FISICA',
-        'nombre' => 'Fix Transportista TV',
-        'telefono' => '00000000',
-        'correoElectronico' => 'fix-tv@test.com',
-    ])
-);
-$placaFix = 'FIX-TV-' . bin2hex(random_bytes(3));
-$vehiculoId = $vehiculoModel->ejecutarConBloqueoAlta(
-    fn () => $vehiculoModel->crear([
-        'placa' => $placaFix,
-        'vin' => 'VIN-FIX-TV',
-        'modelo' => 'Fix Modelo',
-    ])
-);
+$identificacionA = 'FIXTVA' . strtoupper(bin2hex(random_bytes(3)));
+$identificacionB = 'FIXTVB' . strtoupper(bin2hex(random_bytes(3)));
+$transportistaIdA = null;
+$transportistaIdB = null;
+$vehiculoId = null;
 
 try {
-    // Robustez del endpoint
+    $transportistaIdA = $transportistaModel->ejecutarConBloqueoAlta(
+        fn (): int => $transportistaModel->crear([
+            'identificacionNumero' => $identificacionA,
+            'identificacionTipo' => 'PASAPORTE',
+            'nombre' => 'Transportista HTTP A',
+            'telefono' => '88888888',
+            'correoElectronico' => 'fix-tva@test.com',
+        ])
+    );
+    $transportistaIdB = $transportistaModel->ejecutarConBloqueoAlta(
+        fn (): int => $transportistaModel->crear([
+            'identificacionNumero' => $identificacionB,
+            'identificacionTipo' => 'PASAPORTE',
+            'nombre' => 'Transportista HTTP B',
+            'telefono' => '87777777',
+            'correoElectronico' => 'fix-tvb@test.com',
+        ])
+    );
+    $vehiculoId = $vehiculoModel->ejecutarConBloqueoAlta(
+        fn (): int => $vehiculoModel->crear([
+            'placa' => 'FIX-TV-' . strtoupper(bin2hex(random_bytes(3))),
+            'vin' => 'VIN-FIX-TV-' . strtoupper(bin2hex(random_bytes(3))),
+            'modelo' => 'Vehiculo HTTP relacion',
+        ])
+    );
+
     test_same(405, test_http_json('TRACE', null, 'application/json', $url)['status'],
         'HTTP 405 JSON en transportistas-vehiculos.php');
     test_same(415, test_http_json('POST', '{}', 'text/plain', $url)['status'],
@@ -48,37 +58,57 @@ try {
     test_same(400, test_http_json('POST', '{bad', 'application/json', $url)['status'],
         'HTTP 400 JSON malformado en transportistas-vehiculos.php');
 
-    // POST — asignar (usa identificacionNumero + vehiculoId, NO transportistaId)
-    $cuerpoPost = json_encode([
-        'identificacionNumero' => $identificacionFix,
+    $cuerpoAsignar = json_encode([
+        'identificacionNumero' => $identificacionA,
         'vehiculoId' => $vehiculoId,
     ], JSON_THROW_ON_ERROR);
-    $post = test_http_json('POST', $cuerpoPost, 'application/json', $url);
+    $post = test_http_json('POST', $cuerpoAsignar, 'application/json', $url);
     test_same(201, $post['status'], 'POST asignar vehículo responde 201');
 
-    // GET — verificar asignación por identificacionNumero
-    $get = test_http_json('GET', null, 'application/json', "{$url}?identificacionNumero={$identificacionFix}");
-    test_same(200, $get['status'], 'GET lista vehículos del transportista');
-    test_same(1, count($get['body']['data']['vehiculos']), 'GET muestra 1 vehículo asignado');
-    test_same($vehiculoId, $get['body']['data']['vehiculos'][0]['vehiculoId'], 'GET muestra vehículo correcto');
+    $getA = test_http_json('GET', null, 'application/json', "{$url}?identificacionNumero={$identificacionA}");
+    test_same(200, $getA['status'], 'GET lista vehículos del transportista A');
+    test_same(1, count($getA['body']['data']['vehiculos']), 'Transportista A tiene el vehículo asignado');
 
-    // POST duplicado — debe fallar con 409
-    $postDup = test_http_json('POST', $cuerpoPost, 'application/json', $url);
-    test_same(409, $postDup['status'], 'POST asignar vehículo ya asignado responde 409');
+    $postDuplicado = test_http_json('POST', $cuerpoAsignar, 'application/json', $url);
+    test_same(409, $postDuplicado['status'], 'POST duplicado debe responder 409');
 
-    // DELETE — desasignar
+    $cuerpoReasignar = json_encode([
+        'identificacionNumero' => $identificacionB,
+        'vehiculoId' => $vehiculoId,
+    ], JSON_THROW_ON_ERROR);
+    $put = test_http_json('PUT', $cuerpoReasignar, 'application/json', $url);
+    test_same(200, $put['status'], 'PUT debe reasignar el vehículo a otro transportista');
+
+    $getATrasPut = test_http_json('GET', null, 'application/json', "{$url}?identificacionNumero={$identificacionA}");
+    test_same(0, count($getATrasPut['body']['data']['vehiculos']), 'Transportista A queda sin el vehículo tras PUT');
+
+    $getB = test_http_json('GET', null, 'application/json', "{$url}?identificacionNumero={$identificacionB}");
+    test_same(1, count($getB['body']['data']['vehiculos']), 'Transportista B recibe el vehículo tras PUT');
+    test_same($vehiculoId, $getB['body']['data']['vehiculos'][0]['vehiculoId'], 'PUT conserva el vehículo correcto');
+
     $cuerpoDelete = json_encode(['vehiculoId' => $vehiculoId], JSON_THROW_ON_ERROR);
     $delete = test_http_json('DELETE', $cuerpoDelete, 'application/json', $url);
     test_same(200, $delete['status'], 'DELETE desasignar responde 200');
 
-    // GET tras desasignar
-    $getVacio = test_http_json('GET', null, 'application/json', "{$url}?identificacionNumero={$identificacionFix}");
-    test_same(0, count($getVacio['body']['data']['vehiculos']), 'GET tras DELETE muestra 0 vehículos');
-
+    $getBFinal = test_http_json('GET', null, 'application/json', "{$url}?identificacionNumero={$identificacionB}");
+    test_same(0, count($getBFinal['body']['data']['vehiculos']), 'GET tras DELETE muestra 0 vehículos');
 } finally {
-    $conn->exec("DELETE FROM tbtransportistavehiculo WHERE tbvehiculoid = {$vehiculoId}");
-    $conn->exec("DELETE FROM tbvehiculo WHERE tbvehiculoid = {$vehiculoId}");
-    $conn->exec("DELETE FROM tbtransportista WHERE tbtransportistaid = {$transportistaId}");
+    if ($vehiculoId !== null) {
+        $conn->prepare(
+            'DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN (:asignar, :reasignar, :desasignar)'
+        )->execute([
+            'asignar' => $identificacionA . ':' . $vehiculoId,
+            'reasignar' => $identificacionB . ':' . $vehiculoId,
+            'desasignar' => (string) $vehiculoId,
+        ]);
+        $conn->prepare('DELETE FROM tbtransportistavehiculo WHERE tbvehiculoid = :id')->execute(['id' => $vehiculoId]);
+        $conn->prepare('DELETE FROM tbvehiculo WHERE tbvehiculoid = :id')->execute(['id' => $vehiculoId]);
+    }
+    foreach ([$transportistaIdA, $transportistaIdB] as $transportistaId) {
+        if ($transportistaId !== null) {
+            $conn->prepare('DELETE FROM tbtransportista WHERE tbtransportistaid = :id')->execute(['id' => $transportistaId]);
+        }
+    }
 }
 
-echo "OK api_transportistas_vehiculos_http_test: asignar/desasignar/listar + robustez vía HTTP.\n";
+echo "OK api_transportistas_vehiculos_http_test: POST/GET/PUT/DELETE + 400/405/409/415 vía HTTP real.\n";

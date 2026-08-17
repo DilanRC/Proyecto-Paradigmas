@@ -13,11 +13,6 @@ final class FincaDireccion
         private readonly Direccion $direccion,
     ) {}
 
-    /**
-     * Adquiere el lock de finca_direccion Y el de direccion anidado.
-     * Necesario porque insertarEnlace calcula MAX(tbfincadireccionid)+1
-     * y además crea una dirección (que requiere su propio lock).
-     */
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
@@ -28,12 +23,6 @@ final class FincaDireccion
         }
     }
 
-    /**
-     * Creación explícita: solo permitida cuando la finca todavía no tiene
-     * ninguna fila de enlace.
-     *
-     * PRECONDICIÓN: debe invocarse dentro de ejecutarConBloqueoAlta().
-     */
     public function crear(int $fincaId, array $direccion): void
     {
         $comprobar = $this->conexion->prepare(
@@ -98,17 +87,9 @@ final class FincaDireccion
         return (int) $filas[0];
     }
 
-    /**
-     * Inserta el enlace y la dirección subyacente. Usa crear() directo
-     * porque estamos DENTRO de ejecutarConBloqueoAlta() que ya adquirió
-     * AMBOS locks (finca_direccion + direccion). Llamar a crearConBloqueo()
-     * aquí causaría deadlock si NamedLock no es reentrante.
-     *
-     * PRECONDICIÓN: solo invocar dentro de ejecutarConBloqueoAlta().
-     */
     private function insertarEnlace(int $fincaId, array $direccion): void
     {
-        $direccionId = $this->direccion->crearSinBloqueo($direccion);
+        $direccionId = $this->direccion->crearConBloqueoExistente($direccion);
 
         $enlaceId = $this->siguienteEnlaceId();
         $sentencia = $this->conexion->prepare(
