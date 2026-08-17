@@ -102,9 +102,9 @@ test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
     $pagoMetodoEstructura->fetchAll(), 'Los datos iniciales deben dejar solo Efectivo en tbpagometodo');
 
 // Corte deliberado: hasta aquí se comprueba el contrato de base de datos y ya no
-// depende de la aplicación. Lo que sigue ejercita el CRUD de productores, que
-// todavía escribe la ubicación en tbproductordireccion y fallará hasta que se
-// adapte Application/Model/ProductorDireccion.php al contrato normalizado.
+// depende de la aplicación. Lo que sigue ejercita el CRUD de productores, ahora
+// contra el contrato normalizado (tbproductordireccion como enlace + tbdireccion
+// como contenido real).
 echo "OK schema_test (estructura): once tablas, columnas exactas, cero claves, índices, "
     . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
@@ -121,8 +121,8 @@ try {
     test_same(409, test_controller()->procesar('POST', [], test_payload($apiIds[0]))['status'],
         'La aplicación debe rechazar una identificación repetida aunque MySQL no tenga claves');
 
-    // Cada dirección conserva su propio tbproductordireccionId, distinto del de otros productores,
-    // y sigue relacionada mediante tbproductorId (una sola fila por productor).
+    // Cada enlace conserva su propio tbproductordireccionId, distinto del de otros productores,
+    // y sigue relacionado mediante tbproductorId (una sola fila por productor).
     $direccionId = $db->prepare('SELECT tbproductordireccionid FROM tbproductordireccion WHERE tbproductorid = :id');
     $direccionId->execute(['id' => $first['productorId']]);
     $idDireccion1 = (int) $direccionId->fetchColumn();
@@ -154,10 +154,18 @@ try {
     $directCount->execute(['identificacion' => $directIdentification]);
     test_same(2, (int) $directCount->fetchColumn(), 'Sin PK, UNIQUE ni CHECK, SQL directo acepta duplicados y dominio inválido');
 
+    // Enlace huérfano: se crea primero la fila real en tbdireccion, y luego el
+    // enlace en tbproductordireccion apuntando a un productor inexistente.
+    $db->prepare("INSERT INTO tbdireccion
+        (tbdireccionid,tbdireccionprovincia,tbdireccioncanton,tbdirecciondistrito,tbdireccionpueblo,tbdireccionsenas)
+        VALUES (:direccionId,'X','X','X',NULL,NULL)")->execute(['direccionId' => $orphanId]);
     $db->prepare("INSERT INTO tbproductordireccion
-        (tbproductordireccionid,tbproductorid,tbproductordireccionprovincia,
-         tbproductordireccioncanton,tbproductordirecciondistrito)
-        VALUES (:direccionId,:id,'X','X','X')")->execute(['direccionId' => $orphanId, 'id' => $orphanId]);
+        (tbproductordireccionid,tbproductorid,tbdireccionid)
+        VALUES (:enlaceId,:id,:direccionId)")->execute([
+            'enlaceId' => $orphanId,
+            'id' => $orphanId,
+            'direccionId' => $orphanId,
+        ]);
     $db->prepare("INSERT INTO tbfinca
         (tbfincaid,tbproductorid,tbfincanombre,tbfincaestado)
         VALUES (:fincaId,:id,'Finca sin productor',1)")->execute(['fincaId' => $orphanId, 'id' => $orphanId]);
@@ -169,6 +177,7 @@ try {
 } finally {
     $db->prepare('DELETE FROM tbfinca WHERE tbproductorid = :id')->execute(['id' => $orphanId]);
     $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid = :id')->execute(['id' => $orphanId]);
+    $db->prepare('DELETE FROM tbdireccion WHERE tbdireccionid = :id')->execute(['id' => $orphanId]);
     $deleteDirect = $db->prepare('DELETE FROM tbproductor WHERE tbproductorid IN (?, ?)');
     $deleteDirect->execute($directProductorIds);
     test_cleanup_productores($apiIds);
