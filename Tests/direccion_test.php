@@ -59,7 +59,11 @@ try {
     );
 
     // Restauramos la fila vacía usando el modelo real (mismo camino que usa el POST de alta).
-    $modeloDireccion->crearVacia($productorId);
+    // CORRECCIÓN: crearVacia() requiere ejecutarConBloqueoAlta() porque internamente
+    // llama a insertarEnlace() que calcula MAX(id)+1 y crea una dirección.
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->crearVacia($productorId)
+    );
 
     // ============================================================
     // PUT /productores-direccion — actualizarDireccion()
@@ -110,7 +114,10 @@ try {
     );
 
     // Restauramos la fila (con valores) para las pruebas de DELETE, usando el modelo real.
-    $modeloDireccion->crear($productorId, test_direccion_payload(['provincia' => 'Limón']));
+    // CORRECCIÓN: crear() también requiere ejecutarConBloqueoAlta().
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->crear($productorId, test_direccion_payload(['provincia' => 'Limón']))
+    );
 
     // ============================================================
     // DELETE /productores-direccion — eliminarDireccion()
@@ -169,14 +176,18 @@ try {
     );
 
     // Restauramos la fila vacía para la prueba de integridad final.
-    $modeloDireccion->crearVacia($productorId);
+    // CORRECCIÓN: crearVacia() requiere ejecutarConBloqueoAlta().
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->crearVacia($productorId)
+    );
 
     // ============================================================
     // buscar() — no debe ocultar más de una dirección por productor
     // ============================================================
     // crear()/crearVacia() rechazan insertar si ya existe una fila (validación de negocio
-    // real), así que para forzar el duplicado usamos SQL directo. Con el esquema
-    // normalizado necesitamos una fila real en tbdireccion además del enlace.
+    // real), así que para forzar el duplicado usamos SQL directo. Este bloque es
+    // intencionalmente fuera del lock porque simula corrupción de datos preexistente,
+    // no una operación concurrente legítima.
     $direccionDuplicadaId = (int) $db->query(
         'SELECT COALESCE(MAX(tbdireccionid), 0) + 1 FROM tbdireccion'
     )->fetchColumn();
