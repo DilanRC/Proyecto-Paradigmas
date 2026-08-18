@@ -9,6 +9,7 @@ use PDO;
 final class Direccion
 {
     private const LOCK_ALTA = 'tindercows_direccion_alta';
+    private int $profundidadBloqueoAlta = 0;
 
     public function __construct(private readonly PDO $conexion) {}
 
@@ -16,13 +17,19 @@ final class Direccion
      * Envuelve la operación bajo el lock global de alta de direcciones.
      * El llamador debe incluir dentro del callback toda la transacción que
      * contiene el cálculo MAX(tbdireccionid)+1, el INSERT y su COMMIT/ROLLBACK.
+     *
+     * La profundidad se controla en PHP para no depender de funciones de
+     * inspección específicas de MySQL. NamedLock ya abstrae la adquisición y
+     * liberación para MySQL y PostgreSQL.
      */
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
+        $this->profundidadBloqueoAlta++;
         try {
             return $operacion();
         } finally {
+            $this->profundidadBloqueoAlta--;
             $this->liberarBloqueoAlta();
         }
     }
@@ -46,14 +53,14 @@ final class Direccion
     }
 
     /**
-     * Crea usando un lock que ya debe pertenecer a esta misma conexión.
-     * Se mantiene público porque ProductorDireccion y FincaDireccion son
-     * colaboradores separados, pero no permite continuar si el lock requerido
-     * no está realmente adquirido por la conexión actual.
+     * Crea usando el lock adquirido por esta misma instancia mediante
+     * ejecutarConBloqueoAlta(). ProductorDireccion y FincaDireccion comparten
+     * esta instancia y por eso pueden crear la fila sin consultar funciones
+     * específicas del motor de base de datos.
      */
     public function crearConBloqueoExistente(array $direccion): int
     {
-        if (!$this->conexionPoseeBloqueoAlta()) {
+        if ($this->profundidadBloqueoAlta <= 0) {
             throw new \LogicException(
                 'La conexión debe poseer el lock de alta de dirección antes de crear la fila.'
             );
@@ -115,16 +122,6 @@ final class Direccion
         $sentencia->execute();
 
         return (int) $sentencia->fetchColumn();
-    }
-
-    private function conexionPoseeBloqueoAlta(): bool
-    {
-        $sentencia = $this->conexion->prepare(
-            'SELECT IS_USED_LOCK(:nombreLock) = CONNECTION_ID()'
-        );
-        $sentencia->execute(['nombreLock' => self::LOCK_ALTA]);
-
-        return (int) $sentencia->fetchColumn() === 1;
     }
 
     private function adquirirBloqueoAlta(): void
