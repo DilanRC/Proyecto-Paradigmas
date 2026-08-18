@@ -5,47 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Administración de productores de TinderCows">
     <title>Productores | TinderCows</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
     <link rel="stylesheet" href="css/styles.css">
     <script src="js/productores.js" defer></script>
 </head>
-<body>
-    <header class="top-bar">
-        <a class="brand" href="./" aria-label="Ir al inicio de TinderCows">
+<body class="rural-panel">
+    <aside class="rural-panel__sidebar">
+        <div class="rural-panel__sidebar-brand">
             <span class="brand__icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 12 6 7c-1 7 2 10 7 11m22-6 7-5c1 7-2 10-7 11"/><path d="M11 24c0-10 5-16 13-16s13 6 13 16v7c0 7-5 11-13 11S11 38 11 31Z"/><path d="M16 29c0-4 3-6 8-6s8 2 8 6-3 7-8 7-8-3-8-7Z"/><circle cx="18" cy="20" r="2"/><circle cx="30" cy="20" r="2"/><circle cx="21" cy="29" r="1.5"/><circle cx="27" cy="29" r="1.5"/></svg></span>
-            <span>Tinder<strong>Cows</strong></span>
-        </a>
-        <nav class="top-bar__nav">
-            <span class="top-bar__module">Módulo de productores</span>
-            <a class="top-bar__link" href="./">Inicio</a>
+            <span class="rural-panel__sidebar-brand-name">Tinder<strong>Cows</strong></span>
+        </div>
+        <nav class="rural-panel__nav" aria-label="Administración">
+            <p class="rural-panel__nav-label">Administración</p>
+            <div class="rural-panel__nav-list">
+                <a class="rural-panel__nav-item rural-panel__nav-item--active" href="productores.php">Productores<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
+                <a class="rural-panel__nav-item" href="compradores.php">Compradores</a>
+                <a class="rural-panel__nav-item" href="transportistas.php">Transportistas</a>
+                <a class="rural-panel__nav-item" href="vehiculos.php">Vehículos</a>
+                <a class="rural-panel__nav-item" href="pagometodos.php">Métodos de pago</a>
+            </div>
         </nav>
-    </header>
+        <div class="rural-panel__sidebar-footer">
+            <p>Gestión de la red ganadera.</p>
+            <p>TinderCows · 2026</p>
+        </div>
+    </aside>
 
-    <main class="container">
-        <section class="page-header" aria-labelledby="page-title">
-            <div><span class="label">Registro de productores</span><h1 id="page-title">Productores</h1><p>Administre productores identificados por su número, contacto, dirección y fincas.</p></div>
-            <button class="button button--primary" id="crear-productor" type="button"><span aria-hidden="true">＋</span>Crear productor</button>
-        </section>
+    <main class="rural-panel__main">
+        <div class="rural-panel__glow" aria-hidden="true"></div>
+        <div class="rural-panel__content">
+            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Regresar</a></div>
 
-        <section class="panel" aria-label="Lista de productores" aria-busy="true" id="panel-productores">
-            <div class="tools">
-                <label class="search"><span class="screen-reader-only">Buscar productor</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-productor" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
-                <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
-            </div>
-            <div class="list-summary">
-                <p id="total-productores" aria-live="polite">Cargando productores…</p>
-                <div class="pagination" aria-label="Paginación de productores">
-                    <button class="link-button" id="pagina-anterior" type="button">Anterior</button>
-                    <span id="pagina-actual" aria-live="polite">Página 1</span>
-                    <button class="link-button" id="pagina-siguiente" type="button">Siguiente</button>
-                    <button class="link-button" id="actualizar-lista" type="button">Actualizar lista</button>
+            <section class="page-header" aria-labelledby="page-title">
+                <div><span class="label">Registro de productores</span><h1 id="page-title">Productores</h1><p>Administre productores identificados por su número, contacto, dirección y fincas.</p></div>
+                <button class="button button--primary" id="crear-productor" type="button"><span aria-hidden="true">＋</span>Crear productor</button>
+            </section>
+
+            <section class="panel" aria-label="Lista de productores" aria-busy="true" id="panel-productores">
+                <div class="tools">
+                    <label class="search"><span class="screen-reader-only">Buscar productor</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-productor" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
+                    <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
                 </div>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th>Productor</th><th>Identificación</th><th>Contacto</th><th>Dirección principal</th><th>Fincas</th><th>Estado</th><th><span class="screen-reader-only">Acciones</span></th></tr></thead><tbody id="cuerpo-productores"></tbody></table>
-                <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>No se encontraron productores</h2><p>Modifique la búsqueda o cree el primer productor.</p></div>
-                <div class="loading-state" id="estado-carga" aria-live="polite"><span class="loader" aria-hidden="true"></span>Cargando información…</div>
-            </div>
-        </section>
+                <div class="list-summary">
+                    <p id="total-productores" aria-live="polite">Cargando productores…</p>
+                    <div class="pagination" aria-label="Paginación de productores">
+                        <button class="link-button" id="pagina-anterior" type="button">Anterior</button>
+                        <span id="pagina-actual" aria-live="polite">Página 1</span>
+                        <button class="link-button" id="pagina-siguiente" type="button">Siguiente</button>
+                        <button class="link-button" id="actualizar-lista" type="button">Actualizar lista</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table><thead><tr><th>Productor</th><th>Identificación</th><th>Contacto</th><th>Dirección principal</th><th>Fincas</th><th>Estado</th><th><span class="screen-reader-only">Acciones</span></th></tr></thead><tbody id="cuerpo-productores"></tbody></table>
+                    <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>No se encontraron productores</h2><p>Modifique la búsqueda o cree el primer productor.</p></div>
+                    <div class="loading-state" id="estado-carga" aria-live="polite"><span class="loader" aria-hidden="true"></span>Cargando información…</div>
+                </div>
+            </section>
+
+            <p class="rural-panel__footnote">Directorio de productores · Datos protegidos por TinderCows</p>
+        </div>
     </main>
 
     <dialog class="modal" id="modal-productor" aria-labelledby="titulo-modal">
@@ -82,6 +102,22 @@
         <div class="modal__header"><div><span class="label">Ficha del productor</span><h2 id="titulo-detalle">Detalle</h2></div><button class="close-button" id="cerrar-detalle" type="button" aria-label="Cerrar detalle">×</button></div>
         <div class="modal__content"><dl class="detail-grid" id="detalle-contenido"></dl></div>
         <div class="modal__actions"><button class="button button--secondary" id="cerrar-detalle-secundario" type="button">Cerrar</button><button class="button button--primary" id="editar-desde-detalle" type="button">Editar</button></div>
+    </dialog>
+
+    <dialog class="modal" id="modal-direccion-finca" aria-labelledby="titulo-direccion-finca">
+        <form id="formulario-direccion-finca" novalidate aria-busy="false">
+            <div class="modal__header"><div><span class="label" id="subtitulo-direccion-finca">Finca</span><h2 id="titulo-direccion-finca">Dirección de la finca</h2></div><button class="close-button" id="cerrar-direccion-finca" type="button" aria-label="Cerrar">×</button></div>
+            <div class="modal__content">
+                <fieldset><legend>Dirección</legend><div class="form-grid">
+                    <label class="field"><span>Provincia <b aria-hidden="true">*</b></span><input id="finca-direccion-provincia" name="direccionFinca.provincia" maxlength="100" required aria-describedby="error-finca-direccion-provincia"><small class="field__error" id="error-finca-direccion-provincia" data-error-for="direccionFinca.provincia"></small></label>
+                    <label class="field"><span>Cantón <b aria-hidden="true">*</b></span><input id="finca-direccion-canton" name="direccionFinca.canton" maxlength="100" required aria-describedby="error-finca-direccion-canton"><small class="field__error" id="error-finca-direccion-canton" data-error-for="direccionFinca.canton"></small></label>
+                    <label class="field"><span>Distrito <b aria-hidden="true">*</b></span><input id="finca-direccion-distrito" name="direccionFinca.distrito" maxlength="100" required aria-describedby="error-finca-direccion-distrito"><small class="field__error" id="error-finca-direccion-distrito" data-error-for="direccionFinca.distrito"></small></label>
+                    <label class="field"><span>Pueblo</span><input id="finca-direccion-pueblo" name="direccionFinca.pueblo" maxlength="150" aria-describedby="error-finca-direccion-pueblo"><small class="field__error" id="error-finca-direccion-pueblo" data-error-for="direccionFinca.pueblo"></small></label>
+                    <label class="field field--full"><span>Señas</span><textarea id="finca-direccion-senas" name="direccionFinca.senas" maxlength="500" rows="3" aria-describedby="error-finca-direccion-senas"></textarea><small class="field__error" id="error-finca-direccion-senas" data-error-for="direccionFinca.senas"></small></label>
+                </div></fieldset>
+            </div>
+            <div class="modal__actions"><button class="button button--secondary" id="cancelar-direccion-finca" type="button">Cancelar</button><button class="button button--danger" id="vaciar-direccion-finca" type="button" hidden>Vaciar dirección</button><button class="button button--primary" id="guardar-direccion-finca" type="submit">Guardar dirección</button></div>
+        </form>
     </dialog>
     <div class="notification" id="notificacion" role="status" aria-live="polite" hidden></div>
 </body>
