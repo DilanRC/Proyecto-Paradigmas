@@ -52,6 +52,8 @@
         <a class="rural__panel-link" href="productores.php">Panel de productores →</a>
         <a class="rural__panel-link" href="compradores.php">Panel de compradores →</a>
         <a class="rural__panel-link" href="pagometodos.php">Métodos de pago →</a>
+        <a class="rural__panel-link" href="transportistas.php">Panel de transportistas →</a>
+        <a class="rural__panel-link" href="vehiculos.php">Panel de vehículos →</a>
     </aside>
 
     <main class="rural__main">
