@@ -2,6 +2,7 @@
     'use strict';
 
     const API_URL = 'api/productores.php';
+    const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';
     const $ = (selector) => document.querySelector(selector);
     const elements = {
         body: $('#cuerpo-productores'), empty: $('#estado-vacio'), loading: $('#estado-carga'), panel: $('#panel-productores'), total: $('#total-productores'),
@@ -10,11 +11,15 @@
         reactivateExisting: $('#reactivar-existente'), types: $('#identificacion-tipo'), farms: $('#fincas-nombres'), deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
         cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'), notification: $('#notificacion'),
         detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'), detailContent: $('#detalle-contenido'), closeDetail: $('#cerrar-detalle'), closeDetailSecondary: $('#cerrar-detalle-secundario'), editFromDetail: $('#editar-desde-detalle'),
+        fincaAddressModal: $('#modal-direccion-finca'), fincaAddressForm: $('#formulario-direccion-finca'), fincaAddressTitle: $('#titulo-direccion-finca'),
+        closeFincaAddress: $('#cerrar-direccion-finca'), cancelFincaAddress: $('#cancelar-direccion-finca'), clearFincaAddress: $('#vaciar-direccion-finca'),
     };
     const productores = new Map();
     let tiposIdentificacion = [];
     let productorPendiente = null;
     let productorDetalle = null;
+    let fincaDireccionContexto = null;
+    let savingFincaAddress = false;
     let searchTimer = 0;
     let notificationTimer = 0;
     let listController = null;
@@ -54,6 +59,16 @@
         elements.closeDetail.addEventListener('click', closeDetail);
         elements.closeDetailSecondary.addEventListener('click', closeDetail);
         elements.editFromDetail.addEventListener('click', editFromDetail);
+        elements.detailContent.addEventListener('click', handleDetailFincaAction);
+        elements.fincaAddressModal.addEventListener('click', closeOnBackdropClick);
+        elements.fincaAddressModal.addEventListener('close', restoreFocus);
+        elements.fincaAddressForm.addEventListener('submit', saveFincaAddressSubmit);
+        elements.fincaAddressForm.addEventListener('invalid', markNativeError, true);
+        elements.fincaAddressForm.addEventListener('input', clearControlError);
+        elements.fincaAddressForm.addEventListener('change', clearControlError);
+        elements.closeFincaAddress.addEventListener('click', closeFincaAddressDialog);
+        elements.cancelFincaAddress.addEventListener('click', closeFincaAddressDialog);
+        elements.clearFincaAddress.addEventListener('click', clearFincaAddressSubmit);
         listProducers();
     }
 
@@ -155,7 +170,6 @@
             ['Distrito', direccion.distrito || '—'],
             ['Pueblo', direccion.pueblo || '—'],
             ['Señas', direccion.senas || '—', true],
-            ['Fincas', formatFarms(producer.fincas), true],
         ];
         const fragment = document.createDocumentFragment();
         campos.forEach(([etiqueta, valor, completa]) => {
@@ -163,12 +177,103 @@
             const dd = document.createElement('dd'); dd.textContent = valor; if (completa) dd.className = 'detail--full';
             fragment.append(dt, dd);
         });
+        const fincas = Array.isArray(producer.fincas) ? producer.fincas : [];
+        if (fincas.length === 0) {
+            const dt = document.createElement('dt'); dt.textContent = 'Fincas';
+            const dd = document.createElement('dd'); dd.textContent = 'Sin fincas registradas';
+            fragment.append(dt, dd);
+        } else {
+            fincas.forEach((finca) => {
+                const dt = document.createElement('dt'); dt.textContent = 'Finca';
+                const dd = document.createElement('dd');
+                const label = document.createElement('span'); label.textContent = finca.nombre;
+                const addressButton = document.createElement('button');
+                addressButton.type = 'button'; addressButton.className = 'link-button'; addressButton.dataset.action = 'direccion-finca'; addressButton.dataset.finca = finca.nombre; addressButton.textContent = 'Dirección';
+                dd.append(label, document.createTextNode(' — '), addressButton);
+                fragment.append(dt, dd);
+            });
+        }
         elements.detailContent.replaceChildren(fragment);
         openDialog(elements.detailModal); elements.closeDetail.focus();
     }
 
     function closeDetail() { if (elements.detailModal.open) elements.detailModal.close(); productorDetalle = null; }
     function editFromDetail() { if (productorDetalle) { const producer = productorDetalle; closeDetail(); openEditForm(producer); } }
+
+    function handleDetailFincaAction(event) {
+        const button = event.target.closest('[data-action="direccion-finca"]');
+        if (!button) return;
+        openFincaAddressDialog(button.dataset.finca);
+    }
+
+    async function openFincaAddressDialog(nombreFinca) {
+        if (!productorDetalle) return;
+        const identificacionNumero = productorDetalle.identificacionNumero;
+        fincaDireccionContexto = { identificacionNumero, nombreFinca, exists: false };
+        elements.fincaAddressForm.reset();
+        clearErrors(elements.fincaAddressForm);
+        elements.clearFincaAddress.hidden = true;
+        elements.fincaAddressTitle.textContent = `Dirección de ${nombreFinca}`;
+        openDialog(elements.fincaAddressModal);
+        try {
+            const response = await request(`${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`);
+            const direccion = response.data?.direccionFinca ?? {};
+            $('#finca-direccion-provincia').value = direccion.provincia ?? '';
+            $('#finca-direccion-canton').value = direccion.canton ?? '';
+            $('#finca-direccion-distrito').value = direccion.distrito ?? '';
+            $('#finca-direccion-pueblo').value = direccion.pueblo ?? '';
+            $('#finca-direccion-senas').value = direccion.senas ?? '';
+            fincaDireccionContexto.exists = true;
+            elements.clearFincaAddress.hidden = false;
+        } catch (error) {
+            if (error.status !== 404) { showNotification(error.message, 'error'); closeFincaAddressDialog(); return; }
+        }
+        $('#finca-direccion-provincia').focus();
+    }
+
+    function closeFincaAddressDialog() { if (!savingFincaAddress) { if (elements.fincaAddressModal.open) elements.fincaAddressModal.close(); fincaDireccionContexto = null; } }
+
+    async function saveFincaAddressSubmit(event) {
+        event.preventDefault();
+        if (savingFincaAddress || !fincaDireccionContexto) return;
+        clearErrors(elements.fincaAddressForm);
+        if (!elements.fincaAddressForm.checkValidity()) { markFirstInvalid(elements.fincaAddressForm); return; }
+        const { identificacionNumero, nombreFinca, exists } = fincaDireccionContexto;
+        const data = {
+            identificacionNumero, nombreFinca,
+            direccionFinca: {
+                provincia: $('#finca-direccion-provincia').value.trim(),
+                canton: $('#finca-direccion-canton').value.trim(),
+                distrito: $('#finca-direccion-distrito').value.trim(),
+                pueblo: nullableValue($('#finca-direccion-pueblo')),
+                senas: nullableValue($('#finca-direccion-senas')),
+            },
+        };
+        savingFincaAddress = true;
+        elements.fincaAddressForm.setAttribute('aria-busy', 'true');
+        try {
+            const response = await request(FINCAS_DIRECCION_URL, { method: exists ? 'PUT' : 'POST', body: JSON.stringify(data) });
+            showNotification(response.message, 'success');
+            elements.fincaAddressModal.close(); fincaDireccionContexto = null;
+        } catch (error) {
+            if (error.errors) showErrors(elements.fincaAddressForm, error.errors);
+            showNotification(error.message, 'error');
+        } finally { savingFincaAddress = false; elements.fincaAddressForm.setAttribute('aria-busy', 'false'); }
+    }
+
+    async function clearFincaAddressSubmit() {
+        if (savingFincaAddress || !fincaDireccionContexto) return;
+        const { identificacionNumero, nombreFinca } = fincaDireccionContexto;
+        savingFincaAddress = true;
+        elements.fincaAddressForm.setAttribute('aria-busy', 'true');
+        try {
+            const response = await request(FINCAS_DIRECCION_URL, { method: 'DELETE', body: JSON.stringify({ identificacionNumero, nombreFinca }) });
+            showNotification(response.message, 'success');
+            elements.fincaAddressModal.close(); fincaDireccionContexto = null;
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally { savingFincaAddress = false; elements.fincaAddressForm.setAttribute('aria-busy', 'false'); }
+    }
 
     function openCreateForm() {
         resetForm();
@@ -196,7 +301,7 @@
     }
 
     function resetForm() {
-        elements.form.reset(); clearErrors(); renderTypeOptions();
+        elements.form.reset(); clearErrors(elements.form); renderTypeOptions();
         $('#identificacion-original').value = ''; $('#identificacion-numero').readOnly = false;
         elements.reactivateExisting.hidden = true; delete elements.reactivateExisting.dataset.id;
     }
@@ -212,8 +317,8 @@
     async function saveProducer(event) {
         event.preventDefault();
         if (saving) return;
-        clearErrors();
-        if (!elements.form.checkValidity()) { markFirstInvalid(); return; }
+        clearErrors(elements.form);
+        if (!elements.form.checkValidity()) { markFirstInvalid(elements.form); return; }
         const original = $('#identificacion-original').value;
         const data = {
             identificacion: { tipoCodigo: elements.types.value, numero: $('#identificacion-numero').value.trim() },
@@ -228,7 +333,7 @@
             const response = await request(API_URL, { method: editing ? 'PUT' : 'POST', body: JSON.stringify(data) });
             elements.modal.close(); showNotification(response.message, 'success'); await listProducers();
         } catch (error) {
-            if (error.errors) showErrors(error.errors);
+            if (error.errors) showErrors(elements.form, error.errors);
             if (!editing && error.status === 409) offerReactivation(error);
             showNotification(error.message, 'error');
         } finally { setSaving(false); }
@@ -279,28 +384,28 @@
         return response;
     }
 
-    function showErrors(errors) {
+    function showErrors(form, errors) {
         let first = null;
         Object.entries(errors).forEach(([field, message]) => {
             const normalized = field.startsWith('fincas.') ? 'fincas' : field;
-            const control = elements.form.elements.namedItem(normalized);
-            const container = elements.form.querySelector(`[data-error-for="${CSS.escape(normalized)}"]`);
+            const control = form.elements.namedItem(normalized);
+            const container = form.querySelector(`[data-error-for="${CSS.escape(normalized)}"]`);
             if (control instanceof HTMLElement) { control.setAttribute('aria-invalid', 'true'); first ??= control; }
             if (container) container.textContent = String(message);
         });
         first?.focus();
     }
     function markNativeError(event) { event.target.setAttribute('aria-invalid', 'true'); }
-    function markFirstInvalid() { const first = elements.form.querySelector(':invalid'); if (first) { first.setAttribute('aria-invalid', 'true'); first.focus(); } }
-    function clearControlError(event) { const control = event.target; if (!control.name) return; control.removeAttribute('aria-invalid'); const container = elements.form.querySelector(`[data-error-for="${CSS.escape(control.name)}"]`); if (container) container.textContent = ''; }
-    function clearErrors() { elements.form.querySelectorAll('[aria-invalid]').forEach((control) => control.removeAttribute('aria-invalid')); elements.form.querySelectorAll('[data-error-for]').forEach((container) => { container.textContent = ''; }); }
+    function markFirstInvalid(form) { const first = form.querySelector(':invalid'); if (first) { first.setAttribute('aria-invalid', 'true'); first.focus(); } }
+    function clearControlError(event) { const control = event.target; if (!control.name || !control.form) return; control.removeAttribute('aria-invalid'); const container = control.form.querySelector(`[data-error-for="${CSS.escape(control.name)}"]`); if (container) container.textContent = ''; }
+    function clearErrors(form) { form.querySelectorAll('[aria-invalid]').forEach((control) => control.removeAttribute('aria-invalid')); form.querySelectorAll('[data-error-for]').forEach((container) => { container.textContent = ''; }); }
     function setSaving(value) { saving = value; elements.form.setAttribute('aria-busy', String(value)); elements.form.querySelectorAll('button, input, select, textarea').forEach((control) => { control.disabled = value; }); if (value) { elements.save.dataset.label = elements.save.textContent; elements.save.textContent = 'Guardando…'; } else { elements.save.textContent = elements.save.dataset.label || elements.save.textContent; delete elements.save.dataset.label; } }
     function setLoading(value) { elements.loading.hidden = !value; elements.panel.setAttribute('aria-busy', String(value)); elements.refresh.disabled = value; }
     function scheduleSearch() { currentPage = 1; window.clearTimeout(searchTimer); searchTimer = window.setTimeout(listProducers, 300); }
     function showNotification(message, type) { window.clearTimeout(notificationTimer); elements.notification.textContent = message; elements.notification.className = `notification notification--${type}`; elements.notification.setAttribute('role', type === 'error' ? 'alert' : 'status'); elements.notification.hidden = false; if (type !== 'error') notificationTimer = window.setTimeout(() => { elements.notification.hidden = true; }, 4500); }
-    function closeForm() { if (!saving) { if (elements.modal.open) elements.modal.close(); clearErrors(); } }
+    function closeForm() { if (!saving) { if (elements.modal.open) elements.modal.close(); clearErrors(elements.form); } }
     function closeDeactivation() { if (!changingStatus) { if (elements.deactivateModal.open) elements.deactivateModal.close(); productorPendiente = null; } }
-    function closeOnBackdropClick(event) { if (event.target === event.currentTarget && !saving && !changingStatus) event.currentTarget.close(); }
+    function closeOnBackdropClick(event) { if (event.target === event.currentTarget && !saving && !changingStatus && !savingFincaAddress) event.currentTarget.close(); }
     function openDialog(dialog) { focusReturn = document.activeElement; if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', ''); }
     function restoreFocus() { if (focusReturn instanceof HTMLElement && focusReturn.isConnected) focusReturn.focus(); focusReturn = null; }
     function nullableValue(control) { const value = control.value.trim(); return value === '' ? null : value; }
