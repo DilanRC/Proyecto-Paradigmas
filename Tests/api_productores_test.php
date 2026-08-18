@@ -6,11 +6,16 @@ require __DIR__ . '/bootstrap.php';
 $ids = [];
 try {
     $visible = 'AB-00-' . strtoupper(bin2hex(random_bytes(4)));
-    $creado = test_create(['fincas' => [['nombre' => 'Finca Uno'], ['nombre' => 'Finca Dos']]], $visible);
+    $creado = test_create([
+        'direccionPrincipal' => test_direccion_payload(['provincia' => 'Alajuela']),
+        'fincas' => [['nombre' => 'Finca Uno'], ['nombre' => 'Finca Dos']],
+    ], $visible);
     $ids[] = $creado['identificacionNumero'];
     test_same(str_replace('-', '', $visible), $creado['identificacionNumero'], 'La identificación debe almacenarse canónica');
     test_assert(is_int($creado['productorId']) && $creado['productorId'] > 0,
         'PHP debe asignar tbproductorid sin AUTO_INCREMENT en MySQL');
+    test_same('Alajuela', $creado['direccionPrincipal']['provincia'],
+        'POST debe aceptar y persistir la dirección enviada por la UI');
     test_same(2, count($creado['fincas']), 'Debe admitir varias fincas en tbfinca');
 
     $consulta = test_controller()->procesar('GET', ['identificacionNumero' => $visible], []);
@@ -96,4 +101,4 @@ try {
     test_cleanup_productores($ids);
 }
 
-echo "OK api_productores_test: CRUD JSON por identificación, fincas, búsqueda y reactivación.\n";
+echo "OK api_productores_test: CRUD JSON por identificación, dirección, fincas, búsqueda y reactivación.\n";
