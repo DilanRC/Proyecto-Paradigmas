@@ -17,6 +17,7 @@ docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
+node Tests/frontend_contract_test.js
 php services/supabase-database/tests/schema_test.php
 php services/supabase-database/evals/schema_eval.php
 ```
@@ -27,3 +28,9 @@ Las pruebas generan identificaciones aleatorias y limpian únicamente sus filas.
 el código, respetan `PORT` y conservan la creación idempotente de `tbfinca`.
 `deployment_eval.php` exige que el artefacto y el procedimiento operativo estén
 completos.
+
+`frontend_contract_test.js` verifica que los payloads y endpoints usados por los
+paneles de productores, compradores, métodos de pago, transportistas, vehículos
+y direcciones de finca sigan coincidiendo con los campos aceptados por sus
+controladores. Evita que una validación backend rompa silenciosamente un
+formulario que continúa enviando un contrato distinto.
