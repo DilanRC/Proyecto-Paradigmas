@@ -134,7 +134,11 @@ final class ProductorController
                             );
                         }
                         $productorId = $this->productor->crear($datos);
-                        $this->direccion->crearVacia($productorId);
+                        if ($datos['direccion'] === null) {
+                            $this->direccion->crearVacia($productorId);
+                        } else {
+                            $this->direccion->crear($productorId, $datos['direccion']);
+                        }
                         $this->fincas->sincronizar($productorId, $datos['fincas']);
                         $nuevo = $this->productor->buscar($datos['identificacionNumero']);
                         if ($nuevo === null) {
@@ -200,8 +204,9 @@ final class ProductorController
 
     /**
      * Ruta de reparación: crea la dirección de un productor que quedó sin fila
-     * (por ejemplo, datos heredados). Para el flujo normal de alta, la dirección
-     * ya se instancia vacía en crear() y se completa con PUT /productores.php.
+     * por datos heredados o corrupción previa. El alta normal siempre crea el
+     * enlace de dirección: con los datos recibidos en POST o vacío para clientes
+     * heredados que todavía no envían direccionPrincipal.
      */
     public function crearDireccion(array $cuerpo): array
     {
@@ -313,9 +318,8 @@ final class ProductorController
 
     private function validarProductor(array $cuerpo, bool $actualizacion): array
     {
-        $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico', 'fincas'];
+        $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];
         if ($actualizacion) {
-            $permitidos[] = 'direccionPrincipal';
             $permitidos[] = 'identificacionNumeroOriginal';
         }
         $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
@@ -324,11 +328,12 @@ final class ProductorController
         $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
         $telefono = $this->validarTelefono($cuerpo['telefono'] ?? null, $errores);
         $correo = $this->validarCorreo($cuerpo['correoElectronico'] ?? null, $errores);
-        // En el alta la dirección se instancia vacía automáticamente (ver crear()).
-        // Solo se valida/exige cuando se actualiza, que es cuando se completa o edita.
-        $direccion = $actualizacion
-            ? $this->validarDireccion($cuerpo['direccionPrincipal'] ?? null, $errores)
-            : [];
+        $direccion = array_key_exists('direccionPrincipal', $cuerpo)
+            ? $this->validarDireccion($cuerpo['direccionPrincipal'], $errores)
+            : null;
+        if ($actualizacion && $direccion === null) {
+            $errores['direccionPrincipal'] = 'La dirección es obligatoria.';
+        }
         $fincas = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
         $original = null;
         if ($actualizacion) {
