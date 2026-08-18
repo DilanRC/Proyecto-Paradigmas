@@ -5,48 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Administración de transportistas de TinderCows">
     <title>Transportistas | TinderCows</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
     <link rel="stylesheet" href="css/styles.css">
     <script src="js/transportistas.js" defer></script>
 </head>
-<body>
-    <header class="top-bar">
-        <a class="brand" href="./" aria-label="Ir al inicio de TinderCows">
+<body class="rural-panel">
+    <aside class="rural-panel__sidebar">
+        <div class="rural-panel__sidebar-brand">
             <span class="brand__icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 12 6 7c-1 7 2 10 7 11m22-6 7-5c1 7-2 10-7 11"/><path d="M11 24c0-10 5-16 13-16s13 6 13 16v7c0 7-5 11-13 11S11 38 11 31Z"/><path d="M16 29c0-4 3-6 8-6s8 2 8 6-3 7-8 7-8-3-8-7Z"/><circle cx="18" cy="20" r="2"/><circle cx="30" cy="20" r="2"/><circle cx="21" cy="29" r="1.5"/><circle cx="27" cy="29" r="1.5"/></svg></span>
-            <span>Tinder<strong>Cows</strong></span>
-        </a>
-        <nav class="top-bar__nav">
-            <span class="top-bar__module">Módulo de transportistas</span>
-            <a class="top-bar__link" href="vehiculos.php">Vehículos</a>
-            <a class="top-bar__link" href="./">Inicio</a>
+            <span class="rural-panel__sidebar-brand-name">Tinder<strong>Cows</strong></span>
+        </div>
+        <nav class="rural-panel__nav" aria-label="Administración">
+            <p class="rural-panel__nav-label">Administración</p>
+            <div class="rural-panel__nav-list">
+                <a class="rural-panel__nav-item" href="productores.php">Productores</a>
+                <a class="rural-panel__nav-item" href="compradores.php">Compradores</a>
+                <a class="rural-panel__nav-item rural-panel__nav-item--active" href="transportistas.php">Transportistas<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
+                <a class="rural-panel__nav-item" href="vehiculos.php">Vehículos</a>
+                <a class="rural-panel__nav-item" href="pagometodos.php">Métodos de pago</a>
+            </div>
         </nav>
-    </header>
+        <div class="rural-panel__sidebar-footer">
+            <p>Gestión de la red ganadera.</p>
+            <p>TinderCows · 2026</p>
+        </div>
+    </aside>
 
-    <main class="container">
-        <section class="page-header" aria-labelledby="page-title">
-            <div><span class="label">Registro de transportistas</span><h1 id="page-title">Transportistas</h1><p>Administre transportistas identificados por su número, contacto y vehículos asignados.</p></div>
-            <button class="button button--primary" id="crear-transportista" type="button"><span aria-hidden="true">＋</span>Crear transportista</button>
-        </section>
+    <main class="rural-panel__main">
+        <div class="rural-panel__glow" aria-hidden="true"></div>
+        <div class="rural-panel__content">
+            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Regresar</a></div>
 
-        <section class="panel" aria-label="Lista de transportistas" aria-busy="true" id="panel-transportistas">
-            <div class="tools">
-                <label class="search"><span class="screen-reader-only">Buscar transportista</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-transportista" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
-                <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
-            </div>
-            <div class="list-summary">
-                <p id="total-transportistas" aria-live="polite">Cargando transportistas…</p>
-                <div class="pagination" aria-label="Paginación de transportistas">
-                    <button class="link-button" id="pagina-anterior" type="button">Anterior</button>
-                    <span id="pagina-actual" aria-live="polite">Página 1</span>
-                    <button class="link-button" id="pagina-siguiente" type="button">Siguiente</button>
-                    <button class="link-button" id="actualizar-lista" type="button">Actualizar lista</button>
+            <section class="page-header" aria-labelledby="page-title">
+                <div><span class="label">Registro de transportistas</span><h1 id="page-title">Transportistas</h1><p>Administre transportistas identificados por su número, contacto y vehículos asignados.</p></div>
+                <button class="button button--primary" id="crear-transportista" type="button"><span aria-hidden="true">＋</span>Crear transportista</button>
+            </section>
+
+            <section class="panel" aria-label="Lista de transportistas" aria-busy="true" id="panel-transportistas">
+                <div class="tools">
+                    <label class="search"><span class="screen-reader-only">Buscar transportista</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-transportista" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
+                    <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
                 </div>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th>Transportista</th><th>Identificación</th><th>Contacto</th><th>Vehículos</th><th>Estado</th><th><span class="screen-reader-only">Acciones</span></th></tr></thead><tbody id="cuerpo-transportistas"></tbody></table>
-                <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>No se encontraron transportistas</h2><p>Modifique la búsqueda o cree el primero.</p></div>
-                <div class="loading-state" id="estado-carga" aria-live="polite"><span class="loader" aria-hidden="true"></span>Cargando información…</div>
-            </div>
-        </section>
+                <div class="list-summary">
+                    <p id="total-transportistas" aria-live="polite">Cargando transportistas…</p>
+                    <div class="pagination" aria-label="Paginación de transportistas">
+                        <button class="link-button" id="pagina-anterior" type="button">Anterior</button>
+                        <span id="pagina-actual" aria-live="polite">Página 1</span>
+                        <button class="link-button" id="pagina-siguiente" type="button">Siguiente</button>
+                        <button class="link-button" id="actualizar-lista" type="button">Actualizar lista</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table><thead><tr><th>Transportista</th><th>Identificación</th><th>Contacto</th><th>Vehículos</th><th>Estado</th><th><span class="screen-reader-only">Acciones</span></th></tr></thead><tbody id="cuerpo-transportistas"></tbody></table>
+                    <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>No se encontraron transportistas</h2><p>Modifique la búsqueda o cree el primero.</p></div>
+                    <div class="loading-state" id="estado-carga" aria-live="polite"><span class="loader" aria-hidden="true"></span>Cargando información…</div>
+                </div>
+            </section>
+
+            <p class="rural-panel__footnote">Directorio de transportistas · Datos protegidos por TinderCows</p>
+        </div>
     </main>
 
     <dialog class="modal" id="modal-transportista" aria-labelledby="titulo-modal">
