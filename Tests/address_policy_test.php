@@ -3,40 +3,61 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 
-$id = test_document();
+$idConDireccion = test_document();
+$idLegado = test_document();
 try {
-    // El alta ya no acepta dirección en el cuerpo: es un campo desconocido en POST.
-    $conDireccion = test_payload($id, ['direccionPrincipal' => ['provincia' => 'Cartago']]);
-    test_same(422, test_controller()->procesar('POST', [], $conDireccion)['status'],
-        'POST debe rechazar direccionPrincipal; se instancia vacía automáticamente');
+    // El formulario real envía direccionPrincipal en el mismo POST de alta.
+    // Debe validarse y persistirse dentro de la misma transacción que el productor.
+    $conDireccion = test_payload($idConDireccion, [
+        'direccionPrincipal' => test_direccion_payload(['provincia' => 'Cartago']),
+    ]);
+    $respuestaPost = test_controller()->procesar('POST', [], $conDireccion);
+    test_same(201, $respuestaPost['status'], 'POST debe aceptar direccionPrincipal enviada por la UI');
+    $productor = $respuestaPost['body']['data'];
+    test_same('Cartago', $productor['direccionPrincipal']['provincia'],
+        'POST debe devolver la dirección ya persistida');
 
-    $productor = test_create([], $id);
     $conteo = test_db()->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
     $conteo->execute(['id' => $productor['productorId']]);
-    test_same(1, (int) $conteo->fetchColumn(), 'POST debe instanciar exactamente una dirección vacía por política de aplicación');
+    test_same(1, (int) $conteo->fetchColumn(),
+        'POST con dirección debe crear exactamente un enlace de dirección');
 
-    // PUT sin dirección debe rechazarse: al actualizar sí es obligatoria (es cuando se completa).
-    $sinDireccion = test_payload($id);
+    // Compatibilidad con clientes anteriores: si omiten direccionPrincipal, el alta
+    // conserva la invariante 1:1 creando una dirección vacía que luego puede completarse.
+    $productorLegado = test_create([], $idLegado);
+    test_same('', $productorLegado['direccionPrincipal']['provincia'],
+        'POST legado sin dirección debe conservar una dirección vacía');
+    $conteo->execute(['id' => $productorLegado['productorId']]);
+    test_same(1, (int) $conteo->fetchColumn(),
+        'POST legado debe instanciar exactamente una dirección vacía');
+
+    // PUT sigue siendo una actualización completa: la dirección es obligatoria.
+    $sinDireccion = test_payload($idConDireccion);
     $sinDireccion['identificacionNumeroOriginal'] = $productor['identificacionNumero'];
     test_same(422, test_controller()->procesar('PUT', [], $sinDireccion)['status'],
-        'PUT debe exigir la dirección: es el paso donde se completa');
+        'PUT debe exigir la dirección principal');
 
-    $actualizacion = test_payload($id, ['direccionPrincipal' => test_direccion_payload(['provincia' => 'Cartago'])]);
+    $actualizacion = test_payload($idConDireccion, [
+        'direccionPrincipal' => test_direccion_payload(['provincia' => 'Heredia']),
+    ]);
     $actualizacion['identificacionNumeroOriginal'] = $productor['identificacionNumero'];
     $respuestaPut = test_controller()->procesar('PUT', [], $actualizacion);
-    test_same(200, $respuestaPut['status'], 'PUT actualiza/completa la dirección existente');
-    test_same('Cartago', $respuestaPut['body']['data']['direccionPrincipal']['provincia'], 'PUT persiste el valor completado');
+    test_same(200, $respuestaPut['status'], 'PUT actualiza la dirección existente');
+    test_same('Heredia', $respuestaPut['body']['data']['direccionPrincipal']['provincia'],
+        'PUT persiste el valor actualizado');
     $conteo->execute(['id' => $productor['productorId']]);
-    test_same(1, (int) $conteo->fetchColumn(), 'PUT debe conservar una sola dirección por política de aplicación');
+    test_same(1, (int) $conteo->fetchColumn(),
+        'PUT debe conservar una sola dirección por política de aplicación');
 
-    // Intentar "crear" una dirección para un productor que ya tiene una debe fallar (ruta de reparación).
+    // La ruta POST de dirección continúa siendo solo de reparación para datos sin enlace.
     $reparacion = test_controller()->crearDireccion([
         'identificacionNumero' => $productor['identificacionNumero'],
         'direccionPrincipal' => test_direccion_payload(),
     ]);
-    test_same(409, $reparacion['status'], 'La ruta de reparación no debe duplicar la dirección de un productor existente');
+    test_same(409, $reparacion['status'],
+        'La ruta de reparación no debe duplicar la dirección de un productor existente');
 } finally {
-    test_cleanup_productores([$id]);
+    test_cleanup_productores([$idConDireccion, $idLegado]);
 }
 
-echo "OK address_policy_test: dirección vacía al crear, obligatoria y única al completar con PUT.\n";
+echo "OK address_policy_test: dirección atómica en POST, compatibilidad legado y unicidad 1:1.\n";
