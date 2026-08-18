@@ -83,6 +83,22 @@
         <div class="modal__content"><dl class="detail-grid" id="detalle-contenido"></dl></div>
         <div class="modal__actions"><button class="button button--secondary" id="cerrar-detalle-secundario" type="button">Cerrar</button><button class="button button--primary" id="editar-desde-detalle" type="button">Editar</button></div>
     </dialog>
+
+    <dialog class="modal" id="modal-direccion-finca" aria-labelledby="titulo-direccion-finca">
+        <form id="formulario-direccion-finca" novalidate aria-busy="false">
+            <div class="modal__header"><div><span class="label" id="subtitulo-direccion-finca">Finca</span><h2 id="titulo-direccion-finca">Dirección de la finca</h2></div><button class="close-button" id="cerrar-direccion-finca" type="button" aria-label="Cerrar">×</button></div>
+            <div class="modal__content">
+                <fieldset><legend>Dirección</legend><div class="form-grid">
+                    <label class="field"><span>Provincia <b aria-hidden="true">*</b></span><input id="finca-direccion-provincia" name="direccionFinca.provincia" maxlength="100" required aria-describedby="error-finca-direccion-provincia"><small class="field__error" id="error-finca-direccion-provincia" data-error-for="direccionFinca.provincia"></small></label>
+                    <label class="field"><span>Cantón <b aria-hidden="true">*</b></span><input id="finca-direccion-canton" name="direccionFinca.canton" maxlength="100" required aria-describedby="error-finca-direccion-canton"><small class="field__error" id="error-finca-direccion-canton" data-error-for="direccionFinca.canton"></small></label>
+                    <label class="field"><span>Distrito <b aria-hidden="true">*</b></span><input id="finca-direccion-distrito" name="direccionFinca.distrito" maxlength="100" required aria-describedby="error-finca-direccion-distrito"><small class="field__error" id="error-finca-direccion-distrito" data-error-for="direccionFinca.distrito"></small></label>
+                    <label class="field"><span>Pueblo</span><input id="finca-direccion-pueblo" name="direccionFinca.pueblo" maxlength="150" aria-describedby="error-finca-direccion-pueblo"><small class="field__error" id="error-finca-direccion-pueblo" data-error-for="direccionFinca.pueblo"></small></label>
+                    <label class="field field--full"><span>Señas</span><textarea id="finca-direccion-senas" name="direccionFinca.senas" maxlength="500" rows="3" aria-describedby="error-finca-direccion-senas"></textarea><small class="field__error" id="error-finca-direccion-senas" data-error-for="direccionFinca.senas"></small></label>
+                </div></fieldset>
+            </div>
+            <div class="modal__actions"><button class="button button--secondary" id="cancelar-direccion-finca" type="button">Cancelar</button><button class="button button--danger" id="vaciar-direccion-finca" type="button" hidden>Vaciar dirección</button><button class="button button--primary" id="guardar-direccion-finca" type="submit">Guardar dirección</button></div>
+        </form>
+    </dialog>
     <div class="notification" id="notificacion" role="status" aria-live="polite" hidden></div>
 </body>
 </html>
