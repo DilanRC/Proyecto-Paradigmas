@@ -4,18 +4,7 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 $required = [
-    'Database/SqlScripts/001createdatabase.sql',
-    'Database/SqlScripts/002createproductores.sql',
-    'Database/SqlScripts/003createproductoresdireccion.sql',
-    'Database/SqlScripts/004createfinca.sql',
-    'Database/SqlScripts/005createaudit.sql',
-    'Database/SqlScripts/006createcomprador.sql',
-    'Database/SqlScripts/007createdireccion.sql',
-    'Database/SqlScripts/008createfincadireccion.sql',
-    'Database/SqlScripts/009createpagometodo.sql',
-    'Database/SqlScripts/010createtransportista.sql',
-    'Database/SqlScripts/011createvehiculo.sql',
-    'Database/SqlScripts/012createtransportistavehiculo.sql',
+    'Database/SqlScripts/000instalacioncompleta.sql',
     'Database/SeedData/101initialpagometodo.sql',
     'Database/SeedData/103exampleproductores.sql',
     'Database/Tests/comprobacionestructura.sql',
@@ -36,6 +25,18 @@ $forbiddenFiles = [
     'Application/Model/TipoIdentificacion.php', 'Application/Model/Finca.php',
     'Database/SqlScripts/002_create_catalogs.sql',
     'Database/SqlScripts/003_create_participante_schema.sql',
+    'Database/SqlScripts/001createdatabase.sql',
+    'Database/SqlScripts/002createproductores.sql',
+    'Database/SqlScripts/003createproductoresdireccion.sql',
+    'Database/SqlScripts/004createfinca.sql',
+    'Database/SqlScripts/005createaudit.sql',
+    'Database/SqlScripts/006createcomprador.sql',
+    'Database/SqlScripts/007createdireccion.sql',
+    'Database/SqlScripts/008createfincadireccion.sql',
+    'Database/SqlScripts/009createpagometodo.sql',
+    'Database/SqlScripts/010createtransportista.sql',
+    'Database/SqlScripts/011createvehiculo.sql',
+    'Database/SqlScripts/012createtransportistavehiculo.sql',
 ];
 foreach ($forbiddenFiles as $file) {
     if (file_exists("{$root}/{$file}")) throw new RuntimeException("Archivo obsoleto: {$file}");
@@ -71,7 +72,8 @@ if (preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $sql, $coincidencia)) {
 foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
 }
-if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== count($sqlFiles)
+$modulosEsperados = 12; // 001createdatabase .. 012createtransportistavehiculo, unificados en 000instalacioncompleta.sql
+if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $modulosEsperados
     || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
