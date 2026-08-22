@@ -8,8 +8,7 @@ $root = dirname(__DIR__);
 $dockerfile = file_get_contents("{$root}/Dockerfile");
 $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
-$fincaSchema = file_get_contents("{$root}/Database/SqlScripts/004createfinca.sql");
-$compradorSchema = file_get_contents("{$root}/Database/SqlScripts/006createcomprador.sql");
+$databaseSchema = file_get_contents("{$root}/Database/SqlScripts/000instalacioncompleta.sql");
 $vercelConfiguration = json_decode(file_get_contents("{$root}/vercel.json"), true, 512, JSON_THROW_ON_ERROR);
 
 foreach ([$dockerfile, $vercelDockerfile] as $definition) {
@@ -32,9 +31,9 @@ test_assert(str_contains($entrypoint, '${PORT:-80}'), 'El contenedor debe respet
 test_assert(str_contains($entrypoint, 'exec apache2-foreground'), 'Apache debe quedar como proceso principal');
 test_assert(str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'El arranque debe validar el esquema Supabase');
-test_assert(str_contains($fincaSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
+test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
     'El esquema debe crear tbfinca de forma idempotente');
-test_assert(str_contains($compradorSchema, 'CREATE TABLE IF NOT EXISTS tbcomprador'),
+test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbcomprador'),
     'El esquema debe crear tbcomprador de forma idempotente');
 test_same('Dockerfile.vercel', $vercelConfiguration['services']['app']['entrypoint'] ?? null,
     'Vercel debe construir explícitamente el contenedor');
