@@ -150,3 +150,5 @@ CREATE TABLE IF NOT EXISTS tbtransportistavehiculo (
     tbtransportistaid INT NOT NULL,
     tbvehiculoid INT NOT NULL
 ) ENGINE=InnoDB;
+
+--fin del script de instalación completa
