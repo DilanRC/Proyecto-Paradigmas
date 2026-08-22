@@ -30,18 +30,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./Database/SqlScripts/001createdatabase.sql:/docker-entrypoint-initdb.d/001createdatabase.sql:ro
-      - ./Database/SqlScripts/002createproductores.sql:/docker-entrypoint-initdb.d/002createproductores.sql:ro
-      - ./Database/SqlScripts/003createproductoresdireccion.sql:/docker-entrypoint-initdb.d/003createproductoresdireccion.sql:ro
-      - ./Database/SqlScripts/004createfinca.sql:/docker-entrypoint-initdb.d/004createfinca.sql:ro
-      - ./Database/SqlScripts/005createaudit.sql:/docker-entrypoint-initdb.d/005createaudit.sql:ro
-      - ./Database/SqlScripts/006createcomprador.sql:/docker-entrypoint-initdb.d/006createcomprador.sql:ro
-      - ./Database/SqlScripts/007createdireccion.sql:/docker-entrypoint-initdb.d/007createdireccion.sql:ro
-      - ./Database/SqlScripts/008createfincadireccion.sql:/docker-entrypoint-initdb.d/008createfincadireccion.sql:ro
-      - ./Database/SqlScripts/009createpagometodo.sql:/docker-entrypoint-initdb.d/009createpagometodo.sql:ro
-      - ./Database/SqlScripts/010createtransportista.sql:/docker-entrypoint-initdb.d/010createtransportista.sql:ro
-      - ./Database/SqlScripts/011createvehiculo.sql:/docker-entrypoint-initdb.d/011createvehiculo.sql:ro
-      - ./Database/SqlScripts/012createtransportistavehiculo.sql:/docker-entrypoint-initdb.d/012createtransportistavehiculo.sql:ro
+      - ./Database/SqlScripts/000instalacioncompleta.sql:/docker-entrypoint-initdb.d/000instalacioncompleta.sql:ro
       - ./Database/SeedData/101initialpagometodo.sql:/docker-entrypoint-initdb.d/101initialpagometodo.sql:ro
       - ./Database/SeedData/103exampleproductores.sql:/docker-entrypoint-initdb.d/103exampleproductores.sql:ro
     healthcheck:
@@ -81,3 +70,4 @@ services:
 
 volumes:
   mysql_data:
+ 

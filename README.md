@@ -64,18 +64,7 @@ docker compose up --build -d
 ## Scripts
 
 ```text
-Database/SqlScripts/001createdatabase.sql
-Database/SqlScripts/002createproductores.sql
-Database/SqlScripts/003createproductoresdireccion.sql
-Database/SqlScripts/004createfinca.sql
-Database/SqlScripts/005createaudit.sql
-Database/SqlScripts/006createcomprador.sql
-Database/SqlScripts/007createdireccion.sql
-Database/SqlScripts/008createfincadireccion.sql
-Database/SqlScripts/009createpagometodo.sql
-Database/SqlScripts/010createtransportista.sql
-Database/SqlScripts/011createvehiculo.sql
-Database/SqlScripts/012createtransportistavehiculo.sql
+Database/SqlScripts/000instalacioncompleta.sql
 Database/SeedData/101initialpagometodo.sql
 Database/SeedData/103exampleproductores.sql
 Database/Migrations/001normalizadireccionproductor.sql
@@ -84,6 +73,11 @@ Database/Tests/comprobaciondatosiniciales.sql
 Database/Tests/comprobacionrelaciones.sql
 Database/Tests/diagnostico.sql
 ```
+
+`000instalacioncompleta.sql` unifica, en orden, los módulos que antes eran los scripts
+`001createdatabase.sql` a `012createtransportistavehiculo.sql`. Cada `CREATE
+TABLE` usa `IF NOT EXISTS`, así que volver a ejecutarlo contra una base que ya
+tiene algunas de esas tablas no falla: solo crea las que falten.
 
 La semilla usa datos ficticios y correos `example.test`. `101initialpagometodo`
 registra el único método de pago del alcance vigente. `Database/Migrations/`
@@ -134,33 +128,24 @@ trasladando la ubicación a `tbdireccion`, registra `Efectivo` en
 log `supabase_schema_status=ready tables=11 migration=v3` confirma el
 resultado.
 
-### Aplicar `tbfinca` a una base existente
+### Aplicar el esquema a una base existente
 
 Los archivos de `/docker-entrypoint-initdb.d` solo se ejecutan al crear un
-volumen MySQL vacío. Para un volumen existente, primero respalde la base y luego
-aplique el script idempotente:
+volumen MySQL vacío. Para un volumen existente, primero respalde la base y
+luego reaplique `000instalacioncompleta.sql`: como cada `CREATE TABLE` usa
+`IF NOT EXISTS`, las tablas ya presentes se ignoran y solo se crean las que
+falten (por ejemplo `tbfinca`, `tbcomprador` o las del avance de direcciones,
+pagos y transporte).
 
 ```bash
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
-  < Database/SqlScripts/004createfinca.sql
+  < Database/SqlScripts/000instalacioncompleta.sql
 docker compose exec -T app php Tests/schema_test.php
 ```
 
 `CREATE TABLE IF NOT EXISTS` no altera una tabla incompatible que ya exista.
 Antes de usar `ALTER` o `DROP`, compare su estructura con
 `Tests/schema_test.php` y genere un respaldo.
-
-### Aplicar `tbcomprador` a una base existente
-
-La tabla de compradores replica el perfil de identificación y contacto de
-`tbproductor`. No tiene claves, índices, defaults ni datos semilla. Para un
-volumen MySQL existente, aplique su script idempotente y valide el contrato:
-
-```bash
-docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
-  < Database/SqlScripts/006createcomprador.sql
-docker compose exec -T app php Tests/schema_test.php
-```
 
 En Vercel, el arranque ejecuta la migración v3 contra Supabase, recarga la caché
 de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
@@ -169,15 +154,13 @@ con columnas incompatibles.
 ### Aplicar el avance de direcciones, pagos y transporte a una base existente
 
 Un volumen MySQL creado antes de este avance conserva la ubicación dentro de
-`tbproductordireccion`. Respalde primero y luego aplique, en orden, los scripts
-idempotentes y la migración que normaliza la dirección:
+`tbproductordireccion`. Respalde primero y luego aplique `000instalacioncompleta.sql` (crea
+únicamente las tablas nuevas, gracias a `IF NOT EXISTS`) y la migración que
+normaliza la dirección:
 
 ```bash
-for script in 007createdireccion 008createfincadireccion 009createpagometodo \
-  010createtransportista 011createvehiculo 012createtransportistavehiculo; do
-  docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
-    < "Database/SqlScripts/${script}.sql"
-done
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/SqlScripts/000instalacioncompleta.sql
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
   < Database/Migrations/001normalizadireccionproductor.sql
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
@@ -188,8 +171,7 @@ docker compose exec -T app php Tests/schema_test.php
 La migración se ejecuta una sola vez: copia cada residencia a `tbdireccion`,
 comprueba que ningún productor quedó sin enlace y después elimina las cinco
 columnas heredadas. Repetirla termina con el error 1091 de MySQL. Una base
-limpia ya nace normalizada desde
-`Database/SqlScripts/003createproductoresdireccion.sql` y no debe ejecutarla.
+limpia ya nace normalizada desde `000instalacioncompleta.sql` y no debe ejecutarla.
 
 Tras la migración, el contrato de base cambió: la aplicación debe escribir
 provincia, cantón, distrito, pueblo y señas en `tbdireccion`, no en
@@ -263,7 +245,7 @@ que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
 La base y las cinco tablas usan `utf8mb4_unicode_ci`. Compose fija esta
-intercalación en MySQL y `001createdatabase.sql` altera también una base que
+intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
 ## Interfaz
