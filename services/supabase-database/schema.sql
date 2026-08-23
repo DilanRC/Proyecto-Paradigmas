@@ -11,7 +11,36 @@ CREATE TABLE IF NOT EXISTS public.tbproductor (
 CREATE TABLE IF NOT EXISTS public.tbproductordireccion (
     tbproductordireccionid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
-    tbdireccionid INTEGER NOT NULL
+    tbdireccionid INTEGER NOT NULL,
+    tbproductordireccionfechainicio TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbproductordireccionfechafin TIMESTAMP WITHOUT TIME ZONE NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbproductorestadoperiodo (
+    tbproductorestadoperiodoid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductorestadoperiodoestado SMALLINT NOT NULL,
+    tbproductorestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbproductorestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbproductorestadoperiodomotivo VARCHAR(250) NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbproductorubicacion (
+    tbproductorubicacionid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductorubicacionlatitud NUMERIC(10,7) NOT NULL,
+    tbproductorubicacionlongitud NUMERIC(10,7) NOT NULL,
+    tbproductorubicacionprecision NUMERIC(10,2) NULL,
+    tbproductorubicacionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbproductorubicacionorigen VARCHAR(40) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbproductoractividad (
+    tbproductoractividadid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductoractividadtipo VARCHAR(60) NOT NULL,
+    tbproductoractividadfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbproductoractividadorigen VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbdireccion (
@@ -93,6 +122,9 @@ CREATE TABLE IF NOT EXISTS public.tbcomprador (
 
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductordireccion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductorestadoperiodo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductorubicacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductoractividad ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbdireccion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbfinca ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbfincadireccion ENABLE ROW LEVEL SECURITY;

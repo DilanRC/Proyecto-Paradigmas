@@ -27,6 +27,15 @@ DESCRIBE tbvehiculo;
 SELECT '--- tbtransportistavehiculo' AS comprobacion;
 DESCRIBE tbtransportistavehiculo;
 
+SELECT '--- tbproductorestadoperiodo' AS comprobacion;
+DESCRIBE tbproductorestadoperiodo;
+
+SELECT '--- tbproductorubicacion' AS comprobacion;
+DESCRIBE tbproductorubicacion;
+
+SELECT '--- tbproductoractividad' AS comprobacion;
+DESCRIBE tbproductoractividad;
+
 -- Comprobación 2: el avance no introdujo llaves, restricciones ni índices.
 -- Resultado esperado: cero filas en las tres consultas.
 SELECT '--- restricciones declaradas (esperado: 0 filas)' AS comprobacion;
