@@ -6,6 +6,7 @@ use Application\Model\Direccion;
 use Application\Model\Productor;
 use Application\Model\ProductorDireccion;
 use Application\Model\ProductorFinca;
+use Application\Model\ProductorUbicacion;
 
 require __DIR__ . '/bootstrap.php';
 
@@ -236,6 +237,65 @@ try {
         test_same($token, $model->ejecutarConBloqueoAlta(fn (): string => $token),
             'El wrapper devuelve el resultado mixed del callable');
     }
+
+    // ============================================================
+    // Ráfaga simultánea de ubicaciones del mismo productor: N procesos
+    // PHP en paralelo compiten por el lock de alta; los IDs deben salir
+    // únicos, consecutivos y con exactamente N filas nuevas.
+    // ============================================================
+    $identificationUbicaciones = test_document();
+    $productorUbicaciones = test_create([], $identificationUbicaciones);
+    $productorIdUbicaciones = (int) $productorUbicaciones['productorId'];
+    $rafaga = 6;
+    $dbLectura = test_db();
+    $baseRafaga = (int) $dbLectura->query(
+        'SELECT COALESCE(MAX(tbproductorubicacionid), 0) FROM tbproductorubicacion'
+    )->fetchColumn();
+
+    $codigoWorker = static fn (int $productorId): string => sprintf(
+        "require %s;\n"
+        . "\$modelo = new Application\\Model\\ProductorUbicacion(test_db());\n"
+        . "echo \$modelo->ejecutarConBloqueoAlta(\n"
+        . "    fn (): int => \$modelo->registrar(%d, '9.9943210', '-84.0976543', null, 'NAVEGADOR'),\n"
+        . ");",
+        var_export(__DIR__ . '/bootstrap.php', true),
+        $productorId,
+    );
+
+    $procesos = [];
+    for ($i = 0; $i < $rafaga; $i++) {
+        $tuberias = [];
+        $proceso = proc_open(
+            [PHP_BINARY, '-r', $codigoWorker($productorIdUbicaciones)],
+            [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+            $tuberias,
+        );
+        test_assert(is_resource($proceso), 'Cada worker de la ráfaga debe poder iniciarse');
+        $procesos[] = [$proceso, $tuberias];
+    }
+
+    $idsRafaga = [];
+    foreach ($procesos as [$proceso, $tuberias]) {
+        $salida = stream_get_contents($tuberias[1]);
+        $error = stream_get_contents($tuberias[2]);
+        fclose($tuberias[1]);
+        fclose($tuberias[2]);
+        test_same(0, proc_close($proceso),
+            'El worker no debe fallar' . ($error !== '' ? ": {$error}" : '.'));
+        test_assert(ctype_digit(trim((string) $salida)) && trim((string) $salida) !== '',
+            'Cada worker debe reportar el ID asignado');
+        $idsRafaga[] = (int) trim((string) $salida);
+    }
+
+    test_same($rafaga, count(array_unique($idsRafaga)),
+        'Bajo escrituras simultáneas ningún ID de ubicación puede duplicarse');
+    sort($idsRafaga);
+    test_same(range($baseRafaga + 1, $baseRafaga + $rafaga), $idsRafaga,
+        'Los IDs de la ráfaga deben quedar consecutivos sin huecos');
+    $conteoRafaga = $dbLectura->prepare('SELECT COUNT(*) FROM tbproductorubicacion WHERE tbproductorid = :id');
+    $conteoRafaga->execute(['id' => $productorIdUbicaciones]);
+    test_same($rafaga, (int) $conteoRafaga->fetchColumn(),
+        'La ráfaga debe producir exactamente N filas nuevas para el productor');
 } finally {
     if ($a->inTransaction()) {
         $a->rollBack();
@@ -260,7 +320,11 @@ try {
     }
     $cleanup->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid IN (?, ?)')->execute($directionProductorIds);
     $cleanup->prepare('DELETE FROM tbfinca WHERE tbproductorid IN (?, ?)')->execute($farmProductorIds);
-    test_cleanup_productores([$identificationA, $identificationB]);
+    if (isset($productorIdUbicaciones)) {
+        test_cleanup_ubicaciones([$productorIdUbicaciones]);
+    }
+    test_cleanup_productores([$identificationA, $identificationB, $identificationUbicaciones ?? '']);
 }
 
-echo "OK concurrency_test: los tres consecutivos retienen GET_LOCK hasta después de COMMIT y liberan en finally.\n";
+echo "OK concurrency_test: los tres consecutivos retienen GET_LOCK hasta después de COMMIT, liberan en finally "
+    . "y la ráfaga simultánea de ubicaciones produce IDs únicos y consecutivos.\n";

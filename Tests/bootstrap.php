@@ -4,16 +4,21 @@ declare(strict_types=1);
 
 use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
+use Application\Controller\ProductorUbicacionController;
+use Application\Model\Bitacora;
+use Application\Model\ProductorFinca;
+use Application\Model\ProductorUbicacion;
 use Configuration\Database;
 
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
-foreach (['NamedLock', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor'] as $testModel) {
+foreach (['NamedLock', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
+require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
 
 function test_assert(bool $condition, string $message): void
 {
@@ -57,6 +62,33 @@ function test_controller(?string $requestId = null): ProductorController
 function test_finca_controller(?string $requestId = null): FincaController
 {
     return new FincaController(test_db(), $requestId ?? test_token('request'));
+}
+
+function test_ubicacion_controller(?string $requestId = null): ProductorUbicacionController
+{
+    $db = test_db();
+
+    return new ProductorUbicacionController(
+        $db,
+        new Productor($db, new ProductorFinca($db)),
+        new ProductorUbicacion($db),
+        new Bitacora($db),
+        $requestId ?? test_token('request'),
+    );
+}
+
+/**
+ * Limpia las filas de ubicación append-only de los productores indicados.
+ * El borrado directo es válido en pruebas: la política append-only aplica a
+ * la API y al modelo, no al mantenimiento del banco de pruebas. Los eventos
+ * de bitácora asociados se retiran con test_cleanup_productores().
+ */
+function test_cleanup_ubicaciones(array $productorIds): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $productorIds))));
+    if ($ids === []) return;
+    $marcadores = implode(',', array_fill(0, count($ids), '?'));
+    test_db()->prepare("DELETE FROM tbproductorubicacion WHERE tbproductorid IN ({$marcadores})")->execute($ids);
 }
 
 function test_token(string $label): string

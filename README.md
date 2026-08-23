@@ -244,6 +244,26 @@ bloqueos en orden inverso después del commit o rollback. Las actualizaciones
 que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
+### Ubicaciones GPS del productor
+
+Endpoint: `/api/productores-ubicacion.php`
+
+| Método | Operación |
+|---|---|
+| GET | Histórico por `productorId`, paginado (`pagina`, `tamano`) o por rango (`desde`, `hasta`) |
+| POST | Registrar una nueva lectura GPS (append-only) |
+
+```json
+{"productorId": 12, "latitud": 10.1234567, "longitud": -84.1234567,
+ "precisionMetros": 25.4, "origen": "NAVEGADOR"}
+```
+
+La tabla es append-only (DEC-16): PUT, PATCH y DELETE responden 405. La fecha
+la asigna siempre PHP; el campo `fecha` del cliente se descarta. El origen solo
+acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
+rango con errores por campo. Cada inserción queda en la bitácora dentro de la
+misma transacción.
+
 La base y las cinco tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
@@ -266,6 +286,8 @@ docker compose exec -T app php Tests/transaction_test.php
 docker compose exec -T app php Tests/address_policy_test.php
 docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
+docker compose exec -T app php Tests/productor_ubicacion_test.php
+docker compose exec -T app php Tests/api_productores_ubicacion_http_test.php
 docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php

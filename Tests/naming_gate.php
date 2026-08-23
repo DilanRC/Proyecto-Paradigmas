@@ -15,7 +15,9 @@ $required = [
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
     'Application/Model/ProductorFinca.php',
+    'Application/Model/ProductorUbicacion.php',
     'Public/api/productores.php',
+    'Public/api/productores-ubicacion.php',
 ];
 foreach ($required as $file) {
     if (!is_file("{$root}/{$file}")) throw new RuntimeException("Falta {$file}");
@@ -45,7 +47,8 @@ $sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $sql = implode("\n", array_map('file_get_contents', $sqlFiles));
 foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador',
     'tbdireccion', 'tbfincadireccion', 'tbpagometodo', 'tbtransportista', 'tbvehiculo',
-    'tbtransportistavehiculo'] as $table) {
+    'tbtransportistavehiculo', 'tbproductorestadoperiodo', 'tbproductorubicacion',
+    'tbproductoractividad'] as $table) {
     if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
