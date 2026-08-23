@@ -16,8 +16,9 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
 test_same(['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo',
-    'tbproductor', 'tbproductordireccion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
-    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente once tablas singulares');
+    'tbproductor', 'tbproductoractividad', 'tbproductordireccion', 'tbproductorestadoperiodo',
+    'tbproductorubicacion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
+    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente catorce tablas singulares');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
@@ -70,9 +71,18 @@ foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENT
 $expectedColumns = [
     'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
         'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
-    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid'],
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
+        'tbproductordireccionfechainicio', 'tbproductordireccionfechafin'],
     'tbdireccion' => ['tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
         'tbdireccionpueblo', 'tbdireccionsenas'],
+    'tbproductorestadoperiodo' => ['tbproductorestadoperiodoid', 'tbproductorid',
+        'tbproductorestadoperiodoestado', 'tbproductorestadoperiodofechainicio',
+        'tbproductorestadoperiodofechafin', 'tbproductorestadoperiodomotivo'],
+    'tbproductorubicacion' => ['tbproductorubicacionid', 'tbproductorid', 'tbproductorubicacionlatitud',
+        'tbproductorubicacionlongitud', 'tbproductorubicacionprecision', 'tbproductorubicacionfecha',
+        'tbproductorubicacionorigen'],
+    'tbproductoractividad' => ['tbproductoractividadid', 'tbproductorid', 'tbproductoractividadtipo',
+        'tbproductoractividadfecha', 'tbproductoractividadorigen'],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
     'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
     'tbpagometodo' => ['tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo'],
@@ -105,7 +115,7 @@ test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
 // depende de la aplicación. Lo que sigue ejercita el CRUD de productores, ahora
 // contra el contrato normalizado (tbproductordireccion como enlace + tbdireccion
 // como contenido real).
-echo "OK schema_test (estructura): once tablas, columnas exactas, cero claves, índices, "
+echo "OK schema_test (estructura): catorce tablas, columnas exactas, cero claves, índices, "
     . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
 $apiIds = [test_document(), test_document(), test_document()];
@@ -183,4 +193,4 @@ try {
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: once tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+echo "OK schema_test: catorce tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

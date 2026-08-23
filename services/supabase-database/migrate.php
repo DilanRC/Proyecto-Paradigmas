@@ -7,10 +7,27 @@ const EXPECTED_COLUMNS = [
         'tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
         'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado',
     ],
-    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid'],
+    'tbproductordireccion' => [
+        'tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
+        'tbproductordireccionfechainicio', 'tbproductordireccionfechafin',
+    ],
     'tbdireccion' => [
         'tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
         'tbdireccionpueblo', 'tbdireccionsenas',
+    ],
+    'tbproductorestadoperiodo' => [
+        'tbproductorestadoperiodoid', 'tbproductorid', 'tbproductorestadoperiodoestado',
+        'tbproductorestadoperiodofechainicio', 'tbproductorestadoperiodofechafin',
+        'tbproductorestadoperiodomotivo',
+    ],
+    'tbproductorubicacion' => [
+        'tbproductorubicacionid', 'tbproductorid', 'tbproductorubicacionlatitud',
+        'tbproductorubicacionlongitud', 'tbproductorubicacionprecision',
+        'tbproductorubicacionfecha', 'tbproductorubicacionorigen',
+    ],
+    'tbproductoractividad' => [
+        'tbproductoractividadid', 'tbproductorid', 'tbproductoractividadtipo',
+        'tbproductoractividadfecha', 'tbproductoractividadorigen',
     ],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
     'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
@@ -107,7 +124,7 @@ function validateSchema(PDO $connection): void
     $expected = EXPECTED_COLUMNS;
     ksort($expected);
     if ($actual !== $expected) {
-        throw new RuntimeException('El esquema Supabase no coincide con el contrato de once tablas.');
+        throw new RuntimeException('El esquema Supabase no coincide con el contrato de catorce tablas.');
     }
 }
 
@@ -167,6 +184,18 @@ function normalizeProductorAddress(PDO $connection): void
         ALTER COLUMN tbdireccionid SET NOT NULL');
 }
 
+/**
+ * Agrega las columnas de fecha del futuro histórico de dirección (plan §8) a
+ * una base ya desplegada. Idempotente vía ADD COLUMN IF NOT EXISTS; en una
+ * base nueva schema.sql ya las crea y este paso no hace nada.
+ */
+function agregarHistoricoDireccion(PDO $connection): void
+{
+    $connection->exec('ALTER TABLE public.tbproductordireccion
+        ADD COLUMN IF NOT EXISTS tbproductordireccionfechainicio TIMESTAMP WITHOUT TIME ZONE NULL,
+        ADD COLUMN IF NOT EXISTS tbproductordireccionfechafin TIMESTAMP WITHOUT TIME ZONE NULL');
+}
+
 /** Registra el único método de pago del alcance vigente sin duplicarlo. */
 function seedInitialData(PDO $connection): void
 {
@@ -183,14 +212,15 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v3'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v4'))");
     $connection->exec($schema);
     normalizeProductorAddress($connection);
+    agregarHistoricoDireccion($connection);
     seedInitialData($connection);
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=11 migration=v3\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=14 migration=v4\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();
