@@ -154,6 +154,22 @@ Asocia transportista y vehículo.
 | `tbbitacoraorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico. | Aplicación | - |
 | `tbbitacorasolicitudid` | `VARCHAR(100) NOT NULL` | No | Correlación de solicitud. | Aplicación | - |
 
+## tbproductorubicacion
+
+Histórico append-only de ubicaciones GPS observadas del productor (plan §9,
+§14-16). Cada lectura inserta una fila nueva; ninguna se actualiza ni se
+elimina. La fecha la asigna siempre PHP con el reloj del servidor.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductorubicacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el bloqueo `tindercows_productor_ubicacion_alta`. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor al que pertenece la lectura. | Aplicación | `tbproductor` |
+| `tbproductorubicacionlatitud` | `DECIMAL(10,7) NOT NULL` | No | Latitud validada por aplicación en el rango -90 a 90. | Usuario | - |
+| `tbproductorubicacionlongitud` | `DECIMAL(10,7) NOT NULL` | No | Longitud validada por aplicación en el rango -180 a 180. | Usuario | - |
+| `tbproductorubicacionprecision` | `DECIMAL(10,2) NULL` | Sí | Precisión de la lectura, sin unidades en la columna. | Usuario | - |
+| `tbproductorubicacionfecha` | `DATETIME NOT NULL` | No | Fecha y hora del servidor; el cliente no puede falsearla. | Aplicación | - |
+| `tbproductorubicacionorigen` | `VARCHAR(40) NOT NULL` | No | Origen de la lectura: conjunto controlado `NAVEGADOR` o `MANUAL`. | Usuario | - |
+
 ## tbcomprador
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
