@@ -28,10 +28,16 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Enlace entre el productor y su residencia principal. La tabla no almacena
 -- datos de ubicación: provincia, cantón, distrito, pueblo y señas viven una sola
 -- vez en tbdireccion y se alcanzan por tbdireccionid.
+-- tbproductordireccionfechainicio/fechafin preparan el histórico de dirección
+-- (plan §8): quedan NULL para el enlace vigente hasta que el flujo transaccional
+-- de cierre+alta (todavía sin implementar) las asigne. La fecha la calcula PHP,
+-- nunca el motor.
 CREATE TABLE IF NOT EXISTS tbproductordireccion (
     tbproductordireccionid INT NOT NULL,
     tbproductorid INT NOT NULL,
-    tbdireccionid INT NOT NULL
+    tbdireccionid INT NOT NULL,
+    tbproductordireccionfechainicio DATETIME NULL,
+    tbproductordireccionfechafin DATETIME NULL
 ) ENGINE=InnoDB;
 
 USE dbtindervacas;
@@ -151,4 +157,53 @@ CREATE TABLE IF NOT EXISTS tbtransportistavehiculo (
     tbvehiculoid INT NOT NULL
 ) ENGINE=InnoDB;
 
---fin del script de instalación completa
+-- ==========================================================================
+-- Tablas históricas del remodelado EIF400 (plan §7, §9, §17). Se agregan sin
+-- USE/SET NAMES propios porque ya rigen desde el bloque anterior; el conteo de
+-- "SET NAMES" que exige Tests/naming_gate.php sigue en 12.
+--
+-- tbproductor.tbproductorestado y tbcomprador NO se tocan en este cambio:
+-- Application/Model/Productor.php todavía lee/ordena por esa columna y
+-- Application/Controller/CompradorController.php todavía existe. Retirarlos
+-- es un cambio de capa de aplicación (plan §6 y §4, fases 2-5), fuera de este
+-- alcance solo-DB, y se haría romper el proyecto si se hiciera aquí sin
+-- actualizar el PHP a la vez.
+-- ==========================================================================
+
+-- Historial de estado del productor. Cada fila es un periodo; el periodo
+-- abierto (tbproductorestadoperiodofechafin NULL) es el estado vigente. Debe
+-- existir como máximo un periodo abierto por productor: esa regla la aplica
+-- PHP bajo un lock nombrado (plan §21), no el motor.
+CREATE TABLE IF NOT EXISTS tbproductorestadoperiodo (
+    tbproductorestadoperiodoid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbproductorestadoperiodoestado TINYINT(1) NOT NULL,
+    tbproductorestadoperiodofechainicio DATETIME NOT NULL,
+    tbproductorestadoperiodofechafin DATETIME NULL,
+    tbproductorestadoperiodomotivo VARCHAR(250) NULL
+) ENGINE=InnoDB;
+
+-- Ubicación observada del productor (plan §9, §14-16). Append-only: cada
+-- lectura es una fila nueva; ninguna fila se actualiza ni se borra.
+CREATE TABLE IF NOT EXISTS tbproductorubicacion (
+    tbproductorubicacionid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbproductorubicacionlatitud DECIMAL(10,7) NOT NULL,
+    tbproductorubicacionlongitud DECIMAL(10,7) NOT NULL,
+    tbproductorubicacionprecision DECIMAL(10,2) NULL,
+    tbproductorubicacionfecha DATETIME NOT NULL,
+    tbproductorubicacionorigen VARCHAR(40) NOT NULL
+) ENGINE=InnoDB;
+
+-- Actividad del productor (plan §17-18), base para la futura desactivación
+-- automática por inactividad (Tools/desactivar_productores_inactivos.php,
+-- todavía sin implementar).
+CREATE TABLE IF NOT EXISTS tbproductoractividad (
+    tbproductoractividadid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbproductoractividadtipo VARCHAR(60) NOT NULL,
+    tbproductoractividadfecha DATETIME NOT NULL,
+    tbproductoractividadorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- fin del script de instalación completa

@@ -1,7 +1,7 @@
 # Esquema Supabase
 
 Servicio de migración PostgreSQL para el proyecto Supabase conectado a Vercel.
-Mantiene en `public` el equivalente de las once tablas MySQL, sin claves,
+Mantiene en `public` el equivalente de las catorce tablas MySQL, sin claves,
 índices ni valores automáticos. El único dato inicial es el método de pago
 `Efectivo`.
 
@@ -16,7 +16,7 @@ contenedor sin borrar ni alterar datos existentes.
 Evidencia operativa esperada en los logs de Vercel:
 
 ```text
-supabase_schema_status=ready tables=11 migration=v3
+supabase_schema_status=ready tables=14 migration=v4
 ```
 
 Pruebas:
