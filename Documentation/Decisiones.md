@@ -168,3 +168,26 @@ espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
 en la migración `v3`: once tablas, `tbproductordireccion` normalizada y el mismo
 criterio de cero llaves, restricciones, índices y valores automáticos. El espejo
 sigue a MySQL; nunca al revés.
+
+## DEC-16 - Ubicaciones GPS append-only
+
+`tbproductorubicacion` es una serie temporal: cada lectura GPS del productor
+inserta una fila nueva y ninguna fila se actualiza ni se elimina. Las
+consecuencias vigentes son:
+
+1. **Solo INSERT**: `Application/Model/ProductorUbicacion.php` no expone
+   `actualizar()` ni `eliminar()`, y el endpoint
+   `/api/productores-ubicacion.php` rechaza PUT, PATCH y DELETE con 405.
+2. **Fecha del servidor**: PHP asigna `tbproductorubicacionfecha` con su reloj;
+   el campo `fecha` que pudiera enviar el cliente se descarta.
+3. **Origen conjunto controlado**: `tbproductorubicacionorigen` solo acepta
+   `NAVEGADOR` o `MANUAL`; cualquier otro valor se rechaza con error por campo.
+4. **Lock dedicado**: el consecutivo usa `MAX(tbproductorubicacionid) + 1`
+   bajo el bloqueo nombrado `tindercows_productor_ubicacion_alta`, retenido
+   hasta después del COMMIT para garantizar IDs únicos bajo ráfagas
+   simultáneas.
+5. **Bitácora en la misma transacción**: cada inserción registra
+   `REGISTRAR_UBICACION` en `tbbitacora` antes del commit.
+6. **Coordenadas exactas**: latitud y longitud se validan por rango (-90..90,
+   -180..180) y se guardan como texto hacia `DECIMAL(10,7)`, sin redondeos de
+   punto flotante.

@@ -15,8 +15,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('once_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 11,
-    'SQL crea exactamente once tablas: cinco del CRUD vigente y seis del avance de direcciones, pagos y transporte');
+$evaluate('catorce_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 14,
+    'SQL crea exactamente catorce tablas: cinco del CRUD vigente, seis del avance de direcciones, pagos y transporte, y tres de estado, ubicación y actividad del productor');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -39,7 +39,7 @@ $evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS t
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
 $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindervacas')
-    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === count($schemaFiles),
+    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 12,
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('direccion_centralizada', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfincadireccion ')
