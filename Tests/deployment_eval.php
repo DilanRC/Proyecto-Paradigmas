@@ -18,8 +18,9 @@ $checks = [
         && str_contains($vercelDockerfile, 'a2enconf servername'),
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
-    'procedimiento_tbfinca' => str_contains($readme, 'Aplicar `tbfinca` a una base existente'),
-    'procedimiento_tbcomprador' => str_contains($readme, 'Aplicar `tbcomprador` a una base existente'),
+    'procedimiento_tbfinca' => str_contains($readme, '### Aplicar el esquema a una base existente')
+        && str_contains($readme, 'por ejemplo `tbfinca`'),
+    'procedimiento_tbcomprador' => str_contains($readme, '`tbcomprador` o las del avance de direcciones'),
     'verificacion_dominio' => str_contains($readme, 'curl -fsS https://tindervacas.dpdns.org/'),
 ];
 $passed = count(array_filter($checks));

@@ -84,6 +84,15 @@ erDiagram
         VARCHAR tbcompradorcorreoelectronico
         TINYINT tbcompradorestado
     }
+    tbproductorubicacion {
+        INT tbproductorubicacionid
+        INT tbproductorid
+        DECIMAL tbproductorubicacionlatitud
+        DECIMAL tbproductorubicacionlongitud
+        DECIMAL tbproductorubicacionprecision
+        DATETIME tbproductorubicacionfecha
+        VARCHAR tbproductorubicacionorigen
+    }
     tbproductor ||--|| tbproductordireccion : "una residencia por tbproductorid"
     tbproductordireccion }o--|| tbdireccion : "ubicación por tbdireccionid"
     tbproductor ||--o{ tbfinca : "varias fincas por tbproductorid"
@@ -92,6 +101,7 @@ erDiagram
     tbtransportista ||--o{ tbtransportistavehiculo : "varios vehículos por tbtransportistaid"
     tbtransportistavehiculo }o--|| tbvehiculo : "un transportista por tbvehiculoid"
     tbproductor ||--o{ tbbitacora : "referencia lógica por identificación"
+    tbproductor ||--o{ tbproductorubicacion : "histórico append-only por tbproductorid"
 ```
 
 ## Cardinalidades conceptuales
@@ -127,6 +137,13 @@ transportista por vehículo es documental, no física.
 
 `tbpagometodo` es un catálogo aislado: el alcance vigente solo registra
 `Efectivo` y todavía no se relaciona con operaciones económicas.
+
+`tbproductorubicacion` registra cada lectura de ubicación GPS del productor
+como una fila nueva: es append-only, ninguna fila se actualiza ni se elimina y
+el histórico completo queda consultable por productor y por rango de fechas.
+La relación con `tbproductor` es conceptual por `tbproductorid`, sin FK. No
+confundir con `tbdireccion`: aquella es la residencia principal editable; esta
+es la serie temporal de posiciones observadas.
 
 ## Atributos confirmados y atributos propuestos
 

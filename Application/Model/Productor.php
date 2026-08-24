@@ -82,6 +82,18 @@ final class Productor
         return $this->mapear($fila, $this->fincas->listarActivas((int) $fila['tbproductorid']));
     }
 
+    /** Fila cruda por ID numérico; usada para validar existencia y estado. */
+    public function buscarPorId(int $productorId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT * FROM tbproductor WHERE tbproductorid = :productorId'
+        );
+        $sentencia->execute(['productorId' => $productorId]);
+        $fila = $sentencia->fetch();
+
+        return $fila === false ? null : $fila;
+    }
+
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
