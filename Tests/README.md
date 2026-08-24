@@ -18,6 +18,7 @@ docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
 node Tests/frontend_contract_test.js
+node Tests/frontend_retirement_eval.js
 php services/supabase-database/tests/schema_test.php
 php services/supabase-database/evals/schema_eval.php
 ```
@@ -30,7 +31,10 @@ el código, respetan `PORT` y conservan la creación idempotente de `tbfinca`.
 completos.
 
 `frontend_contract_test.js` verifica que los payloads y endpoints usados por los
-paneles de productores, compradores, métodos de pago, transportistas, vehículos
-y direcciones de finca sigan coincidiendo con los campos aceptados por sus
-controladores. Evita que una validación backend rompa silenciosamente un
-formulario que continúa enviando un contrato distinto.
+paneles activos de productores, métodos de pago, transportistas, vehículos y
+direcciones de finca sigan coincidiendo con los campos aceptados por sus
+controladores. También impide que el enlace, la vista, la ruta o el JavaScript
+de Compradores reaparezcan después de su retiro en el tramo 7.
+
+`frontend_retirement_eval.js` puntúa el retiro del frontend de Compradores y
+exige que todos los artefactos y enlaces retirados permanezcan ausentes.
