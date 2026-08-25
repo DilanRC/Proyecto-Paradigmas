@@ -22,7 +22,8 @@ $checks = [
         && str_contains($vercelDockerfile, 'a2enconf servername'),
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
-    'preview_solo_dev' => str_contains($vercelConfiguration, 'Tools/vercel-ignore-build.sh')
+    'preview_solo_dev' => str_contains($vercelConfiguration, '"app"')
+        && str_contains($vercelConfiguration, 'Tools/vercel-ignore-build.sh')
         && str_contains($vercelIgnoreBuild, 'VERCEL_GIT_COMMIT_REF:-}" == "dev"')
         && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"'),
     'phpmyadmin_local' => str_contains($compose, 'phpmyadmin:5.2.2-apache')

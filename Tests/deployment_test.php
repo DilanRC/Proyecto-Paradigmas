@@ -43,8 +43,10 @@ test_same('Dockerfile.vercel', $vercelConfiguration['services']['app']['entrypoi
     'Vercel debe construir explícitamente el contenedor');
 test_same(['service' => 'app'], $vercelConfiguration['rewrites'][0]['destination'] ?? null,
     'Vercel debe dirigir todo el tráfico al contenedor');
-test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['ignoreCommand'] ?? null,
-    'Vercel debe aplicar la política de ramas antes de construir');
+test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['services']['app']['ignoreCommand'] ?? null,
+    'El servicio Vercel debe aplicar la política de ramas antes de construir');
+test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration),
+    'ignoreCommand no puede ser global cuando vercel.json declara services');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_ENV:-}" == "production"'),
     'La política debe conservar los despliegues de producción');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_GIT_COMMIT_REF:-}" == "dev"'),

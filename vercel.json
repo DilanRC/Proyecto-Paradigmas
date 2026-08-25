@@ -1,11 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "ignoreCommand": "bash Tools/vercel-ignore-build.sh",
   "services": {
     "app": {
       "root": ".",
-      "entrypoint": "Dockerfile.vercel"
+      "entrypoint": "Dockerfile.vercel",
+      "ignoreCommand": "bash Tools/vercel-ignore-build.sh"
     }
   },
   "rewrites": [
