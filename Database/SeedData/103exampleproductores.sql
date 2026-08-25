@@ -25,14 +25,35 @@ SELECT 2, '3101111111', 'CEDULA_JURIDICA', 'Ganaderia Valle Verde S.A.', '+50622
        'contacto.compartido@example.test', 1
 WHERE NOT EXISTS (SELECT 1 FROM tbpersona WHERE tbpersonaidentificacionnumero = '3101111111');
 
+-- El estado del productor vive en tbproductorestadoperiodo, no en tbproductor.
 INSERT INTO tbproductor (
     tbproductorid,
-    tbpersonaid,
-    tbproductorestado
+    tbpersonaid
 )
-SELECT 1, 1, 1 WHERE NOT EXISTS (SELECT 1 FROM tbproductor WHERE tbpersonaid = 1)
+SELECT 1, 1 WHERE NOT EXISTS (SELECT 1 FROM tbproductor WHERE tbpersonaid = 1)
 UNION ALL
-SELECT 2, 2, 1 WHERE NOT EXISTS (SELECT 1 FROM tbproductor WHERE tbpersonaid = 2);
+SELECT 2, 2 WHERE NOT EXISTS (SELECT 1 FROM tbproductor WHERE tbpersonaid = 2);
+
+-- Periodos iniciales: cada productor comienza como ACTIVO (estado 1).
+-- INSERTs individuales porque MySQL aplica WHERE NOT EXISTS solo al
+-- último SELECT de un UNION ALL.
+INSERT INTO tbproductorestadoperiodo
+    (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
+     tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin,
+     tbproductorestadoperiodomotivo)
+SELECT 1, 1, 1, NOW(), NULL, 'Alta del productor'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductorestadoperiodo WHERE tbproductorid = 1
+);
+
+INSERT INTO tbproductorestadoperiodo
+    (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
+     tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin,
+     tbproductorestadoperiodomotivo)
+SELECT 2, 2, 1, NOW(), NULL, 'Alta del productor'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductorestadoperiodo WHERE tbproductorid = 2
+);
 
 -- La ubicación vive en tbdireccion. tbproductordireccion solamente enlaza.
 UPDATE tbdireccion SET

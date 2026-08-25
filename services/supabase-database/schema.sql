@@ -10,8 +10,7 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
 
 CREATE TABLE IF NOT EXISTS public.tbproductor (
     tbproductorid INTEGER NOT NULL,
-    tbpersonaid INTEGER NOT NULL,
-    tbproductorestado SMALLINT NOT NULL
+    tbpersonaid INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductordireccion (
