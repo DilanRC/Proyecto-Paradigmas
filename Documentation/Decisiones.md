@@ -192,6 +192,26 @@ consecuencias vigentes son:
    -180..180) y se guardan como texto hacia `DECIMAL(10,7)`, sin redondeos de
    punto flotante.
 
+# Decisiones - Modelos de históricos
+
+## DEC-18 - Periodos con fechafin NULL como vigente; cierre inmutable
+
+El estado y la residencia del productor se modelan como hechos históricos
+(plan §7-8). `ProductorEstadoPeriodo` escribe en `tbproductorestadoperiodo` y
+`ProductorDireccion` trabaja sobre `tbproductordireccion` con sus columnas de
+vigencia: **el periodo vigente es la fila con fechafin NULL**. Un cambio cierra
+el periodo abierto (UPDATE solo de fechafin, asignada por el reloj de PHP) e
+inserta una fila nueva; ningún periodo cerrado se edita ni elimina. El motor no
+puede garantizar "máximo un abierto por productor" (cero restricciones): PHP lo
+garantiza ejecutando abrir/cerrar bajo el bloqueo nombrado por productor
+(`tindercows_productor_estado_{id}`) dentro de la transacción completa, y los
+métodos de escritura rechazan llamadas sin ese lock (`LogicException`). La
+consulta `consultarVigenteEn(fecha)` resuelve el periodo cuya vigencia contiene
+la fecha. La política anterior de "exactamente una dirección por productor"
+se reescribe sobre el periodo abierto: tener varias direcciones históricas es
+lo normal, y dos periodos abiertos simultáneos se detectan como integridad
+rota.
+
 # Decisiones - Códigos HTTP de ubicación
 
 ## DEC-17 - Consistencia de códigos con el resto de la API
