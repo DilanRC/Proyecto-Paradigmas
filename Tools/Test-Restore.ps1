@@ -116,7 +116,7 @@ try {
         $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$database' AND CONSTRAINT_TYPE='CHECK';"
         if ($checkCount -ne '0') { throw "$database contiene $checkCount CHECK." }
         $tablesCsv = Invoke-MySqlQuery "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE';"
-        if ($tablesCsv -ne 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbproductor,tbproductordireccion,tbtransportista,tbtransportistavehiculo,tbvehiculo') { throw "$database contiene tablas inesperadas: $tablesCsv." }
+        if ($tablesCsv -ne 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbpersona,tbproductor,tbproductoractividad,tbproductordireccion,tbproductorestadoperiodo,tbproductorubicacion,tbtransportista,tbtransportistavehiculo,tbvehiculo') { throw "$database contiene tablas inesperadas: $tablesCsv." }
         $indexCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$database';"
         if ($indexCount -ne '0') { throw "$database contiene $indexCount índices." }
         $productorIdExtra = Invoke-MySqlQuery "SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND TABLE_NAME='tbproductor' AND COLUMN_NAME='tbproductorid';"
@@ -140,7 +140,7 @@ try {
         if ($sourceChecksum -ne $restoreChecksum -or $restoreChecksum -ne $partsChecksum) { throw "Los datos difieren para $table." }
     }
 
-    Invoke-MySqlQuery "SELECT tbproductorid,tbproductoridentificacionnumero FROM $RestoreDatabase.tbproductor ORDER BY tbproductorid LIMIT 1;" | Out-Null
+    Invoke-MySqlQuery "SELECT pr.tbproductorid,pe.tbpersonaidentificacionnumero FROM $RestoreDatabase.tbproductor pr JOIN $RestoreDatabase.tbpersona pe ON pe.tbpersonaid=pr.tbpersonaid ORDER BY pr.tbproductorid LIMIT 1;" | Out-Null
     $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
     $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
     $indexCount = Invoke-MySqlQuery "SELECT COUNT(DISTINCT TABLE_NAME,INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
@@ -148,7 +148,7 @@ try {
     $foreignKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='FOREIGN KEY';"
     $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='CHECK';"
     $manifest = [IO.File]::ReadAllText($ManifestFile)
-    $manifest = $manifest -replace '(?m)^- Intercalación comprobada: .*$', '- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y once tablas'
+    $manifest = $manifest -replace '(?m)^- Intercalación comprobada: .*$', '- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y quince tablas'
     $manifest = $manifest -replace '(?m)^- Restauración completa comprobada: .*$', '- Restauración completa comprobada: Sí'
     $manifest = $manifest -replace '(?m)^- Restauración estructura \+ datos comprobada: .*$', '- Restauración estructura + datos comprobada: Sí'
     $manifest = $manifest -replace '(?m)^- Cantidad de tablas: .*$', "- Cantidad de tablas: $tableCount"

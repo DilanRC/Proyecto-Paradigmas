@@ -9,6 +9,14 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 SELECT '--- tbdireccion' AS comprobacion;
 DESCRIBE tbdireccion;
 
+SELECT '--- tbpersona' AS comprobacion;
+DESCRIBE tbpersona;
+
+SELECT '--- perfiles de capacidad' AS comprobacion;
+DESCRIBE tbproductor;
+DESCRIBE tbcomprador;
+DESCRIBE tbtransportista;
+
 SELECT '--- tbproductordireccion' AS comprobacion;
 DESCRIBE tbproductordireccion;
 
@@ -62,3 +70,8 @@ UNION ALL
 SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATABASE()
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
+
+-- Comprobación 4: exactamente 15 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_15
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

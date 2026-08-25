@@ -15,8 +15,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('catorce_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 14,
-    'SQL crea exactamente catorce tablas: cinco del CRUD vigente, seis del avance de direcciones, pagos y transporte, y tres de estado, ubicación y actividad del productor');
+$evaluate('quince_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 15,
+    'SQL crea exactamente quince tablas, incluida la identidad compartida tbpersona');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -34,8 +34,8 @@ $evaluate('direccion_politica_aplicacion', !str_contains($schema, 'pk_tbproducto
 $evaluate('tabla_finca', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca')
     && !str_contains($schema, 'tbproductorfinca'), 'La finca usa la tabla tbfinca solicitada');
 $evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador')
-    && str_contains($schema, 'tbcompradoridentificacionnumero VARCHAR(250) NOT NULL'),
-    'Comprador tiene nombre singular y perfil de identificación explícito');
+    && str_contains($schema, 'tbpersonaid INT NOT NULL'),
+    'Comprador tiene nombre singular y referencia la identidad compartida');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
 $evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbmercadoganadero')

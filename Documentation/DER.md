@@ -1,167 +1,74 @@
-# DER - Modelo docente sin restricciones
+# DER - Persona con capacidades independientes
 
 ```mermaid
 erDiagram
-    tbproductor {
-        INT tbproductorid
-        VARCHAR tbproductoridentificacionnumero
-        VARCHAR tbproductoridentificaciontipo
-        VARCHAR tbproductornombre
-        VARCHAR tbproductortelefono
-        VARCHAR tbproductorcorreoelectronico
-        TINYINT tbproductorestado
+    tbpersona {
+        INT tbpersonaid
+        VARCHAR tbpersonaidentificacionnumero
+        VARCHAR tbpersonaidentificaciontipo
+        VARCHAR tbpersonanombre
+        VARCHAR tbpersonatelefono
+        VARCHAR tbpersonacorreoelectronico
+        TINYINT tbpersonaestado
     }
-    tbproductordireccion {
-        INT tbproductordireccionid
-        INT tbproductorid
-        INT tbdireccionid
-    }
-    tbdireccion {
-        INT tbdireccionid
-        VARCHAR tbdireccionprovincia
-        VARCHAR tbdireccioncanton
-        VARCHAR tbdirecciondistrito
-        VARCHAR tbdireccionpueblo
-        VARCHAR tbdireccionsenas
-    }
-    tbfinca {
-        INT tbfincaid
-        INT tbproductorid
-        VARCHAR tbfincanombre
-        TINYINT tbfincaestado
-    }
-    tbfincadireccion {
-        INT tbfincadireccionid
-        INT tbfincaid
-        INT tbdireccionid
-    }
-    tbpagometodo {
-        INT tbpagometodoid
-        VARCHAR tbpagometodonombre
-        VARCHAR tbpagometododescripcion
-        TINYINT tbpagometodoactivo
-    }
-    tbtransportista {
-        INT tbtransportistaid
-        VARCHAR tbtransportistaidentificacionnumero
-        VARCHAR tbtransportistaidentificaciontipo
-        VARCHAR tbtransportistanombre
-        VARCHAR tbtransportistatelefono
-        VARCHAR tbtransportistacorreoelectronico
-        TINYINT tbtransportistaestado
-    }
-    tbvehiculo {
-        INT tbvehiculoid
-        VARCHAR tbvehiculoplaca
-        VARCHAR tbvehiculovin
-        VARCHAR tbvehiculomodelo
-        TINYINT tbvehiculoestado
-    }
-    tbtransportistavehiculo {
-        INT tbtransportistavehiculoid
-        INT tbtransportistaid
-        INT tbvehiculoid
-    }
-    tbbitacora {
-        BIGINT tbbitacoraid
-        VARCHAR tbbitacoraentidad
-        VARCHAR tbbitacoraregistroidentificacionnumero
-        VARCHAR tbbitacoraaccion
-        DATETIME tbbitacorafecha
-        JSON tbbitacoradatosanteriores
-        JSON tbbitacoradatosnuevos
-        VARCHAR tbbitacoraactortipo
-        BIGINT tbbitacorausuarioid
-        VARCHAR tbbitacoraorigen
-        VARCHAR tbbitacorasolicitudid
-    }
-    tbcomprador {
-        INT tbcompradorid
-        VARCHAR tbcompradoridentificacionnumero
-        VARCHAR tbcompradoridentificaciontipo
-        VARCHAR tbcompradornombre
-        VARCHAR tbcompradortelefono
-        VARCHAR tbcompradorcorreoelectronico
-        TINYINT tbcompradorestado
-    }
-    tbproductorubicacion {
-        INT tbproductorubicacionid
-        INT tbproductorid
-        DECIMAL tbproductorubicacionlatitud
-        DECIMAL tbproductorubicacionlongitud
-        DECIMAL tbproductorubicacionprecision
-        DATETIME tbproductorubicacionfecha
-        VARCHAR tbproductorubicacionorigen
-    }
-    tbproductor ||--|| tbproductordireccion : "una residencia por tbproductorid"
-    tbproductordireccion }o--|| tbdireccion : "ubicación por tbdireccionid"
-    tbproductor ||--o{ tbfinca : "varias fincas por tbproductorid"
-    tbfinca ||--|| tbfincadireccion : "una dirección por tbfincaid"
-    tbfincadireccion }o--|| tbdireccion : "ubicación por tbdireccionid"
-    tbtransportista ||--o{ tbtransportistavehiculo : "varios vehículos por tbtransportistaid"
-    tbtransportistavehiculo }o--|| tbvehiculo : "un transportista por tbvehiculoid"
-    tbproductor ||--o{ tbbitacora : "referencia lógica por identificación"
-    tbproductor ||--o{ tbproductorubicacion : "histórico append-only por tbproductorid"
+    tbproductor { INT tbproductorid INT tbpersonaid TINYINT tbproductorestado }
+    tbcomprador { INT tbcompradorid INT tbpersonaid TINYINT tbcompradorestado }
+    tbtransportista { INT tbtransportistaid INT tbpersonaid TINYINT tbtransportistaestado }
+    tbproductordireccion { INT tbproductordireccionid INT tbproductorid INT tbdireccionid DATETIME tbproductordireccionfechainicio DATETIME tbproductordireccionfechafin }
+    tbdireccion { INT tbdireccionid VARCHAR tbdireccionprovincia VARCHAR tbdireccioncanton VARCHAR tbdirecciondistrito VARCHAR tbdireccionpueblo VARCHAR tbdireccionsenas }
+    tbfinca { INT tbfincaid INT tbproductorid VARCHAR tbfincanombre TINYINT tbfincaestado }
+    tbfincadireccion { INT tbfincadireccionid INT tbfincaid INT tbdireccionid }
+    tbpagometodo { INT tbpagometodoid VARCHAR tbpagometodonombre VARCHAR tbpagometododescripcion TINYINT tbpagometodoactivo }
+    tbvehiculo { INT tbvehiculoid VARCHAR tbvehiculoplaca VARCHAR tbvehiculovin VARCHAR tbvehiculomodelo TINYINT tbvehiculoestado }
+    tbtransportistavehiculo { INT tbtransportistavehiculoid INT tbtransportistaid INT tbvehiculoid }
+    tbproductorestadoperiodo { INT tbproductorestadoperiodoid INT tbproductorid TINYINT tbproductorestadoperiodoestado DATETIME tbproductorestadoperiodofechainicio DATETIME tbproductorestadoperiodofechafin VARCHAR tbproductorestadoperiodomotivo }
+    tbproductorubicacion { INT tbproductorubicacionid INT tbproductorid DECIMAL tbproductorubicacionlatitud DECIMAL tbproductorubicacionlongitud DECIMAL tbproductorubicacionprecision DATETIME tbproductorubicacionfecha VARCHAR tbproductorubicacionorigen }
+    tbproductoractividad { INT tbproductoractividadid INT tbproductorid VARCHAR tbproductoractividadtipo DATETIME tbproductoractividadfecha VARCHAR tbproductoractividadorigen }
+    tbbitacora { BIGINT tbbitacoraid VARCHAR tbbitacoraentidad VARCHAR tbbitacoraregistroidentificacionnumero VARCHAR tbbitacoraaccion DATETIME tbbitacorafecha JSON tbbitacoradatosanteriores JSON tbbitacoradatosnuevos VARCHAR tbbitacoraactortipo BIGINT tbbitacorausuarioid VARCHAR tbbitacoraorigen VARCHAR tbbitacorasolicitudid }
+
+    tbpersona ||--o| tbproductor : "capacidad por tbpersonaid"
+    tbpersona ||--o| tbcomprador : "capacidad por tbpersonaid"
+    tbpersona ||--o| tbtransportista : "capacidad por tbpersonaid"
+    tbproductor ||--|| tbproductordireccion : "residencia"
+    tbproductordireccion }o--|| tbdireccion : "ubicacion"
+    tbproductor ||--o{ tbfinca : "fincas"
+    tbfinca ||--|| tbfincadireccion : "direccion"
+    tbfincadireccion }o--|| tbdireccion : "ubicacion"
+    tbtransportista ||--o{ tbtransportistavehiculo : "vehiculos"
+    tbtransportistavehiculo }o--|| tbvehiculo : "vehiculo"
+    tbproductor ||--o{ tbproductorestadoperiodo : "historico de estado"
+    tbproductor ||--o{ tbproductorubicacion : "ubicaciones"
+    tbproductor ||--o{ tbproductoractividad : "actividad"
 ```
 
-## Cardinalidades conceptuales
+## Identidad y capacidades
+
+`tbpersona` es la fuente única de identificación, tipo, nombre, teléfono,
+correo y disponibilidad global. `tbproductor`, `tbcomprador` y
+`tbtransportista` conservan sus IDs históricos y solo contienen el enlace
+`tbpersonaid` y su estado de participación. Una misma persona puede tener una,
+dos o las tres capacidades sin duplicar datos personales.
+
+El estado efectivo se calcula en PHP:
 
 ```text
-tbproductor 1 --- 1 tbproductordireccion N --- 1 tbdireccion
-tbfinca     1 --- 1 tbfincadireccion     N --- 1 tbdireccion
-tbproductor 1 --- N tbfinca
-tbtransportista 1 --- N tbtransportistavehiculo N --- 1 tbvehiculo
+capacidad efectiva = tbpersonaestado activo Y perfil.estado activo
 ```
 
-`tbproductordireccion` y `tbfincadireccion` solo enlazan: ninguna guarda datos
-de ubicación. Provincia, cantón, distrito, pueblo y señas existen una sola vez,
-en `tbdireccion`.
+Desactivar un perfil no afecta los otros. Desactivar `tbpersona` vuelve
+inoperantes las tres capacidades. `DELETE` de las APIs desactiva únicamente el
+perfil y `PATCH` únicamente lo reactiva, siempre que la persona esté activa.
 
-`tbdireccion` no pertenece a productor ni a finca. Cuando la residencia del
-productor y la ubicación de la finca son el mismo lugar físico,
-`tbproductordireccion.tbdireccionid` y `tbfincadireccion.tbdireccionid` guardan
-el mismo valor y la ubicación existe una sola vez:
+## Relaciones y política física
 
-```text
-Caso A - lugares distintos          Caso B - mismo lugar
-Productor -> tbdireccion 10         Productor -> tbdireccion 10
-Finca     -> tbdireccion 11         Finca     -> tbdireccion 10
-```
+El modelo contiene exactamente 15 tablas. Las líneas del DER son relaciones
+conceptuales usadas por PHP. MySQL y PostgreSQL no declaran PK, FK, UNIQUE,
+CHECK, índices, ENUM, valores DEFAULT, AUTO_INCREMENT, triggers, rutinas ni
+eventos. En términos del contrato docente: el esquema mantiene cero claves y
+cero restricciones, índices u objetos programables. PHP garantiza IDs,
+unicidad, coherencia, transacciones y bloqueos.
 
-La relación productor - finca vive en `tbfinca.tbproductorid`; el avance no
-introduce una tabla puente adicional porque la cardinalidad confirmada es
-1 productor a N fincas.
-
-`tbtransportistavehiculo` representa la asociación; la política de un solo
-transportista por vehículo es documental, no física.
-
-`tbpagometodo` es un catálogo aislado: el alcance vigente solo registra
-`Efectivo` y todavía no se relaciona con operaciones económicas.
-
-`tbproductorubicacion` registra cada lectura de ubicación GPS del productor
-como una fila nueva: es append-only, ninguna fila se actualiza ni se elimina y
-el histórico completo queda consultable por productor y por rango de fechas.
-La relación con `tbproductor` es conceptual por `tbproductorid`, sin FK. No
-confundir con `tbdireccion`: aquella es la residencia principal editable; esta
-es la serie temporal de posiciones observadas.
-
-## Atributos confirmados y atributos propuestos
-
-| Entidad | Confirmado | Propuesto por modelado |
-|---|---|---|
-| `tbvehiculo` | placa, vin, modelo | `tbvehiculoestado`, por coherencia con el estado lógico del resto de tablas |
-| `tbtransportista` | es una persona independiente, con identificador propio, y puede tener varios vehículos | identificación, tipo de identificación, nombre, teléfono, correo y estado, siguiendo el patrón de personas ya registrado en `tbproductor` y `tbcomprador` |
-
-Los atributos propuestos no fueron solicitados: se modelaron para poder
-identificar y contactar a la persona. Pueden retirarse si el dominio no los
-necesita. Queda pendiente confirmar con el profesor cuáles son obligatorios.
-
-Las líneas muestran asociaciones usadas por PHP, no restricciones de MySQL.
-`tbcomprador` es independiente y todavía no participa en el CRUD de
-productores.
-El esquema define cero claves, restricciones, índices, valores `DEFAULT`,
-`AUTO_INCREMENT` y objetos programables. PHP calcula cada identificador
-mediante `MAX(id) + 1` bajo un bloqueo nombrado y envía todos los valores con
-sentencias preparadas. Los campos `tbdireccionid`, `tbfincaid`,
-`tbtransportistaid` y `tbvehiculoid` de las tablas de enlace son relaciones
-conceptuales: el script no declara ninguna llave foránea.
+`tbproductordireccion` y `tbfincadireccion` solo enlazan ubicaciones de
+`tbdireccion`. `tbproductorubicacion` conserva posiciones GPS append-only y no
+reemplaza la residencia editable. Los IDs de perfiles y todas las relaciones
+existentes permanecen iguales durante la migración.
