@@ -32,7 +32,9 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 |---|---|---|---|---|---|
 | `tbproductorid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
-| `tbproductorestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como productor. | Aplicación | - |
+
+El productor no guarda estado propio: su estado vigente es el del periodo
+abierto en `tbproductorestadoperiodo`.
 
 ## tbproductordireccion
 

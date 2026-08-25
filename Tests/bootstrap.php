@@ -13,7 +13,7 @@ use Configuration\Database;
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
-foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion'] as $testModel) {
+foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
@@ -89,6 +89,19 @@ function test_cleanup_ubicaciones(array $productorIds): void
     if ($ids === []) return;
     $marcadores = implode(',', array_fill(0, count($ids), '?'));
     test_db()->prepare("DELETE FROM tbproductorubicacion WHERE tbproductorid IN ({$marcadores})")->execute($ids);
+}
+
+/**
+ * Retira los periodos de estado y actividad del productor de prueba; el
+ * productor, su dirección y su bitácora se retiran con test_cleanup_productores().
+ */
+function test_cleanup_estado_periodos(array $productorIds): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $productorIds))));
+    if ($ids === []) return;
+    $marcadores = implode(',', array_fill(0, count($ids), '?'));
+    test_db()->prepare("DELETE FROM tbproductorestadoperiodo WHERE tbproductorid IN ({$marcadores})")->execute($ids);
+    test_db()->prepare("DELETE FROM tbproductoractividad WHERE tbproductorid IN ({$marcadores})")->execute($ids);
 }
 
 function test_token(string $label): string
@@ -198,6 +211,8 @@ function test_cleanup_productores(array $identificaciones): void
 
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));
+            $db->prepare("DELETE FROM tbproductorestadoperiodo WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
+            $db->prepare("DELETE FROM tbproductoractividad WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
 
             $buscarFincaIds = $db->prepare("SELECT tbfincaid FROM tbfinca WHERE tbproductorid IN ({$marcadoresProductor})");
             $buscarFincaIds->execute($productorIds);

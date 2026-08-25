@@ -16,6 +16,29 @@ final class Productor
         $this->persona = new Persona($conexion);
     }
 
+    /**
+     * Estado vigente derivado del periodo abierto de tbproductorestadoperiodo.
+     * tbproductor ya no guarda estado propio: un productor sin periodos (dato
+     * heredado o corrupto) se considera INACTIVO porque no hay evidencia de
+     * que esté activo. Se expone con el alias tbproductorestado para que los
+     * consumidores lean el estado por el mismo nombre de siempre.
+     */
+    private function sqlEstadoVigente(string $alias): string
+    {
+        return "COALESCE((SELECT ep.tbproductorestadoperiodoestado
+                 FROM tbproductorestadoperiodo ep
+                 WHERE ep.tbproductorid = {$alias}.tbproductorid
+                   AND ep.tbproductorestadoperiodofechafin IS NULL), 0)";
+    }
+
+    private function sqlExistePeriodoActivo(string $alias): string
+    {
+        return "EXISTS (SELECT 1 FROM tbproductorestadoperiodo ep
+                 WHERE ep.tbproductorid = {$alias}.tbproductorid
+                   AND ep.tbproductorestadoperiodofechafin IS NULL
+                   AND ep.tbproductorestadoperiodoestado = 1)";
+    }
+
     public function listar(string $busqueda, string $estado, int $pagina, int $tamano): array
     {
         [$where, $parametros] = $this->filtros($busqueda, $estado);
@@ -23,7 +46,8 @@ final class Productor
         $conteo->execute($parametros);
         $total = (int) $conteo->fetchColumn();
 
-        $sql = "SELECT p.*, pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
+        $sql = "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
+                       pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
                        pe.tbpersonaidentificaciontipo AS tbproductoridentificaciontipo,
                        pe.tbpersonanombre AS tbproductornombre, pe.tbpersonatelefono AS tbproductortelefono,
                        pe.tbpersonacorreoelectronico AS tbproductorcorreoelectronico, pe.tbpersonaestado,
@@ -39,7 +63,7 @@ final class Productor
                 INNER JOIN tbdireccion d
                     ON d.tbdireccionid = pd.tbdireccionid
                 {$where}
-                ORDER BY (p.tbproductorestado * pe.tbpersonaestado) DESC, pe.tbpersonanombre,
+                ORDER BY ({$this->sqlEstadoVigente('p')} * pe.tbpersonaestado) DESC, pe.tbpersonanombre,
                          pe.tbpersonaidentificacionnumero
                 LIMIT :limite OFFSET :desplazamiento";
         $sentencia = $this->conexion->prepare($sql);
@@ -64,7 +88,8 @@ final class Productor
     public function buscar(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT p.*, pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
+                    pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
                     pe.tbpersonaidentificaciontipo AS tbproductoridentificaciontipo,
                     pe.tbpersonanombre AS tbproductornombre, pe.tbpersonatelefono AS tbproductortelefono,
                     pe.tbpersonacorreoelectronico AS tbproductorcorreoelectronico, pe.tbpersonaestado,
@@ -79,7 +104,7 @@ final class Productor
                 ON pd.tbproductorid = p.tbproductorid
              LEFT JOIN tbdireccion d
                 ON d.tbdireccionid = pd.tbdireccionid
-             WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero'
+             WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero"
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -98,10 +123,11 @@ final class Productor
     public function buscarPorId(int $productorId): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT p.*, pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
+                    pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
                     pe.tbpersonanombre AS tbproductornombre, pe.tbpersonaestado
              FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
-             WHERE p.tbproductorid = :productorId'
+             WHERE p.tbproductorid = :productorId"
         );
         $sentencia->execute(['productorId' => $productorId]);
         $fila = $sentencia->fetch();
@@ -112,8 +138,9 @@ final class Productor
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT p.*, pe.tbpersonaestado FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
-             WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero FOR UPDATE'
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado, pe.tbpersonaestado
+             FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
+             WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero FOR UPDATE"
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -144,19 +171,21 @@ final class Productor
         NamedLock::release($this->conexion, 'tindercows_persona_alta');
     }
 
+    /**
+     * Crea la capacidad de productor sobre la persona. El periodo de estado
+     * inicial lo abre el controlador bajo el lock del productor recién creado.
+     */
     public function crear(array $datos): int
     {
         $persona = $this->persona->obtenerOCrear($datos);
         $productorId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbproductor
-             (tbproductorid, tbpersonaid, tbproductorestado)
-             VALUES (:productorId, :personaId, :estado)'
+            'INSERT INTO tbproductor (tbproductorid, tbpersonaid)
+             VALUES (:productorId, :personaId)'
         );
         $sentencia->execute([
             'productorId' => $productorId,
             'personaId' => $persona['tbpersonaid'],
-            'estado' => 1,
         ]);
 
         return $productorId;
@@ -175,17 +204,6 @@ final class Productor
         $this->persona->actualizar($identificacionNumero, $datos);
     }
 
-    public function cambiarEstado(string $identificacionNumero, bool $activo): void
-    {
-        $persona = $this->persona->buscar($identificacionNumero);
-        if ($persona === null) return;
-        $sentencia = $this->conexion->prepare('UPDATE tbproductor SET tbproductorestado = :estado WHERE tbpersonaid = :personaId');
-        $sentencia->execute([
-            'estado' => $activo ? 1 : 0,
-            'personaId' => $persona['tbpersonaid'],
-        ]);
-    }
-
     private function filtros(string $busqueda, string $estado): array
     {
         $condiciones = [];
@@ -200,9 +218,11 @@ final class Productor
                 ':busquedaIdentificacion' => '%' . mb_strtoupper(preg_replace('/[ -]+/u', '', $busqueda) ?? '', 'UTF-8') . '%',
             ];
         }
+        // ACTIVO exige periodo abierto en estado 1 y persona activa: la
+        // identidad inactiva desactiva todas sus capacidades.
         if ($estado !== 'TODOS') {
-            $condiciones[] = '(p.tbproductorestado * pe.tbpersonaestado) = :estado';
-            $parametros[':estado'] = $estado === 'ACTIVO' ? 1 : 0;
+            $activo = '(' . $this->sqlExistePeriodoActivo('p') . ' AND pe.tbpersonaestado = 1)';
+            $condiciones[] = $estado === 'ACTIVO' ? $activo : 'NOT ' . $activo;
         }
 
         return [$condiciones === [] ? '' : 'WHERE ' . implode(' AND ', $condiciones), $parametros];

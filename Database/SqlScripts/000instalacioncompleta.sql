@@ -24,8 +24,7 @@ CREATE TABLE IF NOT EXISTS tbpersona (
 
 CREATE TABLE IF NOT EXISTS tbproductor (
     tbproductorid INT NOT NULL,
-    tbpersonaid INT NOT NULL,
-    tbproductorestado TINYINT(1) NOT NULL
+    tbpersonaid INT NOT NULL
 ) ENGINE=InnoDB;
 
 USE dbmercadoganadero;
