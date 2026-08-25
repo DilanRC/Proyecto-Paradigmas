@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SOURCE_DATABASE='dbtindervacas'
-readonly RESTORE_DATABASE='dbtindervacas_restore_test'
-readonly PARTS_DATABASE='dbtindervacas_restore_parts_test'
+readonly SOURCE_DATABASE='dbmercadoganadero'
+readonly RESTORE_DATABASE='dbmercadoganadero_restore_test'
+readonly PARTS_DATABASE='dbmercadoganadero_restore_parts_test'
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 readonly INJECT_INVALID_METADATA="${RESTORE_TEST_INJECT_INVALID_METADATA:-0}"
@@ -103,16 +103,16 @@ fi
 mysql_query "CREATE DATABASE ${RESTORE_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 restore_created=1
 docker compose exec -T db sh -c \
-    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbmercadoganadero_restore_test' \
     < "$complete_file"
 
 mysql_query "CREATE DATABASE ${PARTS_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 parts_created=1
 docker compose exec -T db sh -c \
-    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_parts_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbmercadoganadero_restore_parts_test' \
     < "$schema_file"
 docker compose exec -T db sh -c \
-    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_parts_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbmercadoganadero_restore_parts_test' \
     < "$data_file"
 
 if [[ "$INJECT_SCHEMA_DIFFERENCE" == '1' ]]; then
