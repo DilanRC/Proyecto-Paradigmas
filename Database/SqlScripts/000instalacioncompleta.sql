@@ -18,8 +18,7 @@ CREATE TABLE IF NOT EXISTS tbproductor (
     tbproductoridentificaciontipo VARCHAR(40) NOT NULL,
     tbproductornombre VARCHAR(150) NOT NULL,
     tbproductortelefono VARCHAR(20) NOT NULL,
-    tbproductorcorreoelectronico VARCHAR(150) NOT NULL,
-    tbproductorestado TINYINT(1) NOT NULL
+    tbproductorcorreoelectronico VARCHAR(150) NOT NULL
 ) ENGINE=InnoDB;
 
 USE dbtindervacas;
@@ -161,13 +160,6 @@ CREATE TABLE IF NOT EXISTS tbtransportistavehiculo (
 -- Tablas históricas del remodelado EIF400 (plan §7, §9, §17). Se agregan sin
 -- USE/SET NAMES propios porque ya rigen desde el bloque anterior; el conteo de
 -- "SET NAMES" que exige Tests/naming_gate.php sigue en 12.
---
--- tbproductor.tbproductorestado y tbcomprador NO se tocan en este cambio:
--- Application/Model/Productor.php todavía lee/ordena por esa columna y
--- Application/Controller/CompradorController.php todavía existe. Retirarlos
--- es un cambio de capa de aplicación (plan §6 y §4, fases 2-5), fuera de este
--- alcance solo-DB, y se haría romper el proyecto si se hiciera aquí sin
--- actualizar el PHP a la vez.
 -- ==========================================================================
 
 -- Historial de estado del productor. Cada fila es un periodo; el periodo

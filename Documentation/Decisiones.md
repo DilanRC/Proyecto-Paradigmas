@@ -226,3 +226,21 @@ productor inexistente, **409** productor inactivo, **405** métodos
 destructivos sobre la tabla append-only y 400/415 del contrato de transporte
 (JSON malformado / Content-Type incorrecto). El alta válida responde **201**
 porque crea una fila nueva, igual que POST de productor.
+
+# Decisiones - Estado como periodos
+
+## DEC-19 - El estado es un hecho histórico; la columna muerta se retira en el mismo PR
+
+`tbproductorestado` se retira de `tbproductor` (MySQL y espejo Supabase) en el
+mismo PR que cambia `ProductorController` para derivar el estado del periodo
+abierto, de modo que nadie pueda volver a usar la columna eliminada. El
+esquema MySQL (`000instalacioncompleta.sql`), la migración
+`003eliminaestadoproductor.sql` (con backfill y comprobación previa) y el
+espejo PostgreSQL (`schema.sql` + `migrate.php` v5) quedan sincronizados. La
+semilla `103exampleproductores.sql` crea periodos iniciales ACTIVO para los
+productores ficticios en lugar de escribir la columna muerta. Un productor sin
+periodos (solo puede ocurrir con datos heredados pre-migración) se considera
+**INACTIVO** por defecto: no hay evidencia de que esté activo. El orden de
+locks en `desactivar`/`reactivar` es: bloqueo de fila FOR UPDATE del
+productor → lock nombrado del periodo por productor; idempotente: desactivar
+dos veces seguidas no duplica periodos.

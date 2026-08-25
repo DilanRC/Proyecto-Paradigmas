@@ -9,8 +9,7 @@ UPDATE tbproductor SET
     tbproductoridentificaciontipo = 'CEDULA_FISICA',
     tbproductornombre = 'Maria Fernandez Solano',
     tbproductortelefono = '88881111',
-    tbproductorcorreoelectronico = 'contacto.compartido@example.test',
-    tbproductorestado = 1
+    tbproductorcorreoelectronico = 'contacto.compartido@example.test'
 WHERE tbproductoridentificacionnumero = '101110111';
 
 UPDATE tbproductor SET
@@ -18,8 +17,7 @@ UPDATE tbproductor SET
     tbproductoridentificaciontipo = 'CEDULA_JURIDICA',
     tbproductornombre = 'Ganaderia Valle Verde S.A.',
     tbproductortelefono = '+50622221111',
-    tbproductorcorreoelectronico = 'contacto.compartido@example.test',
-    tbproductorestado = 1
+    tbproductorcorreoelectronico = 'contacto.compartido@example.test'
 WHERE tbproductoridentificacionnumero = '3101111111';
 
 INSERT INTO tbproductor (
@@ -28,19 +26,39 @@ INSERT INTO tbproductor (
     tbproductoridentificaciontipo,
     tbproductornombre,
     tbproductortelefono,
-    tbproductorcorreoelectronico,
-    tbproductorestado
+    tbproductorcorreoelectronico
 )
 SELECT 1, '101110111', 'CEDULA_FISICA', 'Maria Fernandez Solano', '88881111',
-       'contacto.compartido@example.test', 1
+       'contacto.compartido@example.test'
 WHERE NOT EXISTS (
     SELECT 1 FROM tbproductor WHERE tbproductoridentificacionnumero = '101110111'
 )
 UNION ALL
 SELECT 2, '3101111111', 'CEDULA_JURIDICA', 'Ganaderia Valle Verde S.A.', '+50622221111',
-       'contacto.compartido@example.test', 1
+       'contacto.compartido@example.test'
 WHERE NOT EXISTS (
     SELECT 1 FROM tbproductor WHERE tbproductoridentificacionnumero = '3101111111'
+);
+
+-- Periodos iniciales: cada productor comienza como ACTIVO (estado 1).
+-- INSERTs individuales porque MySQL aplica WHERE NOT EXISTS solo al
+-- último SELECT de un UNION ALL.
+INSERT INTO tbproductorestadoperiodo
+    (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
+     tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin,
+     tbproductorestadoperiodomotivo)
+SELECT 1, 1, 1, NOW(), NULL, 'Alta del productor'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductorestadoperiodo WHERE tbproductorid = 1
+);
+
+INSERT INTO tbproductorestadoperiodo
+    (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
+     tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin,
+     tbproductorestadoperiodomotivo)
+SELECT 2, 2, 1, NOW(), NULL, 'Alta del productor'
+WHERE NOT EXISTS (
+    SELECT 1 FROM tbproductorestadoperiodo WHERE tbproductorid = 2
 );
 
 -- La ubicación vive en tbdireccion. tbproductordireccion solamente enlaza.

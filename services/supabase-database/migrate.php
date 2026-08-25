@@ -5,7 +5,7 @@ declare(strict_types=1);
 const EXPECTED_COLUMNS = [
     'tbproductor' => [
         'tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
-        'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado',
+        'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico',
     ],
     'tbproductordireccion' => [
         'tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
@@ -205,6 +205,41 @@ function seedInitialData(PDO $connection): void
         WHERE NOT EXISTS (SELECT 1 FROM public.tbpagometodo WHERE tbpagometodoid = 1)");
 }
 
+/**
+ * Traslada tbproductorestado al histórico de periodos y retira la columna
+ * de tbproductor (plan §4). Idempotente: si la columna no existe, solamente
+ * confirma que la tabla ya tiene la estructura objetivo.
+ */
+function eliminarEstadoProductor(PDO $connection): void
+{
+    $existe = $connection->prepare("SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'tbproductor'
+          AND column_name = 'tbproductorestado'");
+    $existe->execute();
+    if ((int) $existe->fetchColumn() === 0) {
+        return;
+    }
+
+    $maximo = $connection->prepare('SELECT COALESCE(MAX(tbproductorestadoperiodoid), 0) FROM public.tbproductorestadoperiodo');
+    $maximo->execute();
+    $offset = (int) $maximo->fetchColumn();
+
+    $connection->prepare('INSERT INTO public.tbproductorestadoperiodo
+        (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
+         tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin,
+         tbproductorestadoperiodomotivo)
+        SELECT :offset + ROW_NUMBER() OVER (ORDER BY tbproductorid), tbproductorid, tbproductorestado,
+               NOW(), NULL, ''Migración v5: estado heredado''
+        FROM public.tbproductor p
+        WHERE NOT EXISTS (
+            SELECT 1 FROM public.tbproductorestadoperiodo ep
+            WHERE ep.tbproductorid = p.tbproductorid
+        )')
+        ->execute(['offset' => $offset]);
+
+    $connection->exec('ALTER TABLE public.tbproductor DROP COLUMN IF EXISTS tbproductorestado');
+}
+
 try {
     $connection = configuredConnection();
     $schema = file_get_contents(__DIR__ . '/schema.sql');
@@ -212,15 +247,16 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v4'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v5'))");
     $connection->exec($schema);
     normalizeProductorAddress($connection);
     agregarHistoricoDireccion($connection);
+    eliminarEstadoProductor($connection);
     seedInitialData($connection);
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=14 migration=v4\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=14 migration=v5\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

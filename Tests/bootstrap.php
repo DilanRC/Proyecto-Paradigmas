@@ -211,6 +211,8 @@ function test_cleanup_productores(array $identificaciones): void
 
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));
+            $db->prepare("DELETE FROM tbproductorestadoperiodo WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
+            $db->prepare("DELETE FROM tbproductoractividad WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
 
             $buscarFincaIds = $db->prepare("SELECT tbfincaid FROM tbfinca WHERE tbproductorid IN ({$marcadoresProductor})");
             $buscarFincaIds->execute($productorIds);
