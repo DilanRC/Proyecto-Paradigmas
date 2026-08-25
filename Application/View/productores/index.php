@@ -21,7 +21,6 @@
             <p class="rural-panel__nav-label">Administración</p>
             <div class="rural-panel__nav-list">
                 <a class="rural-panel__nav-item rural-panel__nav-item--active" href="productores.php">Productores<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
-                <a class="rural-panel__nav-item" href="compradores.php">Compradores</a>
                 <a class="rural-panel__nav-item" href="transportistas.php">Transportistas</a>
                 <a class="rural-panel__nav-item" href="vehiculos.php">Vehículos</a>
                 <a class="rural-panel__nav-item" href="pagometodos.php">Métodos de pago</a>
