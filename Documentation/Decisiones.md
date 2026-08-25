@@ -103,6 +103,12 @@ migración v2 crea y valida la misma estructura en Supabase PostgreSQL.
 
 # Decisiones - Avance de direcciones, pagos y transporte
 
+## DEC-TRAMO-7 - Retiro frontend de Comprador
+
+En el tramo 7 se retira Comprador del frontend; Productor, Transportista,
+Vehículo y Métodos de pago se mantienen como paneles activos, no se toca el
+contrato `estado` y el retiro respeta el alcance secuencial del remodelado.
+
 Este bloque solamente toca base de datos y documentación. Ninguna decisión se
 implementa con código de aplicación.
 

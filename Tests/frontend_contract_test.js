@@ -11,6 +11,16 @@ function has(path, pattern, message) {
     assert(ok, `${path}: ${message}`);
 }
 
+function lacks(path, pattern, message) {
+    const source = read(path);
+    const found = pattern instanceof RegExp ? pattern.test(source) : source.includes(pattern);
+    assert(!found, `${path}: ${message}`);
+}
+
+function missing(path, message) {
+    assert(!fs.existsSync(path), `${path}: ${message}`);
+}
+
 // Productores: el formulario exige dirección y el POST debe aceptarla/persistirla.
 has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpoint de productores incorrecto');
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
@@ -26,14 +36,13 @@ has(
     'el alta debe persistir la dirección recibida'
 );
 
-// Compradores.
-has('Public/js/compradores.js', "const API_URL = 'api/compradores.php';", 'endpoint de compradores incorrecto');
-has('Public/js/compradores.js', 'identificacionNumeroOriginal', 'PUT debe enviar identificación original');
-has(
-    'Application/Controller/CompradorController.php',
-    "$permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico'];",
-    'contrato de campos de comprador cambió'
-);
+// Tramo 7: el módulo retirado no debe reaparecer en los paneles activos.
+for (const panel of ['productores', 'transportistas', 'vehiculos', 'pagometodos']) {
+    lacks(`Application/View/${panel}/index.php`, 'compradores.php', 'el menú conserva el enlace retirado');
+}
+missing('Application/View/compradores', 'la vista retirada volvió a existir');
+missing('Public/compradores.php', 'la ruta pública retirada volvió a existir');
+missing('Public/js/compradores.js', 'el JavaScript retirado volvió a existir');
 
 // Transportistas y asignación de vehículos.
 has('Public/js/transportistas.js', "const API_URL = 'api/transportistas.php';", 'endpoint de transportistas incorrecto');
@@ -88,4 +97,4 @@ has(
     'DELETE de dirección de finca debe identificar productor y finca'
 );
 
-console.log('OK frontend_contract_test: contratos UI/API alineados en productores, compradores, pagos, transportistas, vehículos y direcciones de finca.');
+console.log('OK frontend_contract_test: contratos UI/API alineados en productores, pagos, transportistas, vehículos y direcciones de finca; Compradores continúa retirado.');
