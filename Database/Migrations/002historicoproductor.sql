@@ -1,4 +1,4 @@
-USE dbtindervacas;
+USE dbmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Migración manual, de una sola ejecución. Agrega el histórico de estado, la
@@ -13,7 +13,7 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 --
 -- Comprobar antes de ejecutar. Si devuelve 0, la migración ya se aplicó:
 --   SELECT COUNT(*) FROM information_schema.columns
---   WHERE table_schema = 'dbtindervacas'
+--   WHERE table_schema = 'dbmercadoganadero'
 --     AND table_name = 'tbproductordireccion'
 --     AND column_name = 'tbproductordireccionfechainicio';
 --

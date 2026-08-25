@@ -187,7 +187,7 @@ final class TransportistaVehiculoController
         if ($bloqueado === null) {
             throw new TransportistaVehiculoHttpException('Transportista no encontrado.', 404);
         }
-        if ((int) $bloqueado['tbtransportistaestado'] !== 1) {
+        if ((int) $bloqueado['tbtransportistaestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
             throw new TransportistaVehiculoHttpException(
                 'El transportista está inactivo. Debe reactivarlo antes de asignarle vehículos.', 409,
             );
