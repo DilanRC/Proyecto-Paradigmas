@@ -38,7 +38,7 @@ $evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS t
     'Comprador tiene nombre singular y perfil de identificación explícito');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
-$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindervacas')
+$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbmercadoganadero')
     && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 12,
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('direccion_centralizada', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
@@ -89,7 +89,7 @@ $evaluate('decision_docente', str_contains($docs, 'instrucción docente') && str
 $evaluate('protocolo_identificacion', str_contains($docs, 'desactivar el registro incorrecto')
     && str_contains($docs, 'conservar su bitácora') && str_contains($docs, 'crear el registro correcto'),
     'La corrección de identificación conserva la trazabilidad');
-$evaluate('readme_operativo', str_contains($readme, 'dbtindervacas') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
+$evaluate('readme_operativo', str_contains($readme, 'dbmercadoganadero') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
 $evaluate('pdf_obligatorios', count(array_filter(['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'],
     fn (string $pdf): bool => is_file("{$root}/Documentation/{$pdf}") && filesize("{$root}/Documentation/{$pdf}") > 1000)) === 3,
     'Existen los tres PDF de la entrega');

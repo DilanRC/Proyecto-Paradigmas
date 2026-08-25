@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `dbtindervacas` contiene exactamente:
+La base `dbmercadoganadero` contiene exactamente:
 
 1. `tbproductor`
 2. `tbproductordireccion`
@@ -48,11 +48,11 @@ docker compose ps
 ```
 
 - Aplicación: <http://localhost:8080>
-- Adminer: <http://localhost:8081>, servidor `db`
+- phpMyAdmin: <http://localhost:8081>, servidor preconfigurado `db`; ingrese con `DB_USER` y `DB_PASS`
 - Verificación JWT Supabase: <http://127.0.0.1:3001>
-- MySQL desde host: `localhost:${DB_HOST_PORT:-3307}`
+- MySQL desde host: `localhost:${DB_HOST_PORT:-3309}`
 - MySQL entre contenedores: `db:3306`
-- Base: `dbtindervacas`
+- Base MySQL: `dbmercadoganadero`
 
 Reinicio limpio, únicamente después de verificar un respaldo:
 
@@ -104,6 +104,8 @@ administrativa que la necesite.
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
 declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
+`Tools/vercel-ignore-build.sh` conserva `main` para producción y permite previews
+automáticos únicamente desde `dev`; el resto de ramas se omite antes del build.
 
 ```bash
 docker build -t tindercows:local .
