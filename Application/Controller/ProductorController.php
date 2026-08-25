@@ -7,6 +7,7 @@ namespace Application\Controller;
 use Application\Model\Bitacora;
 use Application\Model\Productor;
 use Application\Model\ProductorDireccion;
+use Application\Model\ProductorEstadoPeriodo;
 use Application\Model\ProductorFinca;
 use Application\Model\Direccion;
 use PDO;
@@ -36,6 +37,7 @@ final class ProductorController
 
     private Productor $productor;
     private ProductorDireccion $direccion;
+    private ProductorEstadoPeriodo $estadoPeriodos;
     private ProductorFinca $fincas;
     private Bitacora $bitacora;
     private string $solicitudId;
@@ -45,6 +47,7 @@ final class ProductorController
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
         $this->direccion = new ProductorDireccion($conexion, new Direccion($conexion));
+        $this->estadoPeriodos = new ProductorEstadoPeriodo($conexion);
         $this->bitacora = new Bitacora($conexion);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
     }
@@ -140,6 +143,10 @@ final class ProductorController
                             $this->direccion->crear($productorId, $datos['direccion']);
                         }
                         $this->fincas->sincronizar($productorId, $datos['fincas']);
+                        $this->estadoPeriodos->ejecutarConBloqueo(
+                            $productorId,
+                            fn (): int => $this->estadoPeriodos->abrir($productorId, 1, 'Alta del productor'),
+                        );
                         $nuevo = $this->productor->buscar($datos['identificacionNumero']);
                         if ($nuevo === null) {
                             throw new \RuntimeException('No fue posible leer el productor recién creado.');
@@ -283,10 +290,24 @@ final class ProductorController
             if ($bloqueado === null || $anterior === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbproductorestado'] === 0) {
+            $productorId = (int) $bloqueado['tbproductorid'];
+            $transicionOcurrida = $this->estadoPeriodos->ejecutarConBloqueo(
+                $productorId,
+                function () use ($productorId): bool {
+                    $abierto = $this->estadoPeriodos->consultarAbierto($productorId);
+                    if ($abierto !== null && (int) $abierto['tbproductorestadoperiodoestado'] === 0) {
+                        return false;
+                    }
+                    if ($abierto !== null) {
+                        $this->estadoPeriodos->cerrar($productorId);
+                    }
+                    $this->estadoPeriodos->abrir($productorId, 0, 'Desactivación');
+                    return true;
+                },
+            );
+            if (!$transicionOcurrida) {
                 return $anterior;
             }
-            $this->productor->cambiarEstado($identificacion, false);
             $nuevo = $this->productor->buscar($identificacion);
             $this->bitacora->registrar('DESACTIVAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
             return $nuevo ?? throw new \RuntimeException('No fue posible leer el productor desactivado.');
@@ -304,10 +325,24 @@ final class ProductorController
             if ($bloqueado === null || $anterior === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbproductorestado'] === 1) {
+            $productorId = (int) $bloqueado['tbproductorid'];
+            $transicionOcurrida = $this->estadoPeriodos->ejecutarConBloqueo(
+                $productorId,
+                function () use ($productorId): bool {
+                    $abierto = $this->estadoPeriodos->consultarAbierto($productorId);
+                    if ($abierto !== null && (int) $abierto['tbproductorestadoperiodoestado'] === 1) {
+                        return false;
+                    }
+                    if ($abierto !== null) {
+                        $this->estadoPeriodos->cerrar($productorId);
+                    }
+                    $this->estadoPeriodos->abrir($productorId, 1, 'Reactivación');
+                    return true;
+                },
+            );
+            if (!$transicionOcurrida) {
                 return $anterior;
             }
-            $this->productor->cambiarEstado($identificacion, true);
             $nuevo = $this->productor->buscar($identificacion);
             $this->bitacora->registrar('REACTIVAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
             return $nuevo ?? throw new \RuntimeException('No fue posible leer el productor reactivado.');

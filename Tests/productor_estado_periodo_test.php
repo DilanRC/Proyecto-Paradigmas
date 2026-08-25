@@ -36,8 +36,10 @@ try {
     test_assert($lanzoLogicException, 'cerrar() sin el lock del productor debe lanzar LogicException');
 
     // ============================================================
-    // Alta inicial: abrir ACTIVO bajo lock; consultarAbierto lo ve abierto.
+    // Alta inicial: cerrar el periodo que test_create abrió y abrir
+    // uno nuevo bajo lock; consultarAbierto lo ve abierto.
     // ============================================================
+    $modelo->ejecutarConBloqueo($productorId, fn () => $modelo->cerrar($productorId));
     $primerPeriodoId = $modelo->ejecutarConBloqueo(
         $productorId,
         fn (): int => $modelo->abrir($productorId, 1, 'Alta inicial'),
@@ -92,15 +94,15 @@ try {
 
     $conteo = $db->prepare('SELECT COUNT(*) FROM tbproductorestadoperiodo WHERE tbproductorid = :id');
     $conteo->execute(['id' => $productorId]);
-    test_same(4, (int) $conteo->fetchColumn(), 'La secuencia deja cuatro periodos en total');
+    test_same(5, (int) $conteo->fetchColumn(), 'La secuencia deja cinco periodos en total');
 
     $estados = $db->prepare(
         'SELECT tbproductorestadoperiodoestado FROM tbproductorestadoperiodo
          WHERE tbproductorid = :id ORDER BY tbproductorestadoperiodoid ASC'
     );
     $estados->execute(['id' => $productorId]);
-    test_same([1, 0, 1, 1], array_map('intval', array_column($estados->fetchAll(), 'tbproductorestadoperiodoestado')),
-        'Los periodos registran la secuencia ACTIVO, INACTIVO, ACTIVO, ACTIVO');
+    test_same([1, 1, 0, 1, 1], array_map('intval', array_column($estados->fetchAll(), 'tbproductorestadoperiodoestado')),
+        'Los periodos registran la secuencia ACTIVO, ACTIVO, INACTIVO, ACTIVO, ACTIVO');
 
     $abiertoFinal = $modelo->consultarAbierto($productorId);
     test_assert($abiertoFinal !== null && $abiertoFinal['tbproductorestadoperiodomotivo'] === null,

@@ -4,8 +4,7 @@ CREATE TABLE IF NOT EXISTS public.tbproductor (
     tbproductoridentificaciontipo VARCHAR(40) NOT NULL,
     tbproductornombre VARCHAR(150) NOT NULL,
     tbproductortelefono VARCHAR(20) NOT NULL,
-    tbproductorcorreoelectronico VARCHAR(150) NOT NULL,
-    tbproductorestado SMALLINT NOT NULL
+    tbproductorcorreoelectronico VARCHAR(150) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductordireccion (

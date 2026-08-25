@@ -14,6 +14,27 @@ final class Productor
     ) {
     }
 
+    /**
+     * Estado vigente derivado del periodo abierto de tbproductorestadoperiodo.
+     * Un productor sin periodos (dato heredado o corrupto) se considera
+     * INACTIVO: no hay evidencia de que esté activo.
+     */
+    private function sqlEstadoVigente(string $alias): string
+    {
+        return "COALESCE((SELECT ep.tbproductorestadoperiodoestado
+                 FROM tbproductorestadoperiodo ep
+                 WHERE ep.tbproductorid = {$alias}.tbproductorid
+                   AND ep.tbproductorestadoperiodofechafin IS NULL), 0)";
+    }
+
+    private function sqlExistePeriodoActivo(string $alias): string
+    {
+        return "EXISTS (SELECT 1 FROM tbproductorestadoperiodo ep
+                 WHERE ep.tbproductorid = {$alias}.tbproductorid
+                   AND ep.tbproductorestadoperiodofechafin IS NULL
+                   AND ep.tbproductorestadoperiodoestado = 1)";
+    }
+
     public function listar(string $busqueda, string $estado, int $pagina, int $tamano): array
     {
         [$where, $parametros] = $this->filtros($busqueda, $estado);
@@ -21,7 +42,8 @@ final class Productor
         $conteo->execute($parametros);
         $total = (int) $conteo->fetchColumn();
 
-        $sql = "SELECT p.*, d.tbdireccionprovincia AS tbproductordireccionprovincia,
+        $sql = "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
+                       d.tbdireccionprovincia AS tbproductordireccionprovincia,
                        d.tbdireccioncanton AS tbproductordireccioncanton,
                        d.tbdirecciondistrito AS tbproductordirecciondistrito,
                        d.tbdireccionpueblo AS tbproductordireccionpueblo,
@@ -32,7 +54,7 @@ final class Productor
                 INNER JOIN tbdireccion d
                     ON d.tbdireccionid = pd.tbdireccionid
                 {$where}
-                ORDER BY p.tbproductorestado DESC, p.tbproductornombre,
+                ORDER BY {$this->sqlEstadoVigente('p')} DESC, p.tbproductornombre,
                          p.tbproductoridentificacionnumero
                 LIMIT :limite OFFSET :desplazamiento";
         $sentencia = $this->conexion->prepare($sql);
@@ -57,7 +79,8 @@ final class Productor
     public function buscar(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT p.*, d.tbdireccionprovincia AS tbproductordireccionprovincia,
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
+                    d.tbdireccionprovincia AS tbproductordireccionprovincia,
                     d.tbdireccioncanton AS tbproductordireccioncanton,
                     d.tbdirecciondistrito AS tbproductordirecciondistrito,
                     d.tbdireccionpueblo AS tbproductordireccionpueblo,
@@ -67,7 +90,7 @@ final class Productor
                 ON pd.tbproductorid = p.tbproductorid
              LEFT JOIN tbdireccion d
                 ON d.tbdireccionid = pd.tbdireccionid
-             WHERE p.tbproductoridentificacionnumero = :identificacionNumero'
+             WHERE p.tbproductoridentificacionnumero = :identificacionNumero"
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -86,7 +109,8 @@ final class Productor
     public function buscarPorId(int $productorId): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT * FROM tbproductor WHERE tbproductorid = :productorId'
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado
+             FROM tbproductor p WHERE p.tbproductorid = :productorId"
         );
         $sentencia->execute(['productorId' => $productorId]);
         $fila = $sentencia->fetch();
@@ -97,8 +121,9 @@ final class Productor
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT * FROM tbproductor
-             WHERE tbproductoridentificacionnumero = :identificacionNumero FOR UPDATE'
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado
+             FROM tbproductor p
+             WHERE p.tbproductoridentificacionnumero = :identificacionNumero FOR UPDATE"
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -136,9 +161,9 @@ final class Productor
             'INSERT INTO tbproductor
              (tbproductorid, tbproductoridentificacionnumero, tbproductoridentificaciontipo,
               tbproductornombre, tbproductortelefono,
-              tbproductorcorreoelectronico, tbproductorestado)
+              tbproductorcorreoelectronico)
              VALUES (:productorId, :identificacionNumero, :identificacionTipo, :nombre, :telefono,
-                     :correoElectronico, :estado)'
+                     :correoElectronico)'
         );
         $sentencia->execute([
             'productorId' => $productorId,
@@ -147,7 +172,6 @@ final class Productor
             'nombre' => $datos['nombre'],
             'telefono' => $datos['telefono'],
             'correoElectronico' => $datos['correoElectronico'],
-            'estado' => 1,
         ]);
 
         return $productorId;
@@ -180,18 +204,6 @@ final class Productor
         ]);
     }
 
-    public function cambiarEstado(string $identificacionNumero, bool $activo): void
-    {
-        $sentencia = $this->conexion->prepare(
-            'UPDATE tbproductor SET tbproductorestado = :estado
-             WHERE tbproductoridentificacionnumero = :identificacionNumero'
-        );
-        $sentencia->execute([
-            'estado' => $activo ? 1 : 0,
-            'identificacionNumero' => $identificacionNumero,
-        ]);
-    }
-
     private function filtros(string $busqueda, string $estado): array
     {
         $condiciones = [];
@@ -207,8 +219,9 @@ final class Productor
             ];
         }
         if ($estado !== 'TODOS') {
-            $condiciones[] = 'p.tbproductorestado = :estado';
-            $parametros[':estado'] = $estado === 'ACTIVO' ? 1 : 0;
+            $condiciones[] = $estado === 'ACTIVO'
+                ? $this->sqlExistePeriodoActivo('p')
+                : 'NOT ' . $this->sqlExistePeriodoActivo('p');
         }
 
         return [$condiciones === [] ? '' : 'WHERE ' . implode(' AND ', $condiciones), $parametros];
