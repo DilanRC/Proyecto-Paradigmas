@@ -191,3 +191,18 @@ consecuencias vigentes son:
 6. **Coordenadas exactas**: latitud y longitud se validan por rango (-90..90,
    -180..180) y se guardan como texto hacia `DECIMAL(10,7)`, sin redondeos de
    punto flotante.
+
+# Decisiones - Códigos HTTP de ubicación
+
+## DEC-17 - Consistencia de códigos con el resto de la API
+
+Las validaciones de `/api/productores-ubicacion.php` responden **422**
+(contenido no procesable) en lugar de 400: coordenadas fuera de rango o no
+numéricas, precisión negativa o no numérica, origen fuera de
+`{NAVEGADOR, MANUAL}`, campos desconocidos y rango de fechas inválido. Es el
+mismo criterio que ya aplicaban `ProductorController` (422 en sus trece
+validaciones) y `CompradorController` (422 en nueve). Se mantienen: **404**
+productor inexistente, **409** productor inactivo, **405** métodos
+destructivos sobre la tabla append-only y 400/415 del contrato de transporte
+(JSON malformado / Content-Type incorrecto). El alta válida responde **201**
+porque crea una fila nueva, igual que POST de productor.
