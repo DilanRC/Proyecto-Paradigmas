@@ -55,18 +55,22 @@ try {
 
     $physicalCounts = [];
     foreach (['tbproductor', 'tbproductordireccion', 'tbfinca'] as $tabla) {
-        $columna = $tabla === 'tbproductor' ? 'tbproductoridentificacionnumero' : 'tbproductorid';
         $valor = $tabla === 'tbproductor' ? $creado['identificacionNumero'] : $creado['productorId'];
-        $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE {$columna} = :valor");
+        $sql = $tabla === 'tbproductor'
+            ? 'SELECT COUNT(*) FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero=:valor'
+            : "SELECT COUNT(*) FROM {$tabla} WHERE tbproductorid = :valor";
+        $statement = test_db()->prepare($sql);
         $statement->execute(['valor' => $valor]);
         $physicalCounts[$tabla] = (int) $statement->fetchColumn();
     }
     $desactivado = test_controller()->procesar('DELETE', [], ['identificacionNumero' => $visible]);
     test_same('INACTIVO', $desactivado['body']['data']['estado'], 'Desactivación lógica');
     foreach (['tbproductor', 'tbproductordireccion', 'tbfinca'] as $tabla) {
-        $columna = $tabla === 'tbproductor' ? 'tbproductoridentificacionnumero' : 'tbproductorid';
         $valor = $tabla === 'tbproductor' ? $creado['identificacionNumero'] : $creado['productorId'];
-        $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE {$columna} = :valor");
+        $sql = $tabla === 'tbproductor'
+            ? 'SELECT COUNT(*) FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero=:valor'
+            : "SELECT COUNT(*) FROM {$tabla} WHERE tbproductorid = :valor";
+        $statement = test_db()->prepare($sql);
         $statement->execute(['valor' => $valor]);
         test_same($physicalCounts[$tabla], (int) $statement->fetchColumn(),
             "Desactivar no debe borrar físicamente {$tabla}");
@@ -79,9 +83,11 @@ try {
     test_same($creado['identificacionNumero'], $reactivado['body']['data']['identificacionNumero'],
         'La reactivación debe conservar la identificación');
     foreach ($physicalCounts as $tabla => $expectedCount) {
-        $columna = $tabla === 'tbproductor' ? 'tbproductoridentificacionnumero' : 'tbproductorid';
         $valor = $tabla === 'tbproductor' ? $creado['identificacionNumero'] : $creado['productorId'];
-        $statement = test_db()->prepare("SELECT COUNT(*) FROM {$tabla} WHERE {$columna} = :valor");
+        $sql = $tabla === 'tbproductor'
+            ? 'SELECT COUNT(*) FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero=:valor'
+            : "SELECT COUNT(*) FROM {$tabla} WHERE tbproductorid = :valor";
+        $statement = test_db()->prepare($sql);
         $statement->execute(['valor' => $valor]);
         test_same($expectedCount, (int) $statement->fetchColumn(),
             "Reactivar no debe crear ni borrar filas físicas en {$tabla}");

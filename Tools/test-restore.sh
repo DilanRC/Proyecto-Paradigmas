@@ -224,7 +224,7 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
     fi
     tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE';")"
-    if [[ "$tables_csv" != 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbproductor,tbproductordireccion,tbtransportista,tbtransportistavehiculo,tbvehiculo' ]]; then
+    if [[ "$tables_csv" != 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbpersona,tbproductor,tbproductoractividad,tbproductordireccion,tbproductorestadoperiodo,tbproductorubicacion,tbtransportista,tbtransportistavehiculo,tbvehiculo' ]]; then
         echo "Error: ${database} contiene tablas inesperadas: ${tables_csv}." >&2
         exit 1
     fi
@@ -279,8 +279,10 @@ for table in "${tables[@]}"; do
     fi
 done
 
-mysql_query "SELECT tbproductorid, tbproductoridentificacionnumero, tbproductornombre
-    FROM ${RESTORE_DATABASE}.tbproductor ORDER BY tbproductorid LIMIT 1;" >/dev/null
+mysql_query "SELECT pr.tbproductorid, pe.tbpersonaidentificacionnumero, pe.tbpersonanombre
+    FROM ${RESTORE_DATABASE}.tbproductor pr
+    JOIN ${RESTORE_DATABASE}.tbpersona pe ON pe.tbpersonaid = pr.tbpersonaid
+    ORDER BY pr.tbproductorid LIMIT 1;" >/dev/null
 
 source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
 source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"
@@ -295,7 +297,7 @@ source_check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE
 
 manifest_temp="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest.XXXXXX")"
 sed \
-    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: utf8mb4\/utf8mb4_unicode_ci en base y once tablas/' \
+    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: utf8mb4\/utf8mb4_unicode_ci en base y quince tablas/' \
     -e 's/^- Restauración completa comprobada: .*/- Restauración completa comprobada: Sí/' \
     -e 's/^- Restauración estructura + datos comprobada: .*/- Restauración estructura + datos comprobada: Sí/' \
     -e "s/^- Cantidad de tablas: .*/- Cantidad de tablas: ${source_tables}/" \

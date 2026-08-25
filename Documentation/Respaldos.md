@@ -28,9 +28,9 @@ El verificador restaura el dump completo y luego estructura más datos. Compara
 tablas, columnas, metadatos de claves, CHECK, reglas referenciales, índices,
 intercalación, conteos y checksum de datos. Para Corrección 04 exige:
 
-- once tablas singulares exactas: las cinco del CRUD vigente más `tbdireccion`,
-  `tbfincadireccion`, `tbpagometodo`, `tbtransportista`, `tbvehiculo` y
-  `tbtransportistavehiculo`;
+- quince tablas exactas, incluida `tbpersona`, los tres perfiles de capacidad,
+  las tablas históricas de productor y las tablas de dirección, pago y
+  transporte;
 - cero restricciones totales;
 - cero PRIMARY KEY, FOREIGN KEY y CHECK;
 - cero índices;
@@ -38,6 +38,19 @@ intercalación, conteos y checksum de datos. Para Corrección 04 exige:
 - cero valores `DEFAULT`, columnas generadas, triggers, rutinas y eventos;
 - `utf8mb4/utf8mb4_unicode_ci` en base y tablas;
 - igualdad entre origen, restauración completa y restauración por partes.
+
+La consulta funcional del verificador une `tbproductor` con `tbpersona`; así
+detecta respaldos antiguos que todavía guarden identidad duplicada en el
+perfil. La comparación de metadatos es bidireccional: origen contra
+restauración completa y restauración completa contra estructura más datos. Un
+fallo SQL o cualquier salida por stderr invalida la ejecución y nunca se
+interpreta como cero diferencias.
+
+Antes de migrar una base existente se genera el respaldo y se ejecuta la
+restauración completa. La migración de persona debe abortar sin retirar
+columnas si detecta identificaciones repetidas o datos incompatibles. El
+respaldo previo es el punto de reversión. Supabase requiere además snapshot y
+autorización explícita; estos comandos no aplican cambios remotos.
 
 Antes de cada verificación el manifiesto vuelve a estado `Pendiente`. Solo pasa
 a `APROBADO` después de completar todas las comparaciones. Las pruebas negativas

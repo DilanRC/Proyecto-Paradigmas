@@ -1,5 +1,48 @@
 # Decisiones - Corrección 04
 
+## DEC-PER-001 - Persona única y capacidades independientes
+
+Esta decisión sustituye cualquier descripción posterior que trate Productor,
+Comprador y Transportista como identidades distintas. `tbpersona` concentra
+identificación, tipo, nombre, teléfono, correo y estado global. La existencia
+de una fila en `tbproductor`, `tbcomprador` o `tbtransportista` representa una
+capacidad concreta. No se crean roles, catálogos, ENUM ni columnas de tipo de
+rol.
+
+Los IDs históricos de los tres perfiles y sus relaciones se conservan. Cada
+perfil contiene `tbpersonaid` y su propio estado de participación. El estado
+efectivo requiere persona y perfil activos.
+
+## DEC-PER-002 - Conflictos y escritura compartida
+
+Al crear una capacidad, PHP crea la persona o la reutiliza por identificación.
+Devuelve 409 si la capacidad ya existe o si los datos personales recibidos no
+coinciden, sin sobrescribir ni escoger datos automáticamente. Actualizar los
+datos personales desde cualquier capacidad modifica `tbpersona` y se refleja
+en las demás. PHP aplica unicidad, IDs manuales y coherencia mediante
+transacciones, sentencias preparadas y bloqueos nombrados.
+
+## DEC-PER-003 - Desactivación lógica
+
+`DELETE` desactiva exclusivamente el perfil y nunca ejecuta `DELETE FROM`.
+`PATCH` reactiva exclusivamente el perfil. Una persona globalmente inactiva no
+puede operar ni reactivar capacidades por esos endpoints.
+
+## DEC-PER-004 - Migración atómica y espejo PostgreSQL
+
+La migración detecta primero identificaciones duplicadas y datos personales
+incompatibles. Ante un conflicto aborta antes de retirar columnas. Si no hay
+conflictos, crea y enlaza `tbpersona`, verifica conteos, IDs, relaciones y
+huérfanos, y solo después elimina las columnas duplicadas. La misma
+transformación existe para MySQL y Supabase/PostgreSQL. La migración remota no
+se ejecuta ni se activa por push sin snapshot confirmado y autorización
+expresa.
+
+## DEC-PER-005 - Quince tablas sin objetos de integridad
+
+El modelo final tiene exactamente 15 tablas y mantiene cero PK, FK, UNIQUE,
+CHECK, índices, ENUM, defaults, triggers y objetos programables.
+
 ## DEC-C04-001 - Instrucción docente vigente
 
 La instrucción docente sustituye el modelo anterior. `dbtindervacas` conserva
@@ -22,7 +65,8 @@ Dirección y finca guardan ese mismo valor como enlace lógico, sin FK.
 
 ## DEC-C04-004 - Identificación inmutable por contrato
 
-`tbproductoridentificacionnumero` no es PK. La aplicación no permite cambiarla.
+La identificación vive ahora en `tbpersonaidentificacionnumero`; no es PK y la
+aplicación no permite cambiarla.
 Si fue digitada incorrectamente se debe:
 
 1. desactivar el registro incorrecto;
@@ -165,9 +209,10 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-en la migración `v3`: once tablas, `tbproductordireccion` normalizada y el mismo
-criterio de cero llaves, restricciones, índices y valores automáticos. El espejo
-sigue a MySQL; nunca al revés.
+mediante migraciones versionadas: 15 tablas, `tbpersona` como identidad única,
+`tbproductordireccion` normalizada y el mismo criterio de cero llaves,
+restricciones, índices y valores automáticos. El espejo sigue a MySQL; nunca al
+revés. Aplicar el cambio remoto requiere snapshot y autorización expresa.
 
 ## DEC-16 - Ubicaciones GPS append-only
 

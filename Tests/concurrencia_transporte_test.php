@@ -4,14 +4,13 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 
 $raiz = dirname(__DIR__);
-foreach (['NamedLock', 'Vehiculo', 'Transportista', 'TransportistaVehiculo'] as $modelo) {
+foreach (['NamedLock', 'Persona', 'Vehiculo', 'Transportista', 'TransportistaVehiculo'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 
 use Application\Model\Transportista;
 use Application\Model\TransportistaVehiculo;
 use Application\Model\Vehiculo;
-use PDO;
 
 function transporte_try_lock(PDO $conexion, string $nombre): int
 {
@@ -116,10 +115,10 @@ try {
                 'telefono' => '88888888',
                 'correoElectronico' => 'conc1@test.com',
             ]);
-            test_same(0, transporte_try_lock($conn2, 'tindercows_transportista_alta'),
+            test_same(0, transporte_try_lock($conn2, 'tindercows_persona_alta'),
                 'Otra conexión no debe adquirir el lock de transportista antes del COMMIT');
             $conn1->commit();
-            test_same(0, transporte_try_lock($conn2, 'tindercows_transportista_alta'),
+            test_same(0, transporte_try_lock($conn2, 'tindercows_persona_alta'),
                 'El lock de transportista debe seguir retenido después del COMMIT hasta salir del wrapper');
             return $id;
         } catch (Throwable $excepcion) {
@@ -130,9 +129,9 @@ try {
         }
     });
     $transportistaIds[] = $transportistaId1;
-    test_same(1, transporte_try_lock($conn2, 'tindercows_transportista_alta'),
+    test_same(1, transporte_try_lock($conn2, 'tindercows_persona_alta'),
         'El lock de transportista debe liberarse al terminar el wrapper');
-    transporte_release_lock($conn2, 'tindercows_transportista_alta');
+    transporte_release_lock($conn2, 'tindercows_persona_alta');
 
     $identificacion2 = 'CONCT2' . strtoupper(bin2hex(random_bytes(4)));
     $transportistaId2 = $transportista2->ejecutarConBloqueoAlta(
