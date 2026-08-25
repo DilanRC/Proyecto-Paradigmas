@@ -21,46 +21,46 @@ try {
     $postear = fn (array $cuerpo): array => test_http_json('POST',
         json_encode($cuerpo, JSON_THROW_ON_ERROR), 'application/json', $url);
 
-    // POST válido → 200 con id devuelto.
+    // POST válido → 201 con id devuelto.
     $valido = $postear(['productorId' => $productorId, 'latitud' => 9.9345678,
         'longitud' => -84.0876543, 'precisionMetros' => 25.4, 'origen' => 'NAVEGADOR']);
-    test_same(200, $valido['status'], 'POST válido responde 200');
+    test_same(201, $valido['status'], 'POST válido responde 201');
     test_same(true, $valido['body']['success'], 'POST válido reporta success true');
     test_assert(is_int($valido['body']['data']['tbproductorubicacionid'] ?? null)
         && $valido['body']['data']['tbproductorubicacionid'] > 0,
         'POST válido debe devolver el identificador de la ubicación creada');
     $primerId = $valido['body']['data']['tbproductorubicacionid'];
 
-    // Errores por campo con estado 400.
+    // Errores por campo con estado 422.
     $latFuera = $postear(['productorId' => $productorId, 'latitud' => 95, 'longitud' => -84, 'origen' => 'MANUAL']);
-    test_same(400, $latFuera['status'], 'POST con latitud 95 responde 400');
+    test_same(422, $latFuera['status'], 'POST con latitud 95 responde 422');
     test_assert(isset($latFuera['body']['errors']['latitud']), 'El error de latitud se reporta por campo');
 
     $lonFuera = $postear(['productorId' => $productorId, 'latitud' => 9.9, 'longitud' => -200, 'origen' => 'MANUAL']);
-    test_same(400, $lonFuera['status'], 'POST con longitud -200 responde 400');
+    test_same(422, $lonFuera['status'], 'POST con longitud -200 responde 422');
     test_assert(isset($lonFuera['body']['errors']['longitud']), 'El error de longitud se reporta por campo');
 
     $precisionNegativa = $postear(['productorId' => $productorId, 'latitud' => 9.9,
         'longitud' => -84.0, 'precisionMetros' => -1, 'origen' => 'MANUAL']);
-    test_same(400, $precisionNegativa['status'], 'POST con precisión -1 responde 400');
+    test_same(422, $precisionNegativa['status'], 'POST con precisión -1 responde 422');
     test_assert(isset($precisionNegativa['body']['errors']['precisionMetros']),
         'El error de precisión se reporta por campo');
 
     $origenMagico = $postear(['productorId' => $productorId, 'latitud' => 9.9,
         'longitud' => -84.0, 'origen' => 'GPS_MAGICO']);
-    test_same(400, $origenMagico['status'], 'POST con origen fuera del catálogo responde 400');
+    test_same(422, $origenMagico['status'], 'POST con origen fuera del catálogo responde 422');
     test_assert(isset($origenMagico['body']['errors']['origen']), 'El error de origen se reporta por campo');
 
     $inexistente = $postear(['productorId' => 2147483000, 'latitud' => 9.9,
         'longitud' => -84.0, 'origen' => 'MANUAL']);
-    test_assert(in_array($inexistente['status'], [400, 404], true),
-        'POST con productorId inexistente responde 400 o 404');
+    test_same(404, $inexistente['status'],
+        'POST con productorId inexistente responde 404');
 
     // El campo "fecha" del cliente se ignora: la fila guarda la hora del servidor.
     $fechaCliente = '1999-12-31 23:59:59';
     $conFecha = $postear(['productorId' => $productorId, 'latitud' => 9.95,
         'longitud' => -84.09, 'origen' => 'NAVEGADOR', 'fecha' => $fechaCliente]);
-    test_same(200, $conFecha['status'], 'POST que incluye "fecha" del cliente se acepta y el campo se descarta');
+    test_same(201, $conFecha['status'], 'POST que incluye "fecha" del cliente se acepta y el campo se descarta');
     $segundoId = $conFecha['body']['data']['tbproductorubicacionid'];
 
     // Escritura destructiva prohibida en la capa HTTP.
@@ -108,5 +108,5 @@ try {
     test_cleanup_productores([$id]);
 }
 
-echo "OK api_productores_ubicacion_http_test: POST/GET reales con errores por campo, 405 append-only, "
+echo "OK api_productores_ubicacion_http_test: POST/GET reales con errores por campo (422), 405 append-only, "
     . "paginación, rango de fechas y fecha asignada por el servidor.\n";

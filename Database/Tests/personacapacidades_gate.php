@@ -16,7 +16,8 @@ $check($schema !== false && $migration !== false && $seed !== false, 'No se pudi
 $check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 15, 'El esquema debe crear 15 tablas.');
 $check(str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbpersona'), 'Falta tbpersona.');
 foreach (['productor', 'comprador', 'transportista'] as $profile) {
-    $check(str_contains($schema, "tb{$profile}id INT NOT NULL,\n    tbpersonaid INT NOT NULL,"),
+    // tbproductor cierra en tbpersonaid: su estado vive en el histórico de periodos.
+    $check((bool) preg_match("/tb{$profile}id INT NOT NULL,\\s*\\n\\s*tbpersonaid INT NOT NULL/", $schema),
         "El perfil {$profile} no referencia tbpersona.");
     $check(!str_contains($schema, "tb{$profile}identificacionnumero"),
         "El perfil {$profile} todavía duplica identificación.");

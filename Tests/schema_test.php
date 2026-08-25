@@ -71,7 +71,7 @@ foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENT
 $expectedColumns = [
     'tbpersona' => ['tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
         'tbpersonanombre', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado'],
-    'tbproductor' => ['tbproductorid', 'tbpersonaid', 'tbproductorestado'],
+    'tbproductor' => ['tbproductorid', 'tbpersonaid'],
     'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
         'tbproductordireccionfechainicio', 'tbproductordireccionfechafin'],
     'tbdireccion' => ['tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
@@ -155,8 +155,8 @@ try {
         (tbpersonaid,tbpersonaidentificacionnumero,tbpersonaidentificaciontipo,tbpersonanombre,
          tbpersonatelefono,tbpersonacorreoelectronico,tbpersonaestado)
         VALUES (:personaId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
-    $directInsert = $db->prepare('INSERT INTO tbproductor (tbproductorid,tbpersonaid,tbproductorestado)
-        VALUES (:productorId,:personaId,9)');
+    $directInsert = $db->prepare('INSERT INTO tbproductor (tbproductorid,tbpersonaid)
+        VALUES (:productorId,:personaId)');
     foreach ($directProductorIds as $directId) {
         $directInsertPersona->execute(['personaId' => $directId, 'identificacion' => $directIdentification]);
         $directInsert->execute(['productorId' => $directId, 'personaId' => $directId]);

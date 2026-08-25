@@ -14,6 +14,7 @@ $required = [
     'Database/Migrations/001normalizadireccionproductor.sql',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
+    'Application/Model/ProductorEstadoPeriodo.php',
     'Application/Model/ProductorFinca.php',
     'Application/Model/ProductorUbicacion.php',
     'Public/api/productores.php',
