@@ -47,6 +47,8 @@ $check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización 
 $check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
 $check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
 $check(str_contains($migration, 'supabase_schema_status=ready tables=15 migration=v5'), 'Falta traza operativa');
+$check(str_contains($migration, 'esperado=[%s] actual=[%s]'), 'La validación debe identificar columnas divergentes');
+$check(substr_count($migration, 'sort($columns)') === 2, 'La comparación debe ignorar el orden físico de columnas');
 $check(str_contains($migration, "'tbcomprador' => ["), 'Falta validar las columnas de tbcomprador');
 $check(str_contains($migration, "\$query['sslmode']"), 'La migración debe leer sslmode desde la URL');
 $check(str_contains($migration, "? \$query['sslmode'] : 'require'"), 'TLS debe ser obligatorio por defecto');

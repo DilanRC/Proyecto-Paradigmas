@@ -120,11 +120,30 @@ function validateSchema(PDO $connection): void
     foreach ($statement->fetchAll() as $column) {
         $actual[$column['table_name']][] = $column['column_name'];
     }
+    foreach ($actual as &$columns) {
+        sort($columns);
+    }
+    unset($columns);
     ksort($actual);
     $expected = EXPECTED_COLUMNS;
+    foreach ($expected as &$columns) {
+        sort($columns);
+    }
+    unset($columns);
     ksort($expected);
     if ($actual !== $expected) {
-        throw new RuntimeException('El esquema Supabase no coincide con el contrato de quince tablas.');
+        $differences = [];
+        foreach (array_unique(array_merge(array_keys($expected), array_keys($actual))) as $table) {
+            $expectedColumns = $expected[$table] ?? [];
+            $actualColumns = $actual[$table] ?? [];
+            if ($expectedColumns !== $actualColumns) {
+                $differences[] = sprintf('%s esperado=[%s] actual=[%s]', $table,
+                    implode(',', $expectedColumns), implode(',', $actualColumns));
+            }
+        }
+        throw new RuntimeException(
+            'El esquema Supabase no coincide con el contrato de quince tablas: ' . implode('; ', $differences)
+        );
     }
 }
 
