@@ -111,8 +111,10 @@ administrativa que la necesite.
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
 declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
-`Tools/vercel-ignore-build.sh` conserva `main` para producción y permite previews
-automáticos únicamente desde `dev`; el resto de ramas se omite antes del build.
+`git.deploymentEnabled` bloquea la creación de deployments para cualquier rama
+salvo `main` y `dev`. `Tools/vercel-ignore-build.sh` mantiene una segunda guarda:
+conserva `main` para producción y permite previews automáticos únicamente desde
+`dev`.
 
 ```bash
 docker build -t tindercows:local .

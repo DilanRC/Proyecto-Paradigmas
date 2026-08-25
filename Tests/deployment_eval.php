@@ -7,7 +7,8 @@ $dockerfile = file_get_contents("{$root}/Dockerfile");
 $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
 $readme = file_get_contents("{$root}/README.md");
-$vercelConfiguration = file_get_contents("{$root}/vercel.json");
+$vercelConfigurationText = file_get_contents("{$root}/vercel.json");
+$vercelConfiguration = json_decode($vercelConfigurationText, true, 512, JSON_THROW_ON_ERROR);
 $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
 $databaseConfiguration = file_get_contents("{$root}/Configuration/Database.php");
@@ -21,9 +22,11 @@ $checks = [
     'apache_sin_warning_servername' => str_contains($dockerfile, 'a2enconf servername')
         && str_contains($vercelDockerfile, 'a2enconf servername'),
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
-    'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
-    'preview_solo_dev' => str_contains($vercelConfiguration, '"app"')
-        && str_contains($vercelConfiguration, 'Tools/vercel-ignore-build.sh')
+    'servicio_vercel_explicito' => ($vercelConfiguration['services']['app']['entrypoint'] ?? null) === 'Dockerfile.vercel',
+    'preview_solo_dev' => ($vercelConfiguration['git']['deploymentEnabled']['*'] ?? null) === false
+        && ($vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null) === true
+        && ($vercelConfiguration['git']['deploymentEnabled']['main'] ?? null) === true
+        && ($vercelConfiguration['services']['app']['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
         && str_contains($vercelIgnoreBuild, 'VERCEL_GIT_COMMIT_REF:-}" == "dev"')
         && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"'),
     'phpmyadmin_local' => str_contains($compose, 'phpmyadmin:5.2.2-apache')
