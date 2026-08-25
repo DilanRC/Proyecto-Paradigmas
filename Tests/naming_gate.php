@@ -78,7 +78,7 @@ foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $
 }
 $modulosEsperados = 12; // 001createdatabase .. 012createtransportistavehiculo, unificados en 000instalacioncompleta.sql
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $modulosEsperados
-    || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
+    || !str_contains($sql, 'ALTER DATABASE dbmercadoganadero')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 $avance = [

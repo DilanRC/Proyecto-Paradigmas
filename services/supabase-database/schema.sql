@@ -1,10 +1,16 @@
+CREATE TABLE IF NOT EXISTS public.tbpersona (
+    tbpersonaid INTEGER NOT NULL,
+    tbpersonaidentificacionnumero VARCHAR(250) NOT NULL,
+    tbpersonaidentificaciontipo VARCHAR(40) NOT NULL,
+    tbpersonanombre VARCHAR(150) NOT NULL,
+    tbpersonatelefono VARCHAR(20) NOT NULL,
+    tbpersonacorreoelectronico VARCHAR(150) NOT NULL,
+    tbpersonaestado SMALLINT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbproductor (
     tbproductorid INTEGER NOT NULL,
-    tbproductoridentificacionnumero VARCHAR(250) NOT NULL,
-    tbproductoridentificaciontipo VARCHAR(40) NOT NULL,
-    tbproductornombre VARCHAR(150) NOT NULL,
-    tbproductortelefono VARCHAR(20) NOT NULL,
-    tbproductorcorreoelectronico VARCHAR(150) NOT NULL
+    tbpersonaid INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductordireccion (
@@ -73,11 +79,7 @@ CREATE TABLE IF NOT EXISTS public.tbpagometodo (
 
 CREATE TABLE IF NOT EXISTS public.tbtransportista (
     tbtransportistaid INTEGER NOT NULL,
-    tbtransportistaidentificacionnumero VARCHAR(250) NOT NULL,
-    tbtransportistaidentificaciontipo VARCHAR(40) NOT NULL,
-    tbtransportistanombre VARCHAR(150) NOT NULL,
-    tbtransportistatelefono VARCHAR(20) NOT NULL,
-    tbtransportistacorreoelectronico VARCHAR(150) NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
     tbtransportistaestado SMALLINT NOT NULL
 );
 
@@ -111,14 +113,11 @@ CREATE TABLE IF NOT EXISTS public.tbbitacora (
 
 CREATE TABLE IF NOT EXISTS public.tbcomprador (
     tbcompradorid INTEGER NOT NULL,
-    tbcompradoridentificacionnumero VARCHAR(250) NOT NULL,
-    tbcompradoridentificaciontipo VARCHAR(40) NOT NULL,
-    tbcompradornombre VARCHAR(150) NOT NULL,
-    tbcompradortelefono VARCHAR(20) NOT NULL,
-    tbcompradorcorreoelectronico VARCHAR(150) NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
     tbcompradorestado SMALLINT NOT NULL
 );
 
+ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductordireccion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductorestadoperiodo ENABLE ROW LEVEL SECURITY;

@@ -24,7 +24,7 @@ try {
     }
 
     $normalizado = str_replace('-', '', $idFallaBitacora);
-    $conteo = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbproductoridentificacionnumero = :id');
+    $conteo = $db->prepare('SELECT COUNT(*) FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero = :id');
     $conteo->execute(['id' => $normalizado]);
     test_same(0, (int) $conteo->fetchColumn(), 'Rollback elimina productor si falla bitácora');
     foreach (['tbproductordireccion', 'tbfinca'] as $tabla) {

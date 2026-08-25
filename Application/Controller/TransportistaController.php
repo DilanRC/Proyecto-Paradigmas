@@ -55,6 +55,8 @@ final class TransportistaController
                 'PATCH' => $this->reactivar($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
+        } catch (\Application\Model\PersonaConflictException $excepcion) {
+            return $this->respuesta(false, $excepcion->getMessage(), null, 409, ['identificacion.numero' => $excepcion->getMessage()]);
         } catch (TransportistaHttpException $excepcion) {
             return $this->respuesta(
                 false,
@@ -162,7 +164,7 @@ final class TransportistaController
             if ($bloqueado === null) {
                 throw new TransportistaHttpException('Transportista no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbtransportistaestado'] !== 1) {
+            if ((int) $bloqueado['tbtransportistaestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
                 throw new TransportistaHttpException(
                     'El transportista está inactivo. Debe reactivarlo antes de actualizarlo.',
                     409,
@@ -193,6 +195,9 @@ final class TransportistaController
             if ($bloqueado === null || $anterior === null) {
                 throw new TransportistaHttpException('Transportista no encontrado.', 404);
             }
+            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
+                throw new TransportistaHttpException('La persona está inactiva y no puede operar capacidades.', 409);
+            }
             if ((int) $bloqueado['tbtransportistaestado'] === 0) {
                 return $anterior;
             }
@@ -216,6 +221,9 @@ final class TransportistaController
             $anterior = $this->transportista->buscar($identificacion);
             if ($bloqueado === null || $anterior === null) {
                 throw new TransportistaHttpException('Transportista no encontrado.', 404);
+            }
+            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
+                throw new TransportistaHttpException('La persona está inactiva y no puede reactivar capacidades.', 409);
             }
             if ((int) $bloqueado['tbtransportistaestado'] === 1) {
                 return $anterior;

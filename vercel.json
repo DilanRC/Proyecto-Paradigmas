@@ -4,7 +4,8 @@
   "services": {
     "app": {
       "root": ".",
-      "entrypoint": "Dockerfile.vercel"
+      "entrypoint": "Dockerfile.vercel",
+      "ignoreCommand": "bash Tools/vercel-ignore-build.sh"
     }
   },
   "rewrites": [

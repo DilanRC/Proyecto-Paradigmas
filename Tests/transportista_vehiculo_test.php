@@ -89,7 +89,9 @@ function test_tv_cleanup(array $identificaciones, array $vehiculoIds): void
                 $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero LIKE :patron")
                     ->execute(['patron' => $identificacion . ':%']);
             }
-            $db->prepare("DELETE FROM tbtransportista WHERE tbtransportistaidentificacionnumero IN ({$marcadoresTransportista})")
+            $db->prepare("DELETE t FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid=t.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marcadoresTransportista})")
+                ->execute($idsTransportista);
+            $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadoresTransportista})")
                 ->execute($idsTransportista);
         }
         $db->commit();

@@ -95,7 +95,7 @@ $identificationB = test_document();
 $directionProductorIds = [-random_int(3000000, 3999999), -random_int(4000000, 4999999)];
 $farmProductorIds = [-random_int(5000000, 5999999), -random_int(6000000, 6999999)];
 $lockNames = [
-    Productor::class => 'tindercows_productor_alta',
+    Productor::class => 'tindercows_persona_alta',
     ProductorDireccion::class => 'tindercows_productor_direccion_alta',
     ProductorFinca::class => 'tindercows_finca_alta',
 ];
@@ -132,12 +132,13 @@ try {
         $b,
         $lockNames[Productor::class],
         fn (): int => $productorA->crear(concurrency_productor_data($identificationA, 'A')),
-        fn (): int => concurrency_count(
-            $b,
-            'tbproductor',
-            'tbproductoridentificacionnumero',
-            $identificationA,
-        ),
+        function () use ($b, $identificationA): int {
+            $sentencia = $b->prepare('SELECT COUNT(*) FROM tbproductor p
+                INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
+                WHERE pe.tbpersonaidentificacionnumero=:identificacion');
+            $sentencia->execute(['identificacion' => $identificationA]);
+            return (int) $sentencia->fetchColumn();
+        },
     );
     $productorIdB = $productorB->ejecutarConBloqueoAlta(function () use (
         $b,
