@@ -65,8 +65,10 @@ try {
             'DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :id'
         )->execute(['id' => $identificacionCanonica]);
         $conn->prepare(
-            'DELETE FROM tbtransportista WHERE tbtransportistaidentificacionnumero = :id'
+            'DELETE t FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid=t.tbpersonaid WHERE p.tbpersonaidentificacionnumero = :id'
         )->execute(['id' => $identificacionCanonica]);
+        $conn->prepare('DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero = :id')
+            ->execute(['id' => $identificacionCanonica]);
     }
 }
 

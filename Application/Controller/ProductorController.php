@@ -60,6 +60,10 @@ final class ProductorController
                 'PATCH' => $this->reactivar($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
+        } catch (\Application\Model\PersonaConflictException $excepcion) {
+            return $this->respuesta(false, $excepcion->getMessage(), null, 409, [
+                'identificacion.numero' => $excepcion->getMessage(),
+            ]);
         } catch (ProductorHttpException $excepcion) {
             return $this->respuesta(
                 false,
@@ -176,7 +180,7 @@ final class ProductorController
                 if ($bloqueado === null) {
                     throw new ProductorHttpException('Productor no encontrado.', 404);
                 }
-                if ((int) $bloqueado['tbproductorestado'] !== 1) {
+                if ((int) $bloqueado['tbproductorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
                     throw new ProductorHttpException(
                         'El productor está inactivo. Debe reactivarlo antes de actualizarlo.',
                         409,
@@ -283,6 +287,9 @@ final class ProductorController
             if ($bloqueado === null || $anterior === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
+            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
+                throw new ProductorHttpException('La persona está inactiva y no puede operar capacidades.', 409);
+            }
             if ((int) $bloqueado['tbproductorestado'] === 0) {
                 return $anterior;
             }
@@ -303,6 +310,9 @@ final class ProductorController
             $anterior = $this->productor->buscar($identificacion);
             if ($bloqueado === null || $anterior === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
+            }
+            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
+                throw new ProductorHttpException('La persona está inactiva y no puede reactivar capacidades.', 409);
             }
             if ((int) $bloqueado['tbproductorestado'] === 1) {
                 return $anterior;
@@ -454,7 +464,7 @@ final class ProductorController
             if ($bloqueado === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbproductorestado'] !== 1) {
+            if ((int) $bloqueado['tbproductorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
                 throw new ProductorHttpException(
                     'El productor está inactivo. Debe reactivarlo antes de actualizar su dirección.',
                     409,
@@ -497,7 +507,7 @@ final class ProductorController
             if ($bloqueado === null) {
                 throw new ProductorHttpException('Productor no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbproductorestado'] !== 1) {
+            if ((int) $bloqueado['tbproductorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
                 throw new ProductorHttpException(
                     'El productor está inactivo. Debe reactivarlo antes de modificar su dirección.',
                     409,

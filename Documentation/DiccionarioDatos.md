@@ -12,17 +12,27 @@ Columnas de cada ficha:
 - **Relación conceptual**: tabla a la que apunta el valor. Ninguna de estas
   relaciones existe como llave foránea; el motor no las verifica.
 
+## tbpersona
+
+Fuente única de identidad y contacto compartida por todas las capacidades.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbpersonaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbpersonaidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica; PHP impide duplicados. | Usuario | - |
+| `tbpersonaidentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación validado por PHP. | Usuario | - |
+| `tbpersonanombre` | `VARCHAR(150) NOT NULL` | No | Nombre compartido por todos los perfiles. | Usuario | - |
+| `tbpersonatelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono compartido por todos los perfiles. | Usuario | - |
+| `tbpersonacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo compartido por todos los perfiles. | Usuario | - |
+| `tbpersonaestado` | `TINYINT(1) NOT NULL` | No | Disponibilidad global de la identidad. | Aplicación | - |
+
 ## tbproductor
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbproductorid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
-| `tbproductoridentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica e inmutable por aplicación. | Usuario | - |
-| `tbproductoridentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo validado por aplicación. | Usuario | - |
-| `tbproductornombre` | `VARCHAR(150) NOT NULL` | No | Nombre del productor. | Usuario | - |
-| `tbproductortelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono. | Usuario | - |
-| `tbproductorcorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo, no único en MySQL. | Usuario | - |
-| `tbproductorestado` | `TINYINT(1) NOT NULL` | No | Desactivación lógica. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
+| `tbproductorestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como productor. | Aplicación | - |
 
 ## tbproductordireccion
 
@@ -34,6 +44,8 @@ ubicación: la política del modelo espera una sola fila por `tbproductorid`.
 | `tbproductordireccionid` | `INT NOT NULL` | No | Identificador de la asociación, distinto del productor y de la dirección. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Identificador lógico del productor asociado. | Aplicación | `tbproductor` |
 | `tbdireccionid` | `INT NOT NULL` | No | Identificador lógico de la ubicación física. | Aplicación | `tbdireccion` |
+| `tbproductordireccionfechainicio` | `DATETIME NULL` | Sí | Inicio del periodo de residencia. | Aplicación | - |
+| `tbproductordireccionfechafin` | `DATETIME NULL` | Sí | Fin del periodo; nulo mientras sea vigente. | Aplicación | - |
 
 Observación: provincia, cantón, distrito, pueblo y señas vivían antes en esta
 tabla y ahora existen una sola vez en `tbdireccion`. La migración
@@ -87,30 +99,13 @@ Catálogo de métodos de pago. No se relaciona todavía con ninguna operación.
 
 ## tbtransportista
 
-Persona independiente responsable del transporte. No es productor, comprador,
-usuario ni empresa: tiene identificador propio.
+Capacidad logística de una persona. Conserva su identificador histórico.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbtransportistaid` | `INT NOT NULL` | No | Identificador lógico propio del transportista. | Aplicación | - |
-| `tbtransportistaidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica. | Usuario | - |
-| `tbtransportistaidentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación. | Usuario | - |
-| `tbtransportistanombre` | `VARCHAR(150) NOT NULL` | No | Nombre del transportista. | Usuario | - |
-| `tbtransportistatelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono. | Usuario | - |
-| `tbtransportistacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo electrónico. | Usuario | - |
-| `tbtransportistaestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. | Aplicación | - |
-
-Hecho confirmado: el transportista es una persona independiente con
-identificador propio y puede tener varios vehículos.
-
-Propuesta de modelado: identificación, tipo, nombre, teléfono, correo y estado
-se agregaron para poder identificar y contactar a la persona, siguiendo el
-patrón de personas ya registrado en el proyecto. No fueron solicitados y pueden
-retirarse si el dominio no los necesita.
-
-PENDIENTE DE CONFIRMACIÓN: cuáles de esos atributos son obligatorios, y si
-hacen falta licencia, permisos, pólizas, tarifas, capacidad, horarios o vínculo
-con empresa. Ninguno de estos últimos se agregó.
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad logística. | Aplicación | `tbpersona` |
+| `tbtransportistaestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como transportista. | Aplicación | - |
 
 ## tbvehiculo
 
@@ -170,17 +165,48 @@ elimina. La fecha la asigna siempre PHP con el reloj del servidor.
 | `tbproductorubicacionfecha` | `DATETIME NOT NULL` | No | Fecha y hora del servidor; el cliente no puede falsearla. | Aplicación | - |
 | `tbproductorubicacionorigen` | `VARCHAR(40) NOT NULL` | No | Origen de la lectura: conjunto controlado `NAVEGADOR` o `MANUAL`. | Usuario | - |
 
+## tbproductorestadoperiodo
+
+Histórico de participación del productor. PHP mantiene como máximo un periodo
+abierto por productor.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductorestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor observado. | Aplicación | `tbproductor` |
+| `tbproductorestadoperiodoestado` | `TINYINT(1) NOT NULL` | No | Estado durante el periodo. | Aplicación | - |
+| `tbproductorestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo. | Aplicación | - |
+| `tbproductorestadoperiodofechafin` | `DATETIME NULL` | Sí | Fin; nulo para el periodo abierto. | Aplicación | - |
+| `tbproductorestadoperiodomotivo` | `VARCHAR(250) NULL` | Sí | Motivo opcional del cambio. | Aplicación | - |
+
+## tbproductoractividad
+
+Eventos de actividad usados para trazabilidad y políticas del productor.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductoractividadid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor relacionado. | Aplicación | `tbproductor` |
+| `tbproductoractividadtipo` | `VARCHAR(60) NOT NULL` | No | Tipo de actividad validado por PHP. | Aplicación | - |
+| `tbproductoractividadfecha` | `DATETIME NOT NULL` | No | Fecha asignada por PHP. | Aplicación | - |
+| `tbproductoractividadorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico de la actividad. | Aplicación | - |
+
 ## tbcomprador
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbcompradorid` | `INT NOT NULL` | No | Identificador asignado por la aplicación. | Aplicación | - |
-| `tbcompradoridentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica. | Usuario | - |
-| `tbcompradoridentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación. | Usuario | - |
-| `tbcompradornombre` | `VARCHAR(150) NOT NULL` | No | Nombre del comprador. | Usuario | - |
-| `tbcompradortelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono. | Usuario | - |
-| `tbcompradorcorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo electrónico. | Usuario | - |
-| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
+| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como comprador. | Aplicación | - |
+
+## Estado efectivo y coherencia
+
+Una capacidad está activa solo si `tbpersonaestado` y el estado del perfil
+están activos. `DELETE` y `PATCH` modifican el perfil, nunca eliminan filas ni
+reactivan una persona globalmente inactiva. Al actualizar identidad o contacto
+desde cualquier capacidad, PHP actualiza `tbpersona` y el cambio se observa en
+las demás. La unicidad por identificación y la coincidencia de datos se
+garantizan con transacciones, sentencias preparadas y bloqueos nombrados.
 
 ## Estructura, relación y política
 
