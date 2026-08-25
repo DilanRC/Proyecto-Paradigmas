@@ -43,6 +43,12 @@ test_same('Dockerfile.vercel', $vercelConfiguration['services']['app']['entrypoi
     'Vercel debe construir explícitamente el contenedor');
 test_same(['service' => 'app'], $vercelConfiguration['rewrites'][0]['destination'] ?? null,
     'Vercel debe dirigir todo el tráfico al contenedor');
+test_same(false, $vercelConfiguration['git']['deploymentEnabled']['*'] ?? null,
+    'Vercel debe bloquear automáticamente cualquier rama no autorizada');
+test_same(true, $vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null,
+    'Vercel debe crear previews automáticos únicamente desde dev');
+test_same(true, $vercelConfiguration['git']['deploymentEnabled']['main'] ?? null,
+    'Vercel debe conservar los despliegues de producción desde main');
 test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['services']['app']['ignoreCommand'] ?? null,
     'El servicio Vercel debe aplicar la política de ramas antes de construir');
 test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration),
