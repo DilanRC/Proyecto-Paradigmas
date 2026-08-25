@@ -47,6 +47,13 @@ $check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización 
 $check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
 $check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
 $check(str_contains($migration, 'supabase_schema_status=ready tables=15 migration=v5'), 'Falta traza operativa');
+$check(!str_contains($schema, 'tbproductorestado SMALLINT'),
+    'La columna tbproductorestado fue retirada de tbproductor en v5');
+$check(str_contains($migration, 'eliminarEstadoProductor($connection)'),
+    'La migración debe trasladar el estado del productor al histórico de periodos');
+$check(strpos($migration, 'INSERT INTO public.tbproductorestadoperiodo')
+    < strpos($migration, 'DROP COLUMN IF EXISTS tbproductorestado'),
+    'El estado heredado debe respaldarse antes de retirar la columna');
 $check(str_contains($migration, 'esperado=[%s] actual=[%s]'), 'La validación debe identificar columnas divergentes');
 $check(substr_count($migration, 'sort($columns)') === 2, 'La comparación debe ignorar el orden físico de columnas');
 $check(str_contains($migration, "'tbcomprador' => ["), 'Falta validar las columnas de tbcomprador');

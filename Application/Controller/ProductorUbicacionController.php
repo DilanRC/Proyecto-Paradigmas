@@ -120,7 +120,7 @@ final class ProductorUbicacionController
             'tbproductorubicacionprecision' => $datos['precisionMetros'],
             'tbproductorubicacionfecha' => date('Y-m-d H:i:s'),
             'tbproductorubicacionorigen' => $datos['origen'],
-        ]);
+        ], 201);
     }
 
     private function listar(array $consulta): array
@@ -128,7 +128,7 @@ final class ProductorUbicacionController
         $errores = [];
         $productorId = $this->enteroConsulta($consulta['productorId'] ?? null, 'productorId', $errores);
         if ($errores !== []) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 400, $errores);
+            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
         }
 
         if (isset($consulta['desde']) || isset($consulta['hasta'])) {
@@ -146,7 +146,7 @@ final class ProductorUbicacionController
             $errores['tamano'] = 'Debe estar entre 1 y 100.';
         }
         if ($errores !== []) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 400, $errores);
+            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
         }
 
         return $this->respuesta(true, 'Ubicaciones consultadas correctamente.',
@@ -173,7 +173,7 @@ final class ProductorUbicacionController
         }
 
         if ($errores !== []) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 400, $errores);
+            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
         }
 
         return [
@@ -236,7 +236,7 @@ final class ProductorUbicacionController
         $fin = $this->fechaConsulta($hasta, 'hasta', $formatos, '23:59:59');
 
         if ($inicio > $fin) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 400, [
+            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, [
                 'desde' => 'La fecha inicial debe ser anterior o igual a la final.',
             ]);
         }
@@ -258,7 +258,7 @@ final class ProductorUbicacionController
             }
         }
 
-        throw new ProductorUbicacionHttpException('Revise los campos indicados.', 400, [
+        throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, [
             $campo => 'Debe usar el formato Y-m-d H:i:s o Y-m-d.',
         ]);
     }
@@ -302,7 +302,7 @@ final class ProductorUbicacionController
         foreach ($desconocidos as $campo) {
             $errores[$campo] = 'Campo no permitido.';
         }
-        throw new ProductorUbicacionHttpException('Revise los campos indicados.', 400, $errores);
+        throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
     }
 
     private function transaccion(callable $operacion): mixed

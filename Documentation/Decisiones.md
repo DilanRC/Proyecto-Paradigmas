@@ -242,3 +242,70 @@ consecuencias vigentes son:
 6. **Coordenadas exactas**: latitud y longitud se validan por rango (-90..90,
    -180..180) y se guardan como texto hacia `DECIMAL(10,7)`, sin redondeos de
    punto flotante.
+
+# Decisiones - Modelos de históricos
+
+## DEC-18 - Periodos con fechafin NULL como vigente; cierre inmutable
+
+El estado y la residencia del productor se modelan como hechos históricos
+(plan §7-8). `ProductorEstadoPeriodo` escribe en `tbproductorestadoperiodo` y
+`ProductorDireccion` trabaja sobre `tbproductordireccion` con sus columnas de
+vigencia: **el periodo vigente es la fila con fechafin NULL**. Un cambio cierra
+el periodo abierto (UPDATE solo de fechafin, asignada por el reloj de PHP) e
+inserta una fila nueva; ningún periodo cerrado se edita ni elimina. El motor no
+puede garantizar "máximo un abierto por productor" (cero restricciones): PHP lo
+garantiza ejecutando abrir/cerrar bajo el bloqueo nombrado por productor
+(`tindercows_productor_estado_{id}`) dentro de la transacción completa, y los
+métodos de escritura rechazan llamadas sin ese lock (`LogicException`). La
+consulta `consultarVigenteEn(fecha)` resuelve el periodo cuya vigencia contiene
+la fecha. La política anterior de "exactamente una dirección por productor"
+se reescribe sobre el periodo abierto: tener varias direcciones históricas es
+lo normal, y dos periodos abiertos simultáneos se detectan como integridad
+rota.
+
+# Decisiones - Códigos HTTP de ubicación
+
+## DEC-17 - Consistencia de códigos con el resto de la API
+
+Las validaciones de `/api/productores-ubicacion.php` responden **422**
+(contenido no procesable) en lugar de 400: coordenadas fuera de rango o no
+numéricas, precisión negativa o no numérica, origen fuera de
+`{NAVEGADOR, MANUAL}`, campos desconocidos y rango de fechas inválido. Es el
+mismo criterio que ya aplicaban `ProductorController` (422 en sus trece
+validaciones) y `CompradorController` (422 en nueve). Se mantienen: **404**
+productor inexistente, **409** productor inactivo, **405** métodos
+destructivos sobre la tabla append-only y 400/415 del contrato de transporte
+(JSON malformado / Content-Type incorrecto). El alta válida responde **201**
+porque crea una fila nueva, igual que POST de productor.
+
+# Decisiones - Estado como periodos
+
+## DEC-19 - El estado es un hecho histórico; la columna muerta se retira en el mismo PR
+
+`tbproductorestado` se retira de `tbproductor` (MySQL y espejo Supabase) en el
+mismo PR que cambia `ProductorController` para derivar el estado del periodo
+abierto, de modo que nadie pueda volver a usar la columna eliminada. El
+esquema MySQL (`000instalacioncompleta.sql`), la migración
+`004eliminaestadoproductor.sql` (con backfill y comprobación previa) y el
+espejo PostgreSQL (`schema.sql` + `migrate.php` v5) quedan sincronizados. La
+semilla `103exampleproductores.sql` crea periodos iniciales ACTIVO para los
+productores ficticios en lugar de escribir la columna muerta. Un productor sin
+periodos (solo puede ocurrir con datos heredados pre-migración) se considera
+**INACTIVO** por defecto: no hay evidencia de que esté activo. El orden de
+locks en `desactivar`/`reactivar` es: bloqueo de fila FOR UPDATE del
+productor → lock nombrado del periodo por productor; idempotente: desactivar
+dos veces seguidas no duplica periodos.
+
+## DEC-20 - Periodos de estado sobre persona con capacidades
+
+Al integrar este tramo con la unificación de personas (DEC de `tbpersona`),
+la identidad y el contacto del productor vienen de `tbpersona` y su estado
+del periodo abierto: son dos ejes independientes. Un productor cuenta como
+**ACTIVO** solo si su periodo abierto está en 1 **y** `tbpersonaestado` es 1,
+porque una identidad inactiva desactiva todas sus capacidades. El modelo
+expone el estado derivado con el alias `tbproductorestado` en cada consulta,
+de modo que `FincaController`, `ProductorUbicacionController` y
+`ProductorController` siguen leyendo el estado por el mismo nombre sin
+depender de una columna que ya no existe. La migración MySQL se renumeró a
+`004` porque `003` lo ocupa `003personacapacidades.sql`, y debe ejecutarse
+después de ella: primero se unifica la persona, luego se retira la columna.

@@ -11,7 +11,7 @@ erDiagram
         VARCHAR tbpersonacorreoelectronico
         TINYINT tbpersonaestado
     }
-    tbproductor { INT tbproductorid INT tbpersonaid TINYINT tbproductorestado }
+    tbproductor { INT tbproductorid INT tbpersonaid }
     tbcomprador { INT tbcompradorid INT tbpersonaid TINYINT tbcompradorestado }
     tbtransportista { INT tbtransportistaid INT tbpersonaid TINYINT tbtransportistaestado }
     tbproductordireccion { INT tbproductordireccionid INT tbproductorid INT tbdireccionid DATETIME tbproductordireccionfechainicio DATETIME tbproductordireccionfechafin }
