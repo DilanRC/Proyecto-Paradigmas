@@ -1,4 +1,4 @@
-USE dbtindervacas;
+USE dbmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Consultas de diagnóstico del modelo sin restricciones.
@@ -12,6 +12,29 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Ejecutar:
 --   docker compose exec -T db mysql -uroot -p"$DB_ROOT_PASS" \
 --     < Database/Tests/diagnostico.sql
+
+-- D-00: perfiles sin identidad y capacidades repetidas para una persona.
+SELECT 'D-00 perfiles de persona invalidos' AS diagnostico;
+SELECT 'tbproductor persona inexistente' AS problema, p.tbproductorid AS registro
+FROM tbproductor p LEFT JOIN tbpersona x ON x.tbpersonaid = p.tbpersonaid
+WHERE x.tbpersonaid IS NULL
+UNION ALL
+SELECT 'tbcomprador persona inexistente', c.tbcompradorid
+FROM tbcomprador c LEFT JOIN tbpersona x ON x.tbpersonaid = c.tbpersonaid
+WHERE x.tbpersonaid IS NULL
+UNION ALL
+SELECT 'tbtransportista persona inexistente', t.tbtransportistaid
+FROM tbtransportista t LEFT JOIN tbpersona x ON x.tbpersonaid = t.tbpersonaid
+WHERE x.tbpersonaid IS NULL;
+
+SELECT 'D-00 capacidades duplicadas' AS diagnostico;
+SELECT 'tbproductor' AS perfil, tbpersonaid, COUNT(*) AS repeticiones
+FROM tbproductor GROUP BY tbpersonaid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbcomprador', tbpersonaid, COUNT(*) FROM tbcomprador GROUP BY tbpersonaid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbtransportista', tbpersonaid, COUNT(*) FROM tbtransportista
+GROUP BY tbpersonaid HAVING COUNT(*) > 1;
 
 -- D-01: productores con más de una dirección. Política: una residencia principal.
 SELECT 'D-01 productores con mas de una direccion' AS diagnostico;

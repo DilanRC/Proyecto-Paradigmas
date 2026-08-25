@@ -1,4 +1,4 @@
-USE dbtindervacas;
+USE dbmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Comprobación de relaciones con datos de prueba desechables.
@@ -9,6 +9,22 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 --     < Database/Tests/comprobacionrelaciones.sql
 
 START TRANSACTION;
+
+INSERT INTO tbpersona (tbpersonaid, tbpersonaidentificacionnumero,
+    tbpersonaidentificaciontipo, tbpersonanombre, tbpersonatelefono,
+    tbpersonacorreoelectronico, tbpersonaestado) VALUES
+    (-901, 'PRUEBA-901', 'CEDULA_FISICA', 'Productor prueba uno', '88889001', 'p901@example.test', 1),
+    (-902, 'PRUEBA-902', 'CEDULA_FISICA', 'Productor prueba dos', '88889002', 'p902@example.test', 1),
+    (-701, 'PRUEBA-701', 'CEDULA_FISICA', 'Transportista de prueba', '88880000',
+     'prueba.transportista@example.test', 1);
+INSERT INTO tbproductor (tbproductorid, tbpersonaid) VALUES
+    (-901, -901), (-902, -902);
+-- El estado vigente del productor vive en su periodo abierto.
+INSERT INTO tbproductorestadoperiodo (tbproductorestadoperiodoid, tbproductorid,
+    tbproductorestadoperiodoestado, tbproductorestadoperiodofechainicio,
+    tbproductorestadoperiodofechafin, tbproductorestadoperiodomotivo) VALUES
+    (-901, -901, 1, NOW(), NULL, 'Prueba: alta del productor'),
+    (-902, -902, 1, NOW(), NULL, 'Prueba: alta del productor');
 
 -- Ubicaciones físicas.
 INSERT INTO tbdireccion (tbdireccionid, tbdireccionprovincia, tbdireccioncanton,
@@ -34,11 +50,8 @@ INSERT INTO tbfincadireccion (tbfincadireccionid, tbfincaid, tbdireccionid) VALU
     (-803, -803, -9003),
     (-802, -802, -9003);
 
-INSERT INTO tbtransportista (tbtransportistaid, tbtransportistaidentificacionnumero,
-    tbtransportistaidentificaciontipo, tbtransportistanombre, tbtransportistatelefono,
-    tbtransportistacorreoelectronico, tbtransportistaestado) VALUES
-    (-701, 'PRUEBA-701', 'CEDULA_FISICA', 'Transportista de prueba', '88880000',
-     'prueba.transportista@example.test', 1);
+INSERT INTO tbtransportista (tbtransportistaid, tbpersonaid, tbtransportistaestado)
+VALUES (-701, -701, 1);
 
 INSERT INTO tbvehiculo (tbvehiculoid, tbvehiculoplaca, tbvehiculovin, tbvehiculomodelo,
     tbvehiculoestado) VALUES
@@ -91,7 +104,10 @@ DELETE FROM tbtransportista WHERE tbtransportistaid = -701;
 DELETE FROM tbfincadireccion WHERE tbfincadireccionid IN (-801, -802, -803);
 DELETE FROM tbfinca WHERE tbfincaid IN (-801, -802, -803);
 DELETE FROM tbproductordireccion WHERE tbproductordireccionid IN (-901, -902);
+DELETE FROM tbproductorestadoperiodo WHERE tbproductorestadoperiodoid IN (-901, -902);
 DELETE FROM tbdireccion WHERE tbdireccionid IN (-9001, -9002, -9003);
+DELETE FROM tbproductor WHERE tbproductorid IN (-901, -902);
+DELETE FROM tbpersona WHERE tbpersonaid IN (-901, -902, -701);
 
 COMMIT;
 

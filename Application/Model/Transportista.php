@@ -8,23 +8,29 @@ use PDO;
 
 final class Transportista
 {
+    private Persona $persona;
     public function __construct(
         private readonly PDO $conexion,
         private readonly TransportistaVehiculo $vehiculos,
     ) {
+        $this->persona = new Persona($conexion);
     }
 
     public function listar(string $busqueda, string $estado, int $pagina, int $tamano): array
     {
         [$where, $parametros] = $this->filtros($busqueda, $estado);
-        $conteo = $this->conexion->prepare("SELECT COUNT(*) FROM tbtransportista t {$where}");
+        $conteo = $this->conexion->prepare("SELECT COUNT(*) FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid {$where}");
         $conteo->execute($parametros);
         $total = (int) $conteo->fetchColumn();
 
-        $sql = "SELECT t.* FROM tbtransportista t
+        $sql = "SELECT t.*, pe.tbpersonaidentificacionnumero AS tbtransportistaidentificacionnumero,
+                pe.tbpersonaidentificaciontipo AS tbtransportistaidentificaciontipo,
+                pe.tbpersonanombre AS tbtransportistanombre, pe.tbpersonatelefono AS tbtransportistatelefono,
+                pe.tbpersonacorreoelectronico AS tbtransportistacorreoelectronico, pe.tbpersonaestado
+                FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid
                 {$where}
-                ORDER BY t.tbtransportistaestado DESC, t.tbtransportistanombre,
-                         t.tbtransportistaidentificacionnumero
+                ORDER BY (t.tbtransportistaestado * pe.tbpersonaestado) DESC, pe.tbpersonanombre,
+                         pe.tbpersonaidentificacionnumero
                 LIMIT :limite OFFSET :desplazamiento";
         $sentencia = $this->conexion->prepare($sql);
         foreach ($parametros as $nombre => $valor) {
@@ -50,7 +56,12 @@ final class Transportista
     public function buscar(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT * FROM tbtransportista WHERE tbtransportistaidentificacionnumero = :identificacionNumero'
+            'SELECT t.*, pe.tbpersonaidentificacionnumero AS tbtransportistaidentificacionnumero,
+                    pe.tbpersonaidentificaciontipo AS tbtransportistaidentificaciontipo,
+                    pe.tbpersonanombre AS tbtransportistanombre, pe.tbpersonatelefono AS tbtransportistatelefono,
+                    pe.tbpersonacorreoelectronico AS tbtransportistacorreoelectronico, pe.tbpersonaestado
+             FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid
+             WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero'
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -74,9 +85,10 @@ final class Transportista
     public function buscarPorId(int $transportistaId): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbtransportistaidentificacionnumero AS identificacionNumero,
-                    tbtransportistanombre AS nombre
-             FROM tbtransportista WHERE tbtransportistaid = :id'
+            'SELECT pe.tbpersonaidentificacionnumero AS identificacionNumero, pe.tbpersonanombre AS nombre,
+                    t.tbtransportistaestado, pe.tbpersonaestado
+             FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid
+             WHERE t.tbtransportistaid = :id'
         );
         $sentencia->execute(['id' => $transportistaId]);
         $fila = $sentencia->fetch();
@@ -87,8 +99,8 @@ final class Transportista
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT * FROM tbtransportista
-             WHERE tbtransportistaidentificacionnumero = :identificacionNumero FOR UPDATE'
+            'SELECT t.*, pe.tbpersonaestado FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid
+             WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero FOR UPDATE'
         );
         $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
         $filas = $sentencia->fetchAll();
@@ -111,30 +123,26 @@ final class Transportista
 
     private function adquirirBloqueoAlta(): void
     {
-        NamedLock::acquire($this->conexion, 'tindercows_transportista_alta');
+        NamedLock::acquire($this->conexion, 'tindercows_persona_alta');
     }
 
     private function liberarBloqueoAlta(): void
     {
-        NamedLock::release($this->conexion, 'tindercows_transportista_alta');
+        NamedLock::release($this->conexion, 'tindercows_persona_alta');
     }
 
     public function crear(array $datos): int
     {
+        $persona = $this->persona->obtenerOCrear($datos);
         $transportistaId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbtransportista
-             (tbtransportistaid, tbtransportistaidentificacionnumero, tbtransportistaidentificaciontipo,
-              tbtransportistanombre, tbtransportistatelefono, tbtransportistacorreoelectronico, tbtransportistaestado)
-             VALUES (:transportistaId, :identificacionNumero, :identificacionTipo, :nombre, :telefono, :correoElectronico, :estado)'
+             (tbtransportistaid, tbpersonaid, tbtransportistaestado)
+             VALUES (:transportistaId, :personaId, :estado)'
         );
         $sentencia->execute([
             'transportistaId' => $transportistaId,
-            'identificacionNumero' => $datos['identificacionNumero'],
-            'identificacionTipo' => $datos['identificacionTipo'],
-            'nombre' => $datos['nombre'],
-            'telefono' => $datos['telefono'],
-            'correoElectronico' => $datos['correoElectronico'],
+            'personaId' => $persona['tbpersonaid'],
             'estado' => 1,
         ]);
 
@@ -151,32 +159,16 @@ final class Transportista
 
     public function actualizar(string $identificacionNumero, array $datos): void
     {
-        $sentencia = $this->conexion->prepare(
-            'UPDATE tbtransportista
-             SET tbtransportistaidentificaciontipo = :identificacionTipo,
-                 tbtransportistanombre = :nombre,
-                 tbtransportistatelefono = :telefono,
-                 tbtransportistacorreoelectronico = :correoElectronico
-             WHERE tbtransportistaidentificacionnumero = :identificacionNumero'
-        );
-        $sentencia->execute([
-            'identificacionNumero' => $identificacionNumero,
-            'identificacionTipo' => $datos['identificacionTipo'],
-            'nombre' => $datos['nombre'],
-            'telefono' => $datos['telefono'],
-            'correoElectronico' => $datos['correoElectronico'],
-        ]);
+        $this->persona->actualizar($identificacionNumero, $datos);
     }
 
     public function cambiarEstado(string $identificacionNumero, bool $activo): void
     {
-        $sentencia = $this->conexion->prepare(
-            'UPDATE tbtransportista SET tbtransportistaestado = :estado
-             WHERE tbtransportistaidentificacionnumero = :identificacionNumero'
-        );
+        $persona = $this->persona->buscar($identificacionNumero); if ($persona === null) return;
+        $sentencia = $this->conexion->prepare('UPDATE tbtransportista SET tbtransportistaestado = :estado WHERE tbpersonaid = :personaId');
         $sentencia->execute([
             'estado' => $activo ? 1 : 0,
-            'identificacionNumero' => $identificacionNumero,
+            'personaId' => $persona['tbpersonaid'],
         ]);
     }
 
@@ -185,9 +177,9 @@ final class Transportista
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(t.tbtransportistanombre LIKE :busquedaNombre
-                OR t.tbtransportistacorreoelectronico LIKE :busquedaCorreo
-                OR t.tbtransportistaidentificacionnumero LIKE :busquedaIdentificacion)';
+            $condiciones[] = '(pe.tbpersonanombre LIKE :busquedaNombre
+                OR pe.tbpersonacorreoelectronico LIKE :busquedaCorreo
+                OR pe.tbpersonaidentificacionnumero LIKE :busquedaIdentificacion)';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
                 ':busquedaCorreo' => "%{$busqueda}%",
@@ -195,7 +187,7 @@ final class Transportista
             ];
         }
         if ($estado !== 'TODOS') {
-            $condiciones[] = 't.tbtransportistaestado = :estado';
+            $condiciones[] = '(t.tbtransportistaestado * pe.tbpersonaestado) = :estado';
             $parametros[':estado'] = $estado === 'ACTIVO' ? 1 : 0;
         }
 
@@ -214,7 +206,7 @@ final class Transportista
             'nombre' => $fila['tbtransportistanombre'],
             'telefono' => $fila['tbtransportistatelefono'],
             'correoElectronico' => $fila['tbtransportistacorreoelectronico'],
-            'estado' => (int) $fila['tbtransportistaestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
+            'estado' => (int) $fila['tbtransportistaestado'] === 1 && (int) $fila['tbpersonaestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
             'vehiculos' => $vehiculos,
         ];
     }

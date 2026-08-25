@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the three required Markdown documents as deterministic, text PDFs."""
+"""Render the required Markdown documents as deterministic, text PDFs."""
 
 from __future__ import annotations
 
@@ -13,6 +13,8 @@ DOCUMENTS = {
     "AvanceSemanal.md": "AvanceSemanal.pdf",
     "DAplicacion.md": "DAplicacion.pdf",
     "DER.md": "DER.pdf",
+    "DiccionarioDatos.md": "DiccionarioDatos.pdf",
+    "Decisiones.md": "Decisiones.pdf",
 }
 
 
@@ -42,13 +44,13 @@ def document_lines(markdown: str) -> list[tuple[str, int, str]]:
             lines.append(("bold", {1: 17, 2: 14, 3: 12}[level], printable(heading.group(2))))
             continue
         style = "mono" if code else "regular"
-        width = 88 if code else 92
+        width = 88 if code else 100
         text = printable(stripped)
         indent = len(text) - len(text.lstrip())
         prefix = text[:indent]
         wrapped = textwrap.wrap(text.lstrip(), width=max(20, width - indent),
             subsequent_indent="  ", replace_whitespace=False, drop_whitespace=False) or [""]
-        lines.extend((style, 9 if code else 10, prefix + part) for part in wrapped)
+        lines.extend((style, 9, prefix + part) for part in wrapped)
     return lines
 
 

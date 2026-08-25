@@ -76,7 +76,7 @@ final class ProductorUbicacionController
                 'productorId' => 'No existe un productor con ese identificador.',
             ]);
         }
-        if ((int) $productor['tbproductorestado'] !== 1) {
+        if ((int) $productor['tbproductorestado'] !== 1 || (int) $productor['tbpersonaestado'] !== 1) {
             throw new ProductorUbicacionHttpException('El productor está inactivo.', 409, [
                 'productorId' => 'Solo productores activos pueden registrar ubicaciones.',
             ]);

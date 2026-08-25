@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 const EXPECTED_COLUMNS = [
+    'tbpersona' => [
+        'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
+        'tbpersonanombre', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
+    ],
     'tbproductor' => [
-        'tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
-        'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico',
+        'tbproductorid', 'tbpersonaid',
     ],
     'tbproductordireccion' => [
         'tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
@@ -35,9 +38,7 @@ const EXPECTED_COLUMNS = [
         'tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo',
     ],
     'tbtransportista' => [
-        'tbtransportistaid', 'tbtransportistaidentificacionnumero', 'tbtransportistaidentificaciontipo',
-        'tbtransportistanombre', 'tbtransportistatelefono', 'tbtransportistacorreoelectronico',
-        'tbtransportistaestado',
+        'tbtransportistaid', 'tbpersonaid', 'tbtransportistaestado',
     ],
     'tbvehiculo' => [
         'tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado',
@@ -51,8 +52,7 @@ const EXPECTED_COLUMNS = [
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid',
     ],
     'tbcomprador' => [
-        'tbcompradorid', 'tbcompradoridentificacionnumero', 'tbcompradoridentificaciontipo',
-        'tbcompradornombre', 'tbcompradortelefono', 'tbcompradorcorreoelectronico', 'tbcompradorestado',
+        'tbcompradorid', 'tbpersonaid', 'tbcompradorestado',
     ],
 ];
 
@@ -120,11 +120,101 @@ function validateSchema(PDO $connection): void
     foreach ($statement->fetchAll() as $column) {
         $actual[$column['table_name']][] = $column['column_name'];
     }
+    foreach ($actual as &$columns) {
+        sort($columns);
+    }
+    unset($columns);
     ksort($actual);
     $expected = EXPECTED_COLUMNS;
+    foreach ($expected as &$columns) {
+        sort($columns);
+    }
+    unset($columns);
     ksort($expected);
     if ($actual !== $expected) {
-        throw new RuntimeException('El esquema Supabase no coincide con el contrato de catorce tablas.');
+        $differences = [];
+        foreach (array_unique(array_merge(array_keys($expected), array_keys($actual))) as $table) {
+            $expectedColumns = $expected[$table] ?? [];
+            $actualColumns = $actual[$table] ?? [];
+            if ($expectedColumns !== $actualColumns) {
+                $differences[] = sprintf('%s esperado=[%s] actual=[%s]', $table,
+                    implode(',', $expectedColumns), implode(',', $actualColumns));
+            }
+        }
+        throw new RuntimeException(
+            'El esquema Supabase no coincide con el contrato de quince tablas: ' . implode('; ', $differences)
+        );
+    }
+}
+
+/** Migra los tres perfiles heredados a una identidad compartida. Todo el DDL
+ * PostgreSQL es transaccional: cualquier conflicto restaura el esquema previo. */
+function normalizePersonCapabilities(PDO $connection): void
+{
+    $legacy = (int) $connection->query("SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'tbproductor'
+          AND column_name = 'tbproductoridentificacionnumero'")->fetchColumn();
+    if ($legacy === 0) {
+        return;
+    }
+
+    // La comprobación exacta por capacidad evita perder IDs históricos.
+    $duplicates = (int) $connection->query("SELECT
+        (SELECT COUNT(*) FROM (SELECT 1 FROM public.tbproductor GROUP BY tbproductoridentificacionnumero HAVING COUNT(*) > 1) x) +
+        (SELECT COUNT(*) FROM (SELECT 1 FROM public.tbcomprador GROUP BY tbcompradoridentificacionnumero HAVING COUNT(*) > 1) x) +
+        (SELECT COUNT(*) FROM (SELECT 1 FROM public.tbtransportista GROUP BY tbtransportistaidentificacionnumero HAVING COUNT(*) > 1) x)")->fetchColumn();
+    if ($duplicates > 0) {
+        throw new RuntimeException('Migración abortada: capacidad duplicada por identificación.');
+    }
+    $conflicts = (int) $connection->query("SELECT COUNT(*) FROM (
+        SELECT identificacion FROM (
+          SELECT tbproductoridentificacionnumero identificacion, tbproductoridentificaciontipo tipo,
+                 tbproductornombre nombre, tbproductortelefono telefono,
+                 tbproductorcorreoelectronico correo FROM public.tbproductor
+          UNION ALL SELECT tbcompradoridentificacionnumero, tbcompradoridentificaciontipo,
+                 tbcompradornombre, tbcompradortelefono, tbcompradorcorreoelectronico FROM public.tbcomprador
+          UNION ALL SELECT tbtransportistaidentificacionnumero, tbtransportistaidentificaciontipo,
+                 tbtransportistanombre, tbtransportistatelefono,
+                 tbtransportistacorreoelectronico FROM public.tbtransportista
+        ) personas GROUP BY identificacion
+        HAVING COUNT(DISTINCT ROW(tipo, nombre, telefono, correo)) > 1
+      ) conflictos")->fetchColumn();
+    if ($conflicts > 0) {
+        throw new RuntimeException('Migración abortada: datos personales incompatibles.');
+    }
+
+    $connection->exec('ALTER TABLE public.tbproductor ADD COLUMN tbpersonaid INTEGER NULL;
+        ALTER TABLE public.tbcomprador ADD COLUMN tbpersonaid INTEGER NULL;
+        ALTER TABLE public.tbtransportista ADD COLUMN tbpersonaid INTEGER NULL');
+    $connection->exec("INSERT INTO public.tbpersona
+      SELECT ROW_NUMBER() OVER (ORDER BY identificacion)::INTEGER, identificacion,
+             MIN(tipo), MIN(nombre), MIN(telefono), MIN(correo), 1
+      FROM (
+        SELECT tbproductoridentificacionnumero identificacion, tbproductoridentificaciontipo tipo,
+               tbproductornombre nombre, tbproductortelefono telefono,
+               tbproductorcorreoelectronico correo FROM public.tbproductor
+        UNION ALL SELECT tbcompradoridentificacionnumero, tbcompradoridentificaciontipo,
+               tbcompradornombre, tbcompradortelefono, tbcompradorcorreoelectronico FROM public.tbcomprador
+        UNION ALL SELECT tbtransportistaidentificacionnumero, tbtransportistaidentificaciontipo,
+               tbtransportistanombre, tbtransportistatelefono,
+               tbtransportistacorreoelectronico FROM public.tbtransportista
+      ) personas GROUP BY identificacion");
+    foreach (['productor', 'comprador', 'transportista'] as $profile) {
+        $connection->exec("UPDATE public.tb{$profile} p SET tbpersonaid = x.tbpersonaid
+          FROM public.tbpersona x
+          WHERE x.tbpersonaidentificacionnumero = p.tb{$profile}identificacionnumero");
+        $orphans = (int) $connection->query("SELECT COUNT(*) FROM public.tb{$profile}
+          WHERE tbpersonaid IS NULL")->fetchColumn();
+        if ($orphans !== 0) {
+            throw new RuntimeException("Migración abortada: {$profile} sin persona.");
+        }
+        $connection->exec("ALTER TABLE public.tb{$profile}
+          DROP COLUMN tb{$profile}identificacionnumero,
+          DROP COLUMN tb{$profile}identificaciontipo,
+          DROP COLUMN tb{$profile}nombre,
+          DROP COLUMN tb{$profile}telefono,
+          DROP COLUMN tb{$profile}correoelectronico,
+          ALTER COLUMN tbpersonaid SET NOT NULL");
     }
 }
 
@@ -196,15 +286,6 @@ function agregarHistoricoDireccion(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbproductordireccionfechafin TIMESTAMP WITHOUT TIME ZONE NULL');
 }
 
-/** Registra el único método de pago del alcance vigente sin duplicarlo. */
-function seedInitialData(PDO $connection): void
-{
-    $connection->exec("INSERT INTO public.tbpagometodo (
-            tbpagometodoid, tbpagometodonombre, tbpagometododescripcion, tbpagometodoactivo)
-        SELECT 1, 'Efectivo', 'Pago realizado en efectivo', 1
-        WHERE NOT EXISTS (SELECT 1 FROM public.tbpagometodo WHERE tbpagometodoid = 1)");
-}
-
 /**
  * Traslada tbproductorestado al histórico de periodos y retira la columna
  * de tbproductor (plan §4). Idempotente: si la columna no existe, solamente
@@ -224,20 +305,29 @@ function eliminarEstadoProductor(PDO $connection): void
     $maximo->execute();
     $offset = (int) $maximo->fetchColumn();
 
-    $connection->prepare('INSERT INTO public.tbproductorestadoperiodo
+    $connection->prepare("INSERT INTO public.tbproductorestadoperiodo
         (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
          tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin,
          tbproductorestadoperiodomotivo)
-        SELECT :offset + ROW_NUMBER() OVER (ORDER BY tbproductorid), tbproductorid, tbproductorestado,
-               NOW(), NULL, ''Migración v5: estado heredado''
+        SELECT :offset + ROW_NUMBER() OVER (ORDER BY p.tbproductorid), p.tbproductorid,
+               p.tbproductorestado, NOW(), NULL, 'Migración v5: estado heredado'
         FROM public.tbproductor p
         WHERE NOT EXISTS (
             SELECT 1 FROM public.tbproductorestadoperiodo ep
             WHERE ep.tbproductorid = p.tbproductorid
-        )')
+        )")
         ->execute(['offset' => $offset]);
 
     $connection->exec('ALTER TABLE public.tbproductor DROP COLUMN IF EXISTS tbproductorestado');
+}
+
+/** Registra el único método de pago del alcance vigente sin duplicarlo. */
+function seedInitialData(PDO $connection): void
+{
+    $connection->exec("INSERT INTO public.tbpagometodo (
+            tbpagometodoid, tbpagometodonombre, tbpagometododescripcion, tbpagometodoactivo)
+        SELECT 1, 'Efectivo', 'Pago realizado en efectivo', 1
+        WHERE NOT EXISTS (SELECT 1 FROM public.tbpagometodo WHERE tbpagometodoid = 1)");
 }
 
 try {
@@ -249,6 +339,7 @@ try {
     $connection->beginTransaction();
     $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v5'))");
     $connection->exec($schema);
+    normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
     agregarHistoricoDireccion($connection);
     eliminarEstadoProductor($connection);
@@ -256,7 +347,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=14 migration=v5\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=15 migration=v5\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

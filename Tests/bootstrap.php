@@ -13,7 +13,7 @@ use Configuration\Database;
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
-foreach (['NamedLock', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo'] as $testModel) {
+foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
@@ -44,7 +44,7 @@ function test_new_db(): PDO
 {
     $host = getenv('DB_HOST') ?: 'db';
     $port = getenv('DB_PORT') ?: '3306';
-    $name = getenv('DB_NAME') ?: 'dbtindervacas';
+    $name = getenv('DB_NAME') ?: 'dbmercadoganadero';
     $user = getenv('DB_USER') ?: 'root';
     $password = getenv('DB_PASS') ?: '';
     return new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $password, [
@@ -203,8 +203,8 @@ function test_cleanup_productores(array $identificaciones): void
     $marcadores = implode(',', array_fill(0, count($ids), '?'));
     $db->beginTransaction();
     try {
-        $buscarProductorIds = $db->prepare("SELECT tbproductorid FROM tbproductor
-            WHERE tbproductoridentificacionnumero IN ({$marcadores})");
+        $buscarProductorIds = $db->prepare("SELECT p.tbproductorid FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
+            WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})");
         $buscarProductorIds->execute($ids);
         $productorIds = array_map('intval', $buscarProductorIds->fetchAll(PDO::FETCH_COLUMN));
         $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
@@ -241,7 +241,8 @@ function test_cleanup_productores(array $identificaciones): void
                 $db->prepare("DELETE FROM tbdireccion WHERE tbdireccionid IN ({$marcadoresDireccion})")->execute($direccionIds);
             }
         }
-        $db->prepare("DELETE FROM tbproductor WHERE tbproductoridentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE p FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();
     } catch (Throwable $exception) {
         if ($db->inTransaction()) $db->rollBack();
