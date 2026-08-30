@@ -309,3 +309,65 @@ de modo que `FincaController`, `ProductorUbicacionController` y
 depender de una columna que ya no existe. La migración MySQL se renumeró a
 `004` porque `003` lo ocupa `003personacapacidades.sql`, y debe ejecutarse
 después de ella: primero se unifica la persona, luego se retira la columna.
+
+# Decisiones - Respaldo previo al remodelado
+
+## DEC-21 - Respaldo previo al remodelado (tramo 1)
+
+El tramo 2 se ejecutó antes que el tramo 1 porque solo agregaba tablas y no
+arriesgaba datos existentes; el tramo 6, que sí escribe sobre datos
+existentes, no podía arrancar sin un punto de reversión. Por eso se generó
+`Database/Backups/Avance02/`, etiquetado explícitamente como "previo al
+remodelado por tramos (EIF400)" en su `MANIFEST.md`, con
+`Tools/backup-database.sh Avance02` y verificado con `Tools/test-restore.sh
+Avance02`: quince tablas, cero PK/FK/CHECK/índices/AUTO_INCREMENT y
+restauración completa y por partes idénticas al origen (`APROBADO`). Los ocho
+respaldos anteriores (`Avance01` hasta `LineaBase`) se conservan intactos, tal
+como exige el plan.
+
+# Decisiones - Migrar lo que ya existe (tramo 6)
+
+## DEC-22 - Backfill de fecha de inicio en dirección histórica, y conteo de comprador
+
+`tbproductordireccionfechainicio` quedó nullable en
+`Migrations/002historicoproductor.sql` para no romper el `ALTER TABLE` sobre
+filas ya existentes; a esas filas heredadas nunca nadie les asignó una fecha
+de inicio porque no existía el concepto antes del tramo 2. La semilla
+`103exampleproductores.sql` insertaba `tbproductordireccion` sin esa columna
+y reproducía el mismo hueco en cada instalación limpia; se corrigió para
+fijar `NOW()` igual que ya hacía el periodo de estado.
+
+Para bases con datos heredados de antes del tramo 2,
+`Migrations/005backfilldireccionfechainicio.sql` asigna una única marca de
+tiempo (capturada una sola vez con `SET @fechaMigracion := NOW()`) a toda fila
+con `tbproductordireccionfechainicio IS NULL`; es la frase que hay que poder
+decir en la defensa: **"el histórico confiable empieza en la fecha de
+migración; los datos anteriores no existían en el modelo previo"**. Es
+idempotente (solo toca filas con la columna en `NULL`) y no inventa fechas
+distintas por productor porque no hay evidencia de cuándo empezó cada una.
+
+`Database/Tests/diagnostico.sql` se actualizó porque su D-01 verificaba una
+política ya reemplazada por DEC-18 (una sola dirección por productor): con
+histórico, tener varias filas cerradas es normal. D-01 ahora detecta
+productores con más de un periodo de dirección **abierto**, D-01b detecta
+productores sin ninguno abierto, y D-01c detecta periodos abiertos sin fecha
+de inicio (el síntoma exacto que corrige esta migración). Se agregaron
+también D-10 y D-11, equivalentes para `tbproductorestadoperiodo`, que no
+tenía ninguna consulta de diagnóstico propia.
+
+Conteo de `tbcomprador` en la instalación limpia de referencia: **0 filas**
+(sin datos heredados en este entorno). No es criterio para decidir si se
+borra la tabla — DEC-TRAMO-7 ya la conserva — sirve para confirmar que la
+corrección del tramo 7 no perdió compradores existentes. Si el equipo tiene
+una base de desarrollo compartida con compradores reales cargados, debe
+correrse `SELECT COUNT(*) FROM tbcomprador;` ahí antes de cerrar el tramo con
+el equipo, porque este conteo es local.
+
+Verificado: instalación limpia (`docker compose down -v && up`) levanta sin
+errores, `Tests/naming_gate.php` pasa, `Database/Tests/diagnostico.sql`
+devuelve cero filas en todas las consultas, y la suite PHP relevante
+(`schema_test`, `direccion_test`, `address_policy_test`,
+`productor_estado_periodo_test`, `productor_estado_flujo_test`,
+`comprador_test`, `productor_ubicacion_test`, `finca_direccion_test`) pasa
+completa. Ningún productor quedó sin periodo de dirección o estado abierto,
+ninguno con dos a la vez.
