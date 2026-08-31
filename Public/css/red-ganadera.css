@@ -6,7 +6,7 @@ body.rural {
     min-height:100vh;
     margin:0;
     background:var(--rural-wheat);
-    font-family:'DM Sans',Inter,ui-sans-serif,system-ui,sans-serif;
+    font-family:var(--font-sans);
 }
 
 @media (min-width:901px) {
@@ -63,11 +63,10 @@ body.rural {
     padding:10px 16px;
     border:0;
     border-radius:11px;
-    color:var(--rural-wheat);
+    color:var(--wheat-text-soft);
     background:transparent;
     font-size:12px;
     font-weight:700;
-    opacity:.6;
 }
 
 .rural__tab--active {
@@ -120,10 +119,10 @@ body.rural {
 }
 
 .rural__avatar--add {
-    border:2px dashed rgba(245,222,179,.35);
+    border:2px dashed var(--wheat-text-muted);
     background:transparent;
     font-size:20px;
-    color:rgba(245,222,179,.5);
+    color:var(--wheat-text-muted);
 }
 
 .rural__avatar-dot {
@@ -152,7 +151,6 @@ body.rural {
 }
 
 .rural__thread--muted {
-    opacity:.6;
     background:transparent;
 }
 
@@ -167,10 +165,9 @@ body.rural {
 
 .rural__thread-body p {
     margin:2px 0 0;
-    color:var(--rural-wheat);
+    color:var(--wheat-text-muted);
     font-size:12px;
     font-style:italic;
-    opacity:.8;
     line-height:1.5;
 }
 
@@ -187,7 +184,7 @@ body.rural {
     font-weight:700;
     text-transform:uppercase;
     letter-spacing:.05em;
-    opacity:.5;
+    color:var(--wheat-text-muted);
 }
 
 .rural__admin {
@@ -255,13 +252,12 @@ body.rural {
     padding:11px 22px;
     border:0;
     border-radius:14px;
-    color:var(--rural-rust);
+    color:var(--rust-text-muted);
     background:transparent;
     font-size:11px;
     font-weight:700;
     letter-spacing:.08em;
     text-transform:uppercase;
-    opacity:.6;
 }
 
 .rural__card-tab--active {
@@ -342,7 +338,7 @@ body.rural {
 
 .rural__sub-identity {
     margin:10px 0 0;
-    color:rgba(138,46,0,.6);
+    color:var(--rust-text-soft);
     font-size:11px;
     font-weight:800;
     letter-spacing:.14em;
@@ -361,7 +357,7 @@ body.rural {
 
 .rural__rating p {
     margin:6px 0 0;
-    color:rgba(138,46,0,.5);
+    color:var(--rust-text-soft);
     font-size:10px;
     font-weight:800;
     letter-spacing:.12em;
@@ -421,7 +417,7 @@ body.rural {
 
 .rural__producer-title {
     margin:0;
-    color:rgba(138,46,0,.6);
+    color:var(--rust-text-soft);
     font-size:11px;
     font-weight:800;
     letter-spacing:.12em;
@@ -439,7 +435,7 @@ body.rural {
 
 .rural__producer-meta {
     margin:0;
-    color:rgba(138,46,0,.55);
+    color:var(--rust-text-soft);
     font-size:11px;
     font-weight:700;
 }

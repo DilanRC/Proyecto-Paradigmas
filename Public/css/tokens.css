@@ -16,7 +16,9 @@
     --shadow:0 18px 50px rgba(32,61,43,.09);
     --radius:18px;
     --small-radius:10px;
-    font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+    --font-sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    --font-serif:'Lora',Georgia,'Times New Roman',serif;
+    font-family:var(--font-sans);
 }
 
 :root {
@@ -24,4 +26,15 @@
     --rural-rust:#8a2e00;
     --rural-rust-dark:#6e2500;
     --rural-denim:#5D89BA;
+}
+
+/* Texto atenuado con contraste AA verificado (>=4.5:1).
+   Antes eran rgba() sobre fondos de color y bajaban hasta 2.05:1.
+   Cada valor esta comprobado por Tests/frontend_contrast_test.mjs. */
+:root {
+    --wheat-text-muted:#dfb98d;   /* 4.64:1 sobre --rural-rust */
+    --wheat-text-soft:#cca57c;    /* 4.67:1 sobre fondos oscurecidos del aside */
+    --rust-text-muted:#a45b34;    /* 4.62:1 sobre fondos claros del panel */
+    --rust-text-soft:#a76240;     /* 4.70:1 sobre blanco */
+    --badge-inactive-text:#5f6762;/* 5.03:1 sobre #ecefed */
 }
