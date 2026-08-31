@@ -456,7 +456,7 @@ body.rural-panel {
 }
 
 .rural-panel .page-header p {
-    color:rgba(110,37,0,.7);
+    color:var(--rust-text-lead);
 }
 
 .rural-panel .page-header h1, .rural-panel .modal__header h2, .rural-panel .empty-state h2 {
