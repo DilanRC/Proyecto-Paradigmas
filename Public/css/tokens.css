@@ -1,0 +1,27 @@
+/* tokens.css — Tokens de diseno: color, tipografia, espacio, radio, sombra, z-index. */
+
+:root {
+    color-scheme: light;
+    --background:#f5f7f3;
+    --surface:#fff;
+    --text:#1d2821;
+    --muted:#66716a;
+    --border:#dfe5df;
+    --primary:#226a46;
+    --primary-dark:#174c33;
+    --primary-soft:#e6f2eb;
+    --accent:#ef5b63;
+    --danger:#bd343d;
+    --danger-soft:#fdecee;
+    --shadow:0 18px 50px rgba(32,61,43,.09);
+    --radius:18px;
+    --small-radius:10px;
+    font-family:Inter,ui-sans-serif,system-ui,sans-serif;
+}
+
+:root {
+    --rural-wheat:#F5DEB3;
+    --rural-rust:#8a2e00;
+    --rural-rust-dark:#6e2500;
+    --rural-denim:#5D89BA;
+}
