@@ -228,6 +228,110 @@ try {
     $conteoFinal = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
     $conteoFinal->execute(['id' => $productorId]);
     test_same(1, (int) $conteoFinal->fetchColumn(), 'Debe quedar exactamente una fila tras la limpieza del duplicado');
+    // ============================================================
+    // Histórico de dirección: periodos con vigencia (tramo 3b)
+    // ============================================================
+    // Estado de partida: un único enlace abierto creado por crearVacia().
+    $periodoInicial = $modeloDireccion->consultarPeriodoAbierto($productorId);
+    test_assert($periodoInicial !== null, 'El productor conserva su enlace de dirección abierto');
+    test_assert($periodoInicial['tbproductordireccionfechafin'] === null,
+        'El enlace vigente tiene fechafin NULL');
+    $direccionInicialId = $periodoInicial['tbdireccionid'];
+
+    // crear() se rechaza únicamente porque hay un periodo abierto.
+    $rechazaConAbierto = false;
+    try {
+        $modeloDireccion->ejecutarConBloqueoAlta(
+            fn () => $modeloDireccion->crear($productorId, test_direccion_payload())
+        );
+    } catch (RuntimeException $excepcion) {
+        $rechazaConAbierto = str_contains($excepcion->getMessage(), 'ya tiene una dirección registrada');
+    }
+    test_assert($rechazaConAbierto, 'crear() con periodo abierto sigue orientando a actualizar()');
+
+    // Cerrar el periodo: la dirección del pasado queda intocable.
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->cerrarPeriodo($productorId)
+    );
+    test_same(null, $modeloDireccion->consultarPeriodoAbierto($productorId),
+        'Tras cerrar el periodo no hay enlace abierto');
+    test_same(null, $modeloDireccion->buscar($productorId),
+        'buscar() devuelve null cuando no existe periodo abierto');
+
+    // Abrir un periodo nuevo: el histórico crece, nada se sobrescribe.
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->crear($productorId, test_direccion_payload(['provincia' => 'Limón']))
+    );
+    test_same('Limón', $modeloDireccion->buscar($productorId)['provincia'],
+        'buscar() lee el periodo abierto nuevo');
+
+    $direccionInicial = $db->prepare('SELECT tbdireccionprovincia FROM tbdireccion WHERE tbdireccionid = :id');
+    $direccionInicial->execute(['id' => $direccionInicialId]);
+    test_same('', $direccionInicial->fetchColumn(),
+        'La primera dirección permanece almacenada sin modificaciones');
+
+    // Segundo cambio: tres periodos consultables, dos cerrados y uno abierto.
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->cerrarPeriodo($productorId)
+    );
+    $modeloDireccion->ejecutarConBloqueoAlta(
+        fn () => $modeloDireccion->crear($productorId, test_direccion_payload(['provincia' => 'Heredia']))
+    );
+    $conteoHistorico = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
+    $conteoHistorico->execute(['id' => $productorId]);
+    test_same(3, (int) $conteoHistorico->fetchColumn(),
+        'Dos cambios dejan tres periodos consultables');
+    test_same('Heredia', $modeloDireccion->buscar($productorId)['provincia'],
+        'El periodo abierto es el último cambio');
+
+    // Vigencia por fecha sobre el histórico (fechas ajustadas con SQL directo
+    // para límites deterministas).
+    $enlaces = $db->prepare(
+        'SELECT tbproductordireccionid, d.tbdireccionprovincia AS provincia
+         FROM tbproductordireccion pd
+         INNER JOIN tbdireccion d ON d.tbdireccionid = pd.tbdireccionid
+         WHERE pd.tbproductorid = :id ORDER BY pd.tbproductordireccionid ASC'
+    );
+    $enlaces->execute(['id' => $productorId]);
+    $historico = $enlaces->fetchAll();
+    $db->prepare(
+        'UPDATE tbproductordireccion
+         SET tbproductordireccionfechainicio = :inicio, tbproductordireccionfechafin = :fin
+         WHERE tbproductordireccionid = :id'
+    )->execute(['inicio' => '2020-01-01 00:00:00', 'fin' => '2021-01-01 00:00:00',
+        'id' => $historico[0]['tbproductordireccionid']]);
+    $db->prepare(
+        'UPDATE tbproductordireccion
+         SET tbproductordireccionfechainicio = :inicio, tbproductordireccionfechafin = :fin
+         WHERE tbproductordireccionid = :id'
+    )->execute(['inicio' => '2021-01-01 00:00:00', 'fin' => '2022-01-01 00:00:00',
+        'id' => $historico[1]['tbproductordireccionid']]);
+
+    test_same('', $modeloDireccion->consultarVigenteEn($productorId, '2020-06-01 00:00:00')['provincia'],
+        'En 2020 la residencia vigente era la dirección original');
+    test_same('Limón', $modeloDireccion->consultarVigenteEn($productorId, '2021-06-01 00:00:00')['provincia'],
+        'En 2021 la residencia vigente era la segunda dirección');
+    test_same('Heredia', $modeloDireccion->consultarVigenteEn($productorId, '2999-01-01 00:00:00')['provincia'],
+        'Una fecha futura resuelve al periodo abierto');
+
+    // Invariante: nunca dos enlaces abiertos para el mismo productor.
+    $segundoAbiertoId = (int) $db->query(
+        'SELECT COALESCE(MAX(tbproductordireccionid), 0) + 1 FROM tbproductordireccion'
+    )->fetchColumn();
+    $db->prepare('INSERT INTO tbproductordireccion
+            (tbproductordireccionid, tbproductorid, tbdireccionid)
+        VALUES (:enlaceId, :productorId, :direccionId)')
+        ->execute(['enlaceId' => $segundoAbiertoId, 'productorId' => $productorId,
+            'direccionId' => $direccionInicialId]);
+    $detectaDobleAbierto = false;
+    try {
+        $modeloDireccion->consultarPeriodoAbierto($productorId);
+    } catch (RuntimeException $excepcion) {
+        $detectaDobleAbierto = str_contains($excepcion->getMessage(), 'más de un periodo de dirección abierto');
+    }
+    test_assert($detectaDobleAbierto, 'Dos enlaces abiertos deben detectarse como integridad rota');
+    $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductordireccionid = :id')
+        ->execute(['id' => $segundoAbiertoId]);
 } finally {
     test_cleanup_productores([$id]);
 }

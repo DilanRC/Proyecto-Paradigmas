@@ -1,10 +1,18 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
+  "git": {
+    "deploymentEnabled": {
+      "*": false,
+      "dev": true,
+      "main": true
+    }
+  },
   "services": {
     "app": {
       "root": ".",
-      "entrypoint": "Dockerfile.vercel"
+      "entrypoint": "Dockerfile.vercel",
+      "ignoreCommand": "bash Tools/vercel-ignore-build.sh"
     }
   },
   "rewrites": [

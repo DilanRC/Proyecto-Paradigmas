@@ -1,5 +1,48 @@
 # Decisiones - Corrección 04
 
+## DEC-PER-001 - Persona única y capacidades independientes
+
+Esta decisión sustituye cualquier descripción posterior que trate Productor,
+Comprador y Transportista como identidades distintas. `tbpersona` concentra
+identificación, tipo, nombre, teléfono, correo y estado global. La existencia
+de una fila en `tbproductor`, `tbcomprador` o `tbtransportista` representa una
+capacidad concreta. No se crean roles, catálogos, ENUM ni columnas de tipo de
+rol.
+
+Los IDs históricos de los tres perfiles y sus relaciones se conservan. Cada
+perfil contiene `tbpersonaid` y su propio estado de participación. El estado
+efectivo requiere persona y perfil activos.
+
+## DEC-PER-002 - Conflictos y escritura compartida
+
+Al crear una capacidad, PHP crea la persona o la reutiliza por identificación.
+Devuelve 409 si la capacidad ya existe o si los datos personales recibidos no
+coinciden, sin sobrescribir ni escoger datos automáticamente. Actualizar los
+datos personales desde cualquier capacidad modifica `tbpersona` y se refleja
+en las demás. PHP aplica unicidad, IDs manuales y coherencia mediante
+transacciones, sentencias preparadas y bloqueos nombrados.
+
+## DEC-PER-003 - Desactivación lógica
+
+`DELETE` desactiva exclusivamente el perfil y nunca ejecuta `DELETE FROM`.
+`PATCH` reactiva exclusivamente el perfil. Una persona globalmente inactiva no
+puede operar ni reactivar capacidades por esos endpoints.
+
+## DEC-PER-004 - Migración atómica y espejo PostgreSQL
+
+La migración detecta primero identificaciones duplicadas y datos personales
+incompatibles. Ante un conflicto aborta antes de retirar columnas. Si no hay
+conflictos, crea y enlaza `tbpersona`, verifica conteos, IDs, relaciones y
+huérfanos, y solo después elimina las columnas duplicadas. La misma
+transformación existe para MySQL y Supabase/PostgreSQL. La migración remota no
+se ejecuta ni se activa por push sin snapshot confirmado y autorización
+expresa.
+
+## DEC-PER-005 - Quince tablas sin objetos de integridad
+
+El modelo final tiene exactamente 15 tablas y mantiene cero PK, FK, UNIQUE,
+CHECK, índices, ENUM, defaults, triggers y objetos programables.
+
 ## DEC-C04-001 - Instrucción docente vigente
 
 La instrucción docente sustituye el modelo anterior. `dbtindervacas` conserva
@@ -22,7 +65,8 @@ Dirección y finca guardan ese mismo valor como enlace lógico, sin FK.
 
 ## DEC-C04-004 - Identificación inmutable por contrato
 
-`tbproductoridentificacionnumero` no es PK. La aplicación no permite cambiarla.
+La identificación vive ahora en `tbpersonaidentificacionnumero`; no es PK y la
+aplicación no permite cambiarla.
 Si fue digitada incorrectamente se debe:
 
 1. desactivar el registro incorrecto;
@@ -58,6 +102,12 @@ agregan relaciones, claves, índices, defaults ni valores automáticos. La
 migración v2 crea y valida la misma estructura en Supabase PostgreSQL.
 
 # Decisiones - Avance de direcciones, pagos y transporte
+
+## DEC-TRAMO-7 - Retiro frontend de Comprador
+
+En el tramo 7 se retira Comprador del frontend; Productor, Transportista,
+Vehículo y Métodos de pago se mantienen como paneles activos, no se toca el
+contrato `estado` y el retiro respeta el alcance secuencial del remodelado.
 
 Este bloque solamente toca base de datos y documentación. Ninguna decisión se
 implementa con código de aplicación.
@@ -165,6 +215,97 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-en la migración `v3`: once tablas, `tbproductordireccion` normalizada y el mismo
-criterio de cero llaves, restricciones, índices y valores automáticos. El espejo
-sigue a MySQL; nunca al revés.
+mediante migraciones versionadas: 15 tablas, `tbpersona` como identidad única,
+`tbproductordireccion` normalizada y el mismo criterio de cero llaves,
+restricciones, índices y valores automáticos. El espejo sigue a MySQL; nunca al
+revés. Aplicar el cambio remoto requiere snapshot y autorización expresa.
+
+## DEC-16 - Ubicaciones GPS append-only
+
+`tbproductorubicacion` es una serie temporal: cada lectura GPS del productor
+inserta una fila nueva y ninguna fila se actualiza ni se elimina. Las
+consecuencias vigentes son:
+
+1. **Solo INSERT**: `Application/Model/ProductorUbicacion.php` no expone
+   `actualizar()` ni `eliminar()`, y el endpoint
+   `/api/productores-ubicacion.php` rechaza PUT, PATCH y DELETE con 405.
+2. **Fecha del servidor**: PHP asigna `tbproductorubicacionfecha` con su reloj;
+   el campo `fecha` que pudiera enviar el cliente se descarta.
+3. **Origen conjunto controlado**: `tbproductorubicacionorigen` solo acepta
+   `NAVEGADOR` o `MANUAL`; cualquier otro valor se rechaza con error por campo.
+4. **Lock dedicado**: el consecutivo usa `MAX(tbproductorubicacionid) + 1`
+   bajo el bloqueo nombrado `tindercows_productor_ubicacion_alta`, retenido
+   hasta después del COMMIT para garantizar IDs únicos bajo ráfagas
+   simultáneas.
+5. **Bitácora en la misma transacción**: cada inserción registra
+   `REGISTRAR_UBICACION` en `tbbitacora` antes del commit.
+6. **Coordenadas exactas**: latitud y longitud se validan por rango (-90..90,
+   -180..180) y se guardan como texto hacia `DECIMAL(10,7)`, sin redondeos de
+   punto flotante.
+
+# Decisiones - Modelos de históricos
+
+## DEC-18 - Periodos con fechafin NULL como vigente; cierre inmutable
+
+El estado y la residencia del productor se modelan como hechos históricos
+(plan §7-8). `ProductorEstadoPeriodo` escribe en `tbproductorestadoperiodo` y
+`ProductorDireccion` trabaja sobre `tbproductordireccion` con sus columnas de
+vigencia: **el periodo vigente es la fila con fechafin NULL**. Un cambio cierra
+el periodo abierto (UPDATE solo de fechafin, asignada por el reloj de PHP) e
+inserta una fila nueva; ningún periodo cerrado se edita ni elimina. El motor no
+puede garantizar "máximo un abierto por productor" (cero restricciones): PHP lo
+garantiza ejecutando abrir/cerrar bajo el bloqueo nombrado por productor
+(`tindercows_productor_estado_{id}`) dentro de la transacción completa, y los
+métodos de escritura rechazan llamadas sin ese lock (`LogicException`). La
+consulta `consultarVigenteEn(fecha)` resuelve el periodo cuya vigencia contiene
+la fecha. La política anterior de "exactamente una dirección por productor"
+se reescribe sobre el periodo abierto: tener varias direcciones históricas es
+lo normal, y dos periodos abiertos simultáneos se detectan como integridad
+rota.
+
+# Decisiones - Códigos HTTP de ubicación
+
+## DEC-17 - Consistencia de códigos con el resto de la API
+
+Las validaciones de `/api/productores-ubicacion.php` responden **422**
+(contenido no procesable) en lugar de 400: coordenadas fuera de rango o no
+numéricas, precisión negativa o no numérica, origen fuera de
+`{NAVEGADOR, MANUAL}`, campos desconocidos y rango de fechas inválido. Es el
+mismo criterio que ya aplicaban `ProductorController` (422 en sus trece
+validaciones) y `CompradorController` (422 en nueve). Se mantienen: **404**
+productor inexistente, **409** productor inactivo, **405** métodos
+destructivos sobre la tabla append-only y 400/415 del contrato de transporte
+(JSON malformado / Content-Type incorrecto). El alta válida responde **201**
+porque crea una fila nueva, igual que POST de productor.
+
+# Decisiones - Estado como periodos
+
+## DEC-19 - El estado es un hecho histórico; la columna muerta se retira en el mismo PR
+
+`tbproductorestado` se retira de `tbproductor` (MySQL y espejo Supabase) en el
+mismo PR que cambia `ProductorController` para derivar el estado del periodo
+abierto, de modo que nadie pueda volver a usar la columna eliminada. El
+esquema MySQL (`000instalacioncompleta.sql`), la migración
+`004eliminaestadoproductor.sql` (con backfill y comprobación previa) y el
+espejo PostgreSQL (`schema.sql` + `migrate.php` v5) quedan sincronizados. La
+semilla `103exampleproductores.sql` crea periodos iniciales ACTIVO para los
+productores ficticios en lugar de escribir la columna muerta. Un productor sin
+periodos (solo puede ocurrir con datos heredados pre-migración) se considera
+**INACTIVO** por defecto: no hay evidencia de que esté activo. El orden de
+locks en `desactivar`/`reactivar` es: bloqueo de fila FOR UPDATE del
+productor → lock nombrado del periodo por productor; idempotente: desactivar
+dos veces seguidas no duplica periodos.
+
+## DEC-20 - Periodos de estado sobre persona con capacidades
+
+Al integrar este tramo con la unificación de personas (DEC de `tbpersona`),
+la identidad y el contacto del productor vienen de `tbpersona` y su estado
+del periodo abierto: son dos ejes independientes. Un productor cuenta como
+**ACTIVO** solo si su periodo abierto está en 1 **y** `tbpersonaestado` es 1,
+porque una identidad inactiva desactiva todas sus capacidades. El modelo
+expone el estado derivado con el alias `tbproductorestado` en cada consulta,
+de modo que `FincaController`, `ProductorUbicacionController` y
+`ProductorController` siguen leyendo el estado por el mismo nombre sin
+depender de una columna que ya no existe. La migración MySQL se renumeró a
+`004` porque `003` lo ocupa `003personacapacidades.sql`, y debe ejecutarse
+después de ella: primero se unifica la persona, luego se retira la columna.

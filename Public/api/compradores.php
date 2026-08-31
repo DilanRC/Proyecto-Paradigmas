@@ -10,7 +10,7 @@ use function Configuration\sendJsonResponse;
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
-foreach (['NamedLock', 'Bitacora', 'Comprador'] as $modelo) {
+foreach (['NamedLock', 'Persona', 'Bitacora', 'Comprador'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Controller/CompradorController.php';

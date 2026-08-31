@@ -36,7 +36,7 @@ final class Database
 
         $host = self::environmentVariable('DB_HOST', '127.0.0.1');
         $port = self::environmentVariable('DB_PORT', '3306');
-        $databaseName = self::environmentVariable('DB_NAME', 'dbtindervacas');
+        $databaseName = self::environmentVariable('DB_NAME', 'dbmercadoganadero');
         $username = self::environmentVariable('DB_USER', 'root');
         $password = self::environmentVariable('DB_PASS', '');
         $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $databaseName);
