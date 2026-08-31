@@ -1,7 +1,16 @@
 const fs = require('node:fs');
 const assert = require('node:assert');
 
-const js = fs.readFileSync('Public/js/productores.js', 'utf8');
+// El panel se reparte entre su archivo de entrada y los modulos compartidos que
+// importa; el control se busca sobre el grafo completo y no solo sobre la entrada.
+const sharedDir = 'Public/js/shared';
+const shared = fs.existsSync(sharedDir)
+    ? fs.readdirSync(sharedDir)
+        .filter((file) => file.endsWith('.js'))
+        .map((file) => fs.readFileSync(`${sharedDir}/${file}`, 'utf8'))
+        .join('\n')
+    : '';
+const js = `${fs.readFileSync('Public/js/productores.js', 'utf8')}\n${shared}`;
 const view = fs.readFileSync('Application/View/productores/index.php', 'utf8');
 
 assert(js.includes('fetch('), 'La UI debe usar fetch.');
