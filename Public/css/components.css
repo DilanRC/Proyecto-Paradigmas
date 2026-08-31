@@ -107,7 +107,7 @@
 }
 
 .badge--inactive {
-    color:#6f7671;
+    color:var(--badge-inactive-text);
     background:#ecefed;
 }
 

@@ -239,7 +239,7 @@ body.rural-panel {
     --shadow:0 20px 54px rgba(138,46,0,.14);
     --radius:26px;
     --small-radius:14px;
-    font-family:'DM Sans',Inter,ui-sans-serif,system-ui,sans-serif;
+    font-family:var(--font-sans);
 }
 
 @media (min-width:768px) {
@@ -295,7 +295,7 @@ body.rural-panel {
 
 .rural-panel__nav-label {
     margin:0 0 16px;
-    color:rgba(245,222,179,.55);
+    color:var(--wheat-text-muted);
     font-size:11px;
     font-weight:800;
     letter-spacing:.2em;
@@ -314,7 +314,7 @@ body.rural-panel {
     justify-content:space-between;
     padding:14px 16px;
     border-radius:18px;
-    color:rgba(245,222,179,.7);
+    color:var(--wheat-text-muted);
     font-size:14px;
     font-weight:600;
     text-decoration:none;
@@ -348,7 +348,7 @@ body.rural-panel {
 .rural-panel__sidebar-footer p:first-child {
     max-width:190px;
     margin:0;
-    color:rgba(245,222,179,.7);
+    color:var(--wheat-text-muted);
     font-family:'Lora',serif;
     font-style:italic;
     font-size:13px;
@@ -357,7 +357,7 @@ body.rural-panel {
 
 .rural-panel__sidebar-footer p:last-child {
     margin:8px 0 0;
-    color:rgba(245,222,179,.4);
+    color:var(--wheat-text-muted);
     font-size:10px;
     font-weight:800;
     letter-spacing:.16em;
@@ -437,7 +437,7 @@ body.rural-panel {
 
 .rural-panel__footnote {
     margin:24px 0 0;
-    color:rgba(138,46,0,.4);
+    color:var(--rust-text-muted);
     font-size:11px;
     font-weight:600;
     letter-spacing:.12em;
@@ -492,7 +492,7 @@ body.rural-panel {
 }
 
 .rural-panel thead {
-    color:rgba(138,46,0,.5);
+    color:var(--rust-text-muted);
     background:rgba(245,222,179,.24);
 }
 
