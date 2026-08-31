@@ -366,7 +366,7 @@ body.rural {
 
 .rural__quote {
     margin:0 0 32px;
-    color:rgba(138,46,0,.8);
+    color:var(--rust-text-body);
     font-family:'Lora',serif;
     font-style:italic;
     font-size:18px;

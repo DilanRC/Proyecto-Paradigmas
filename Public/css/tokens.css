@@ -36,5 +36,7 @@
     --wheat-text-soft:#cca57c;    /* 4.67:1 sobre fondos oscurecidos del aside */
     --rust-text-muted:#a45b34;    /* 4.62:1 sobre fondos claros del panel */
     --rust-text-soft:#a76240;     /* 4.70:1 sobre blanco */
+    --rust-text-lead:#986344;     /* 4.53:1 sobre el fondo del panel */
+    --rust-text-body:#a15833;     /* 5.30:1 sobre blanco (cita del home) */
     --badge-inactive-text:#5f6762;/* 5.03:1 sobre #ecefed */
 }

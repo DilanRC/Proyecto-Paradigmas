@@ -19,6 +19,7 @@ docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
 node Tests/frontend_contract_test.js
 node Tests/frontend_retirement_eval.js
+node Tests/frontend_contrast_test.mjs
 php services/supabase-database/tests/schema_test.php
 php services/supabase-database/evals/schema_eval.php
 ```
