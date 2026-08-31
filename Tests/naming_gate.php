@@ -14,8 +14,11 @@ $required = [
     'Database/Migrations/001normalizadireccionproductor.sql',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
+    'Application/Model/ProductorEstadoPeriodo.php',
     'Application/Model/ProductorFinca.php',
+    'Application/Model/ProductorUbicacion.php',
     'Public/api/productores.php',
+    'Public/api/productores-ubicacion.php',
 ];
 foreach ($required as $file) {
     if (!is_file("{$root}/{$file}")) throw new RuntimeException("Falta {$file}");
@@ -45,7 +48,8 @@ $sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $sql = implode("\n", array_map('file_get_contents', $sqlFiles));
 foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador',
     'tbdireccion', 'tbfincadireccion', 'tbpagometodo', 'tbtransportista', 'tbvehiculo',
-    'tbtransportistavehiculo'] as $table) {
+    'tbtransportistavehiculo', 'tbproductorestadoperiodo', 'tbproductorubicacion',
+    'tbproductoractividad'] as $table) {
     if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
@@ -74,7 +78,7 @@ foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $
 }
 $modulosEsperados = 12; // 001createdatabase .. 012createtransportistavehiculo, unificados en 000instalacioncompleta.sql
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $modulosEsperados
-    || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
+    || !str_contains($sql, 'ALTER DATABASE dbmercadoganadero')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 $avance = [

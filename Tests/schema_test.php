@@ -16,8 +16,9 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
 test_same(['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo',
-    'tbproductor', 'tbproductordireccion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
-    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente once tablas singulares');
+    'tbpersona', 'tbproductor', 'tbproductoractividad', 'tbproductordireccion', 'tbproductorestadoperiodo',
+    'tbproductorubicacion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
+    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente quince tablas singulares');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
@@ -31,7 +32,7 @@ foreach (['KEY_COLUMN_USAGE', 'REFERENTIAL_CONSTRAINTS', 'CHECK_CONSTRAINTS'] as
     $metadata = $db->prepare("SELECT COUNT(*) FROM information_schema.{$metadataTable}
         WHERE CONSTRAINT_SCHEMA = DATABASE()");
     $metadata->execute();
-    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para dbtindervacas");
+    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para dbmercadoganadero");
 }
 
 $productorIdColumn = $db->prepare("SELECT DATA_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA
@@ -68,24 +69,31 @@ foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENT
 }
 
 $expectedColumns = [
-    'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
-        'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
-    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid'],
+    'tbpersona' => ['tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
+        'tbpersonanombre', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado'],
+    'tbproductor' => ['tbproductorid', 'tbpersonaid'],
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
+        'tbproductordireccionfechainicio', 'tbproductordireccionfechafin'],
     'tbdireccion' => ['tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
         'tbdireccionpueblo', 'tbdireccionsenas'],
+    'tbproductorestadoperiodo' => ['tbproductorestadoperiodoid', 'tbproductorid',
+        'tbproductorestadoperiodoestado', 'tbproductorestadoperiodofechainicio',
+        'tbproductorestadoperiodofechafin', 'tbproductorestadoperiodomotivo'],
+    'tbproductorubicacion' => ['tbproductorubicacionid', 'tbproductorid', 'tbproductorubicacionlatitud',
+        'tbproductorubicacionlongitud', 'tbproductorubicacionprecision', 'tbproductorubicacionfecha',
+        'tbproductorubicacionorigen'],
+    'tbproductoractividad' => ['tbproductoractividadid', 'tbproductorid', 'tbproductoractividadtipo',
+        'tbproductoractividadfecha', 'tbproductoractividadorigen'],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
     'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
     'tbpagometodo' => ['tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo'],
-    'tbtransportista' => ['tbtransportistaid', 'tbtransportistaidentificacionnumero',
-        'tbtransportistaidentificaciontipo', 'tbtransportistanombre', 'tbtransportistatelefono',
-        'tbtransportistacorreoelectronico', 'tbtransportistaestado'],
+    'tbtransportista' => ['tbtransportistaid', 'tbpersonaid', 'tbtransportistaestado'],
     'tbvehiculo' => ['tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado'],
     'tbtransportistavehiculo' => ['tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid'],
     'tbbitacora' => ['tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid'],
-    'tbcomprador' => ['tbcompradorid', 'tbcompradoridentificacionnumero', 'tbcompradoridentificaciontipo',
-        'tbcompradornombre', 'tbcompradortelefono', 'tbcompradorcorreoelectronico', 'tbcompradorestado'],
+    'tbcomprador' => ['tbcompradorid', 'tbpersonaid', 'tbcompradorestado'],
 ];
 foreach ($expectedColumns as $table => $expected) {
     $statement = $db->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS
@@ -105,7 +113,7 @@ test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
 // depende de la aplicación. Lo que sigue ejercita el CRUD de productores, ahora
 // contra el contrato normalizado (tbproductordireccion como enlace + tbdireccion
 // como contenido real).
-echo "OK schema_test (estructura): once tablas, columnas exactas, cero claves, índices, "
+echo "OK schema_test (estructura): quince tablas, columnas exactas, cero claves, índices, "
     . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
 $apiIds = [test_document(), test_document(), test_document()];
@@ -143,14 +151,17 @@ try {
     test_same(2, count($idsFincas), 'Deben crearse dos fincas con su propio identificador');
     test_same($idsFincas[0] + 1, $idsFincas[1], 'Las fincas deben generar tbfincaid consecutivos');
 
-    $directInsert = $db->prepare("INSERT INTO tbproductor
-        (tbproductorid,tbproductoridentificacionnumero,tbproductoridentificaciontipo,tbproductornombre,
-         tbproductortelefono,tbproductorcorreoelectronico,tbproductorestado)
-        VALUES (:productorId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
+    $directInsertPersona = $db->prepare("INSERT INTO tbpersona
+        (tbpersonaid,tbpersonaidentificacionnumero,tbpersonaidentificaciontipo,tbpersonanombre,
+         tbpersonatelefono,tbpersonacorreoelectronico,tbpersonaestado)
+        VALUES (:personaId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
+    $directInsert = $db->prepare('INSERT INTO tbproductor (tbproductorid,tbpersonaid)
+        VALUES (:productorId,:personaId)');
     foreach ($directProductorIds as $directId) {
-        $directInsert->execute(['productorId' => $directId, 'identificacion' => $directIdentification]);
+        $directInsertPersona->execute(['personaId' => $directId, 'identificacion' => $directIdentification]);
+        $directInsert->execute(['productorId' => $directId, 'personaId' => $directId]);
     }
-    $directCount = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbproductoridentificacionnumero = :identificacion');
+    $directCount = $db->prepare('SELECT COUNT(*) FROM tbpersona WHERE tbpersonaidentificacionnumero = :identificacion');
     $directCount->execute(['identificacion' => $directIdentification]);
     test_same(2, (int) $directCount->fetchColumn(), 'Sin PK, UNIQUE ni CHECK, SQL directo acepta duplicados y dominio inválido');
 
@@ -183,4 +194,4 @@ try {
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: once tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+echo "OK schema_test: quince tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

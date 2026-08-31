@@ -1,17 +1,51 @@
+CREATE TABLE IF NOT EXISTS public.tbpersona (
+    tbpersonaid INTEGER NOT NULL,
+    tbpersonaidentificacionnumero VARCHAR(250) NOT NULL,
+    tbpersonaidentificaciontipo VARCHAR(40) NOT NULL,
+    tbpersonanombre VARCHAR(150) NOT NULL,
+    tbpersonatelefono VARCHAR(20) NOT NULL,
+    tbpersonacorreoelectronico VARCHAR(150) NOT NULL,
+    tbpersonaestado SMALLINT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbproductor (
     tbproductorid INTEGER NOT NULL,
-    tbproductoridentificacionnumero VARCHAR(250) NOT NULL,
-    tbproductoridentificaciontipo VARCHAR(40) NOT NULL,
-    tbproductornombre VARCHAR(150) NOT NULL,
-    tbproductortelefono VARCHAR(20) NOT NULL,
-    tbproductorcorreoelectronico VARCHAR(150) NOT NULL,
-    tbproductorestado SMALLINT NOT NULL
+    tbpersonaid INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductordireccion (
     tbproductordireccionid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
-    tbdireccionid INTEGER NOT NULL
+    tbdireccionid INTEGER NOT NULL,
+    tbproductordireccionfechainicio TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbproductordireccionfechafin TIMESTAMP WITHOUT TIME ZONE NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbproductorestadoperiodo (
+    tbproductorestadoperiodoid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductorestadoperiodoestado SMALLINT NOT NULL,
+    tbproductorestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbproductorestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbproductorestadoperiodomotivo VARCHAR(250) NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbproductorubicacion (
+    tbproductorubicacionid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductorubicacionlatitud NUMERIC(10,7) NOT NULL,
+    tbproductorubicacionlongitud NUMERIC(10,7) NOT NULL,
+    tbproductorubicacionprecision NUMERIC(10,2) NULL,
+    tbproductorubicacionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbproductorubicacionorigen VARCHAR(40) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbproductoractividad (
+    tbproductoractividadid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductoractividadtipo VARCHAR(60) NOT NULL,
+    tbproductoractividadfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbproductoractividadorigen VARCHAR(100) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbdireccion (
@@ -45,11 +79,7 @@ CREATE TABLE IF NOT EXISTS public.tbpagometodo (
 
 CREATE TABLE IF NOT EXISTS public.tbtransportista (
     tbtransportistaid INTEGER NOT NULL,
-    tbtransportistaidentificacionnumero VARCHAR(250) NOT NULL,
-    tbtransportistaidentificaciontipo VARCHAR(40) NOT NULL,
-    tbtransportistanombre VARCHAR(150) NOT NULL,
-    tbtransportistatelefono VARCHAR(20) NOT NULL,
-    tbtransportistacorreoelectronico VARCHAR(150) NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
     tbtransportistaestado SMALLINT NOT NULL
 );
 
@@ -83,16 +113,16 @@ CREATE TABLE IF NOT EXISTS public.tbbitacora (
 
 CREATE TABLE IF NOT EXISTS public.tbcomprador (
     tbcompradorid INTEGER NOT NULL,
-    tbcompradoridentificacionnumero VARCHAR(250) NOT NULL,
-    tbcompradoridentificaciontipo VARCHAR(40) NOT NULL,
-    tbcompradornombre VARCHAR(150) NOT NULL,
-    tbcompradortelefono VARCHAR(20) NOT NULL,
-    tbcompradorcorreoelectronico VARCHAR(150) NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
     tbcompradorestado SMALLINT NOT NULL
 );
 
+ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductordireccion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductorestadoperiodo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductorubicacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductoractividad ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbdireccion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbfinca ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbfincadireccion ENABLE ROW LEVEL SECURITY;

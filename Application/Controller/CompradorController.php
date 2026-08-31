@@ -55,6 +55,10 @@ final class CompradorController
                 'PATCH' => $this->reactivar($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
+        } catch (\Application\Model\PersonaConflictException $excepcion) {
+            return $this->respuesta(false, $excepcion->getMessage(), null, 409, [
+                'identificacion.numero' => $excepcion->getMessage(),
+            ]);
         } catch (CompradorHttpException $excepcion) {
             return $this->respuesta(
                 false,
@@ -162,7 +166,7 @@ final class CompradorController
             if ($bloqueado === null) {
                 throw new CompradorHttpException('Comprador no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbcompradorestado'] !== 1) {
+            if ((int) $bloqueado['tbcompradorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
                 throw new CompradorHttpException(
                     'El comprador está inactivo. Debe reactivarlo antes de actualizarlo.',
                     409,
@@ -198,6 +202,9 @@ final class CompradorController
             if ($bloqueado === null || $anterior === null) {
                 throw new CompradorHttpException('Comprador no encontrado.', 404);
             }
+            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
+                throw new CompradorHttpException('La persona está inactiva y no puede operar capacidades.', 409);
+            }
             if ((int) $bloqueado['tbcompradorestado'] === 0) {
                 return $anterior;
             }
@@ -226,6 +233,9 @@ final class CompradorController
             $anterior = $this->comprador->buscar($identificacion);
             if ($bloqueado === null || $anterior === null) {
                 throw new CompradorHttpException('Comprador no encontrado.', 404);
+            }
+            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
+                throw new CompradorHttpException('La persona está inactiva y no puede reactivar capacidades.', 409);
             }
             if ((int) $bloqueado['tbcompradorestado'] === 1) {
                 return $anterior;

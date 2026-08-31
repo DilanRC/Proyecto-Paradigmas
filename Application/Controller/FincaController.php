@@ -229,7 +229,8 @@ final class FincaController
         if ($bloqueado === null) {
             throw new FincaHttpException('Productor no encontrado.', 404);
         }
-        if ($exigirProductorActivo && (int) $bloqueado['tbproductorestado'] !== 1) {
+        if ($exigirProductorActivo && ((int) $bloqueado['tbproductorestado'] !== 1
+            || (int) $bloqueado['tbpersonaestado'] !== 1)) {
             throw new FincaHttpException(
                 'El productor está inactivo. Debe reactivarlo antes de modificar sus fincas.',
                 409,
