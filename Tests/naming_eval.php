@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('veintisiete_tablas', $manifest['table_count'] === 27,
-    'SQL crea exactamente veintisiete tablas, incluida la identidad compartida tbpersona');
+$evaluate('treinta_tablas', $manifest['table_count'] === 30,
+    'SQL crea exactamente treinta tablas, incluida la identidad compartida tbpersona');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -76,13 +76,15 @@ $evaluate('diagnostico_sin_restriccion', str_contains($diagnostico, 'DETECTAN')
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbanimal',
-    'tbanimalinteraccion', 'tbanimalobservacion', 'tbanimalpublicacion',
-    'tbbitacora', 'tbcarrito', 'tbcarritoanimal', 'tbcompra', 'tbcomprador',
+    'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
+    'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito',
+    'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
     'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
     'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorubicacion',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
-    'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'],
+    'tbtransportistahorario', 'tbtransportistaresena', 'tbtransportistavehiculo',
+    'tbvehiculo', 'tbventa'],
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
@@ -119,13 +121,13 @@ $evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "
     'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
 $evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es la entidad de negocio núcleo')
     && str_contains($matrizP0C, '`tbvendedor` no debe existir')
-    && str_contains($matrizP0C, '`tbcomprador` queda como estructura legacy')
+    && str_contains($matrizP0C, '`tbcomprador` tiene destino definitivo')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo')
     && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvendedor')
     && !str_contains($schema, 'tbcompradorestadoperiodo'),
     'P0-C cierra Productor como núcleo y Comprador/Vendedor como clasificaciones históricas');
 $evaluate('comercio_historico_preparado', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimal')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalobservacion')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalpublicacion')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcompra')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbventa')

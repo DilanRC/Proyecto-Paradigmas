@@ -1,7 +1,7 @@
 # Esquema Supabase
 
 Servicio de migración PostgreSQL para el proyecto Supabase conectado a Vercel.
-Mantiene en `public` el equivalente de las 27 tablas MySQL. `tbpersona`
+Mantiene en `public` el equivalente de las 30 tablas MySQL. `tbpersona`
 concentra identidad y contacto; `tbproductor`, `tbcomprador` y
 `tbtransportista` son capacidades independientes enlazadas por `tbpersonaid`.
 El bloque comercial agrega clasificación histórica del Productor, animales,
@@ -20,7 +20,7 @@ contenedor sin borrar ni alterar datos existentes.
 Evidencia operativa esperada en los logs de Vercel:
 
 ```text
-supabase_schema_status=ready tables=27 migration=v6
+supabase_schema_status=ready tables=30 migration=v6
 ```
 
 No se debe ejecutar la migración remota hasta verificar un snapshot y recibir

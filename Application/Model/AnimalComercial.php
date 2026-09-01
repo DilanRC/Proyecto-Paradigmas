@@ -17,12 +17,14 @@ final class AnimalComercial
     private const ACCIONES_INTERACCION = ['AGREGAR', 'RETIRAR'];
     private const LOCKS_ALTA = [
         'tbanimal' => 'tindercows_animal_alta',
-        'tbanimalobservacion' => 'tindercows_animal_observacion_alta',
+        'tbanimalproduccionsalud' => 'tindercows_animal_observacion_alta',
         'tbanimalpublicacion' => 'tindercows_animal_publicacion_alta',
+        'tbanimalpublicacionestadoperiodo' => 'tindercows_animal_publicacion_estado_alta',
         'tbcompra' => 'tindercows_compra_alta',
         'tbventa' => 'tindercows_venta_alta',
         'tbanimalinteraccion' => 'tindercows_animal_interaccion_alta',
         'tbcarrito' => 'tindercows_carrito_alta',
+        'tbcarritoestadoperiodo' => 'tindercows_carrito_estado_alta',
         'tbcarritoanimal' => 'tindercows_carrito_animal_alta',
     ];
 
@@ -48,21 +50,24 @@ final class AnimalComercial
         }
     }
 
-    public function crearAnimal(?string $codigo, ?string $sexo, ?string $raza, string $origen): int
+    public function crearAnimal(?string $codigo, ?string $sexo, ?string $raza, string $origen,
+        ?string $caracteristicas = null): int
     {
         $this->exigirLock('tbanimal');
         $animalId = $this->siguienteId('tbanimal', 'tbanimalid');
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbanimal
-             (tbanimalid, tbanimalcodigo, tbanimalsexo, tbanimalraza,
-              tbanimalfecharegistroensistema, tbanimalorigenregistro)
-             VALUES (:id, :codigo, :sexo, :raza, :fechaRegistro, :origen)'
+             (tbanimalid, tbanimalidentificacion, tbanimalsexo, tbanimalraza,
+              tbanimalcaracteristicas, tbanimalfecharegistroensistema,
+              tbanimalorigenregistro)
+             VALUES (:id, :codigo, :sexo, :raza, :caracteristicas, :fechaRegistro, :origen)'
         );
         $sentencia->execute([
             'id' => $animalId,
             'codigo' => $codigo,
             'sexo' => $sexo,
             'raza' => $raza,
+            'caracteristicas' => $caracteristicas,
             'fechaRegistro' => date('Y-m-d H:i:s'),
             'origen' => $origen,
         ]);
@@ -72,16 +77,16 @@ final class AnimalComercial
 
     public function registrarObservacion(int $animalId, array $datos): int
     {
-        $this->exigirLock('tbanimalobservacion');
-        $observacionId = $this->siguienteId('tbanimalobservacion', 'tbanimalobservacionid');
+        $this->exigirLock('tbanimalproduccionsalud');
+        $observacionId = $this->siguienteId('tbanimalproduccionsalud', 'tbanimalproduccionsaludid');
         $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbanimalobservacion
-             (tbanimalobservacionid, tbanimalid, tbanimalobservacionfecha,
-              tbanimalobservacionorigen, tbanimalobservacioncontexto,
-              tbanimalobservacionedadmeses, tbanimalobservacionpeso,
-              tbanimalobservacionproposito, tbanimalobservacionestadoreproductivo,
-              tbanimalobservacionpartos, tbanimalobservacionlitrosleche,
-              tbanimalobservacionproduccion, tbanimalobservacionsalud)
+            'INSERT INTO tbanimalproduccionsalud
+             (tbanimalproduccionsaludid, tbanimalid, tbanimalproduccionsaludfecha,
+              tbanimalproduccionsaludorigen, tbanimalproduccionsaludcontexto,
+              tbanimalproduccionsaludedadmeses, tbanimalproduccionsaludpeso,
+              tbanimalproduccionsaludproposito, tbanimalproduccionsaludestadoreproductivo,
+              tbanimalproduccionsaludpartos, tbanimalproduccionsaludlitrosleche,
+              tbanimalproduccionsaludproduccion, tbanimalproduccionsaludsalud)
              VALUES (:id, :animalId, :fecha, :origen, :contexto, :edadMeses,
               :peso, :proposito, :estadoReproductivo, :partos, :litrosLeche,
               :produccion, :salud)'
@@ -114,9 +119,9 @@ final class AnimalComercial
              (tbanimalpublicacionid, tbanimalid, tbproductorvendedorid, tbfincaid,
               tbanimalpublicacionfecha, tbanimalpublicacionprecio,
               tbanimalpublicaciontitulo, tbanimalpublicaciondescripcion,
-              tbanimalpublicacionestado, tbanimalpublicacionorigen)
+              tbanimalpublicacionorigen)
              VALUES (:id, :animalId, :vendedorId, :fincaId, :fecha, :precio,
-              :titulo, :descripcion, :estado, :origen)'
+              :titulo, :descripcion, :origen)'
         );
         $sentencia->execute([
             'id' => $publicacionId,
@@ -127,9 +132,15 @@ final class AnimalComercial
             'precio' => $datos['precio'] ?? null,
             'titulo' => $datos['titulo'] ?? null,
             'descripcion' => $datos['descripcion'] ?? null,
-            'estado' => $datos['estado'],
             'origen' => $datos['origen'],
         ]);
+        $this->abrirEstadoPeriodo(
+            'tbanimalpublicacionestadoperiodo',
+            'tbanimalpublicacionid',
+            $publicacionId,
+            $datos['estado'],
+            $datos['origen']
+        );
 
         return $publicacionId;
     }
@@ -171,11 +182,12 @@ final class AnimalComercial
             'INSERT INTO tbventa
              (tbventaid, tbanimalid, tbproductorvendedorid, tbproductorcompradorid,
               tbfincaid, tbcompraid, tbventafecha, tbventahora, tbventalugar,
-              tbventaprecio, tbpagometodoid, tbventaedadmeses, tbventapeso,
+              tbventadireccionid, tbventaproposito, tbventaprecio,
+              tbpagometodoid, tbventaedadmeses, tbventapeso,
               tbventarazasnapshot, tbventaorigen)
              VALUES (:id, :animalId, :vendedorId, :compradorId, :fincaId,
-              :compraId, :fecha, :hora, :lugar, :precio, :pagoMetodoId,
-              :edadMeses, :peso, :razaSnapshot, :origen)'
+              :compraId, :fecha, :hora, :lugar, :direccionId, :proposito,
+              :precio, :pagoMetodoId, :edadMeses, :peso, :razaSnapshot, :origen)'
         );
         $sentencia->execute([
             'id' => $ventaId,
@@ -187,6 +199,8 @@ final class AnimalComercial
             'fecha' => $datos['fecha'],
             'hora' => $datos['hora'] ?? null,
             'lugar' => $datos['lugar'] ?? null,
+            'direccionId' => $datos['direccionId'] ?? null,
+            'proposito' => $datos['proposito'] ?? null,
             'precio' => $datos['precio'],
             'pagoMetodoId' => $datos['pagoMetodoId'],
             'edadMeses' => $datos['edadMeses'] ?? null,
@@ -231,15 +245,15 @@ final class AnimalComercial
         $carritoId = $this->siguienteId('tbcarrito', 'tbcarritoid');
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbcarrito
-             (tbcarritoid, tbproductorid, tbcarritofechacreacion, tbcarritoestado)
-             VALUES (:id, :productorId, :fechaCreacion, :estado)'
+             (tbcarritoid, tbproductorid, tbcarritofechacreacion)
+             VALUES (:id, :productorId, :fechaCreacion)'
         );
         $sentencia->execute([
             'id' => $carritoId,
             'productorId' => $productorId,
             'fechaCreacion' => date('Y-m-d H:i:s'),
-            'estado' => strtoupper(trim($estado)),
         ]);
+        $this->abrirEstadoPeriodo('tbcarritoestadoperiodo', 'tbcarritoid', $carritoId, $estado, 'CARRITO_ALTA');
 
         return $carritoId;
     }
@@ -265,6 +279,35 @@ final class AnimalComercial
         ]);
 
         return $carritoAnimalId;
+    }
+
+    /**
+     * Abre el primer periodo de estado de una entidad cuyo estado dejó de ser
+     * columna mutable. Cerrar y reabrir periodos es responsabilidad de Backend;
+     * aquí solo se registra el estado inicial sin perder historia.
+     */
+    private function abrirEstadoPeriodo(string $tabla, string $columnaEntidad, int $entidadId,
+        string $estado, string $origen): int
+    {
+        return $this->ejecutarConBloqueoAlta($tabla, function () use ($tabla, $columnaEntidad, $entidadId, $estado, $origen): int {
+            $this->exigirLock($tabla);
+            $periodoId = $this->siguienteId($tabla, "{$tabla}id");
+            $sentencia = $this->conexion->prepare(
+                "INSERT INTO {$tabla}
+                 ({$tabla}id, {$columnaEntidad}, {$tabla}estado,
+                  {$tabla}fechainicio, {$tabla}fechafin, {$tabla}motivo, {$tabla}origen)
+                 VALUES (:id, :entidadId, :estado, :fechaInicio, NULL, NULL, :origen)"
+            );
+            $sentencia->execute([
+                'id' => $periodoId,
+                'entidadId' => $entidadId,
+                'estado' => strtoupper(trim($estado)),
+                'fechaInicio' => date('Y-m-d H:i:s'),
+                'origen' => $origen,
+            ]);
+
+            return $periodoId;
+        });
     }
 
     private function exigirLock(string $tabla): void

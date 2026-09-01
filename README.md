@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 27 tablas:
+La base `bdmercadoganadero` contiene exactamente 30 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -24,22 +24,26 @@ La base `bdmercadoganadero` contiene exactamente 27 tablas:
 15. `tbproductoractividad`
 16. `tbproductorclasificacionperiodo`
 17. `tbanimal`
-18. `tbanimalobservacion`
+18. `tbanimalproduccionsalud`
 19. `tbanimalpublicacion`
-20. `tbcompra`
-21. `tbventa`
-22. `tbanimalinteraccion`
-23. `tbcarrito`
-24. `tbcarritoanimal`
-25. `tbtransportistaestadoperiodo`
-26. `tbtransportistaflete`
-27. `tbtransportistaresena`
+20. `tbanimalpublicacionestadoperiodo`
+21. `tbcompra`
+22. `tbventa`
+23. `tbanimalinteraccion`
+24. `tbcarrito`
+25. `tbcarritoanimal`
+26. `tbcarritoestadoperiodo`
+27. `tbtransportistaestadoperiodo`
+28. `tbtransportistahorario`
+29. `tbtransportistaflete`
+30. `tbtransportistaresena`
 
 `tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
 de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
-`tbcomprador` se conserva como estructura legacy de compatibilidad; P0-C
-define que Comprador y Vendedor son clasificaciones históricas derivadas del
-Productor en `tbproductorclasificacionperiodo`. Animal, publicación, compra,
+`tbcomprador` es la marca de capacidad de compra de una persona y ese es su
+destino definitivo: no crece, no recibe periodos propios y no vuelve a ser
+entidad. La historia de Comprador y Vendedor vive en
+`tbproductorclasificacionperiodo`. Animal, publicación, compra,
 venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
 Backend implemente comportamiento después. La ubicación física vive **únicamente** en
 `tbdireccion`: `tbproductordireccion` y
@@ -158,7 +162,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 27 tablas, incluida la identidad compartida en
+El migrador crea y valida las 30 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -314,7 +318,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 27 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 30 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 

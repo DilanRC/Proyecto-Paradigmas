@@ -141,12 +141,14 @@ final class TransportistaHistorico
             'INSERT INTO tbtransportistaflete
              (tbtransportistafleteid, tbtransportistaid, tbproductororigenid,
               tbfincaorigenid, tbdireccionorigenid, tbdirecciondestinoid,
-              tbtransportistafletefecha, tbtransportistafletehora,
-              tbtransportistafletedescripcion, tbtransportistafleteprecio,
+              tbvehiculoid, tbtransportistafletefecha, tbtransportistafletehora,
+              tbtransportistafletedescripcion, tbtransportistafletecantidadcabezas,
+              tbtransportistafletedistanciakm, tbtransportistafleteprecio,
               tbpagometodoid, tbtransportistafleteorigen)
              VALUES (:id, :transportistaId, :productorOrigenId, :fincaOrigenId,
-              :direccionOrigenId, :direccionDestinoId, :fecha, :hora,
-              :descripcion, :precio, :pagoMetodoId, :origen)'
+              :direccionOrigenId, :direccionDestinoId, :vehiculoId, :fecha, :hora,
+              :descripcion, :cantidadCabezas, :distanciaKm, :precio,
+              :pagoMetodoId, :origen)'
         );
         $sentencia->execute([
             'id' => $fleteId,
@@ -155,9 +157,12 @@ final class TransportistaHistorico
             'fincaOrigenId' => $datos['fincaOrigenId'] ?? null,
             'direccionOrigenId' => $datos['direccionOrigenId'] ?? null,
             'direccionDestinoId' => $datos['direccionDestinoId'] ?? null,
+            'vehiculoId' => $datos['vehiculoId'] ?? null,
             'fecha' => $datos['fecha'],
             'hora' => $datos['hora'] ?? null,
             'descripcion' => $datos['descripcion'] ?? null,
+            'cantidadCabezas' => $datos['cantidadCabezas'] ?? null,
+            'distanciaKm' => $datos['distanciaKm'] ?? null,
             'precio' => $datos['precio'] ?? null,
             'pagoMetodoId' => $datos['pagoMetodoId'],
             'origen' => $datos['origen'],
@@ -166,7 +171,7 @@ final class TransportistaHistorico
         return $fleteId;
     }
 
-    public function registrarResena(int $transportistaId, int $productorId, ?int $fleteId, array $datos): int
+    public function registrarResena(int $transportistaId, int $personaId, ?int $fleteId, array $datos): int
     {
         if ($this->profundidadResena <= 0) {
             throw new \LogicException('La conexión debe poseer el lock de alta de reseña.');
@@ -176,17 +181,17 @@ final class TransportistaHistorico
         $resenaId = $this->siguienteId('tbtransportistaresena', 'tbtransportistaresenaid');
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbtransportistaresena
-             (tbtransportistaresenaid, tbtransportistaid, tbproductorid,
+             (tbtransportistaresenaid, tbtransportistaid, tbpersonaid,
               tbtransportistafleteid, tbtransportistaresenafecha,
               tbtransportistaresenacalificacion, tbtransportistaresenacomentario,
               tbtransportistaresenaorigen)
-             VALUES (:id, :transportistaId, :productorId, :fleteId, :fecha,
+             VALUES (:id, :transportistaId, :personaId, :fleteId, :fecha,
               :calificacion, :comentario, :origen)'
         );
         $sentencia->execute([
             'id' => $resenaId,
             'transportistaId' => $transportistaId,
-            'productorId' => $productorId,
+            'personaId' => $personaId,
             'fleteId' => $fleteId,
             'fecha' => $datos['fecha'] ?? date('Y-m-d H:i:s'),
             'calificacion' => $datos['calificacion'],

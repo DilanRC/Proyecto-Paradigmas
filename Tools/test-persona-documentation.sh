@@ -13,7 +13,7 @@ require_text() {
     fi
 }
 
-require_text Documentation/DER.md 'El modelo contiene exactamente 27 tablas.'
+require_text Documentation/DER.md 'El modelo contiene exactamente 30 tablas.'
 require_text Documentation/DER.md 'tbpersona ||--o| tbproductor'
 require_text Documentation/DER.md 'tbpersona ||--o| tbcomprador'
 require_text Documentation/DER.md 'tbpersona ||--o| tbtransportista'
@@ -21,7 +21,7 @@ require_text Documentation/DiccionarioDatos.md '`tbpersonaestado`'
 require_text Documentation/DiccionarioDatos.md '`tbpersonaid` | `INT NOT NULL`'
 require_text Documentation/Decisiones.md '`DELETE` desactiva exclusivamente el perfil'
 require_text Documentation/Respaldos.md 'fallo SQL o cualquier salida por stderr'
-require_text README.md 'contiene exactamente 27 tablas'
+require_text README.md 'contiene exactamente 30 tablas'
 require_text Tools/test-restore.sh 'Respaldo validado sin modificar MANIFEST ni SHA256'
 require_text Tools/Test-Restore.ps1 'Respaldo validado sin modificar MANIFEST ni SHA256'
 
