@@ -137,6 +137,11 @@ FROM tbfinca f
 LEFT JOIN tbproductor p ON p.tbproductorid = f.tbproductorid
 WHERE p.tbproductorid IS NULL
 UNION ALL
+SELECT 'tbproductoractividad.tbproductorid', a.tbproductoractividadid, a.tbproductorid
+FROM tbproductoractividad a
+LEFT JOIN tbproductor p ON p.tbproductorid = a.tbproductorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
 SELECT 'tbtransportistavehiculo.tbtransportistaid', tv.tbtransportistavehiculoid, tv.tbtransportistaid
 FROM tbtransportistavehiculo tv
 LEFT JOIN tbtransportista t ON t.tbtransportistaid = tv.tbtransportistaid
@@ -186,3 +191,25 @@ FROM tbproductor p
 LEFT JOIN tbproductorestadoperiodo ep
     ON ep.tbproductorid = p.tbproductorid AND ep.tbproductorestadoperiodofechafin IS NULL
 WHERE ep.tbproductorestadoperiodoid IS NULL;
+
+-- D-12: catálogo cerrado de actividad (Tramo 12, matriz punto 3; Decisiones.md
+-- decisión #2). Sin CHECK por regla del profesor: esta consulta detecta, no
+-- impide, un tipo_evento fuera de {login, actualizacion_ubicacion,
+-- actualizacion_perfil, registro_actividad_productiva, contacto_comprador}
+-- que PHP debió rechazar antes de insertar (Tramo 15).
+SELECT 'D-12 actividad fuera del catalogo cerrado' AS diagnostico;
+SELECT tbproductoractividadid, tbproductorid, tbproductoractividadtipo
+FROM tbproductoractividad
+WHERE tbproductoractividadtipo NOT IN (
+    'login', 'actualizacion_ubicacion', 'actualizacion_perfil',
+    'registro_actividad_productiva', 'contacto_comprador'
+);
+
+-- D-13: estado de comprador fuera de su dominio lógico {0,1}. Comprador no
+-- tiene tabla de periodos propia (matriz Tramo 12 punto 4: alta/baja lógica
+-- en tbcompradorestado queda fuera del alcance profundo de esta fase); esta
+-- consulta es el único resguardo de coherencia disponible sin CHECK.
+SELECT 'D-13 tbcompradorestado fuera de dominio' AS diagnostico;
+SELECT tbcompradorid, tbcompradorestado
+FROM tbcomprador
+WHERE tbcompradorestado NOT IN (0, 1);

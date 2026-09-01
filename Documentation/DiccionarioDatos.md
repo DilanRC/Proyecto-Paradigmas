@@ -184,22 +184,50 @@ abierto por productor.
 ## tbproductoractividad
 
 Eventos de actividad usados para trazabilidad y políticas del productor.
+`tbproductoractividadtipo` usa el catálogo cerrado del Tramo 12
+(Decisiones.md del arquitecto, decisión #2): `login`,
+`actualizacion_ubicacion`, `actualizacion_perfil`,
+`registro_actividad_productiva`, `contacto_comprador`. Un GET o una vista de
+pantalla no genera fila aquí. La base no declara `CHECK` (regla del
+profesor); el dominio lo valida PHP al escribir (Tramo 15) y
+`Database/Tests/diagnostico.sql` (D-12) lo audita después.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbproductoractividadid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor relacionado. | Aplicación | `tbproductor` |
-| `tbproductoractividadtipo` | `VARCHAR(60) NOT NULL` | No | Tipo de actividad validado por PHP. | Aplicación | - |
+| `tbproductoractividadtipo` | `VARCHAR(60) NOT NULL` | No | Tipo de actividad, catálogo cerrado (ver arriba), validado por PHP. | Aplicación | - |
 | `tbproductoractividadfecha` | `DATETIME NOT NULL` | No | Fecha asignada por PHP. | Aplicación | - |
 | `tbproductoractividadorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico de la actividad. | Aplicación | - |
 
 ## tbcomprador
+
+Alta/baja lógica de la capacidad comprador (matriz Tramo 12, punto 4). No
+tiene tabla de periodos con fecha: la matriz confirma que un histórico
+propio de comprador queda fuera del alcance profundo de esta fase, por lo
+que el Tramo 13 no crea tabla nueva para esta entidad; `tbcompradorestado`
+sigue siendo el único registro de su participación, independiente del
+histórico de productor aunque sea la misma persona.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbcompradorid` | `INT NOT NULL` | No | Identificador asignado por la aplicación. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
 | `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como comprador. | Aplicación | - |
+
+## Histórico transversal (Tramo 12/13)
+
+La matriz histórica del Tramo 12 (`matriz-historica-tramo12.pdf`,
+Documentation/Decisiones.md) confirma tres históricos independientes de
+Productor —`tbproductorestadoperiodo`, `tbproductorubicacion`,
+`tbproductoractividad`— ya creados en el Tramo 2 sin cambios de columnas.
+El Tramo 13 no agrega tablas: cierra el punto de control confirmando que
+el esquema existente ya satisface la matriz. `tbbitacora` se mantiene
+exclusivamente como auditoría técnica y no sustituye ninguno de estos tres
+históricos de negocio. El vínculo persona-productor/comprador no tiene
+tabla histórica propia (matriz punto 5): se deriva de la existencia de
+filas en `tbproductor` y `tbcomprador`, cada capacidad con su historial
+independiente.
 
 ## Estado efectivo y coherencia
 

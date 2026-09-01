@@ -111,7 +111,9 @@ foreach (['transferencia', 'SINPE', 'cheque', 'tarjeta', 'PayPal'] as $fueraDeAl
 }
 $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 foreach (['FROM tbproductordireccion', 'FROM tbfincadireccion', 'FROM tbvehiculo',
-    'FROM tbtransportistavehiculo', 'HAVING COUNT(*) > 1'] as $consulta) {
+    'FROM tbtransportistavehiculo', 'HAVING COUNT(*) > 1',
+    'tbproductoractividad.tbproductorid', 'D-12 actividad fuera del catalogo cerrado',
+    'D-13 tbcompradorestado fuera de dominio'] as $consulta) {
     if (!str_contains($diagnostico, $consulta)) {
         throw new RuntimeException("El diagnóstico debe incluir {$consulta}");
     }
