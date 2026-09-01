@@ -11,9 +11,11 @@ use function Configuration\sendJsonResponse;
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
+require_once $raiz . '/Application/HttpException.php';
 foreach (['NamedLock', 'Vehiculo', 'Bitacora'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
+require_once $raiz . '/Application/Service/EstadoService.php';
 require_once $raiz . '/Application/Controller/VehiculoController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');

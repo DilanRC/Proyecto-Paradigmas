@@ -309,3 +309,43 @@ de modo que `FincaController`, `ProductorUbicacionController` y
 depender de una columna que ya no existe. La migración MySQL se renumeró a
 `004` porque `003` lo ocupa `003personacapacidades.sql`, y debe ejecutarse
 después de ella: primero se unifica la persona, luego se retira la columna.
+
+## DEC-21 - Fin del UPDATE destructivo de dirección
+
+`ProductorDireccion::actualizar()` deja de hacer `UPDATE` sobre la fila vigente de `tbdireccion`. Un cambio de
+residencia ahora ejecuta **cierre + alta** transaccional bajo el bloqueo nombrado **por productor**
+(`tindercows_productor_direccion_{productorId}`), que a su vez delega al lock global de alta de dirección
+(requisito de `Direccion::crearConBloqueoExistente`). El flujo cierra el periodo abierto (solo `fechafin` = reloj
+de PHP), inserta una `tbdireccion` nueva y su enlace con `fechainicio`, y registra **CAMBIO_DIRECCION** en la
+bitácora dentro de la misma transacción. El lock se libera SIEMPRE en `finally`, incluso ante excepción, y
+cualquier fallo entre el cierre y el INSERT provoca `ROLLBACK` que deja el estado original. La primera residencia
+permanece consultable para siempre mediante `consultarVigenteEn(fecha)`; nunca hay más de un periodo abierto.
+`obtenerDireccionAbiertaId()` y la rama de `UPDATE` se eliminan.
+
+**Fincas:** `tbfincadireccion` no tiene columnas de vigencia. No se inventan columnas ni se hace histórico de
+dirección de finca por ahora: se pide a DBA; las direcciones de finca quedan fuera del histórico de residencia.
+
+## DEC-23 - Estado e histórico de dirección son operaciones atómicas y reutilizables
+
+La transición del estado operativo del productor (desactivar/reactivar) y el cierre+alta de residencia dejan de
+vivir dentro del controlador y pasan a `Application/Service/`:
+
+- `ProductorEstadoService::transicionar()` cierra el periodo abierto y abre el nuevo bajo el lock nombrado por
+  productor, dentro de la transacción que posee el llamador. Es **idempotente**: transicionar al mismo estado
+  vigente es un no-op que NO abre un periodo duplicado. Registra `DESACTIVAR`/`REACTIVAR` en la bitácora solo
+  cuando hubo una transición real.
+- `ProductorDireccionService::cambiar()`/`vaciar()` orquestan cierre+alta y registran
+  `CAMBIO_DIRECCION`/`VACIAR_DIRECCION` bajo el lock por productor.
+
+El controlador conserva el contrato sobre JSON (códigos de estado, mensajes y respuestas) y la resolución de
+bloqueos 409, pero ya no duplica la máquina de estados ni el histórico de residencia. Si una de las escrituras
+falla a mitad, el COMMIT/ROLLBACK exterior deja o todas o ninguna.
+
+## DEC-25 - Contrato de validación unificado reutilizable
+
+La validación de productor (identificación, teléfono, correo, dirección y fincas) se extrae del controlador a
+`Application/Service/ProductorValidacionService`, ejecutable sin el controlador gigante. Mantiene el mismo
+contrato de errores por campo que consume toda la API (HTTP 422 + `errors`). El controlador delega y traduce
+`ProductorValidacionException` a `ProductorHttpException` para no cambiar la respuesta hacia el frontend.
+`ProductorController` deja de reimplementar `TIPOS_IDENTIFICACION`, `validarIdentificacion`, `validarDireccion`,
+`textoCampo`, `rechazarCamposDesconocidos`, etc.; la única fuente es el servicio.

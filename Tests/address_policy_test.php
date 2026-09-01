@@ -45,9 +45,11 @@ try {
     test_same(200, $respuestaPut['status'], 'PUT actualiza la dirección existente');
     test_same('Heredia', $respuestaPut['body']['data']['direccionPrincipal']['provincia'],
         'PUT persiste el valor actualizado');
-    $conteo->execute(['id' => $productor['productorId']]);
-    test_same(1, (int) $conteo->fetchColumn(),
-        'PUT debe conservar una sola dirección por política de aplicación');
+    $abiertos = test_db()->prepare('SELECT COUNT(*) FROM tbproductordireccion
+        WHERE tbproductorid = :id AND tbproductordireccionfechafin IS NULL');
+    $abiertos->execute(['id' => $productor['productorId']]);
+    test_same(1, (int) $abiertos->fetchColumn(),
+        'PUT conserva exactamente un periodo de dirección abierto (histórico crece con cada cambio)');
 
     // La ruta POST de dirección continúa siendo solo de reparación para datos sin enlace.
     $reparacion = test_controller()->crearDireccion([
