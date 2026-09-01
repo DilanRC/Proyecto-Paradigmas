@@ -20,6 +20,13 @@ use PDO;
 final class ProductorEstadoPeriodo
 {
     private const PREFIJO_LOCK = 'tindercows_productor_estado_';
+    /**
+     * Lock de tabla para el consecutivo. El lock por productor protege la
+     * invariante de un solo periodo abierto, pero no el id: MAX(id)+1 se
+     * calcula sobre toda la tabla, y dos productores distintos sostienen
+     * locks distintos. Sin este segundo lock ambos leen el mismo maximo.
+     */
+    private const LOCK_ALTA = 'tindercows_productor_estado_alta';
     private int $profundidadBloqueo = 0;
     private int $productorBloqueado = 0;
 
@@ -33,13 +40,20 @@ final class ProductorEstadoPeriodo
      */
     public function ejecutarConBloqueo(int $productorId, callable $operacion): mixed
     {
+        // Orden fijo: primero la entidad, despues la tabla. Invertirlo en
+        // cualquier ruta produciria un abrazo mortal entre dos conexiones.
         NamedLock::acquire($this->conexion, self::PREFIJO_LOCK . $productorId);
-        $this->profundidadBloqueo++;
-        $this->productorBloqueado = $productorId;
         try {
-            return $operacion();
+            NamedLock::acquire($this->conexion, self::LOCK_ALTA);
+            $this->profundidadBloqueo++;
+            $this->productorBloqueado = $productorId;
+            try {
+                return $operacion();
+            } finally {
+                $this->profundidadBloqueo--;
+                NamedLock::release($this->conexion, self::LOCK_ALTA);
+            }
         } finally {
-            $this->profundidadBloqueo--;
             NamedLock::release($this->conexion, self::PREFIJO_LOCK . $productorId);
         }
     }
@@ -147,14 +161,33 @@ final class ProductorEstadoPeriodo
         }
     }
 
+    /**
+     * Consecutivo global de la tabla. Va con FOR UPDATE a proposito, y no es
+     * decoracion: el lock nombrado da exclusion mutua, pero se libera antes
+     * del COMMIT porque en ProductorController la transaccion envuelve al
+     * lock y no al reves. En esa ventana otra conexion podria leer el mismo
+     * maximo. La lectura con bloqueo lo cierra por dos vias: no depende del
+     * snapshot de REPEATABLE READ, que pudo fijarse en una lectura anterior
+     * de la misma transaccion, y queda esperando la fila recien insertada y
+     * todavia sin confirmar de la otra conexion, porque InnoDB retiene ese
+     * bloqueo de fila hasta el COMMIT.
+     */
     private function siguienteId(): int
     {
+        // Se bloquea la fila del maximo en vez de agregar con MAX(): PostgreSQL
+        // rechaza FOR UPDATE junto a funciones de agregacion, y produccion corre
+        // sobre PostgreSQL (Configuration/Database.php arma un DSN pgsql). Esta
+        // forma es valida en los dos motores y bloquea exactamente la misma fila.
         $sentencia = $this->conexion->prepare(
-            'SELECT COALESCE(MAX(tbproductorestadoperiodoid), 0) + 1 FROM tbproductorestadoperiodo'
+            'SELECT tbproductorestadoperiodoid
+             FROM tbproductorestadoperiodo
+             ORDER BY tbproductorestadoperiodoid DESC
+             LIMIT 1 FOR UPDATE'
         );
         $sentencia->execute();
+        $maximo = $sentencia->fetchColumn();
 
-        return (int) $sentencia->fetchColumn();
+        return $maximo === false ? 1 : ((int) $maximo) + 1;
     }
 
     private function mapear(array $fila): array
