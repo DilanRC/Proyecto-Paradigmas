@@ -72,7 +72,9 @@ export function describeValidity(control) {
     if (v.tooLong) {
         return `No puede superar ${control.maxLength} caracteres.`;
     }
-    if (v.patternMismatch) return 'El formato del valor no es válido.';
+    // El control puede llevar en `title` la regla concreta (por ejemplo la del
+    // numero de identificacion segun su tipo); es mas util que un texto generico.
+    if (v.patternMismatch) return control.title || 'El formato del valor no es válido.';
     if (v.rangeUnderflow || v.rangeOverflow || v.stepMismatch) {
         return 'El valor está fuera del rango permitido.';
     }

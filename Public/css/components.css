@@ -230,6 +230,12 @@
     resize:vertical;
 }
 
+.field__hint {
+    min-height:15px;
+    color:var(--muted);
+    font-size:11px;
+}
+
 .field__error {
     min-height:15px;
     color:var(--danger);
