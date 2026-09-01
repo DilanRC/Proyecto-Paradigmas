@@ -430,7 +430,10 @@ tomo de ahi. Los otros tres huecos de la numeracion son legitimos: Rio Cuarto
 (`20306`), Monteverde (`60109`) y Puerto Jimenez (`60702`) dejaron de ser
 distritos al convertirse en canton.
 
-**Bloqueo: las localidades no se cargan.** El archivo *Centros Poblados y
+**Bloqueo superado en DEC-FRONT-13.** Lo que sigue describe por que no se
+cargaron desde el PDF; las localidades entraron despues desde el XLSX oficial.
+
+**Bloqueo original: las localidades no se cargan.** El archivo *Centros Poblados y
 Localidades 2026* no se puede extraer con fidelidad. Su fuente incrustada pierde
 la secuencia `nd` al convertir a texto, con dos extractores independientes
 (`pdftotext` y `pdftohtml`): "Condominio" sale "Coominio" en 983 filas e
@@ -521,3 +524,69 @@ distincion de vacio y error, y habria que rehacerlo entero.
 **Limite.** Solo frontend. No se creo tabla de roles, ni endpoint que devuelva
 las capacidades de una persona en una sola llamada; la ficha las compone desde
 los tres endpoints que ya existian.
+
+## DEC-FRONT-13 - Localidades oficiales y busqueda que compensa un defecto de la fuente
+
+**Necesidad.** DEC-FRONT-11 dejo el catalogo a medias: 494 distritos cargados y
+cero localidades, porque el PDF de Centros Poblados no se podia extraer. El
+distrito quedo como texto libre y el pueblo sin ninguna ayuda, de modo que dos
+personas escribian el mismo lugar de dos formas distintas.
+
+**Fuente.** Instituto Geografico Nacional / Registro Nacional / SNIT, *Centros
+Poblados y Localidades (2026).xlsx*. Se descargo el archivo y se verifico su
+SHA-256 contra el publicado: `ab4b1bf9a753e49c423398f6f746edad577ac8121bec76f2648e14281b0ca6cf`.
+Coincide. Se parseo el XLSX directamente, no su version en PDF. Consulta:
+2026-08-31. Resultado: 13309 etiquetas utiles en 493 distritos; uno no tiene
+ninguna localidad publicada.
+
+**El defecto esta en el archivo oficial, no en la extraccion.** El XLSX pierde
+la secuencia `nd` en sus cadenas de texto: cero de sus 8575 cadenas la
+contienen, y trae `Tamario` por Tamarindo, `Llano Grae` por Llano Grande,
+`Coominio` por Condominio e `Iigena` por Indigena. Se comprobo que no es un
+problema del lector: la tabla DTA del mismo IGN si conserva las 16 apariciones
+de `nd` en nombres de distrito. La prueba mas clara esta dentro del propio
+dato: el distrito `10108 Mata Redonda` de la DTA tiene como cabecera, en el
+XLSX, la localidad `Mata Redoa`. Afecta a cerca del 4% de los nombres.
+
+**Que se hizo.** Tres cosas, en orden de solidez:
+
+1. Los 70 registros cuyo nombre coincide con la forma mutilada de un toponimo
+   que la DTA si trae limpio se corrigieron a la forma de la DTA. Es
+   demostrable, no conjetura: `Mata Redoa` en el distrito 10108 solo puede ser
+   el `Mata Redonda` que la DTA declara para ese mismo distrito.
+2. Los demas se conservan tal como los publica la fuente. No se adivina donde
+   iba un `nd` que la fuente ya perdio, ni se completa parcialmente.
+3. La busqueda compensa el defecto en vez de taparlo. `normalizar` aplica a lo
+   que teclea el usuario la misma perdida que sufrio la fuente, ademas de
+   quitar acentos y mayusculas. Como se aplica a los dos lados de la
+   comparacion el resultado es coherente, y quien escribe "Tamarindo"
+   correctamente encuentra el registro guardado como "Tamario".
+
+**Consecuencia en el formulario.** Provincia, canton y distrito son `<select>`
+encadenados: la DTA es un catalogo cerrado y no tiene sentido teclearla. Pueblo
+sigue siendo texto libre con sugerencias, porque no es una unidad administrativa
+sino lenguaje comun y el catalogo no pretende ser exhaustivo; se escriben las
+primeras letras y aparecen las localidades de ese distrito. Cada campo se
+habilita al elegir el anterior.
+
+**Costo.** Las 13309 localidades pesan 200 KB frente a las 22 KB de la DTA. No
+se cargan con la pagina: `direccion.js` las pide con `import()` la primera vez
+que se elige un distrito, y una sola vez por pagina. Comprobado en navegador:
+`poblados.js` no aparece entre los recursos descargados hasta ese momento.
+
+**Riesgo.** Que alguien regenere el catalogo con un extractor o una fuente
+distinta y reintroduzca nombres mutilados. Lo acota la prueba que exige
+`Mata Redonda`, `Rio Segundo`, `San Andres`, `Rancho Redondo` y `Llano Grande`
+entre los distritos, y la que exige que los 70 nombres reparados sigan escritos
+bien.
+
+**Alternativa descartada.** Reconstruir los nombres afectados insertando la
+secuencia perdida. No es reconstruible: sin la lista correcta no hay forma de
+saber donde iba el `nd`, y esa lista es justamente lo que falta.
+`Tamario` podria ser Tamarindo, pero `Caelaria` solo se resuelve porque la DTA
+lo dice, no porque se pueda deducir.
+
+**Limite.** Solo catalogo de frontend. No se creo tabla, endpoint ni validacion
+de servidor; el backend sigue recibiendo la direccion como texto, con el mismo
+cuerpo que antes. La correccion de nombres vive en el catalogo generado, no en
+los datos ya guardados en la base.

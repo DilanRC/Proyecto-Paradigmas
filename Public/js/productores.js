@@ -5,7 +5,7 @@ import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
 } from './shared/list-state.js';
-import { conectarDireccion } from './shared/territorio.js';
+import { conectarDireccion } from './shared/direccion.js';
 import { createToast } from './shared/toast.js';
 
 const API_URL = 'api/productores.php';
@@ -110,15 +110,15 @@ function initialize() {
     const errores = bindFormErrors(elements.form, { collapsePrefixes: ['fincas'] });
     const erroresFinca = bindFormErrors(elements.fincaAddressForm);
 
-    // Provincia -> canton -> distrito, en los dos formularios que llevan
-    // direccion. El distrito sigue siendo texto libre con sugerencias: el
-    // catalogo de distritos aun no esta completo y no debe impedir escribir uno.
+    // Provincia -> canton -> distrito -> pueblo, en los dos formularios que
+    // llevan direccion. Los tres primeros son desplegables porque la DTA es un
+    // catalogo cerrado; pueblo es texto libre con sugerencias porque no es una
+    // unidad administrativa y su catalogo no pretende ser exhaustivo.
     const direccionPrincipal = conectarDireccion({
         provincia: $('#direccion-provincia'),
         canton: $('#direccion-canton'),
         distrito: $('#direccion-distrito'),
         pueblo: $('#direccion-pueblo'),
-        listaDistritos: $('#lista-distritos'),
         listaPueblos: $('#lista-pueblos'),
     });
     const direccionFinca = conectarDireccion({
@@ -126,7 +126,6 @@ function initialize() {
         canton: $('#finca-direccion-canton'),
         distrito: $('#finca-direccion-distrito'),
         pueblo: $('#finca-direccion-pueblo'),
-        listaDistritos: $('#lista-distritos-finca'),
         listaPueblos: $('#lista-pueblos-finca'),
     });
 
