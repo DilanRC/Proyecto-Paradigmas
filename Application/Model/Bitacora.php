@@ -4,12 +4,18 @@ declare(strict_types=1);
 
 namespace Application\Model;
 
+use Application\Auth\ActorContext;
 use JsonException;
 use PDO;
 
 final class Bitacora
 {
-    public function __construct(private readonly PDO $conexion) {}
+    private readonly ActorContext $actor;
+
+    public function __construct(private readonly PDO $conexion, ?ActorContext $actor = null)
+    {
+        $this->actor = $actor ?? ActorContext::noAutenticado();
+    }
 
     /** @throws JsonException */
     public function registrar(
@@ -39,8 +45,8 @@ final class Bitacora
                 'fecha' => gmdate('Y-m-d H:i:s'),
                 'anteriores' => $anteriores === null ? null : json_encode($anteriores, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
                 'nuevos' => $nuevos === null ? null : json_encode($nuevos, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                'actorTipo' => 'NO_AUTENTICADO',
-                'usuarioId' => null,
+                'actorTipo' => $this->actor->tipo,
+                'usuarioId' => $this->actor->personaId,
                 'origen' => $origen,
                 'solicitudId' => $solicitudId,
             ]);

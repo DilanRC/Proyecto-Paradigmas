@@ -11,6 +11,10 @@ $seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
 $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 $relaciones = file_get_contents("{$root}/Database/Tests/comprobacionrelaciones.sql");
 $matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md");
+$actorResolver = file_get_contents("{$root}/Application/Auth/SupabaseActorResolver.php");
+$actorContext = file_get_contents("{$root}/Application/Auth/ActorContext.php");
+$bitacora = file_get_contents("{$root}/Application/Model/Bitacora.php");
+$authActorTest = file_get_contents("{$root}/Tests/auth_actor_test.php");
 $docs = file_get_contents("{$root}/Documentation/Decisiones.md")
     . file_get_contents("{$root}/Documentation/DiccionarioDatos.md")
     . $matrizP0C;
@@ -114,6 +118,14 @@ $evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es 
     && str_contains($matrizP0C, '`tbcomprador` queda como estructura legacy')
     && str_contains($matrizP0C, '`tbproductorcompradorperiodo` y `tbproductorvendedorperiodo`'),
     'P0-C cierra Productor como núcleo y Comprador/Vendedor como clasificaciones históricas');
+$evaluate('t3_actor_autenticado', str_contains($actorResolver, '/v1/auth/verify')
+    && str_contains($actorResolver, 'tbpersonacorreoelectronico')
+    && str_contains($actorResolver, 'new HttpException(\'La sesión verificada no tiene vínculo con una persona.\', 409)')
+    && str_contains($actorResolver, 'new HttpException(\'No fue posible validar la sesión.\', 503)')
+    && str_contains($actorContext, 'PERSONA_AUTENTICADA')
+    && str_contains($bitacora, "'usuarioId' => \$this->actor->personaId")
+    && !preg_match('/MAX\s*\(\s*tbpersonaid\s*\)\s*\+\s*1/i', $authActorTest),
+    'T3 resuelve Supabase a tbpersonaid y bitácora guarda actor real');
 $score = (int) round(100 * count(array_filter($checks, fn ($c) => $c['cumple'])) / count($checks));
 echo json_encode(['eval' => 'modelo_simplificado_profesor', 'score' => $score, 'threshold' => 100, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
 if ($score < 100) exit(1);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Application\Controller;
 
+use Application\Auth\ActorContext;
 use Application\HttpException;
 use Application\Model\Bitacora;
 use Application\Model\Direccion;
@@ -23,12 +24,12 @@ final class FincaController
     private ValidacionService $validacion;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null)
+    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
         $this->direccionFinca = new FincaDireccion($conexion, new Direccion($conexion));
-        $this->bitacora = new Bitacora($conexion);
+        $this->bitacora = new Bitacora($conexion, $actor);
         $this->validacion = new ValidacionService();
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
     }

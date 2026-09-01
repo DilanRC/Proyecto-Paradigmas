@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Application\Controller\ProductorUbicacionController;
+use Application\Auth\SupabaseActorResolver;
 use Application\Model\Bitacora;
 use Application\Model\Productor;
 use Application\Model\ProductorFinca;
@@ -15,6 +16,8 @@ $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
+require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Productor', 'Bitacora', 'ProductorUbicacion'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
@@ -46,17 +49,20 @@ if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'applicatio
 try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $conexion = Database::getConnection();
+    $actor = SupabaseActorResolver::fromGlobals($conexion);
     $controlador = new ProductorUbicacionController(
         $conexion,
         new Productor($conexion, new ProductorFinca($conexion)),
         new ProductorUbicacion($conexion),
-        new Bitacora($conexion),
+        new Bitacora($conexion, $actor),
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
     );
     $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
+} catch (Application\HttpException $excepcion) {
+    sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos], $excepcion->estadoHttp);
 } catch (Throwable $excepcion) {
     error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(), $excepcion->getFile(), $excepcion->getLine()));
     sendJsonResponse([

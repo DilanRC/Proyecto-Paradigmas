@@ -33,7 +33,7 @@ for (const panel of ['productores', 'compradores', 'transportistas', 'vehiculos'
 has('Public/js/compradores.js', "const API_URL = 'api/compradores.php';", 'endpoint de compradores incorrecto');
 has('Public/js/compradores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
 has(
-    'Application/Controller/CompradorController.php',
+    'Application/Service/ValidacionService.php',
     /\$permitidos = \['identificacion', 'nombre', 'telefono', 'correoElectronico'\];/,
     'el panel envía exactamente los campos que el controlador acepta'
 );
@@ -48,7 +48,7 @@ has('Public/js/transportistas.js', "const API_URL = 'api/transportistas.php';", 
 has('Public/js/transportistas.js', "const ASIGNACION_URL = 'api/transportistas-vehiculos.php';", 'endpoint de asignación incorrecto');
 has('Public/js/transportistas.js', 'identificacionNumeroOriginal', 'PUT debe enviar identificación original');
 has(
-    'Application/Controller/TransportistaController.php',
+    'Application/Service/ValidacionService.php',
     "$permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico'];",
     'contrato de campos de transportista cambió'
 );

@@ -1,0 +1,26 @@
+# Respaldo — Avance03
+
+- Proyecto: TinderCows
+- Base de datos: dbmercadoganadero
+- Entrega: Avance03
+- Fecha y hora: 2026-09-01T03:21-06:00
+- Motor: MySQL 8.0.46
+- Rama: dev
+- Commit candidato de código: 3b8753b4630ee972ad9497d53454df848656a870
+- Etiqueta oficial: avance-03
+- Responsable de exportación: Dilan
+- Archivo completo: dbmercadoganadero_avance03_completo.sql
+- Archivo de estructura: dbmercadoganadero_avance03_estructura.sql
+- Archivo de datos: dbmercadoganadero_avance03_datos.sql
+- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y quince tablas
+- Restauración completa comprobada: Sí
+- Restauración estructura + datos comprobada: Sí
+- Bases temporales utilizadas: dbmercadoganadero_restore_test, dbmercadoganadero_restore_parts_test
+- Cantidad de tablas: 15
+- Cantidad de restricciones: 0
+- Cantidad de índices: 0
+- Cantidad de PRIMARY KEY: 0
+- Cantidad de FOREIGN KEY: 0
+- Cantidad de CHECK: 0
+- Resultado final: APROBADO
+- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, cero índices, cero AUTO_INCREMENT, intercalación y conteos sin diferencias.
