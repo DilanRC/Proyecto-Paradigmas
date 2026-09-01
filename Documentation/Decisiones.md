@@ -49,6 +49,20 @@ La instrucción docente sustituye el modelo anterior. `dbtindervacas` conserva
 cinco tablas: `tbproductor`, `tbproductordireccion`, `tbfinca`, `tbbitacora` y
 `tbcomprador`.
 
+## DEC-P0A-001 - Nombre canónico de la base
+
+Calidad indicó directamente que el nombre vigente debe ser
+`bdmercadoganadero`, con `bd` de base de datos. Desde P0-A,
+`bdmercadoganadero` es el contrato operativo para SQL, configuración, seeds,
+migraciones activas, pruebas, herramientas y documentación vigente.
+
+`dbmercadoganadero` queda como nombre legado de respaldos históricos. Los
+commits `323044e` y `7ad7453` interpretaron el estado anterior del repositorio
+como fuente normativa y por eso restauraron `dbmercadoganadero`; esa política
+queda SUPERADA por la aprobación directa de Calidad. No se reescribe historia:
+la corrección se aplica hacia adelante y los respaldos legados se verifican sin
+modificar sus dumps, `MANIFEST.md` ni `SHA256SUMS.txt`.
+
 ## DEC-C04-002 - Cero restricciones de integridad
 
 El esquema no define claves, restricciones, índices, valores `DEFAULT`,

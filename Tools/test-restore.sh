@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly SOURCE_DATABASE='dbmercadoganadero'
-readonly RESTORE_DATABASE='dbmercadoganadero_restore_test'
-readonly PARTS_DATABASE='dbmercadoganadero_restore_parts_test'
+readonly SOURCE_DATABASE='bdmercadoganadero'
+readonly RESTORE_DATABASE='bdmercadoganadero_restore_test'
+readonly PARTS_DATABASE='bdmercadoganadero_restore_parts_test'
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 readonly INJECT_INVALID_METADATA="${RESTORE_TEST_INJECT_INVALID_METADATA:-0}"
@@ -26,13 +26,23 @@ if [[ -n "$correction_number" ]]; then
     advance_slug+="_correccion${correction_number}"
 fi
 backup_dir="$PROJECT_ROOT/Database/Backups/$advance"
-complete_file="$backup_dir/${SOURCE_DATABASE}_${advance_slug}_completo.sql"
-schema_file="$backup_dir/${SOURCE_DATABASE}_${advance_slug}_estructura.sql"
-data_file="$backup_dir/${SOURCE_DATABASE}_${advance_slug}_datos.sql"
 checksums_file="$backup_dir/SHA256SUMS.txt"
 manifest_file="$backup_dir/MANIFEST.md"
+backup_database=''
+for candidate_database in "$SOURCE_DATABASE" 'dbmercadoganadero'; do
+    candidate_complete_file="$backup_dir/${candidate_database}_${advance_slug}_completo.sql"
+    candidate_schema_file="$backup_dir/${candidate_database}_${advance_slug}_estructura.sql"
+    candidate_data_file="$backup_dir/${candidate_database}_${advance_slug}_datos.sql"
+    if [[ -s "$candidate_complete_file" && -s "$candidate_schema_file" && -s "$candidate_data_file" ]]; then
+        backup_database="$candidate_database"
+        complete_file="$candidate_complete_file"
+        schema_file="$candidate_schema_file"
+        data_file="$candidate_data_file"
+        break
+    fi
+done
 
-if [[ ! -s "$complete_file" || ! -s "$schema_file" || ! -s "$data_file" || ! -s "$checksums_file" || ! -s "$manifest_file" ]]; then
+if [[ -z "$backup_database" || ! -s "$checksums_file" || ! -s "$manifest_file" ]]; then
     echo "Error: faltan el respaldo completo, sus sumas o el manifiesto en $backup_dir" >&2
     exit 1
 fi
@@ -40,21 +50,6 @@ fi
 cd -- "$PROJECT_ROOT"
 docker compose config --quiet
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' >/dev/null
-
-manifest_pending="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest-pending.XXXXXX")"
-sed \
-    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: Pendiente/' \
-    -e 's/^- Restauración completa comprobada: .*/- Restauración completa comprobada: Pendiente/' \
-    -e 's/^- Restauración estructura + datos comprobada: .*/- Restauración estructura + datos comprobada: Pendiente/' \
-    -e 's/^- Cantidad de tablas: .*/- Cantidad de tablas: Pendiente/' \
-    -e 's/^- Cantidad de restricciones: .*/- Cantidad de restricciones: Pendiente/' \
-    -e 's/^- Cantidad de índices: .*/- Cantidad de índices: Pendiente/' \
-    -e 's/^- Cantidad de PRIMARY KEY: .*/- Cantidad de PRIMARY KEY: Pendiente/' \
-    -e 's/^- Cantidad de FOREIGN KEY: .*/- Cantidad de FOREIGN KEY: Pendiente/' \
-    -e 's/^- Cantidad de CHECK: .*/- Cantidad de CHECK: Pendiente/' \
-    -e 's/^- Resultado final: .*/- Resultado final: Pendiente/' \
-    "$manifest_file" > "$manifest_pending"
-mv -- "$manifest_pending" "$manifest_file"
 
 (
     cd -- "$backup_dir"
@@ -103,16 +98,16 @@ fi
 mysql_query "CREATE DATABASE ${RESTORE_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 restore_created=1
 docker compose exec -T db sh -c \
-    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbmercadoganadero_restore_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot bdmercadoganadero_restore_test' \
     < "$complete_file"
 
 mysql_query "CREATE DATABASE ${PARTS_DATABASE} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 parts_created=1
 docker compose exec -T db sh -c \
-    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbmercadoganadero_restore_parts_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot bdmercadoganadero_restore_parts_test' \
     < "$schema_file"
 docker compose exec -T db sh -c \
-    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbmercadoganadero_restore_parts_test' \
+    'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot bdmercadoganadero_restore_parts_test' \
     < "$data_file"
 
 if [[ "$INJECT_SCHEMA_DIFFERENCE" == '1' ]]; then
@@ -254,26 +249,44 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
 done
 
 printf '%-38s %10s %10s %10s\n' 'Tabla' 'Origen' 'Completo' 'Partes'
-if ! tables_output="$(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")"; then
+table_source_database="$SOURCE_DATABASE"
+if [[ "$backup_database" != "$SOURCE_DATABASE" ]]; then
+    table_source_database="$RESTORE_DATABASE"
+fi
+if ! tables_output="$(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${table_source_database}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")"; then
     exit 1
 fi
 mapfile -t tables <<< "$tables_output"
 for table in "${tables[@]}"; do
-    source_count="$(mysql_query "SELECT COUNT(*) FROM ${SOURCE_DATABASE}.${table};")"
+    source_count='LEGADO'
+    if [[ "$backup_database" == "$SOURCE_DATABASE" ]]; then
+        source_count="$(mysql_query "SELECT COUNT(*) FROM ${SOURCE_DATABASE}.${table};")"
+    fi
     restored_count="$(mysql_query "SELECT COUNT(*) FROM ${RESTORE_DATABASE}.${table};")"
     parts_count="$(mysql_query "SELECT COUNT(*) FROM ${PARTS_DATABASE}.${table};")"
     printf '%-38s %10s %10s %10s\n' "$table" "$source_count" "$restored_count" "$parts_count"
-    if [[ "$source_count" != "$restored_count" || "$restored_count" != "$parts_count" ]]; then
+    if [[ "$backup_database" == "$SOURCE_DATABASE" && "$source_count" != "$restored_count" ]]; then
         echo "Error: el conteo difiere para $table." >&2
         exit 1
     fi
-    source_checksum_output="$(mysql_query "CHECKSUM TABLE ${SOURCE_DATABASE}.${table};")"
+    if [[ "$restored_count" != "$parts_count" ]]; then
+        echo "Error: el conteo difiere para $table." >&2
+        exit 1
+    fi
+    source_checksum=''
+    if [[ "$backup_database" == "$SOURCE_DATABASE" ]]; then
+        source_checksum_output="$(mysql_query "CHECKSUM TABLE ${SOURCE_DATABASE}.${table};")"
+        source_checksum="$(awk '{print $2}' <<< "$source_checksum_output")"
+    fi
     restored_checksum_output="$(mysql_query "CHECKSUM TABLE ${RESTORE_DATABASE}.${table};")"
     parts_checksum_output="$(mysql_query "CHECKSUM TABLE ${PARTS_DATABASE}.${table};")"
-    source_checksum="$(awk '{print $2}' <<< "$source_checksum_output")"
     restored_checksum="$(awk '{print $2}' <<< "$restored_checksum_output")"
     parts_checksum="$(awk '{print $2}' <<< "$parts_checksum_output")"
-    if [[ "$source_checksum" != "$restored_checksum" || "$restored_checksum" != "$parts_checksum" ]]; then
+    if [[ "$backup_database" == "$SOURCE_DATABASE" && "$source_checksum" != "$restored_checksum" ]]; then
+        echo "Error: los datos difieren para ${table}." >&2
+        exit 1
+    fi
+    if [[ "$restored_checksum" != "$parts_checksum" ]]; then
         echo "Error: los datos difieren para ${table}." >&2
         exit 1
     fi
@@ -295,23 +308,8 @@ source_foreign_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABL
 source_check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
     WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'CHECK';")"
 
-manifest_temp="$(mktemp "${TMPDIR:-/tmp}/tindercows-manifest.XXXXXX")"
-sed \
-    -e 's/^- Intercalación comprobada: .*/- Intercalación comprobada: utf8mb4\/utf8mb4_unicode_ci en base y quince tablas/' \
-    -e 's/^- Restauración completa comprobada: .*/- Restauración completa comprobada: Sí/' \
-    -e 's/^- Restauración estructura + datos comprobada: .*/- Restauración estructura + datos comprobada: Sí/' \
-    -e "s/^- Cantidad de tablas: .*/- Cantidad de tablas: ${source_tables}/" \
-    -e "s/^- Cantidad de restricciones: .*/- Cantidad de restricciones: ${source_constraints}/" \
-    -e "s/^- Cantidad de índices: .*/- Cantidad de índices: ${source_indexes}/" \
-    -e "s/^- Cantidad de PRIMARY KEY: .*/- Cantidad de PRIMARY KEY: ${source_primary_keys}/" \
-    -e "s/^- Cantidad de FOREIGN KEY: .*/- Cantidad de FOREIGN KEY: ${source_foreign_keys}/" \
-    -e "s/^- Cantidad de CHECK: .*/- Cantidad de CHECK: ${source_check_count}/" \
-    -e 's/^- Resultado final: .*/- Resultado final: APROBADO/' \
-    -e "s|^- Observaciones: .*|- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, cero índices, cero AUTO_INCREMENT, intercalación y conteos sin diferencias.|" \
-    "$manifest_file" > "$manifest_temp"
-mv -- "$manifest_temp" "$manifest_file"
-
 echo "Restauración correcta: tablas=$source_tables, restricciones=$source_constraints, indices=$source_indexes."
 echo "La consulta funcional de productores se ejecutó correctamente."
+echo "Respaldo validado sin modificar MANIFEST ni SHA256: $backup_database."
 echo "La base temporal ${RESTORE_DATABASE} se eliminará al finalizar."
 echo "La base temporal ${PARTS_DATABASE} se eliminará al finalizar."

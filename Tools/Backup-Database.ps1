@@ -9,7 +9,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$DatabaseName = 'dbmercadoganadero'
+$DatabaseName = 'bdmercadoganadero'
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $AdvanceMatch = [regex]::Match($Avance, '^Avance(?<avance>[0-9]{2})(Correccion(?<correccion>[0-9]{2}))?$')
 $AdvanceNumber = $AdvanceMatch.Groups['avance'].Value
@@ -105,9 +105,9 @@ try {
     $WritesFrozen = $true
 
     $BaseArgs = @('compose', 'exec', '-T', 'db', 'sh', '-c')
-    Invoke-DockerProcess ($BaseArgs + 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 dbmercadoganadero') $CompleteFile
-    Invoke-DockerProcess ($BaseArgs + 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-data --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 dbmercadoganadero') $SchemaFile
-    Invoke-DockerProcess ($BaseArgs + 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-create-info --single-transaction --skip-triggers --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 dbmercadoganadero') $DataFile
+    Invoke-DockerProcess ($BaseArgs + 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 bdmercadoganadero') $CompleteFile
+    Invoke-DockerProcess ($BaseArgs + 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-data --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 bdmercadoganadero') $SchemaFile
+    Invoke-DockerProcess ($BaseArgs + 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-create-info --single-transaction --skip-triggers --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 bdmercadoganadero') $DataFile
 
     & docker compose exec -T -e "READ_ONLY_STATE=$ReadOnlyState" -e "SUPER_READ_ONLY_STATE=$SuperReadOnlyState" db sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "SET GLOBAL super_read_only=OFF; SET GLOBAL read_only=$READ_ONLY_STATE; SET GLOBAL super_read_only=$SUPER_READ_ONLY_STATE;"' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'No se pudo restaurar el estado de escritura de MySQL.' }
@@ -137,7 +137,7 @@ try {
 - Intercalación comprobada: Pendiente
 - Restauración completa comprobada: Pendiente
 - Restauración estructura + datos comprobada: Pendiente
-- Bases temporales utilizadas: dbmercadoganadero_restore_test, dbmercadoganadero_restore_parts_test
+- Bases temporales utilizadas: bdmercadoganadero_restore_test, bdmercadoganadero_restore_parts_test
 - Cantidad de tablas: Pendiente
 - Cantidad de restricciones: Pendiente
 - Cantidad de índices: Pendiente

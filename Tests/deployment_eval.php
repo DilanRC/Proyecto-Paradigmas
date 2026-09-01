@@ -32,9 +32,9 @@ $checks = [
     'phpmyadmin_local' => str_contains($compose, 'phpmyadmin:5.2.2-apache')
         && str_contains($compose, 'PMA_HOST: db')
         && str_contains($readme, 'phpMyAdmin: <http://localhost:8081>'),
-    'nombre_db_mercado_ganadero' => str_contains($environmentExample, 'DB_NAME=dbmercadoganadero')
-        && str_contains($databaseConfiguration, "'dbmercadoganadero'")
-        && str_contains($readme, 'Base MySQL: `dbmercadoganadero`')
+    'nombre_db_mercado_ganadero' => str_contains($environmentExample, 'DB_NAME=bdmercadoganadero')
+        && str_contains($databaseConfiguration, "'bdmercadoganadero'")
+        && str_contains($readme, 'Base MySQL: `bdmercadoganadero`')
         && str_contains($environmentExample, 'DB_HOST_PORT=3309'),
     'procedimiento_tbfinca' => str_contains($readme, '### Aplicar el esquema a una base existente')
         && str_contains($readme, 'por ejemplo `tbfinca`'),

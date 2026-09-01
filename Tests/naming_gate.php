@@ -78,12 +78,12 @@ foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $
 }
 $modulosEsperados = 12; // 001createdatabase .. 012createtransportistavehiculo, unificados en 000instalacioncompleta.sql
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $modulosEsperados
-    || !str_contains($sql, 'ALTER DATABASE dbmercadoganadero')) {
+    || !str_contains($sql, 'ALTER DATABASE bdmercadoganadero')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 // El script debe nombrar una sola base. Comprobar solo ALTER DATABASE dejaba pasar
 // un CREATE DATABASE con otro nombre: un cambio previo creó un nombre distinto
-// mientras ALTER y USE seguian en dbmercadoganadero, y una instalacion sin
+// mientras ALTER y USE seguian en bdmercadoganadero, y una instalacion sin
 // compose fallaba porque la base del ALTER no existia. Compose lo ocultaba
 // porque MYSQL_DATABASE ya creaba la base antes de correr el script.
 preg_match_all('/(?:CREATE DATABASE(?: IF NOT EXISTS)?|ALTER DATABASE|USE)\s+`?([A-Za-z0-9_]+)`?/i', $sql, $bases);
@@ -95,9 +95,9 @@ if (count($nombresBase) !== 1) {
         . '); CREATE, ALTER y USE deben referirse a la misma.'
     );
 }
-if ($nombresBase[0] !== 'dbmercadoganadero') {
+if ($nombresBase[0] !== 'bdmercadoganadero') {
     throw new RuntimeException(
-        "La base canonica es dbmercadoganadero y el script usa {$nombresBase[0]}; "
+        "La base canonica es bdmercadoganadero y el script usa {$nombresBase[0]}; "
         . 'Configuration/Database.php y .env.example fijan ese contrato.'
     );
 }
@@ -172,6 +172,17 @@ if (str_contains($compose, 'create_catalogs') || str_contains($compose, 'identif
 }
 foreach (['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci'] as $setting) {
     if (!str_contains($compose, $setting)) throw new RuntimeException("Falta configuración Docker {$setting}");
+}
+$restoreTool = file_get_contents("{$root}/Tools/test-restore.sh");
+foreach (['dbmercadoganadero', 'Respaldo validado sin modificar MANIFEST ni SHA256'] as $restoreContract) {
+    if (!str_contains($restoreTool, $restoreContract)) {
+        throw new RuntimeException("Restore debe conservar respaldos legados: falta {$restoreContract}");
+    }
+}
+foreach (['mv -- "$manifest_temp" "$manifest_file"', 'mv -- "$manifest_pending" "$manifest_file"'] as $manifestMutation) {
+    if (str_contains($restoreTool, $manifestMutation)) {
+        throw new RuntimeException('Restore no debe modificar MANIFEST.md ni SHA256SUMS.txt.');
+    }
 }
 
 foreach (['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'] as $pdf) {

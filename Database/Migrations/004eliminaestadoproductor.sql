@@ -1,4 +1,4 @@
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Migración manual, de una sola ejecución. Retira tbproductorestado de
@@ -15,7 +15,7 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 --
 -- Comprobar antes de ejecutar:
 --   SELECT COUNT(*) FROM information_schema.columns
---   WHERE table_schema = 'dbmercadoganadero'
+--   WHERE table_schema = 'bdmercadoganadero'
 --     AND table_name = 'tbproductor'
 --     AND column_name = 'tbproductorestado';
 -- Si devuelve 0, esta migración ya se aplicó; repetirla no daña nada.
@@ -52,7 +52,7 @@ WHERE NOT EXISTS (
 -- Suprimir una columna inexistente da error 1091.
 SET @existe = (
     SELECT COUNT(*) FROM information_schema.columns
-    WHERE table_schema = 'dbmercadoganadero'
+    WHERE table_schema = 'bdmercadoganadero'
       AND table_name = 'tbproductor'
       AND column_name = 'tbproductorestado'
 );

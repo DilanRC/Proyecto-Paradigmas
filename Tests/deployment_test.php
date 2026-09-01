@@ -62,11 +62,11 @@ test_assert(str_contains($compose, 'phpmyadmin:5.2.2-apache'),
 test_assert(str_contains($compose, 'PMA_HOST: db'),
     'phpMyAdmin debe apuntar al servicio MySQL interno');
 test_assert(!str_contains($compose, 'adminer:'), 'Adminer debe ser reemplazado por phpMyAdmin');
-test_assert(str_contains($environmentExample, 'DB_NAME=dbmercadoganadero'),
+test_assert(str_contains($environmentExample, 'DB_NAME=bdmercadoganadero'),
     'El entorno de ejemplo debe usar el nuevo nombre de base');
 test_assert(str_contains($environmentExample, 'DB_HOST_PORT=3309'),
     'MySQL debe usar el puerto local documentado');
-test_assert(str_contains($databaseConfiguration, "'dbmercadoganadero'"),
+test_assert(str_contains($databaseConfiguration, "'bdmercadoganadero'"),
     'El fallback de conexión debe usar el nuevo nombre de base');
 
-echo "OK deployment_test: despliegue por rama, phpMyAdmin y base dbmercadoganadero configurados.\n";
+echo "OK deployment_test: despliegue por rama, phpMyAdmin y base bdmercadoganadero configurados.\n";

@@ -32,9 +32,11 @@ Antes de cualquier DDL posterior a P0-C se generó el checkpoint local
 manifiesto y SHA256 se verificaron mediante restauración completa y por partes
 en las bases temporales del verificador: 15 tablas, cero restricciones y cero
 índices, sin diferencias de conteo. Los respaldos históricos no fueron
-modificados. Los dumps quedan fuera del control de versiones por la política
-de `.gitignore`; no se deben sustituir ni regenerar sin crear un checkpoint
-nuevo.
+modificados. Este checkpoint todavía pertenece al nombre legado
+`dbmercadoganadero`; el verificador lo conserva como respaldo histórico y no
+reescribe su `MANIFEST.md` ni sus sumas SHA256. Los dumps quedan fuera del
+control de versiones por la política de `.gitignore`; no se deben sustituir ni
+regenerar sin crear un checkpoint nuevo.
 
 ## Entrega vigente
 
@@ -81,6 +83,11 @@ perfil. La comparación de metadatos es bidireccional: origen contra
 restauración completa y restauración completa contra estructura más datos. Un
 fallo SQL o cualquier salida por stderr invalida la ejecución y nunca se
 interpreta como cero diferencias.
+
+Para respaldos legados con prefijo `dbmercadoganadero`, el verificador conserva
+el archivo original y compara los datos restaurados del dump completo contra
+estructura más datos. No exige que esos datos históricos sean idénticos a la
+base operativa actual `bdmercadoganadero`.
 
 Antes de migrar una base existente se genera el respaldo y se ejecuta la
 restauración completa. La migración de persona debe abortar sin retirar

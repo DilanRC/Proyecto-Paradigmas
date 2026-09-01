@@ -1,4 +1,4 @@
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Migración manual, de una sola ejecución. Cierra el vacío de tramo 6 del

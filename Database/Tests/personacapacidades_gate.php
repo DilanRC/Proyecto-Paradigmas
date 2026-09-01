@@ -24,7 +24,7 @@ foreach (['productor', 'comprador', 'transportista'] as $profile) {
 }
 $check(strpos($migration, 'MIGRACION_ABORTADA_CAPACIDAD_DUPLICADA')
     < strpos($migration, 'CREATE TABLE tbpersona'), 'La validación de duplicados debe ocurrir antes del DDL.');
-$check(str_contains($migration, "GET_LOCK('dbmercadoganadero:migrar-persona-capacidades'"), 'Falta el lock de migración.');
+$check(str_contains($migration, "GET_LOCK('bdmercadoganadero:migrar-persona-capacidades'"), 'Falta el lock de migración.');
 $check(str_contains($migration, 'IF(@migracion_lock = 1'), 'La migración debe comprobar que adquirió el lock.');
 $check(!preg_match('/CREATE\s+(PROCEDURE|FUNCTION|TRIGGER|EVENT)/i', $migration), 'La migración no debe crear objetos programables.');
 $check(str_contains($migration, 'PREPARE preflight FROM @preflight_sql'), 'Falta el aborto pre-DDL de sesión.');

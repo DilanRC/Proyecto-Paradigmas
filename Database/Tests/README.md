@@ -1,7 +1,7 @@
 # Comprobaciones SQL del modelo
 
 Scripts de solo base de datos. No sustituyen a las pruebas de `Tests/`: aquí no
-hay PHP, únicamente SQL que se ejecuta contra `dbmercadoganadero`.
+hay PHP, únicamente SQL que se ejecuta contra `bdmercadoganadero`.
 
 ## Orden de ejecución
 
