@@ -406,3 +406,57 @@ contrato, no de la vista.
 (`tbproductordireccionfechafin IS NULL`), de modo que un productor con historico
 de direcciones podria aparecer repetido una vez por periodo. No se reprodujo con
 los datos actuales, pero conviene revisarlo junto con lo anterior.
+
+## DEC-FRONT-11 - Catalogo territorial: distritos oficiales, localidades bloqueadas
+
+**Necesidad.** Los formularios de direccion pedian provincia, canton, distrito y
+pueblo como cuatro campos de texto libre e independientes. Nada impedia escribir
+un canton en la provincia equivocada, y cada usuario tecleaba el mismo nombre de
+otra forma ("Perez Zeledon", "Pérez Zeledón"), lo que rompe cualquier filtro o
+agrupacion posterior.
+
+**Fuente.** Instituto Geografico Nacional / Registro Nacional, *Division
+Territorial Administrativa, 2026* (DTA 2026), tabla por provincias, cantones y
+distritos. Consultada el 2026-08-31. `Public/js/shared/territorio.js` se genero
+desde ese PDF con un script; no se escribio a mano ni desde la memoria del
+modelo, y no se uso Wikipedia, Google Maps ni datasets comunitarios.
+
+**Reconciliacion de 493 frente a 494.** La tabla de distritos del PDF contiene
+493 filas, una menos que las 494 que declara su propia portada. La diferencia no
+es del parseo: la extraccion no produjo una sola anomalia. El distrito ausente es
+`70605` (Guacimo, Limon), cuyo nombre, **Duacari**, aparece en el archivo *Centros
+Poblados y Localidades 2026* del mismo IGN, que le atribuye nueve localidades. Se
+tomo de ahi. Los otros tres huecos de la numeracion son legitimos: Rio Cuarto
+(`20306`), Monteverde (`60109`) y Puerto Jimenez (`60702`) dejaron de ser
+distritos al convertirse en canton.
+
+**Bloqueo: las localidades no se cargan.** El archivo *Centros Poblados y
+Localidades 2026* no se puede extraer con fidelidad. Su fuente incrustada pierde
+la secuencia `nd` al convertir a texto, con dos extractores independientes
+(`pdftotext` y `pdftohtml`): "Condominio" sale "Coominio" en 983 filas e
+"Indigena" sale "Iigena" en 892. La perdida alcanza a los nombres propios, no
+solo a la tipologia: "Grande", "Segundo" y "Redonda" aparecen 8, 2 y 4 veces en la
+DTA y **cero** veces en las 7465 filas extraidas de localidades. Cargar esos
+nombres habria metido errores silenciosos en la base de direcciones, asi que no
+se cargo ninguno.
+
+**Consecuencia en el formulario.** Provincia y canton son `<select>` encadenados:
+elegir provincia repuebla los cantones. Distrito es `<input list>` con `<datalist>`
+de los 494 valores oficiales, no un `<select>`: sugiere sin rechazar, de modo que
+una direccion ya guardada fuera del catalogo sobrevive a una edicion. Pueblo
+queda como texto libre mientras su lista este vacia.
+
+**Costo.** El catalogo pesa unos 20 KB y hay que regenerarlo cuando el IGN
+publique una DTA nueva.
+
+**Riesgo.** Que el archivo quede desactualizado tras una reforma territorial. Lo
+acota la prueba de integridad `ningun nombre de distrito perdio caracteres en la
+extraccion`: si alguien regenera el catalogo con un extractor defectuoso, el gate
+falla en vez de aceptar nombres mutilados.
+
+**Alternativa descartada.** Completar las localidades reinsertando la secuencia
+perdida. No es reconstruible: no hay forma de saber donde iba el `nd` sin la
+lista correcta, que es justamente lo que falta.
+
+**Limite.** Solo catalogo de frontend. No se creo tabla, endpoint ni validacion
+de servidor; el backend sigue aceptando las direcciones como texto.
