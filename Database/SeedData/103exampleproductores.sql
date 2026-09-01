@@ -1,4 +1,4 @@
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Datos académicos ficticios. Las comprobaciones explícitas hacen el script idempotente.

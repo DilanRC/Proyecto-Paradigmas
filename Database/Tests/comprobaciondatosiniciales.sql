@@ -1,4 +1,4 @@
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Comprobación de los datos iniciales del avance.

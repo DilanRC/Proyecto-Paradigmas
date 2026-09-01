@@ -32,7 +32,7 @@ foreach (['KEY_COLUMN_USAGE', 'REFERENTIAL_CONSTRAINTS', 'CHECK_CONSTRAINTS'] as
     $metadata = $db->prepare("SELECT COUNT(*) FROM information_schema.{$metadataTable}
         WHERE CONSTRAINT_SCHEMA = DATABASE()");
     $metadata->execute();
-    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para dbmercadoganadero");
+    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para bdmercadoganadero");
 }
 
 $productorIdColumn = $db->prepare("SELECT DATA_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA

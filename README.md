@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `dbmercadoganadero` contiene exactamente 15 tablas:
+La base `bdmercadoganadero` contiene exactamente 15 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -59,7 +59,7 @@ docker compose ps
 - Verificación JWT Supabase: <http://127.0.0.1:3001>
 - MySQL desde host: `localhost:${DB_HOST_PORT:-3309}`
 - MySQL entre contenedores: `db:3306`
-- Base MySQL: `dbmercadoganadero`
+- Base MySQL: `bdmercadoganadero`
 
 Reinicio limpio, únicamente después de verificar un respaldo:
 

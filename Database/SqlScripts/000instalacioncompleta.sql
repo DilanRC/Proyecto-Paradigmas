@@ -1,15 +1,15 @@
-CREATE DATABASE IF NOT EXISTS dbmercadoganadero
+CREATE DATABASE IF NOT EXISTS bdmercadoganadero
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-ALTER DATABASE dbmercadoganadero
+ALTER DATABASE bdmercadoganadero
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tbpersona (
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS tbproductor (
     tbpersonaid INT NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Enlace entre el productor y su residencia principal. La tabla no almacena
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS tbproductordireccion (
     tbproductordireccionfechafin DATETIME NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tbfinca (
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS tbfinca (
     tbfincaestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tbbitacora (
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacorasolicitudid VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tbcomprador (
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS tbcomprador (
     tbcompradorestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Ubicación física reutilizable. No pertenece a productor ni a finca: ambas
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS tbdireccion (
     tbdireccionsenas VARCHAR(500) NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Enlace conceptual entre una finca y su ubicación. La política del modelo
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS tbfincadireccion (
     tbdireccionid INT NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Catálogo de métodos de pago. El alcance vigente solo contempla efectivo y
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS tbpagometodo (
     tbpagometodoactivo TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Capacidad logística de una persona. La identidad vive solamente en tbpersona.
@@ -128,7 +128,7 @@ CREATE TABLE IF NOT EXISTS tbtransportista (
     tbtransportistaestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Vehículo utilizado para el transporte. Placa y vin se almacenan tal cual: la
@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS tbvehiculo (
     tbvehiculoestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;
 
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Enlace conceptual entre transportista y vehículo. La política del modelo

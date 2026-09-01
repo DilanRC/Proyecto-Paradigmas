@@ -1,9 +1,9 @@
-USE dbmercadoganadero;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Ejecutar una sola vez tras un respaldo verificado. El preflight no crea
 -- objetos ni altera tablas: todo conflicto falla antes del primer DDL.
-SELECT GET_LOCK('dbmercadoganadero:migrar-persona-capacidades', 30) INTO @migracion_lock;
+SELECT GET_LOCK('bdmercadoganadero:migrar-persona-capacidades', 30) INTO @migracion_lock;
 SET @preflight_sql := IF(@migracion_lock = 1, 'DO 0',
     'SELECT * FROM MIGRACION_ABORTADA_BLOQUEO_NO_ADQUIRIDO');
 PREPARE preflight FROM @preflight_sql;
@@ -116,4 +116,4 @@ ALTER TABLE tbtransportista
   DROP COLUMN tbtransportistanombre, DROP COLUMN tbtransportistatelefono,
   DROP COLUMN tbtransportistacorreoelectronico, MODIFY tbpersonaid INT NOT NULL;
 
-SELECT RELEASE_LOCK('dbmercadoganadero:migrar-persona-capacidades');
+SELECT RELEASE_LOCK('bdmercadoganadero:migrar-persona-capacidades');

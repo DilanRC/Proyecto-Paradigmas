@@ -38,7 +38,7 @@ $evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS t
     'Comprador tiene nombre singular y referencia la identidad compartida');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
-$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbmercadoganadero')
+$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE bdmercadoganadero')
     && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 12,
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('direccion_centralizada', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
@@ -89,7 +89,7 @@ $evaluate('decision_docente', str_contains($docs, 'instrucción docente') && str
 $evaluate('protocolo_identificacion', str_contains($docs, 'desactivar el registro incorrecto')
     && str_contains($docs, 'conservar su bitácora') && str_contains($docs, 'crear el registro correcto'),
     'La corrección de identificación conserva la trazabilidad');
-$evaluate('readme_operativo', str_contains($readme, 'dbmercadoganadero') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
+$evaluate('readme_operativo', str_contains($readme, 'bdmercadoganadero') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
 $evaluate('pdf_obligatorios', count(array_filter(['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'],
     fn (string $pdf): bool => is_file("{$root}/Documentation/{$pdf}") && filesize("{$root}/Documentation/{$pdf}") > 1000)) === 3,
     'Existen los tres PDF de la entrega');
@@ -102,6 +102,11 @@ $evaluate('restauracion_cero_restricciones', str_contains($restoreTool, 'constra
 $evaluate('restauracion_sin_logica_motor', str_contains($restoreTool, 'automatic_columns')
     && str_contains($restoreTool, 'programmable_objects'),
     'La restauración exige cero defaults, generación automática y objetos programables');
+$evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "'dbmercadoganadero'")
+    && str_contains($restoreTool, 'Respaldo validado sin modificar MANIFEST ni SHA256')
+    && !str_contains($restoreTool, 'mv -- "$manifest_temp" "$manifest_file"')
+    && !str_contains($restoreTool, 'mv -- "$manifest_pending" "$manifest_file"'),
+    'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
 $score = (int) round(100 * count(array_filter($checks, fn ($c) => $c['cumple'])) / count($checks));
 echo json_encode(['eval' => 'modelo_simplificado_profesor', 'score' => $score, 'threshold' => 100, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
 if ($score < 100) exit(1);
