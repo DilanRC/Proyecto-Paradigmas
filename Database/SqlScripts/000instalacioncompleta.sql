@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS bdmercadoganadero
+CREATE DATABASE IF NOT EXISTS dbmercadoganadero
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_unicode_ci;
 
