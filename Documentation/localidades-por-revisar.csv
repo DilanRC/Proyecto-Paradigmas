@@ -1,157 +1,157 @@
 codigoDistrito,provincia,canton,distrito,nombre_actual,sugerencia,correccion_final,clasificacion,evidencia
-10302,San José,Desamparados,San Miguel,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-10304,San José,Desamparados,San Rafael Arriba,Méez,Méndez,,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
-10501,San José,Tarrazú,San Marcos,Haciea Tres Marías,Hacienda Tres Marías,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-10502,San José,Tarrazú,San Lorenzo,Bajo Quebrada Hoa,Bajo Quebrada Honda,,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
-10604,San José,Aserrí,San Gabriel,Rancho Grae,Rancho Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-10704,San José,Mora,Piedras Negras,Quebrada Grae,Quebrada Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-10901,San José,Santa Ana,Santa Ana,Area,Andrea,,RECONSTRUCCION_SEGURA,AREA->ANDREA confirmado x1 en distrito 11103
-10901,San José,Santa Ana,Santa Ana,Haciea Del Valle,Hacienda Del Valle,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-10903,San José,Santa Ana,Pozos,La Estancia De Liora,La Estancia De Lindora,,RECONSTRUCCION_SEGURA,LIORA->LINDORA confirmado x4 en distrito 10903
-10904,San José,Santa Ana,Uruca,Residencial La Haciea,Residencial La Hacienda,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-11001,San José,Alajuelita,Alajuelita,Juan Pablo Seguo,Juan Pablo Segundo,,RECONSTRUCCION_SEGURA,SEGUO->SEGUNDO confirmado x3 en distrito 20109
-11004,San José,Alajuelita,Concepción,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-11004,San José,Alajuelita,Concepción,Vista Grae Dos,Vista Grande Dos,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-11102,San José,Vázquez de Coronado,San Rafael,Haciea Abigail,Hacienda Abigail,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-11102,San José,Vázquez de Coronado,San Rafael,Haciea La  Abigail,Hacienda La Abigail,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-11102,San José,Vázquez de Coronado,San Rafael,Holaa,Holanda,,RECONSTRUCCION_SEGURA,HOLAA->HOLANDA confirmado x1 en distrito 10108
-11204,San José,Acosta,Cangrejal,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-11301,San José,Tibás,San Juan,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-11401,San José,Moravia,San Vicente,Alora,Alondra,,RECONSTRUCCION_SEGURA,ALORA->ALONDRA confirmado x2 en distrito 10904
-11601,San José,Turrubares,San Pablo,Haciea Valle Verde,Hacienda Valle Verde,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-11701,San José,Dota,Santa María,Baera,Bandera,,RECONSTRUCCION_SEGURA,BAERA->BANDERA confirmado x2 en distrito 11702
-11701,San José,Dota,Santa María,Las Ares,Las Andres,,RECONSTRUCCION_SEGURA,ARES->ANDRES confirmado x10 en distrito 10201
-11703,San José,Dota,Copey,Alto Iio,Alto Indio,,RECONSTRUCCION_SEGURA,IIO->INDIO confirmado x4 en distrito 11105
-11904,San José,Pérez Zeledón,Rivas,Sitio Camino de los iios,Sitio Camino de los indios,,RECONSTRUCCION_SEGURA,IIOS->INDIOS confirmado x1 en distrito 60603
-12002,San José,León Cortés Castro,San Andrés,Llano Grae,Llano Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-20101,Alajuela,Alajuela,Alajuela,Acequia Grae,Acequia Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-20103,Alajuela,Alajuela,Carrizal,Calle Saoval,Calle Sandoval,,RECONSTRUCCION_SEGURA,SAOVAL->SANDOVAL confirmado x1 en distrito 70103
-20104,Alajuela,Alajuela,San Antonio,Loma Lia Dos,Loma Linda Dos,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-20104,Alajuela,Alajuela,San Antonio,Loma Lia Uno,Loma Linda Uno,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-20107,Alajuela,Alajuela,Sabanilla,Haciea Alsacia,Hacienda Alsacia,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-20107,Alajuela,Alajuela,Sabanilla,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-20113,Alajuela,Alajuela,Garita,Maarina,Mandarina,,RECONSTRUCCION_SEGURA,MAARINA->MANDARINA confirmado x2 en distrito 20113
-20203,Alajuela,San Ramón,San Juan,Valle Escoido (La Pista),Valle Escondido (La Pista),,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
-20211,Alajuela,San Ramón,Concepción,Calle Méez,Calle Méndez,,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
-20301,Alajuela,Grecia,Grecia,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-20403,Alajuela,San Mateo,Jesús María,Quebrada Grae,Quebrada Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-20604,Alajuela,Naranjo,Cirrí Sur,Quebrada Hoa,Quebrada Honda,,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
-20605,Alajuela,Naranjo,San Jerónimo,Haciea Miramonte,Hacienda Miramonte,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-20606,Alajuela,Naranjo,San Juan,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-20606,Alajuela,Naranjo,San Juan,Rincón Elizoo,Rincón Elizondo,,RECONSTRUCCION_SEGURA,ELIZOO->ELIZONDO confirmado x1 en distrito 20707
-20606,Alajuela,Naranjo,San Juan,Río Grae,Río Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-20703,Alajuela,Palmares,Buenos Aires,Calle Fernáez,Calle Fernández,,RECONSTRUCCION_SEGURA,FERNAEZ->FERNANDEZ confirmado x1 en distrito 20207
-20901,Alajuela,Orotina,Orotina,Alto Vias,Alto Vindas,,RECONSTRUCCION_SEGURA,VIAS->VINDAS confirmado x1 en distrito 61001
-20905,Alajuela,Orotina,La Ceiba,Haciea Don Fernao,Hacienda Don Fernando,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201; FERNAO->FERNANDO confirmado x9 en distrito 10801
-21001,Alajuela,San Carlos,Quesada,Lia Vista (Tesalia),Linda Vista (Tesalia),,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-21004,Alajuela,San Carlos,Aguas Zarcas,Calle Hernáez,Calle Hernández,,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
-21004,Alajuela,San Carlos,Aguas Zarcas,Calle Méez,Calle Méndez,,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
-21006,Alajuela,San Carlos,Pital,Piedra Alegre (Quebrada Grae),Piedra Alegre (Quebrada Grande),,RECONSTRUCCION_SEGURA,GRAE)->GRANDE) confirmado x1 en distrito 70401
+10302,San José,Desamparados,San Miguel,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+10304,San José,Desamparados,San Rafael Arriba,Méez,Méndez,Méndez,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
+10501,San José,Tarrazú,San Marcos,Haciea Tres Marías,Hacienda Tres Marías,Hacienda Tres Marías,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+10502,San José,Tarrazú,San Lorenzo,Bajo Quebrada Hoa,Bajo Quebrada Honda,Bajo Quebrada Honda,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
+10604,San José,Aserrí,San Gabriel,Rancho Grae,Rancho Grande,Rancho Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+10704,San José,Mora,Piedras Negras,Quebrada Grae,Quebrada Grande,Quebrada Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+10901,San José,Santa Ana,Santa Ana,Area,Andrea,Andrea,RECONSTRUCCION_SEGURA,AREA->ANDREA confirmado x1 en distrito 11103
+10901,San José,Santa Ana,Santa Ana,Haciea Del Valle,Hacienda Del Valle,Hacienda Del Valle,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+10903,San José,Santa Ana,Pozos,La Estancia De Liora,La Estancia De Lindora,La Estancia De Lindora,RECONSTRUCCION_SEGURA,LIORA->LINDORA confirmado x4 en distrito 10903
+10904,San José,Santa Ana,Uruca,Residencial La Haciea,Residencial La Hacienda,Residencial La Hacienda,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+11001,San José,Alajuelita,Alajuelita,Juan Pablo Seguo,Juan Pablo Segundo,Juan Pablo Segundo,RECONSTRUCCION_SEGURA,SEGUO->SEGUNDO confirmado x3 en distrito 20109
+11004,San José,Alajuelita,Concepción,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+11004,San José,Alajuelita,Concepción,Vista Grae Dos,Vista Grande Dos,Vista Grande Dos,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+11102,San José,Vázquez de Coronado,San Rafael,Haciea Abigail,Hacienda Abigail,Hacienda Abigail,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+11102,San José,Vázquez de Coronado,San Rafael,Haciea La  Abigail,Hacienda La Abigail,Hacienda La Abigail,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+11102,San José,Vázquez de Coronado,San Rafael,Holaa,Holanda,Holanda,RECONSTRUCCION_SEGURA,HOLAA->HOLANDA confirmado x1 en distrito 10108
+11204,San José,Acosta,Cangrejal,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+11301,San José,Tibás,San Juan,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+11401,San José,Moravia,San Vicente,Alora,Alondra,Alondra,RECONSTRUCCION_SEGURA,ALORA->ALONDRA confirmado x2 en distrito 10904
+11601,San José,Turrubares,San Pablo,Haciea Valle Verde,Hacienda Valle Verde,Hacienda Valle Verde,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+11701,San José,Dota,Santa María,Baera,Bandera,Bandera,RECONSTRUCCION_SEGURA,BAERA->BANDERA confirmado x2 en distrito 11702
+11701,San José,Dota,Santa María,Las Ares,Las Andres,Las Andres,RECONSTRUCCION_SEGURA,ARES->ANDRES confirmado x10 en distrito 10201
+11703,San José,Dota,Copey,Alto Iio,Alto Indio,Alto Indio,RECONSTRUCCION_SEGURA,IIO->INDIO confirmado x4 en distrito 11105
+11904,San José,Pérez Zeledón,Rivas,Sitio Camino de los iios,Sitio Camino de los indios,Sitio Camino de los indios,RECONSTRUCCION_SEGURA,IIOS->INDIOS confirmado x1 en distrito 60603
+12002,San José,León Cortés Castro,San Andrés,Llano Grae,Llano Grande,Llano Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+20101,Alajuela,Alajuela,Alajuela,Acequia Grae,Acequia Grande,Acequia Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+20103,Alajuela,Alajuela,Carrizal,Calle Saoval,Calle Sandoval,Calle Sandoval,RECONSTRUCCION_SEGURA,SAOVAL->SANDOVAL confirmado x1 en distrito 70103
+20104,Alajuela,Alajuela,San Antonio,Loma Lia Dos,Loma Linda Dos,Loma Linda Dos,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+20104,Alajuela,Alajuela,San Antonio,Loma Lia Uno,Loma Linda Uno,Loma Linda Uno,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+20107,Alajuela,Alajuela,Sabanilla,Haciea Alsacia,Hacienda Alsacia,Hacienda Alsacia,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+20107,Alajuela,Alajuela,Sabanilla,Lia Vista,Linda Vista,Linda Vista,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+20113,Alajuela,Alajuela,Garita,Maarina,Mandarina,Mandarina,RECONSTRUCCION_SEGURA,MAARINA->MANDARINA confirmado x2 en distrito 20113
+20203,Alajuela,San Ramón,San Juan,Valle Escoido (La Pista),Valle Escondido (La Pista),Valle Escondido (La Pista),RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
+20211,Alajuela,San Ramón,Concepción,Calle Méez,Calle Méndez,Calle Méndez,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
+20301,Alajuela,Grecia,Grecia,Lia Vista,Linda Vista,Linda Vista,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+20403,Alajuela,San Mateo,Jesús María,Quebrada Grae,Quebrada Grande,Quebrada Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+20604,Alajuela,Naranjo,Cirrí Sur,Quebrada Hoa,Quebrada Honda,Quebrada Honda,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
+20605,Alajuela,Naranjo,San Jerónimo,Haciea Miramonte,Hacienda Miramonte,Hacienda Miramonte,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+20606,Alajuela,Naranjo,San Juan,Lia Vista,Linda Vista,Linda Vista,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+20606,Alajuela,Naranjo,San Juan,Rincón Elizoo,Rincón Elizondo,Rincón Elizondo,RECONSTRUCCION_SEGURA,ELIZOO->ELIZONDO confirmado x1 en distrito 20707
+20606,Alajuela,Naranjo,San Juan,Río Grae,Río Grande,Río Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+20703,Alajuela,Palmares,Buenos Aires,Calle Fernáez,Calle Fernández,Calle Fernández,RECONSTRUCCION_SEGURA,FERNAEZ->FERNANDEZ confirmado x1 en distrito 20207
+20901,Alajuela,Orotina,Orotina,Alto Vias,Alto Vindas,Alto Vindas,RECONSTRUCCION_SEGURA,VIAS->VINDAS confirmado x1 en distrito 61001
+20905,Alajuela,Orotina,La Ceiba,Haciea Don Fernao,Hacienda Don Fernando,Hacienda Don Fernando,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201; FERNAO->FERNANDO confirmado x9 en distrito 10801
+21001,Alajuela,San Carlos,Quesada,Lia Vista (Tesalia),Linda Vista (Tesalia),Linda Vista (Tesalia),RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+21004,Alajuela,San Carlos,Aguas Zarcas,Calle Hernáez,Calle Hernández,Calle Hernández,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
+21004,Alajuela,San Carlos,Aguas Zarcas,Calle Méez,Calle Méndez,Calle Méndez,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
+21006,Alajuela,San Carlos,Pital,Piedra Alegre (Quebrada Grae),Piedra Alegre (Quebrada Grande),Piedra Alegre (Quebrada Grande),RECONSTRUCCION_SEGURA,GRAE)->GRANDE) confirmado x1 en distrito 70401
 21006,Alajuela,San Carlos,Pital,Rosalía,,,NO_CORREGIR,la reconstruccion 'Rosalínda' no es ortografia espanola valida: esa tilde no existiria. Ademas el original es un nombre legitimo por si mismo (Rosalia es nombre propio corriente)
 21006,Alajuela,San Carlos,Pital,Saíno,,,NO_CORREGIR,"la reconstruccion 'Sandíno' no es ortografia espanola valida: esa tilde no existiria. Ademas el original es un nombre legitimo por si mismo (saino es el pecari, animal que da nombre a lugares)"
-21007,Alajuela,San Carlos,La Fortuna,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-21010,Alajuela,San Carlos,Venado,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-21011,Alajuela,San Carlos,Cutris,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-21011,Alajuela,San Carlos,Cutris,Tabla Grae (San Pedro),Tabla Grande (San Pedro),,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-21401,Alajuela,Los Chiles,Los Chiles,Hernáez (Los Ángeles),Hernández (Los Ángeles),,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
-21403,Alajuela,Los Chiles,El Amparo,Quebrada Grae,Quebrada Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-30104,Cartago,Cartago,San Nicolás,Roa,Ronda,,RECONSTRUCCION_SEGURA,ROA->RONDA confirmado x2 en distrito 11501
-30105,Cartago,Cartago,Aguacaliente o San Francisco,Loma Lia,Loma Linda,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-30201,Cartago,Paraíso,Paraíso,Paora,Pandora,,RECONSTRUCCION_SEGURA,PAORA->PANDORA confirmado x2 en distrito 70102
-30203,Cartago,Paraíso,Orosi,Calle Obao,Calle Obando,,RECONSTRUCCION_SEGURA,OBAO->OBANDO confirmado x3 en distrito 10901
-30204,Cartago,Paraíso,Cachí,Piedra Grae,Piedra Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-30205,Cartago,Paraíso,Llanos de Santa Lucía,Haciea Jacaraa,Hacienda Jacaranda,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201; JACARAA->JACARANDA confirmado x2 en distrito 10108
-30303,Cartago,La Unión,San Juan,Calle Obao,Calle Obando,,RECONSTRUCCION_SEGURA,OBAO->OBANDO confirmado x3 en distrito 10901
-30303,Cartago,La Unión,San Juan,Haciea Gregal,Hacienda Gregal,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-30306,Cartago,La Unión,Dulce Nombre,Tista Hernáez,Tista Hernández,,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
-30308,Cartago,La Unión,Río Azul,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-30308,Cartago,La Unión,Río Azul,Liavista (Loma Gobierno),Lindavista (Loma Gobierno),,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-30403,Cartago,Jiménez,Pejibaye,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-30502,Cartago,Turrialba,La Suiza,Las Golorinas,Las Golondrinas,,RECONSTRUCCION_SEGURA,GOLORINAS->GOLONDRINAS confirmado x1 en distrito 50309
-30505,Cartago,Turrialba,Santa Teresita,Saoval,Sandoval,,RECONSTRUCCION_SEGURA,SAOVAL->SANDOVAL confirmado x1 en distrito 70103
-30512,Cartago,Turrialba,Chirripó,Valle Escoido,Valle Escondido,,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
-30701,Cartago,Oreamuno,San Rafael,Cerro Grae,Cerro Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-30702,Cartago,Oreamuno,Cot,Dagoberto Méez Carpio,Dagoberto Méndez Carpio,,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
-30801,Cartago,El Guarco,El Tejar,Jacaraas,Jacarandas,,RECONSTRUCCION_SEGURA,JACARAAS->JACARANDAS confirmado x2 en distrito 10203
-30802,Cartago,El Guarco,San Isidro,Seeros del Sol,Senderos del Sol,,RECONSTRUCCION_SEGURA,SEEROS->SENDEROS confirmado x1 en distrito 30105
-40104,Heredia,Heredia,Ulloa,Lia del Norte,Linda del Norte,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-40105,Heredia,Heredia,Varablanca,Haciea Fátima,Hacienda Fátima,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-40305,Heredia,Santo Domingo,Santo Tomás,Calle Roa,Calle Ronda,,RECONSTRUCCION_SEGURA,ROA->RONDA confirmado x2 en distrito 11501
-40401,Heredia,Santa Bárbara,Santa Bárbara,Coominio Colonial,Condominio Colonial,,RECONSTRUCCION_SEGURA,"tipologia del XLSX del IGN: ""Coominio Horizontal"""
-40502,Heredia,San Rafael,San Josecito,Villa del Seero,Villa del Sendero,,RECONSTRUCCION_SEGURA,SEERO->SENDERO confirmado x1 en distrito 20109
-40504,Heredia,San Rafael,Ángeles,Calle Hernáez,Calle Hernández,,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
-40504,Heredia,San Rafael,Ángeles,Cerro Redoo,Cerro Redondo,,RECONSTRUCCION_SEGURA,REDOO->REDONDO confirmado x5 en distrito 10603
-40701,Heredia,Belén,San Antonio,Vistas de Liora,Vistas de Lindora,,RECONSTRUCCION_SEGURA,LIORA->LINDORA confirmado x4 en distrito 10903
-40702,Heredia,Belén,La Ribera,Vista Lia,Vista Linda,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-40703,Heredia,Belén,La Asunción,Calle Lia Vista,Calle Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-41001,Heredia,Sarapiquí,Puerto Viejo,Loma Lia la Gerika,Loma Linda la Gerika,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
-41002,Heredia,Sarapiquí,La Virgen,Quebrada Grae,Quebrada Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-50101,Guanacaste,Liberia,Liberia,Haciea,Hacienda,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50101,Guanacaste,Liberia,Liberia,Haciea Birmania,Hacienda Birmania,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50101,Guanacaste,Liberia,Liberia,Haciea El Real,Hacienda El Real,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50101,Guanacaste,Liberia,Liberia,Haciea Tempisque,Hacienda Tempisque,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50101,Guanacaste,Liberia,Liberia,Pedro Hernáez,Pedro Hernández,,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
-50101,Guanacaste,Liberia,Liberia,Sitio Llano Grae,Sitio Llano Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-50102,Guanacaste,Liberia,Cañas Dulces,Haciea Los Ahogados,Hacienda Los Ahogados,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50103,Guanacaste,Liberia,Mayorga,Haciea El Querpe,Hacienda El Querpe,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50103,Guanacaste,Liberia,Mayorga,Nueva Zelaa,Nueva Zelanda,,RECONSTRUCCION_SEGURA,ZELAA->ZELANDA confirmado x1 en distrito 60701
-50104,Guanacaste,Liberia,Nacascolo,Haciea Horizontes,Hacienda Horizontes,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50104,Guanacaste,Liberia,Nacascolo,Haciea Monte Galán,Hacienda Monte Galán,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50104,Guanacaste,Liberia,Nacascolo,Haciea Santo Tomas,Hacienda Santo Tomas,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50201,Guanacaste,Nicoya,Nicoya,Cerro Redoo,Cerro Redondo,,RECONSTRUCCION_SEGURA,REDOO->REDONDO confirmado x5 en distrito 10603
-50202,Guanacaste,Nicoya,Mansión,Sitio Grae,Sitio Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-50203,Guanacaste,Nicoya,San Antonio,Tamario,Tamarindo,,RECONSTRUCCION_SEGURA,TAMARIO->TAMARINDO confirmado x8 en distrito 20111
-50205,Guanacaste,Nicoya,Sámara,Bajo Escoido,Bajo Escondido,,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
-50309,Guanacaste,Santa Cruz,Tamarindo,Haciea Pinilla,Hacienda Pinilla,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50401,Guanacaste,Bagaces,Bagaces,Haciea Mojica,Hacienda Mojica,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50401,Guanacaste,Bagaces,Bagaces,Sitio Chagüite Grae,Sitio Chagüite Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-50402,Guanacaste,Bagaces,La Fortuna,Haciea Nispero,Hacienda Nispero,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50501,Guanacaste,Carrillo,Filadelfia,Haciea El Viejo,Hacienda El Viejo,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-50602,Guanacaste,Cañas,Palmira,Sitio Quebrada Hoa,Sitio Quebrada Honda,,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
-50704,Guanacaste,Abangares,Colorado,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-51003,Guanacaste,La Cruz,La Garita,San Fernao,San Fernando,,RECONSTRUCCION_SEGURA,FERNAO->FERNANDO confirmado x9 en distrito 10801
-51004,Guanacaste,La Cruz,Santa Elena,Sitio El Escoido,Sitio El Escondido,,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
-51004,Guanacaste,La Cruz,Santa Elena,Sitio Potrero Grae,Sitio Potrero Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-60104,Puntarenas,Puntarenas,Lepanto,Cerro Iio,Cerro Indio,,RECONSTRUCCION_SEGURA,IIO->INDIO confirmado x4 en distrito 11105
-60107,Puntarenas,Puntarenas,Guacimal,Alto Méez,Alto Méndez,,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
-60107,Puntarenas,Puntarenas,Guacimal,Altos Fernáez,Altos Fernández,,RECONSTRUCCION_SEGURA,FERNAEZ->FERNANDEZ confirmado x1 en distrito 20207
-60108,Puntarenas,Puntarenas,Barranca,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-60108,Puntarenas,Puntarenas,Barranca,Riojalaia 2,Riojalandia 2,,RECONSTRUCCION_SEGURA,RIOJALAIA->RIOJALANDIA confirmado x1 en distrito 60108
-60111,Puntarenas,Puntarenas,Cóbano,Bajos de Fernáez,Bajos de Fernández,,RECONSTRUCCION_SEGURA,FERNAEZ->FERNANDEZ confirmado x1 en distrito 20207
-60114,Puntarenas,Puntarenas,Acapulco,Rancho Grae,Rancho Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-60115,Puntarenas,Puntarenas,El Roble,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-60206,Puntarenas,Esparza,Caldera,Haciea La Moncha,Hacienda La Moncha,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-60206,Puntarenas,Esparza,Caldera,Haciea Mata de Guinea,Hacienda Mata de Guinea,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-60206,Puntarenas,Esparza,Caldera,Haciea Playa Lia,Hacienda Playa Linda,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201; LIA->LINDA confirmado x41 en distrito 10105
-60206,Puntarenas,Esparza,Caldera,Haciea Salinas,Hacienda Salinas,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-60206,Puntarenas,Esparza,Caldera,Quebrada Hoa,Quebrada Honda,,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
-60302,Puntarenas,Buenos Aires,Volcán,Río Grae,Río Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-60303,Puntarenas,Buenos Aires,Potrero Grande,San Arés (Las Vueltas de San Arés),San Andrés (Las Vueltas de San Arés),,RECONSTRUCCION_SEGURA,ARES->ANDRES confirmado x10 en distrito 10201
-60303,Puntarenas,Buenos Aires,Potrero Grande,Tamario,Tamarindo,,RECONSTRUCCION_SEGURA,TAMARIO->TAMARINDO confirmado x8 en distrito 20111
-60306,Puntarenas,Buenos Aires,Colinas,Quebrada Hoa,Quebrada Honda,,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
-60309,Puntarenas,Buenos Aires,Brunka,Llano Grae,Llano Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-60403,Puntarenas,Montes de Oro,San Isidro,Calle El Tamario,Calle El Tamarindo,,RECONSTRUCCION_SEGURA,TAMARIO->TAMARINDO confirmado x8 en distrito 20111
-60501,Puntarenas,Osa,Puerto Cortés,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-60503,Puntarenas,Osa,Sierpe,Puerto Escoido,Puerto Escondido,,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
-60504,Puntarenas,Osa,Bahía Ballena,Quebrada Grae,Quebrada Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-60701,Puntarenas,Golfito,Golfito,Rotoa,Rotonda,,RECONSTRUCCION_SEGURA,ROTOA->ROTONDA confirmado x1 en distrito 20101
-60704,Puntarenas,Golfito,Pavón,Quebrada Hoa,Quebrada Honda,,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
-60801,Puntarenas,Coto Brus,San Vito,Liavista,Lindavista,,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
-61001,Puntarenas,Corredores,Corredor,Bajo Iios,Bajo Indios,,RECONSTRUCCION_SEGURA,IIOS->INDIOS confirmado x1 en distrito 60603
-61004,Puntarenas,Corredores,Laurel,María Fernaa,María Fernanda,,RECONSTRUCCION_SEGURA,FERNAA->FERNANDA confirmado x4 en distrito 10601
-61201,Puntarenas,Monteverde,Monteverde,Liora,Lindora,,RECONSTRUCCION_SEGURA,LIORA->LINDORA confirmado x4 en distrito 10903
-61301,Puntarenas,Puerto Jiménez,Puerto Jiménez,Iepeencia,Independencia,,RECONSTRUCCION_SEGURA,IEPEENCIA->INDEPENDENCIA confirmado x2 en distrito 10801
-70101,Limón,Limón,Limón,Juan Pablo Seguo,Juan Pablo Segundo,,RECONSTRUCCION_SEGURA,SEGUO->SEGUNDO confirmado x3 en distrito 20109
-70102,Limón,Limón,Valle La Estrella,Paora Oeste,Pandora Oeste,,RECONSTRUCCION_SEGURA,PAORA->PANDORA confirmado x2 en distrito 70102
-70201,Limón,Pococí,Guápiles,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-70201,Limón,Pococí,Guápiles,Valle Escoido,Valle Escondido,,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
-70203,Limón,Pococí,Rita,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-70203,Limón,Pococí,Rita,Iio,Indio,,RECONSTRUCCION_SEGURA,IIO->INDIO confirmado x4 en distrito 11105
-70302,Limón,Siquirres,Pacuarito,Haciea Ojo de Agua,Hacienda Ojo de Agua,,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
-70401,Limón,Talamanca,Bratsi,Huberie (Rancho Grae),Huberie (Rancho Grande),,RECONSTRUCCION_SEGURA,GRAE)->GRANDE) confirmado x1 en distrito 70401
-70404,Limón,Talamanca,Telire,Sitio Piedra Grae,Sitio Piedra Grande,,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
-70502,Limón,Matina,Batán,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
-70605,Limón,Guácimo,Duacarí,San Edmuo,San Edmundo,,RECONSTRUCCION_SEGURA,EDMUO->EDMUNDO confirmado x1 en distrito 70503
+21007,Alajuela,San Carlos,La Fortuna,Lia Vista,Linda Vista,Linda Vista,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+21010,Alajuela,San Carlos,Venado,Lia Vista,Linda Vista,Linda Vista,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+21011,Alajuela,San Carlos,Cutris,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+21011,Alajuela,San Carlos,Cutris,Tabla Grae (San Pedro),Tabla Grande (San Pedro),Tabla Grande (San Pedro),RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+21401,Alajuela,Los Chiles,Los Chiles,Hernáez (Los Ángeles),Hernández (Los Ángeles),Hernández (Los Ángeles),RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
+21403,Alajuela,Los Chiles,El Amparo,Quebrada Grae,Quebrada Grande,Quebrada Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+30104,Cartago,Cartago,San Nicolás,Roa,Ronda,Ronda,RECONSTRUCCION_SEGURA,ROA->RONDA confirmado x2 en distrito 11501
+30105,Cartago,Cartago,Aguacaliente o San Francisco,Loma Lia,Loma Linda,Loma Linda,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+30201,Cartago,Paraíso,Paraíso,Paora,Pandora,Pandora,RECONSTRUCCION_SEGURA,PAORA->PANDORA confirmado x2 en distrito 70102
+30203,Cartago,Paraíso,Orosi,Calle Obao,Calle Obando,Calle Obando,RECONSTRUCCION_SEGURA,OBAO->OBANDO confirmado x3 en distrito 10901
+30204,Cartago,Paraíso,Cachí,Piedra Grae,Piedra Grande,Piedra Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+30205,Cartago,Paraíso,Llanos de Santa Lucía,Haciea Jacaraa,Hacienda Jacaranda,Hacienda Jacaranda,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201; JACARAA->JACARANDA confirmado x2 en distrito 10108
+30303,Cartago,La Unión,San Juan,Calle Obao,Calle Obando,Calle Obando,RECONSTRUCCION_SEGURA,OBAO->OBANDO confirmado x3 en distrito 10901
+30303,Cartago,La Unión,San Juan,Haciea Gregal,Hacienda Gregal,Hacienda Gregal,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+30306,Cartago,La Unión,Dulce Nombre,Tista Hernáez,Tista Hernández,Tista Hernández,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
+30308,Cartago,La Unión,Río Azul,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+30308,Cartago,La Unión,Río Azul,Liavista (Loma Gobierno),Lindavista (Loma Gobierno),Lindavista (Loma Gobierno),RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+30403,Cartago,Jiménez,Pejibaye,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+30502,Cartago,Turrialba,La Suiza,Las Golorinas,Las Golondrinas,Las Golondrinas,RECONSTRUCCION_SEGURA,GOLORINAS->GOLONDRINAS confirmado x1 en distrito 50309
+30505,Cartago,Turrialba,Santa Teresita,Saoval,Sandoval,Sandoval,RECONSTRUCCION_SEGURA,SAOVAL->SANDOVAL confirmado x1 en distrito 70103
+30512,Cartago,Turrialba,Chirripó,Valle Escoido,Valle Escondido,Valle Escondido,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
+30701,Cartago,Oreamuno,San Rafael,Cerro Grae,Cerro Grande,Cerro Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+30702,Cartago,Oreamuno,Cot,Dagoberto Méez Carpio,Dagoberto Méndez Carpio,Dagoberto Méndez Carpio,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
+30801,Cartago,El Guarco,El Tejar,Jacaraas,Jacarandas,Jacarandas,RECONSTRUCCION_SEGURA,JACARAAS->JACARANDAS confirmado x2 en distrito 10203
+30802,Cartago,El Guarco,San Isidro,Seeros del Sol,Senderos del Sol,Senderos del Sol,RECONSTRUCCION_SEGURA,SEEROS->SENDEROS confirmado x1 en distrito 30105
+40104,Heredia,Heredia,Ulloa,Lia del Norte,Linda del Norte,Linda del Norte,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+40105,Heredia,Heredia,Varablanca,Haciea Fátima,Hacienda Fátima,Hacienda Fátima,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+40305,Heredia,Santo Domingo,Santo Tomás,Calle Roa,Calle Ronda,Calle Ronda,RECONSTRUCCION_SEGURA,ROA->RONDA confirmado x2 en distrito 11501
+40401,Heredia,Santa Bárbara,Santa Bárbara,Coominio Colonial,Condominio Colonial,Condominio Colonial,RECONSTRUCCION_SEGURA,"tipologia del XLSX del IGN: ""Coominio Horizontal"""
+40502,Heredia,San Rafael,San Josecito,Villa del Seero,Villa del Sendero,Villa del Sendero,RECONSTRUCCION_SEGURA,SEERO->SENDERO confirmado x1 en distrito 20109
+40504,Heredia,San Rafael,Ángeles,Calle Hernáez,Calle Hernández,Calle Hernández,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
+40504,Heredia,San Rafael,Ángeles,Cerro Redoo,Cerro Redondo,Cerro Redondo,RECONSTRUCCION_SEGURA,REDOO->REDONDO confirmado x5 en distrito 10603
+40701,Heredia,Belén,San Antonio,Vistas de Liora,Vistas de Lindora,Vistas de Lindora,RECONSTRUCCION_SEGURA,LIORA->LINDORA confirmado x4 en distrito 10903
+40702,Heredia,Belén,La Ribera,Vista Lia,Vista Linda,Vista Linda,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+40703,Heredia,Belén,La Asunción,Calle Lia Vista,Calle Linda Vista,Calle Linda Vista,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+41001,Heredia,Sarapiquí,Puerto Viejo,Loma Lia la Gerika,Loma Linda la Gerika,Loma Linda la Gerika,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
+41002,Heredia,Sarapiquí,La Virgen,Quebrada Grae,Quebrada Grande,Quebrada Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+50101,Guanacaste,Liberia,Liberia,Haciea,Hacienda,Hacienda,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50101,Guanacaste,Liberia,Liberia,Haciea Birmania,Hacienda Birmania,Hacienda Birmania,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50101,Guanacaste,Liberia,Liberia,Haciea El Real,Hacienda El Real,Hacienda El Real,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50101,Guanacaste,Liberia,Liberia,Haciea Tempisque,Hacienda Tempisque,Hacienda Tempisque,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50101,Guanacaste,Liberia,Liberia,Pedro Hernáez,Pedro Hernández,Pedro Hernández,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
+50101,Guanacaste,Liberia,Liberia,Sitio Llano Grae,Sitio Llano Grande,Sitio Llano Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+50102,Guanacaste,Liberia,Cañas Dulces,Haciea Los Ahogados,Hacienda Los Ahogados,Hacienda Los Ahogados,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50103,Guanacaste,Liberia,Mayorga,Haciea El Querpe,Hacienda El Querpe,Hacienda El Querpe,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50103,Guanacaste,Liberia,Mayorga,Nueva Zelaa,Nueva Zelanda,Nueva Zelanda,RECONSTRUCCION_SEGURA,ZELAA->ZELANDA confirmado x1 en distrito 60701
+50104,Guanacaste,Liberia,Nacascolo,Haciea Horizontes,Hacienda Horizontes,Hacienda Horizontes,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50104,Guanacaste,Liberia,Nacascolo,Haciea Monte Galán,Hacienda Monte Galán,Hacienda Monte Galán,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50104,Guanacaste,Liberia,Nacascolo,Haciea Santo Tomas,Hacienda Santo Tomas,Hacienda Santo Tomas,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50201,Guanacaste,Nicoya,Nicoya,Cerro Redoo,Cerro Redondo,Cerro Redondo,RECONSTRUCCION_SEGURA,REDOO->REDONDO confirmado x5 en distrito 10603
+50202,Guanacaste,Nicoya,Mansión,Sitio Grae,Sitio Grande,Sitio Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+50203,Guanacaste,Nicoya,San Antonio,Tamario,Tamarindo,Tamarindo,RECONSTRUCCION_SEGURA,TAMARIO->TAMARINDO confirmado x8 en distrito 20111
+50205,Guanacaste,Nicoya,Sámara,Bajo Escoido,Bajo Escondido,Bajo Escondido,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
+50309,Guanacaste,Santa Cruz,Tamarindo,Haciea Pinilla,Hacienda Pinilla,Hacienda Pinilla,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50401,Guanacaste,Bagaces,Bagaces,Haciea Mojica,Hacienda Mojica,Hacienda Mojica,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50401,Guanacaste,Bagaces,Bagaces,Sitio Chagüite Grae,Sitio Chagüite Grande,Sitio Chagüite Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+50402,Guanacaste,Bagaces,La Fortuna,Haciea Nispero,Hacienda Nispero,Hacienda Nispero,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50501,Guanacaste,Carrillo,Filadelfia,Haciea El Viejo,Hacienda El Viejo,Hacienda El Viejo,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+50602,Guanacaste,Cañas,Palmira,Sitio Quebrada Hoa,Sitio Quebrada Honda,Sitio Quebrada Honda,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
+50704,Guanacaste,Abangares,Colorado,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+51003,Guanacaste,La Cruz,La Garita,San Fernao,San Fernando,San Fernando,RECONSTRUCCION_SEGURA,FERNAO->FERNANDO confirmado x9 en distrito 10801
+51004,Guanacaste,La Cruz,Santa Elena,Sitio El Escoido,Sitio El Escondido,Sitio El Escondido,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
+51004,Guanacaste,La Cruz,Santa Elena,Sitio Potrero Grae,Sitio Potrero Grande,Sitio Potrero Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+60104,Puntarenas,Puntarenas,Lepanto,Cerro Iio,Cerro Indio,Cerro Indio,RECONSTRUCCION_SEGURA,IIO->INDIO confirmado x4 en distrito 11105
+60107,Puntarenas,Puntarenas,Guacimal,Alto Méez,Alto Méndez,Alto Méndez,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
+60107,Puntarenas,Puntarenas,Guacimal,Altos Fernáez,Altos Fernández,Altos Fernández,RECONSTRUCCION_SEGURA,FERNAEZ->FERNANDEZ confirmado x1 en distrito 20207
+60108,Puntarenas,Puntarenas,Barranca,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+60108,Puntarenas,Puntarenas,Barranca,Riojalaia 2,Riojalandia 2,Riojalandia 2,RECONSTRUCCION_SEGURA,RIOJALAIA->RIOJALANDIA confirmado x1 en distrito 60108
+60111,Puntarenas,Puntarenas,Cóbano,Bajos de Fernáez,Bajos de Fernández,Bajos de Fernández,RECONSTRUCCION_SEGURA,FERNAEZ->FERNANDEZ confirmado x1 en distrito 20207
+60114,Puntarenas,Puntarenas,Acapulco,Rancho Grae,Rancho Grande,Rancho Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+60115,Puntarenas,Puntarenas,El Roble,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+60206,Puntarenas,Esparza,Caldera,Haciea La Moncha,Hacienda La Moncha,Hacienda La Moncha,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+60206,Puntarenas,Esparza,Caldera,Haciea Mata de Guinea,Hacienda Mata de Guinea,Hacienda Mata de Guinea,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+60206,Puntarenas,Esparza,Caldera,Haciea Playa Lia,Hacienda Playa Linda,Hacienda Playa Linda,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201; LIA->LINDA confirmado x41 en distrito 10105
+60206,Puntarenas,Esparza,Caldera,Haciea Salinas,Hacienda Salinas,Hacienda Salinas,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+60206,Puntarenas,Esparza,Caldera,Quebrada Hoa,Quebrada Honda,Quebrada Honda,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
+60302,Puntarenas,Buenos Aires,Volcán,Río Grae,Río Grande,Río Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+60303,Puntarenas,Buenos Aires,Potrero Grande,San Arés (Las Vueltas de San Arés),San Andrés (Las Vueltas de San Arés),San Andrés (Las Vueltas de San Arés),RECONSTRUCCION_SEGURA,ARES->ANDRES confirmado x10 en distrito 10201
+60303,Puntarenas,Buenos Aires,Potrero Grande,Tamario,Tamarindo,Tamarindo,RECONSTRUCCION_SEGURA,TAMARIO->TAMARINDO confirmado x8 en distrito 20111
+60306,Puntarenas,Buenos Aires,Colinas,Quebrada Hoa,Quebrada Honda,Quebrada Honda,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
+60309,Puntarenas,Buenos Aires,Brunka,Llano Grae,Llano Grande,Llano Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+60403,Puntarenas,Montes de Oro,San Isidro,Calle El Tamario,Calle El Tamarindo,Calle El Tamarindo,RECONSTRUCCION_SEGURA,TAMARIO->TAMARINDO confirmado x8 en distrito 20111
+60501,Puntarenas,Osa,Puerto Cortés,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+60503,Puntarenas,Osa,Sierpe,Puerto Escoido,Puerto Escondido,Puerto Escondido,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
+60504,Puntarenas,Osa,Bahía Ballena,Quebrada Grae,Quebrada Grande,Quebrada Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+60701,Puntarenas,Golfito,Golfito,Rotoa,Rotonda,Rotonda,RECONSTRUCCION_SEGURA,ROTOA->ROTONDA confirmado x1 en distrito 20101
+60704,Puntarenas,Golfito,Pavón,Quebrada Hoa,Quebrada Honda,Quebrada Honda,RECONSTRUCCION_SEGURA,HOA->HONDA confirmado x11 en distrito 10307
+60801,Puntarenas,Coto Brus,San Vito,Liavista,Lindavista,Lindavista,RECONSTRUCCION_SEGURA,LIAVISTA->LINDAVISTA confirmado x1 en distrito 70301
+61001,Puntarenas,Corredores,Corredor,Bajo Iios,Bajo Indios,Bajo Indios,RECONSTRUCCION_SEGURA,IIOS->INDIOS confirmado x1 en distrito 60603
+61004,Puntarenas,Corredores,Laurel,María Fernaa,María Fernanda,María Fernanda,RECONSTRUCCION_SEGURA,FERNAA->FERNANDA confirmado x4 en distrito 10601
+61201,Puntarenas,Monteverde,Monteverde,Liora,Lindora,Lindora,RECONSTRUCCION_SEGURA,LIORA->LINDORA confirmado x4 en distrito 10903
+61301,Puntarenas,Puerto Jiménez,Puerto Jiménez,Iepeencia,Independencia,Independencia,RECONSTRUCCION_SEGURA,IEPEENCIA->INDEPENDENCIA confirmado x2 en distrito 10801
+70101,Limón,Limón,Limón,Juan Pablo Seguo,Juan Pablo Segundo,Juan Pablo Segundo,RECONSTRUCCION_SEGURA,SEGUO->SEGUNDO confirmado x3 en distrito 20109
+70102,Limón,Limón,Valle La Estrella,Paora Oeste,Pandora Oeste,Pandora Oeste,RECONSTRUCCION_SEGURA,PAORA->PANDORA confirmado x2 en distrito 70102
+70201,Limón,Pococí,Guápiles,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+70201,Limón,Pococí,Guápiles,Valle Escoido,Valle Escondido,Valle Escondido,RECONSTRUCCION_SEGURA,ESCOIDO->ESCONDIDO confirmado x17 en distrito 10701
+70203,Limón,Pococí,Rita,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+70203,Limón,Pococí,Rita,Iio,Indio,Indio,RECONSTRUCCION_SEGURA,IIO->INDIO confirmado x4 en distrito 11105
+70302,Limón,Siquirres,Pacuarito,Haciea Ojo de Agua,Hacienda Ojo de Agua,Hacienda Ojo de Agua,RECONSTRUCCION_SEGURA,HACIEA->HACIENDA confirmado x38 en distrito 10201
+70401,Limón,Talamanca,Bratsi,Huberie (Rancho Grae),Huberie (Rancho Grande),Huberie (Rancho Grande),RECONSTRUCCION_SEGURA,GRAE)->GRANDE) confirmado x1 en distrito 70401
+70404,Limón,Talamanca,Telire,Sitio Piedra Grae,Sitio Piedra Grande,Sitio Piedra Grande,RECONSTRUCCION_SEGURA,GRAE->GRANDE confirmado x37 en distrito 10109
+70502,Limón,Matina,Batán,Almeros,Almendros,Almendros,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
+70605,Limón,Guácimo,Duacarí,San Edmuo,San Edmundo,San Edmundo,RECONSTRUCCION_SEGURA,EDMUO->EDMUNDO confirmado x1 en distrito 70503
 11603,San José,Turrubares,San Juan de Mata,Sitio Caelillal,Sitio Candelillal,Sitio Candelillal,REQUIERE_REVISION,"CAELILLAL->CANDELILLAL solo por vocabulario INEC, sin par confirmado"
 11901,San José,Pérez Zeledón,San Isidro de El General,Otro Muo,Otro Mundo,Otro Mundo,REQUIERE_REVISION,"MUO->MUNDO solo por vocabulario INEC, sin par confirmado"
 20112,Alajuela,Alajuela,Tambor,Vueltas Peñaraa,Vueltas Peñaranda,Vueltas Peñaranda,REQUIERE_REVISION,"PENARAA->PENARANDA solo por vocabulario INEC, sin par confirmado"
