@@ -31,7 +31,15 @@ final class EstadoService
      * @param callable(mixed):?array  $bloquear    fila cruda con lock (o null)
      * @param callable(mixed):?array  $buscar      fila mapeada (o null)
      * @param callable(mixed,bool):void $cambiar   actualiza la columna de estado
-     * @param array<string,mixed>     $config      etiquetas y datos de bitácora
+     * @param ?callable(array):int    $estadoDeNegocio  estado vigente (0/1) leído
+     *        de la fila mapeada. Sirve para entidades cuyo estado de negocio ya
+     *        no vive en la columna legacy: comprador lo deriva de su
+     *        clasificación. Si es null se usa la columna $campoEstado.
+     * @param ?callable(mixed,bool):void $sincronizar  escritura adicional que
+     *        acompaña el cambio de estado, dentro de la misma transacción.
+     *        Se ejecuta DESPUÉS de capturar $anterior: si corriera antes, la
+     *        lectura derivada ya reflejaría el estado nuevo y la bitácora
+     *        registraría INACTIVO -> INACTIVO en vez de ACTIVO -> INACTIVO.
      */
     public function transicionar(
         callable $bloquear,
@@ -46,8 +54,12 @@ final class EstadoService
         mixed $clave,
         ?string $campoPersonaEstado = 'tbpersonaestado',
         string $mensajePosterior = 'el cambio de estado',
+        ?callable $estadoDeNegocio = null,
+        ?callable $sincronizar = null,
     ): array {
         $bloqueado = $bloquear($clave);
+        // $anterior se captura antes de cualquier escritura: es lo que la
+        // bitácora debe mostrar como estado previo.
         $anterior = $buscar($clave);
         if ($bloqueado === null || $anterior === null) {
             throw new HttpException($mensajeNoEncontrado, 404);
@@ -60,8 +72,14 @@ final class EstadoService
                 409,
             );
         }
-        if ((int) $bloqueado[$campoEstado] === $nuevoEstado) {
+        $estadoVigente = $estadoDeNegocio === null
+            ? (int) $bloqueado[$campoEstado]
+            : (int) $estadoDeNegocio($anterior);
+        if ($estadoVigente === $nuevoEstado) {
             return $anterior;
+        }
+        if ($sincronizar !== null) {
+            $sincronizar($clave, $nuevoEstado === 1);
         }
         $cambiar($clave, $nuevoEstado === 1);
         $nuevo = $buscar($clave);

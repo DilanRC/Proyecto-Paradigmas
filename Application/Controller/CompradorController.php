@@ -195,25 +195,22 @@ final class CompradorController
     private function desactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
-        $nuevo = $this->transaccion(function () use ($identificacion): array {
-            // Cerrar primero la clasificación y después escribir el bit deja
-            // ambos lados dentro de la misma transacción: si algo falla entre
-            // medio, el ROLLBACK devuelve el periodo abierto y el bit intacto.
-            $this->cerrarClasificacion($identificacion);
-
-            return $this->estadoService->transicionar(
-                fn ($clave) => $this->comprador->bloquear($clave),
-                fn ($clave) => $this->comprador->buscar($clave),
-                fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
-                'tbcompradorestado',
-                0,
-                'Comprador no encontrado.',
-                $identificacion,
-                'COMPRADOR',
-                'API_COMPRADORES',
-                $identificacion,
-            );
-        });
+        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
+            fn ($clave) => $this->comprador->bloquear($clave),
+            fn ($clave) => $this->comprador->buscar($clave),
+            fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
+            'tbcompradorestado',
+            0,
+            'Comprador no encontrado.',
+            $identificacion,
+            'COMPRADOR',
+            'API_COMPRADORES',
+            $identificacion,
+            estadoDeNegocio: $this->estadoDeNegocio(...),
+            // La clasificación se cierra dentro de la misma transacción, pero
+            // después de que la bitácora ya capturó el estado anterior.
+            sincronizar: fn ($clave) => $this->cerrarClasificacion($clave),
+        ));
 
         return $this->respuesta(true, 'Comprador desactivado correctamente.', $nuevo);
     }
@@ -221,27 +218,37 @@ final class CompradorController
     private function reactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
-        $nuevo = $this->transaccion(function () use ($identificacion): array {
+        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
+            fn ($clave) => $this->comprador->bloquear($clave),
+            fn ($clave) => $this->comprador->buscar($clave),
+            fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
+            'tbcompradorestado',
+            1,
+            'Comprador no encontrado.',
+            $identificacion,
+            'COMPRADOR',
+            'API_COMPRADORES',
+            $identificacion,
+            estadoDeNegocio: $this->estadoDeNegocio(...),
             // Reactivar abre SIEMPRE un periodo nuevo: el anterior quedó
-            // cerrado y no se reabre, porque dejó de ser comprador de verdad
-            // en ese intervalo y esa historia no se toca.
-            $this->abrirClasificacion($identificacion, CompradorClasificacionService::MOTIVO_REACTIVACION);
-
-            return $this->estadoService->transicionar(
-                fn ($clave) => $this->comprador->bloquear($clave),
-                fn ($clave) => $this->comprador->buscar($clave),
-                fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
-                'tbcompradorestado',
-                1,
-                'Comprador no encontrado.',
-                $identificacion,
-                'COMPRADOR',
-                'API_COMPRADORES',
-                $identificacion,
-            );
-        });
+            // cerrado y no se reabre, porque dejó de ser comprador de verdad en
+            // ese intervalo y esa historia no se toca.
+            sincronizar: fn ($clave) => $this->abrirClasificacion(
+                $clave,
+                CompradorClasificacionService::MOTIVO_REACTIVACION,
+            ),
+        ));
 
         return $this->respuesta(true, 'Comprador reactivado correctamente.', $nuevo);
+    }
+
+    /**
+     * Estado de negocio vigente del comprador: la clasificación, nunca el bit
+     * legacy. Decide la idempotencia de desactivar/reactivar.
+     */
+    private function estadoDeNegocio(array $comprador): int
+    {
+        return ($comprador['estado'] ?? 'INACTIVO') === 'ACTIVO' ? 1 : 0;
     }
 
     /**

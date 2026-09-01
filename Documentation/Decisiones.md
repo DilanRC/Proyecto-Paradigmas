@@ -644,6 +644,32 @@ El `estado` que devuelven la API y el panel sale de la clasificación abierta
 misma expresión. El bit sigue escribiéndose para no romper la compatibilidad,
 pero ya no decide nada.
 
+### 5b. Regresión de auditoría corregida antes de migrar nada
+
+Primera versión de este paso: el controlador cerraba/abría la clasificación y
+después llamaba a `EstadoService::transicionar()`. Como `Comprador::buscar()` ya
+deriva el `estado` de la clasificación, el `anterior` que llegaba a la bitácora
+ya venía con el estado nuevo, y `DESACTIVAR` quedaba registrado como
+`INACTIVO -> INACTIVO` (y `REACTIVAR` como `ACTIVO -> ACTIVO`): la auditoría
+perdía la transición.
+
+`EstadoService::transicionar()` recibe ahora dos parámetros opcionales:
+`$estadoDeNegocio`, que lee el estado vigente de la fila mapeada en vez de la
+columna legacy, y `$sincronizar`, la escritura que acompaña la transición y que
+corre **después** de capturar `$anterior` y dentro de la misma transacción. Las
+otras tres entidades que usan el esqueleto (transportista, vehículo, método de
+pago) no cambian: sin esos parámetros el comportamiento es el de antes.
+
+Con eso, comprador conserva las tres propiedades a la vez: la bitácora ve
+`ACTIVO -> INACTIVO` y `INACTIVO -> ACTIVO`, el bit legacy no vuelve a decidir
+negocio (la idempotencia la decide la clasificación) y clasificación y bit
+siguen en la misma transacción, así que un fallo posterior revierte ambos.
+
+`Tests/comprador_backfill_test.php` inspecciona `tbbitacoradatosanteriores` y
+`tbbitacoradatosnuevos`, no solo la acción, y añade el caso de fallo posterior a
+la modificación de la clasificación: el `ROLLBACK` restaura periodo, bit y
+bitácora.
+
 ### 6. Legacy
 
 No hay `DROP TABLE` en este tramo. Quedan los pasos (d) y (e): retirar modelo,
