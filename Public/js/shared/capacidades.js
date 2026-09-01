@@ -1,28 +1,27 @@
-// Capacidades de una persona: productor (vendedor), comprador y transportista.
+// Relaciones visibles de una persona en la red: Productor, clasificación Comprador y Transportista.
 //
-// DEC-PER-001 fija que `tbpersona` concentra a la persona y que la existencia de
-// una fila en `tbproductor` o `tbtransportista` representa una capacidad. No hay
-// tabla de roles: la pregunta se responde consultando el endpoint de esa
-// capacidad por identificacion.
+// DEC-PER-001 fija que `tbpersona` concentra la identidad y que la existencia de
+// una fila en `tbproductor` o `tbtransportista` representa una capacidad
+// operativa. Comprador es distinto: desde DEC-DBREADY-008 es una clasificación
+// histórica del Productor, leída desde un periodo COMPRADOR abierto.
 //
-// Comprador es la excepcion y no es una capacidad: es una clasificacion del
-// Productor (DEC-DBREADY-007). El endpoint sigue existiendo, pero el `estado`
-// que devuelve ya sale del periodo COMPRADOR abierto en
-// `tbproductorclasificacionperiodo`, no del bit de la tabla legacy.
+// Productor tampoco es sinónimo de Vendedor. VENDEDOR es otra clasificación del
+// mismo Productor y puede coexistir con COMPRADOR; por eso este módulo no usa el
+// alias histórico "vendedor" para Productor ni crea `tbvendedor`.
 //
-// El contrato lo permite sin backend nuevo: GET ?identificacionNumero=X
-// devuelve 200 con los datos si la capacidad existe y 404 si no existe.
+// El nombre exportado CAPACIDADES se conserva por compatibilidad de los paneles,
+// pero cada entrada declara `derivada` cuando la lectura corresponde a una
+// clasificación y no a un registro administrable.
 
-/** Las tres capacidades del modelo, en el orden en que se muestran. */
+/** Lecturas de la persona, en el orden en que se muestran en las fichas. */
 export const CAPACIDADES = [
     {
         clave: 'productor',
         etiqueta: 'Productor',
-        // El productor es quien vende: posee las fincas y el ganado. No existe
-        // `tbvendedor`; "vendedor" es esta misma capacidad.
-        alias: 'vendedor',
+        alias: null,
         api: 'api/productores.php',
         panel: 'productores.php',
+        derivada: false,
     },
     {
         clave: 'comprador',
@@ -30,11 +29,9 @@ export const CAPACIDADES = [
         alias: null,
         api: 'api/compradores.php',
         panel: 'compradores.php',
-        // Comprador no es una capacidad que alguien registre: es una
-        // clasificacion que el productor gana por su comportamiento. El
-        // endpoint responde 200 si tiene un periodo COMPRADOR abierto y 404 si
-        // no, asi que la consulta funciona igual, pero la etiqueta debe decir
-        // "clasificado" y no "registrado".
+        // No se registra a mano. El endpoint responde 200 si existe un periodo
+        // COMPRADOR abierto y 404 si no existe; la etiqueta visual debe hablar
+        // de clasificación y no de alta/registro.
         derivada: true,
     },
     {
@@ -43,17 +40,17 @@ export const CAPACIDADES = [
         alias: null,
         api: 'api/transportistas.php',
         panel: 'transportistas.php',
+        derivada: false,
     },
 ];
 
 /**
- * Traduce el desenlace de una consulta a la situacion de la capacidad. Puro.
+ * Traduce el desenlace HTTP a una situación comprobable. Puro.
  *
- * Distingue tres situaciones y no dos, por la misma razon por la que la lista
- * separa vacio de error: un 404 es una respuesta del servidor y significa que la
- * persona NO tiene esa capacidad, mientras que un fallo de red no significa
- * nada. Pintar "no registrado" cuando lo que hubo fue un corte de red seria
- * afirmar algo que no se comprobo.
+ * `registrado` aquí significa solamente "el endpoint devolvió 200". Para una
+ * entrada `derivada` (Comprador), ese 200 significa "clasificación vigente" y
+ * `describirCapacidad()` lo expresa así. Un 404 sí permite afirmar ausencia;
+ * un fallo de red o 500 no permite concluir nada sobre los datos.
  *
  * @param {{ok: true, data: object} | {ok: false, error: {status: ?number}}} desenlace
  */
@@ -68,7 +65,7 @@ export function interpretarCapacidad(desenlace) {
     return { situacion: 'desconocido', estado: null };
 }
 
-/** Etiqueta que se muestra al usuario para una situacion ya interpretada. */
+/** Etiqueta que se muestra al usuario para una situación ya interpretada. */
 export function describirCapacidad({ situacion, estado, derivada = false }) {
     if (situacion === 'registrado') {
         if (derivada) {
@@ -76,18 +73,18 @@ export function describirCapacidad({ situacion, estado, derivada = false }) {
         }
         return estado === 'ACTIVO' ? 'Registrado y activo' : 'Registrado, inactivo';
     }
-    if (situacion === 'no-registrado') return derivada ? 'Sin clasificacion vigente' : 'No registrado';
+    if (situacion === 'no-registrado') return derivada ? 'Sin clasificación vigente' : 'No registrado';
     return 'No se pudo comprobar';
 }
 
 /**
- * Consulta las tres capacidades de una identificacion.
+ * Consulta Productor, clasificación Comprador y Transportista para una identificación.
  *
- * Las tres van en paralelo porque son independientes: en serie el detalle
- * tardaria el triple sin ganar nada. `requestImpl` se inyecta para poder probar
- * esta funcion sin red.
+ * Las tres lecturas van en paralelo porque son independientes. `requestImpl` se
+ * inyecta para poder probar el módulo sin red. Comprador conserva `derivada:
+ * true` en el resultado para que ningún panel lo vuelva a rotular como registro.
  *
- * @returns {Promise<Array<{clave, etiqueta, alias, panel, identificacionNumero,
+ * @returns {Promise<Array<{clave, etiqueta, alias, panel, derivada, identificacionNumero,
  *                            situacion, estado}>>}
  */
 export async function consultarCapacidades(identificacionNumero, { requestImpl }) {
