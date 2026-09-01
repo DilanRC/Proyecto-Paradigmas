@@ -4,6 +4,7 @@
 - [DER](DER.md)
 - [Diagrama de aplicación](DAplicacion.md)
 - [Diccionario de datos](DiccionarioDatos.md)
+- [Matriz arquitectónica P0-C](MatrizArquitectonicaP0C.md)
 - [Guía de defensa](GuiaDefensa.md)
 - [Respaldos](Respaldos.md)
 - [Avance semanal](AvanceSemanal.md) ([PDF](AvanceSemanal.pdf))

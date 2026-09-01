@@ -155,6 +155,18 @@ $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
 if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
     throw new RuntimeException('PDO debe usar sentencias preparadas nativas.');
 }
+$matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md");
+foreach ([
+    'Productor es la entidad de negocio núcleo',
+    '`tbvendedor` no debe existir',
+    '`tbcomprador` queda como estructura legacy',
+    '`tbproductorcompradorperiodo` y `tbproductorvendedorperiodo`',
+    'Visualización por fila sigue como propuesta',
+] as $decisionP0C) {
+    if (!str_contains($matrizP0C, $decisionP0C)) {
+        throw new RuntimeException("P0-C no documenta: {$decisionP0C}");
+    }
+}
 // El panel se reparte entre su archivo de entrada y los modulos compartidos que
 // importa, asi que el control se busca sobre el grafo completo y no solo sobre
 // el archivo de entrada.

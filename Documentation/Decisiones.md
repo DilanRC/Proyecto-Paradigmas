@@ -2,11 +2,15 @@
 
 ## DEC-PER-001 - Persona única y capacidades independientes
 
-Esta decisión sustituye cualquier descripción posterior que trate Productor,
-Comprador y Transportista como identidades distintas. `tbpersona` concentra
-identificación, tipo, nombre, teléfono, correo y estado global. La existencia
-de una fila en `tbproductor`, `tbcomprador` o `tbtransportista` representa una
-capacidad concreta. No se crean roles, catálogos, ENUM ni columnas de tipo de
+Estado: SUPERADA parcialmente por P0-C para Comprador/Vendedor. Sigue vigente
+para `tbpersona` como identidad compartida y para Transportista como capacidad
+operativa actual.
+
+`tbpersona` concentra identificación, tipo, nombre, teléfono, correo y estado
+global. La existencia de una fila en `tbproductor` o `tbtransportista`
+representa una capacidad concreta. `tbcomprador` queda como estructura legacy
+de compatibilidad hasta migración explícita; no se amplía ni se toma como
+entidad normativa. No se crean roles, catálogos, ENUM ni columnas de tipo de
 rol.
 
 Los IDs históricos de los tres perfiles y sus relaciones se conservan. Cada
@@ -110,10 +114,14 @@ respaldo y etiqueta corresponden a Corrección 04.
 
 ## DEC-C04-008 - Compradores
 
-`tbcomprador` conserva identificación, nombre, teléfono, correo y estado con
-el mismo perfil de tipos de `tbproductor`. Es una tabla independiente: no se
-agregan relaciones, claves, índices, defaults ni valores automáticos. La
-migración v2 crea y valida la misma estructura en Supabase PostgreSQL.
+Estado: SUPERADA parcialmente por P0-C. `tbcomprador` se conserva por
+compatibilidad con el esquema y datos existentes, pero ya no es la entidad
+normativa para modelar el comportamiento comprador. La clasificación Comprador
+del negocio debe vivir como histórico del Productor, no como histórico propio
+de `tbcomprador`.
+
+No se agregan relaciones, claves, índices, defaults ni valores automáticos.
+No se crea `tbcompradorestadoperiodo`.
 
 # Decisiones - Avance de direcciones, pagos y transporte
 
@@ -403,6 +411,26 @@ Esta decisión no autoriza SQL todavía. P0-C debe definir el destino de
 políticas de transición antes de ampliar el esquema. D-12 y D-13 se conservan
 como trazabilidad del diagnóstico previo: no se borran ni se reinterpretan como
 prueba de que la política nueva ya esté implementada.
+
+## DEC-P0C-001 - Matriz arquitectónica cerrada
+
+P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
+decisión vigente es: Productor es núcleo; Comprador y Vendedor son
+clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
+`tbcomprador` se conserva solo como legacy hasta migración explícita; Compra y
+Venta son hechos históricos propios.
+
+La representación aprobada para implementar después de T2 es usar dos tablas
+especializadas: `tbproductorcompradorperiodo` y
+`tbproductorvendedorperiodo`. Se eligió esta opción contra una tabla genérica
+de roles porque un Productor puede tener ambas clasificaciones a la vez y cada
+clasificación puede tener reglas de alta, pérdida y reactivación distintas.
+
+La matriz también deja PENDIENTE lo que no tiene evidencia suficiente:
+criterios y pesos del algoritmo, pérdida/reactivación automática,
+`tbanimalestado`, `tbcompraestado`, horario, cobertura, temporalidad de
+vehículo-transportista, obligatoriedad venta-compra, método de pago por hecho
+y captura de visualización por fila. Ningún punto PENDIENTE autoriza SQL.
 
 ## DEC-23 - La matriz del tramo 12 confirma el esquema existente; no se crean tablas nuevas
 

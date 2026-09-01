@@ -202,32 +202,30 @@ profesor); el dominio lo valida PHP al escribir (Tramo 15) y
 
 ## tbcomprador
 
-Alta/baja lógica de la capacidad comprador (matriz Tramo 12, punto 4). No
-tiene tabla de periodos con fecha: la matriz confirma que un histórico
-propio de comprador queda fuera del alcance profundo de esta fase, por lo
-que el Tramo 13 no crea tabla nueva para esta entidad; `tbcompradorestado`
-sigue siendo el único registro de su participación, independiente del
-histórico de productor aunque sea la misma persona.
+Estructura legacy de compatibilidad. P0-C supera la lectura anterior de
+Comprador como capacidad normativa independiente: Comprador y Vendedor son
+clasificaciones derivadas del Productor. La tabla se conserva para no romper
+datos, pruebas ni frontend existente, pero no debe ampliarse ni recibir
+`tbcompradorestadoperiodo`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcompradorid` | `INT NOT NULL` | No | Identificador asignado por la aplicación. | Aplicación | - |
+| `tbcompradorid` | `INT NOT NULL` | No | Identificador legacy asignado por la aplicación. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
-| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como comprador. | Aplicación | - |
+| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Estado legacy de compatibilidad. No sustituye la futura clasificación histórica del Productor. | Aplicación | - |
 
 ## Histórico transversal (Tramo 12/13)
 
-La matriz histórica del Tramo 12 (`matriz-historica-tramo12.pdf`,
-Documentation/Decisiones.md) confirma tres históricos independientes de
-Productor —`tbproductorestadoperiodo`, `tbproductorubicacion`,
-`tbproductoractividad`— ya creados en el Tramo 2 sin cambios de columnas.
-El Tramo 13 no agrega tablas: cierra el punto de control confirmando que
-el esquema existente ya satisface la matriz. `tbbitacora` se mantiene
-exclusivamente como auditoría técnica y no sustituye ninguno de estos tres
-históricos de negocio. El vínculo persona-productor/comprador no tiene
-tabla histórica propia (matriz punto 5): se deriva de la existencia de
-filas en `tbproductor` y `tbcomprador`, cada capacidad con su historial
-independiente.
+La matriz P0-C (`Documentation/MatrizArquitectonicaP0C.md`) supera la
+conclusión del Tramo 13 anterior. Productor mantiene sus históricos actuales:
+`tbproductorestadoperiodo`, `tbproductorubicacion` y
+`tbproductoractividad`. Comprador y Vendedor deben modelarse después como
+clasificaciones históricas del Productor, mediante
+`tbproductorcompradorperiodo` y `tbproductorvendedorperiodo`.
+
+`tbbitacora` se mantiene exclusivamente como auditoría técnica y no sustituye
+históricos de negocio. Compra y Venta son hechos históricos propios, no estados
+de `tbcomprador` ni de un `tbvendedor`.
 
 ## Estado efectivo y coherencia
 
