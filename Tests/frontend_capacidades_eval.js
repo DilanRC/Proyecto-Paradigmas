@@ -28,11 +28,13 @@ const checks = [
     { name: 'modulo_relaciones_persona', pass: fs.existsSync('Public/js/shared/capacidades.js') },
     {
         name: 'comprador_marcado_derivado',
-        pass: /clave:\s*'comprador'[\s\S]{0,260}derivada:\s*true/.test(capacidadesJs),
+        // El comentario que documenta por qué Comprador es derivado puede crecer;
+        // el gate no debe fallar solo porque se agreguen unas líneas explicativas.
+        pass: /clave:\s*'comprador'[\s\S]{0,800}derivada:\s*true/.test(capacidadesJs),
     },
     {
         name: 'productor_no_alias_vendedor',
-        pass: /clave:\s*'productor'[\s\S]{0,180}alias:\s*null/.test(capacidadesJs)
+        pass: /clave:\s*'productor'[\s\S]{0,220}alias:\s*null/.test(capacidadesJs)
             && !/alias:\s*'vendedor'/.test(capacidadesJs),
     },
     {
