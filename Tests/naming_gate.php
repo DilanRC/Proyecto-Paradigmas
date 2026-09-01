@@ -82,7 +82,7 @@ if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $mod
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
 // El script debe nombrar una sola base. Comprobar solo ALTER DATABASE dejaba pasar
-// un CREATE DATABASE con otro nombre: el commit 3ab6d98 creo bdmercadoganadero
+// un CREATE DATABASE con otro nombre: un cambio previo creó un nombre distinto
 // mientras ALTER y USE seguian en dbmercadoganadero, y una instalacion sin
 // compose fallaba porque la base del ALTER no existia. Compose lo ocultaba
 // porque MYSQL_DATABASE ya creaba la base antes de correr el script.
