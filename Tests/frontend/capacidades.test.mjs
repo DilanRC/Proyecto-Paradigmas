@@ -74,7 +74,7 @@ test('Comprador se describe como clasificación y nunca como registro', () => {
         describirCapacidad({ situacion: 'no-registrado', estado: null, derivada: true }),
         'Sin clasificación vigente',
     );
-    assert.notMatch(
+    assert.doesNotMatch(
         describirCapacidad({ situacion: 'registrado', estado: 'ACTIVO', derivada: true }),
         /registrad/i,
     );
