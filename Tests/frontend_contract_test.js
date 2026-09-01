@@ -18,6 +18,32 @@ function hasNot(path, pattern, message) {
     assert(!ok, `${path}: ${message}`);
 }
 
+// Borradores temporales pedidos por Calidad: los CRUD con identidad estable se
+// conectan desde form.js, usan sessionStorage y solo limpian al cerrar tras 2xx.
+has('Public/js/shared/form-draft.js', 'sessionStorage',
+    'los borradores deben vivir en sessionStorage, no ser permanentes');
+has('Public/js/shared/form-draft.js', "const PREFIX = 'tindercows:draft';",
+    'las claves de borrador deben tener namespace propio');
+has('Public/js/shared/form-draft.js', "IDENTITY_FIELDS = ['identificacionNumeroOriginal', 'vehiculoId', 'id']",
+    'crear/editar deben separarse por la identidad estable del recurso');
+hasNot('Public/js/shared/form-draft.js', 'localStorage',
+    'un borrador temporal no debe sobrevivir como almacenamiento permanente');
+has('Public/js/shared/form.js', "from './form-draft.js';",
+    'todos los formularios ligados deben activar la capa compartida de borradores');
+has('Public/js/shared/form.js', 'enableFormDraft(form);',
+    'bindFormErrors debe activar el borrador de los CRUD');
+has('Public/js/shared/form.js', 'clearFormDraftAfterSuccessfulClose(form);',
+    'el borrador debe borrarse únicamente al terminar un guardado exitoso');
+for (const [vista, campo] of [
+    ['productores', 'identificacionNumeroOriginal'],
+    ['transportistas', 'identificacionNumeroOriginal'],
+    ['vehiculos', 'vehiculoId'],
+    ['pagometodos', 'name="id"'],
+]) {
+    has(`Application/View/${vista}/index.php`, campo,
+        `${vista}: falta el contexto estable que separa borrador crear/editar`);
+}
+
 // Productores: el formulario exige dirección y el POST debe aceptarla/persistirla.
 has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpoint de productores incorrecto');
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
@@ -121,4 +147,4 @@ has(
     'DELETE de dirección de finca debe identificar productor y finca'
 );
 
-console.log('OK frontend_contract_test: contratos UI/API alineados; Comprador es una clasificación de solo lectura sin CRUD manual.');
+console.log('OK frontend_contract_test: contratos UI/API alineados; borradores temporales activos y Comprador sigue read-only.');
