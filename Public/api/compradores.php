@@ -6,10 +6,9 @@ declare(strict_types=1);
  * Consulta de productores clasificados como COMPRADOR. Solo lectura.
  *
  * El CRUD legacy de comprador se retiró en el paso (d) (DEC-DBREADY-008):
- * Comprador es una clasificación derivada del comportamiento del productor, así
- * que no hay alta, edición, baja ni reactivación por API. Los métodos de
- * escritura responden 405 con esa explicación en vez de desaparecer, para que
- * un cliente viejo reciba una razón y no un 404 confuso.
+ * Comprador es una clasificación derivada del comportamiento del Productor, por
+ * lo que no existe alta, edición, baja ni reactivación administrativa por API.
+ * Los clientes antiguos reciben 405 con una explicación explícita.
  */
 
 use Application\Controller\CompradorConsultaController;
@@ -33,12 +32,20 @@ if ($metodo === 'OPTIONS') {
     exit;
 }
 if ($metodo !== 'GET') {
+    // Rechazo estructural antes de abrir conexión: una caída de MySQL no puede
+    // convertir una escritura prohibida en 500 ni hacer parecer que el método
+    // existe. El controlador conserva la misma defensa para llamadas directas.
     header('Allow: GET, OPTIONS');
+    sendJsonResponse([
+        'success' => false,
+        'message' => 'La clasificación Comprador se deriva del comportamiento del productor y no se administra a mano.',
+        'data' => null,
+    ], 405);
 }
 
 try {
     $controlador = new CompradorConsultaController(Database::getConnection());
-    $respuesta = $controlador->procesar($metodo, $_GET);
+    $respuesta = $controlador->procesar('GET', $_GET);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (Application\HttpException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(),
