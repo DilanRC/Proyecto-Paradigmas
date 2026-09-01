@@ -85,7 +85,7 @@ def main():
     p.add_argument('--salida', default='Public/js/shared/poblados.js')
     p.add_argument('--manifiesto', default='Documentation/correcciones-localidades.csv')
     p.add_argument('--correcciones', default='Documentation/localidades-por-revisar.csv',
-                   help='CSV revisado a mano; se aplica la columna correccion_final')
+                   help='CSV revisado a mano; se aplica SOLO la columna correccion_final')
     args = p.parse_args()
 
     for ruta in (args.ign, args.inec):
@@ -106,6 +106,12 @@ def main():
     # Correcciones revisadas a mano. Se aplican despues de las automaticas y
     # mandan sobre ellas: una persona que verifico el nombre sabe mas que
     # cualquier cruce. Solo cuentan las filas con correccion_final escrita.
+    #
+    # La columna `sugerencia` NO se aplica nunca sola, ni siquiera en las filas
+    # clasificadas como RECONSTRUCCION_SEGURA. Es una propuesta, y ya se vio a
+    # donde lleva aceptar propuestas por parecido: Roads en Rondads, Hanoi en
+    # Hanondi. Que un nombre no este en INEC no prueba que este mutilado; solo
+    # prueba que INEC no lo cubre.
     manuales = {}
     ruta_manual = Path(args.correcciones)
     if ruta_manual.exists():
