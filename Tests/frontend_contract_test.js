@@ -34,13 +34,19 @@ has(
 );
 
 // Compradores: vista de solo lectura desde el paso (d) (DEC-DBREADY-008).
-// La clasificación se deriva del comportamiento del productor, así que el panel
-// muestra y no administra.
+// Comprador se deriva del comportamiento del Productor; no existe CRUD manual.
 for (const panel of ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos']) {
     has(`Application/View/${panel}/index.php`, 'compradores.php', 'el menú perdió el enlace a Compradores');
 }
+assert.equal(fs.existsSync('Application/Model/Comprador.php'), false,
+    'reapareció Application/Model/Comprador.php');
+assert.equal(fs.existsSync('Application/Controller/CompradorController.php'), false,
+    'reapareció Application/Controller/CompradorController.php');
+has('Application/Controller/CompradorConsultaController.php', 'listarClasificados',
+    'la consulta debe leer periodos de clasificación');
 has('Public/js/compradores.js', "const API_URL = 'api/compradores.php';", 'endpoint de compradores incorrecto');
 has('Public/js/compradores.js', 'clasificadoDesde', 'la lista debe mostrar desde cuándo está clasificado');
+has('Public/js/compradores.js', 'personaEstado', 'la lista debe separar clasificación de disponibilidad de Persona');
 hasNot('Public/js/compradores.js', 'buildCompradorPayload', 'el panel no debe volver a construir cuerpos');
 hasNot('Application/View/compradores/index.php', 'id="crear-comprador"',
     'la vista no debe ofrecer alta de comprador');
@@ -50,11 +56,17 @@ hasNot('Application/View/compradores/index.php', 'id="modal-desactivar"',
     'la vista no debe ofrecer desactivar la clasificación');
 has('Public/api/compradores.php', "header('Allow: GET, OPTIONS');",
     'el endpoint de compradores debe declararse de solo lectura');
-// El comprador no es una identidad aislada: la ficha consulta las tres capacidades.
-has('Public/js/compradores.js', 'consultarCapacidades', 'la ficha debe consultar las capacidades de la persona');
+has('Public/api/compradores.php', "if ($metodo !== 'GET')",
+    'la API debe rechazar escrituras antes de abrir la base');
+has('Public/js/compradores.js', 'consultarCapacidades',
+    'la ficha debe consultar las relaciones de la misma Persona');
 for (const api of ['api/productores.php', 'api/compradores.php', 'api/transportistas.php']) {
-    has('Public/js/shared/capacidades.js', api, `el catálogo de capacidades no apunta a ${api}`);
+    has('Public/js/shared/capacidades.js', api, `el catálogo de relaciones no apunta a ${api}`);
 }
+has('Public/js/shared/capacidades.js', 'derivada: true',
+    'Comprador debe estar marcado como clasificación derivada');
+hasNot('Public/js/shared/capacidades.js', "alias: 'vendedor'",
+    'Productor no puede volver a usarse como alias de Vendedor');
 
 // Transportistas y asignación de vehículos.
 has('Public/js/transportistas.js', "const API_URL = 'api/transportistas.php';", 'endpoint de transportistas incorrecto');
@@ -109,4 +121,4 @@ has(
     'DELETE de dirección de finca debe identificar productor y finca'
 );
 
-console.log('OK frontend_contract_test: contratos UI/API alineados en productores, pagos, transportistas, vehículos y direcciones de finca; Compradores recuperado con sus capacidades.');
+console.log('OK frontend_contract_test: contratos UI/API alineados; Comprador es una clasificación de solo lectura sin CRUD manual.');
