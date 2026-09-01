@@ -44,15 +44,15 @@
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Regresar</a></div>
 
             <section class="page-header" aria-labelledby="page-title">
-                <div><span class="label">Clasificación derivada</span><h1 id="page-title">Compradores</h1><p>Productores con una clasificación <strong>COMPRADOR</strong> abierta. Comprador no es un registro que se dé de alta: es una clasificación que el productor gana por su comportamiento, y esta vista solo la muestra.</p></div>
+                <div><span class="label">Clasificación derivada</span><h1 id="page-title">Compradores</h1><p>Productores con una clasificación <strong>COMPRADOR</strong> abierta. Comprador no se da de alta desde este panel: la clasificación pertenece al histórico del Productor y esta vista únicamente la consulta.</p></div>
             </section>
 
-            <section class="panel" aria-label="Lista de compradores" aria-busy="true" id="panel-compradores">
+            <section class="panel" aria-label="Productores clasificados como compradores" aria-busy="true" id="panel-compradores">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar comprador</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-comprador" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
+                    <label class="search"><span class="screen-reader-only">Buscar productor clasificado</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-comprador" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
                 </div>
                 <div class="list-summary">
-                    <p id="total-compradores" aria-live="polite">Cargando compradores…</p>
+                    <p id="total-compradores" aria-live="polite">Cargando clasificaciones…</p>
                     <div class="pagination" aria-label="Paginación de compradores">
                         <button class="link-button" id="pagina-anterior" type="button">Anterior</button>
                         <span id="pagina-actual" aria-live="polite">Página 1</span>
@@ -61,8 +61,8 @@
                     </div>
                 </div>
                 <div class="table-container">
-                    <table><thead><tr><th>Productor</th><th>Identificación</th><th>Contacto</th><th>Clasificado desde</th><th>Origen</th></tr></thead><tbody id="cuerpo-compradores"></tbody></table>
-                    <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>Ningún productor está clasificado como comprador</h2><p>La clasificación se abre por comportamiento, no a mano. Mientras el mecanismo que la deriva no exista, esta lista solo muestra las clasificaciones ya registradas.</p></div>
+                    <table><thead><tr><th>Productor</th><th>Identificación</th><th>Contacto</th><th>Clasificado desde</th><th>Origen</th><th>Disponibilidad</th></tr></thead><tbody id="cuerpo-compradores"></tbody></table>
+                    <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>Ningún productor está clasificado como comprador</h2><p>Mientras el mecanismo que deriva la clasificación del comportamiento (T10) no exista, esta lista solo puede mostrar clasificaciones ya registradas o migradas; no permite crearlas a mano.</p></div>
                     <div class="error-state" id="estado-error" hidden><span class="error-state__icon" aria-hidden="true">!</span><h2>No fue posible cargar los compradores</h2><p id="mensaje-error"></p><button class="button button--secondary" id="reintentar" type="button">Reintentar</button></div>
                     <div class="skeleton" id="estado-carga" aria-hidden="true">
                         <div class="skeleton__row"></div>
@@ -74,7 +74,7 @@
                 </div>
             </section>
 
-            <p class="rural-panel__footnote">Vista de solo lectura · La clasificación vive en <code>tbproductorclasificacionperiodo</code> · TinderCows</p>
+            <p class="rural-panel__footnote">Vista de solo lectura · Fuente: <code>tbproductorclasificacionperiodo</code> · TinderCows</p>
         </div>
     </main>
 
@@ -83,8 +83,8 @@
         <div class="modal__content">
             <dl class="detail-grid" id="detalle-contenido"></dl>
             <section class="capacidades" aria-labelledby="titulo-capacidades">
-                <h3 class="capacidades__titulo" id="titulo-capacidades">Capacidades de esta persona</h3>
-                <p class="capacidades__nota">Una misma identificación puede estar registrada en varias capacidades, o en ninguna más.</p>
+                <h3 class="capacidades__titulo" id="titulo-capacidades">Relaciones de esta persona</h3>
+                <p class="capacidades__nota">La misma identidad puede ser Productor, tener una clasificación Comprador y/o estar registrada como Transportista. Comprador no se administra desde aquí.</p>
                 <ul class="capacidades__lista" id="lista-capacidades" aria-live="polite" aria-busy="false"></ul>
             </section>
         </div>
