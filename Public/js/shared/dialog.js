@@ -8,6 +8,21 @@
 // modo que en el recorrido detalle -> editar el retorno del primer dialogo se
 // perdia y el foco acababa en el <body>.
 
+export const DIALOG_OPEN_EVENT = 'tindercows:dialog-open';
+
+function notifyOpened(dialog) {
+    if (typeof dialog?.dispatchEvent !== 'function') return;
+    try {
+        const EventCtor = dialog.ownerDocument?.defaultView?.Event ?? globalThis.Event;
+        if (typeof EventCtor === 'function') {
+            dialog.dispatchEvent(new EventCtor(DIALOG_OPEN_EVENT));
+        }
+    } catch {
+        // El evento solo coordina mejoras del frontend; abrir el dialogo nunca
+        // debe fallar porque un entorno no tenga constructor Event utilizable.
+    }
+}
+
 export function createDialogController({ isBusy = () => false } = {}) {
     const focusReturn = [];
 
@@ -15,6 +30,14 @@ export function createDialogController({ isBusy = () => false } = {}) {
         focusReturn.push(document.activeElement);
         if (typeof dialog.showModal === 'function') dialog.showModal();
         else dialog.setAttribute('open', '');
+
+        // Las restauraciones de borrador deben ocurrir de forma sincrona ANTES
+        // de mover el foco. La version anterior observaba el atributo `open`
+        // con MutationObserver; ese callback asincrono podia ejecutar despues
+        // de que el usuario ya abriera un <select> nativo y cerraba su menu al
+        // reescribir el control. Este evento fija un unico punto de apertura.
+        notifyOpened(dialog);
+
         const target = focus ?? dialog.querySelector('[autofocus]');
         target?.focus?.();
     }
