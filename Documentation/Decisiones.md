@@ -427,8 +427,8 @@ prueba de que la política nueva ya esté implementada.
 P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
 decisión vigente es: Productor es núcleo; Comprador y Vendedor son
 clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
-`tbcomprador` se conserva como marca de capacidad de compra de la persona y ese
-es su destino definitivo; Compra y Venta son hechos históricos propios.
+`tbcomprador` se conserva solo como legacy de compatibilidad temporal hasta que
+Backend deje de depender de ella; Compra y Venta son hechos históricos propios.
 
 La representación vigente de base es `tbproductorclasificacionperiodo`, con
 `tbproductorclasificacionperiodotipo` validado por PHP como `COMPRADOR` o
@@ -475,13 +475,26 @@ sistema registró el periodo.
 Última revisión del esquema contra la evidencia directa, sin tocar Backend ni
 ampliar alcance. Ocho divergencias corregidas:
 
-1. **`tbcomprador` tiene destino definitivo.** Deja de estar "en tránsito hacia
-   una migración": es la marca de capacidad de compra de una `tbpersona`, con
-   las mismas tres columnas, igual que `tbtransportista`. No es entidad, no
-   recibe periodos y no se retira. La historia de la clasificación vive en
-   `tbproductorclasificacionperiodo`. Se elige conservarla, y no borrarla,
-   porque borrarla obligaría a reescribir modelo, controlador, API y frontend
-   de comprador sin que la evidencia de Calidad lo pida.
+1. **`tbcomprador` es LEGACY, no destino definitivo.** Comprador es una
+   clasificación del Productor, no una capacidad de Persona: la única fuente de
+   verdad es `tbproductorclasificacionperiodo` con `tipo = COMPRADOR`.
+   `tbcomprador` sobrevive únicamente porque el CRUD actual de Backend depende
+   de ella (`Application/Model/Comprador.php`,
+   `Application/Controller/CompradorController.php`, `Public/api/compradores*`,
+   `Public/js/shared/capacidades.js` y `Tests/comprador_test.php`). Mientras
+   exista: no se amplía, no recibe históricos y no se crea
+   `tbcompradorestadoperiodo`.
+
+   **Trabajo de Backend que permite retirarla**, en este orden:
+   a) que toda lectura de "es comprador" pase por
+   `tbproductorclasificacionperiodo` en vez de `tbcomprador.tbcompradorestado`;
+   b) que el alta/baja del CRUD abra y cierre periodos de clasificación en vez
+   de escribir el bit;
+   c) migrar cada fila viva de `tbcomprador` a un periodo `COMPRADOR` del
+   Productor de esa persona, y registrar en bitácora la equivalencia;
+   d) retirar modelo, controlador, endpoints y contrato de frontend;
+   e) recién entonces, `DROP TABLE tbcomprador` en una migración propia con
+   respaldo previo. Ningún paso de este tramo lo ejecuta.
 2. **El flete recupera lo que se perdió al pasar a SQL.**
    `tbtransportistaflete` gana `tbvehiculoid`, `tbtransportistafletecantidadcabezas`
    y `tbtransportistafletedistanciakm`. Ninguna DEC los había descartado: se
@@ -491,8 +504,8 @@ ampliar alcance. Ocho divergencias corregidas:
    periodo y abre otro; no se sobrescribe. La cobertura geográfica sigue
    PENDIENTE porque no hay evidencia.
 4. **La reseña la firma la persona.** `tbtransportistaresena.tbproductorid` pasa
-   a `tbpersonaid`. Transportista y comprador son capacidades de persona;
-   exigir productor dejaba fuera a quien contrata un flete sin serlo.
+   a `tbpersonaid`. La identidad de quien contrata vive en `tbpersona`; exigir
+   productor dejaba fuera a quien contrata un flete sin serlo.
 5. **`tbanimal` es la identidad aprobada.** `tbanimalcodigo` pasa a
    `tbanimalidentificacion` y se agrega `tbanimalcaracteristicas`. Raza y sexo
    se mantienen. Edad y peso siguen fuera de la identidad.

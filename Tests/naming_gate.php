@@ -222,7 +222,8 @@ $matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md
 foreach ([
     'Productor es la entidad de negocio núcleo',
     '`tbvendedor` no debe existir',
-    '`tbcomprador` tiene destino definitivo',
+    '`tbcomprador` es LEGACY de compatibilidad',
+    'se lee **únicamente** en `tbproductorclasificacionperiodo` con `tipo = COMPRADOR`',
     '`tbproductorclasificacionperiodo`',
     'Visualización por fila sigue como propuesta',
 ] as $decisionP0C) {

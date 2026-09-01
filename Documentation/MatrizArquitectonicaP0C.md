@@ -11,17 +11,17 @@ Productor es la entidad de negocio núcleo. Comprador y Vendedor son
 clasificaciones derivadas del comportamiento del Productor. Compra y Venta son
 hechos históricos propios.
 
-`tbvendedor` no debe existir. `tbcomprador` tiene destino definitivo: es la
-marca de capacidad de compra de una `tbpersona`, igual que `tbtransportista`,
-y se queda así. No es entidad, no se amplía, no recibe tabla de periodos y no
-se migra ni se retira después: la historia de la clasificación Comprador vive
-completa en `tbproductorclasificacionperiodo`.
+`tbvendedor` no debe existir. `tbcomprador` es LEGACY de compatibilidad
+temporal: no es entidad ni capacidad permanente de `tbpersona`, sobrevive solo
+mientras Backend dependa de ella y debe retirarse. La única fuente de verdad de
+Comprador y Vendedor es `tbproductorclasificacionperiodo`.
 
 ## Matriz
 
 | Tema | Estado | Decisión P0-C | Evidencia | Límite |
 |---|---|---|---|---|
-| `tbcomprador` | APROBACIÓN DIRECTA DE CALIDAD | Destino definitivo: marca de capacidad de compra de una persona, no entidad y no legacy en tránsito. Se conserva con sus tres columnas y sin periodos. | Calidad indicó que no existen entidades separadas Productor, Comprador y Vendedor; un Productor puede actuar como Comprador o Vendedor. | No borrar tabla ni datos. No crear `tbcompradorestadoperiodo`. La historia va en `tbproductorclasificacionperiodo`. |
+| Comprador | APROBACIÓN DIRECTA DE CALIDAD | Comprador es una clasificación del Productor y se lee **únicamente** en `tbproductorclasificacionperiodo` con `tipo = COMPRADOR`. No es entidad ni capacidad de persona. | Calidad indicó que no existen entidades separadas Productor, Comprador y Vendedor; un Productor puede actuar como Comprador o Vendedor. | Ninguna consulta de negocio debe leer Comprador desde `tbcomprador`. |
+| `tbcomprador` | LEGACY / COMPATIBILIDAD TEMPORAL | Estructura heredada que sobrevive solo mientras el CRUD actual de Backend dependa de ella. No es destino definitivo: debe retirarse. | Su semántica original (Comprador como perfil independiente) quedó superada por la evidencia de Calidad. | No ampliarla, no darle históricos, no crear `tbcompradorestadoperiodo`. No borrar tabla ni datos hasta que Backend complete el retiro descrito en DEC-DBREADY-005. |
 | Vendedor | APROBACIÓN DIRECTA DE CALIDAD | No crear `tbvendedor`, `tbvendedorestadoperiodo` ni histórico de perfil vendedor. | Calidad indicó que Vendedor no es entidad. | Venta sí puede existir como hecho histórico. |
 | Clasificación Comprador/Vendedor | APROBACIÓN DIRECTA DE CALIDAD | Usar `tbproductorclasificacionperiodo` con tipo `COMPRADOR` o `VENDEDOR` validado en PHP. | Un Productor puede ser Comprador y Vendedor a la vez; una fila por tipo permite periodos simultáneos sin crear roles ni entidades separadas. | No implementar el algoritmo de alta/baja todavía. |
 | Criterios y pesos | PENDIENTE DE CALIDAD/ARQUITECTURA | No guardar pesos en SQL. El algoritmo T10 debe iniciar en modo informe con política versionada fuera del esquema. | No hay pesos confirmados en la evidencia disponible. | Bloquea activación automática de transiciones. |
@@ -51,6 +51,7 @@ completa en `tbproductorclasificacionperiodo`.
 
 ## Consecuencia operativa
 
+`tbcomprador` no cuenta como parte del modelo objetivo: es deuda a retirar.
 Tras la pasada de concordancia, la capa DB llega a 30 tablas en `Database/Migrations/006estructuracomercialhistorica.sql`
 porque las tablas nuevas representan hechos y periodos confirmados sin política
 automática. T4b, T7, T8, T9, T10 y T11 solo pueden implementar comportamiento

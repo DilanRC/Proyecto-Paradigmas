@@ -40,10 +40,10 @@ La base `bdmercadoganadero` contiene exactamente 30 tablas:
 
 `tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
 de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
-`tbcomprador` es la marca de capacidad de compra de una persona y ese es su
-destino definitivo: no crece, no recibe periodos propios y no vuelve a ser
-entidad. La historia de Comprador y Vendedor vive en
-`tbproductorclasificacionperiodo`. Animal, publicación, compra,
+`tbcomprador` es legacy de compatibilidad temporal: sobrevive mientras el CRUD
+actual dependa de ella y debe retirarse. Comprador y Vendedor son
+clasificaciones del Productor y su única fuente de verdad es
+`tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`). Animal, publicación, compra,
 venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
 Backend implemente comportamiento después. La ubicación física vive **únicamente** en
 `tbdireccion`: `tbproductordireccion` y

@@ -202,17 +202,19 @@ profesor); el dominio lo valida PHP al escribir (Tramo 15) y
 
 ## tbcomprador
 
-Marca de capacidad de compra de una persona, igual que `tbtransportista`. Ese
-es su destino definitivo: no es entidad, no se amplía, no recibe
-`tbcompradorestadoperiodo` y no queda en tránsito hacia una migración
-posterior. Comprador y Vendedor como clasificaciones históricas viven completos
-en `tbproductorclasificacionperiodo`.
+Estructura legacy de compatibilidad temporal. Comprador **no** es una entidad
+ni una capacidad permanente de la persona: es una clasificación del Productor y
+su única fuente de verdad es `tbproductorclasificacionperiodo` con
+`tipo = COMPRADOR`. Esta tabla sobrevive solo mientras el CRUD actual de Backend
+dependa de ella y debe retirarse (plan de retiro en DEC-DBREADY-005). Mientras
+exista: no se amplía, no recibe históricos y no se crea
+`tbcompradorestadoperiodo`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcompradorid` | `INT NOT NULL` | No | Consecutivo asignado por la aplicación. | Aplicación | - |
-| `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
-| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Disponibilidad de la capacidad, no estado de negocio. La clasificación histórica vive en `tbproductorclasificacionperiodo`. | Aplicación | - |
+| `tbcompradorid` | `INT NOT NULL` | No | Consecutivo legacy asignado por la aplicación. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona vinculada por el CRUD heredado. | Aplicación | `tbpersona` |
+| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Bit legacy de alta/baja del CRUD actual. No es la clasificación Comprador: esa se lee en `tbproductorclasificacionperiodo`. | Aplicación | - |
 
 ## tbproductorclasificacionperiodo
 
