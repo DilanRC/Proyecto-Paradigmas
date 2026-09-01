@@ -371,3 +371,38 @@ devuelve cero filas en todas las consultas, y la suite PHP relevante
 `comprador_test`, `productor_ubicacion_test`, `finca_direccion_test`) pasa
 completa. Ningún productor quedó sin periodo de dirección o estado abierto,
 ninguno con dos a la vez.
+
+## DEC-FRONT-10 - Bloqueo detectado: el total no coincide con las filas listadas
+
+**Necesidad.** Al verificar en navegador, el panel de productores muestra
+"5 productores encontrados" pero pinta 3 filas. El frontend no puede corregirlo
+sin tocar backend, que esta fuera de alcance.
+
+**Mecanismo del defecto.** En `Application/Model/Productor.php`, `listar()` cuenta
+y lista con criterios distintos:
+
+- el `COUNT(*)` une solamente `tbproductor` con `tbpersona`, de modo que cuenta
+  los 5 productores;
+- la consulta de filas anade `INNER JOIN tbproductordireccion`, asi que descarta
+  a los productores sin enlace de direccion.
+
+Comprobado contra la base: 5 productores, 3 enlaces de direccion, 3 filas
+devueltas por la API con `total: 5`.
+
+**Consecuencia.** El total y la paginacion se calculan sobre una poblacion mayor
+que la que se puede mostrar. Con mas registros aparecerian paginas que se ven
+vacias aunque el total prometa resultados.
+
+**Por que no se corrige aqui.** La correccion pertenece al modelo: o el `COUNT`
+aplica el mismo `INNER JOIN`, o el listado usa `LEFT JOIN` y tolera productores
+sin direccion. Ambas son decisiones de backend con efectos sobre el contrato, y
+este bloque es exclusivamente frontend.
+
+**Limite.** El frontend representa fielmente lo que la API devuelve: pinta las
+filas de `data.productores` y el total de `data.total`. La incoherencia es del
+contrato, no de la vista.
+
+**Nota adicional.** El mismo `INNER JOIN` no filtra por periodo abierto
+(`tbproductordireccionfechafin IS NULL`), de modo que un productor con historico
+de direcciones podria aparecer repetido una vez por periodo. No se reprodujo con
+los datos actuales, pero conviene revisarlo junto con lo anterior.
