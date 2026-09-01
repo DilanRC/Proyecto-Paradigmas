@@ -16,7 +16,7 @@ require_once $testRoot . '/Configuration/Database.php';
 require_once $testRoot . '/Application/HttpException.php';
 require_once $testRoot . '/Application/Auth/ActorContext.php';
 require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
-foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo'] as $testModel) {
+foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService'] as $testServicio) {
