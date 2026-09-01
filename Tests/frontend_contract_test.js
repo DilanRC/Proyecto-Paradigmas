@@ -26,9 +26,9 @@ has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpo
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
 has('Public/js/productores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
 has(
-    'Application/Controller/ProductorController.php',
+    'Application/Service/ValidacionService.php',
     /\$permitidos = \['identificacion', 'nombre', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'\];/,
-    'POST/PUT deben reconocer direccionPrincipal'
+    'POST/PUT deben reconocer direccionPrincipal (contrato de validación unificado)'
 );
 has(
     'Application/Controller/ProductorController.php',
