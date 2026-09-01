@@ -371,3 +371,60 @@ devuelve cero filas en todas las consultas, y la suite PHP relevante
 `comprador_test`, `productor_ubicacion_test`, `finca_direccion_test`) pasa
 completa. Ningún productor quedó sin periodo de dirección o estado abierto,
 ninguno con dos a la vez.
+
+# Decisiones - Esquema histórico transversal (tramo 13)
+
+## DEC-23 - La matriz del tramo 12 confirma el esquema existente; no se crean tablas nuevas
+
+El tramo 13 recibe del arquitecto `matriz-historica-tramo12.pdf` (resumen en
+Decisiones.md del arquitecto) y su condición de entrega es "cada
+entidad/perfil confirmado tiene un mecanismo histórico coherente, sin
+histórico genérico que mezcle semánticas". Contrastando la matriz contra
+`Database/SqlScripts/000instalacioncompleta.sql` no aparece ninguna tabla ni
+columna faltante:
+
+1. **Productor - Estado**: `tbproductorestadoperiodo` (creada en el tramo 2,
+   poblada en el tramo 4/6) ya modela apertura/cierre de periodo con
+   `fechainicio`/`fechafin` de servidor, exactamente como pide la matriz.
+2. **Productor - Ubicación**: `tbproductorubicacion` (tramo 2/8/9) ya es
+   append-only con `latitud`, `longitud`, `precision`, `origen` y fecha de
+   servidor (DEC-16), igual que la matriz.
+3. **Productor - Actividad**: `tbproductoractividad` (tramo 2) ya tiene
+   `tipo`, `fecha` de servidor y `origen`. Se documenta ahora en
+   `Documentation/DiccionarioDatos.md` el catálogo cerrado de
+   `tbproductoractividadtipo` que la matriz exige (`login`,
+   `actualizacion_ubicacion`, `actualizacion_perfil`,
+   `registro_actividad_productiva`, `contacto_comprador`); validarlo es
+   trabajo de PHP (tramo 15), fuera del alcance de esta base.
+4. **Comprador - Perfil**: la matriz marca explícitamente el histórico
+   propio de comprador como "fuera del alcance profundo de esta fase".
+   `tbcompradorestado` (DEC-C04-008/DEC-PER-003) sigue siendo su único
+   registro de alta/baja lógica; no se crea tabla de periodos para
+   comprador.
+5. **Persona - Vínculo productor/comprador**: la matriz confirma
+   explícitamente que no lleva tabla histórica propia, para no repetir el
+   error de tratar dos capacidades simultáneas como un solo estado; se
+   deriva de la existencia de filas en `tbproductor` y `tbcomprador`.
+
+`tbbitacora` se mantiene exclusivamente como auditoría técnica (DEC-C04-006)
+y no se convierte en histórico universal, como exige la regla de base del
+tramo 13.
+
+Como no se crean tablas, `Database/Tests/comprobacionestructura.sql` sigue
+esperando exactamente 15 tablas y `Tests/naming_gate.php` sigue exigiendo
+las mismas tablas que ya validaba (incluida `tbproductoractividad` desde el
+tramo 2). Lo que sí cambia:
+
+- `Database/Tests/diagnostico.sql` gana **D-12** (actividad con
+  `tbproductoractividadtipo` fuera del catálogo cerrado) y **D-13**
+  (`tbcompradorestado` fuera de `{0,1}`), y el bloque **D-07** de huérfanos
+  gana el enlace `tbproductoractividad.tbproductorid`.
+- `Documentation/DiccionarioDatos.md` documenta el catálogo cerrado de
+  actividad y por qué comprador y el vínculo persona-productor/comprador no
+  tienen tabla nueva.
+
+Verificado: instalación limpia (`docker compose down -v && up`) levanta sin
+errores, `Tests/naming_gate.php` pasa, `Database/Tests/diagnostico.sql`
+devuelve cero filas en D-00 a D-13 sobre datos válidos (conteo de tablas
+antes/después del tramo: 15/15, sin cambio), y ningún productor ni
+comprador queda con dos estados actuales incompatibles.
