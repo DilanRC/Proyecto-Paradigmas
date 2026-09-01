@@ -33,10 +33,9 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- Enlace entre el productor y su residencia principal. La tabla no almacena
 -- datos de ubicación: provincia, cantón, distrito, pueblo y señas viven una sola
 -- vez en tbdireccion y se alcanzan por tbdireccionid.
--- tbproductordireccionfechainicio/fechafin preparan el histórico de dirección
--- (plan §8): quedan NULL para el enlace vigente hasta que el flujo transaccional
--- de cierre+alta (todavía sin implementar) las asigne. La fecha la calcula PHP,
--- nunca el motor.
+-- tbproductordireccionfechainicio/fechafin sostienen el histórico de dirección:
+-- el flujo PHP vigente cierra el periodo abierto e inserta uno nuevo dentro de
+-- una transacción. La fecha la calcula PHP, nunca el motor.
 CREATE TABLE IF NOT EXISTS tbproductordireccion (
     tbproductordireccionid INT NOT NULL,
     tbproductorid INT NOT NULL,
@@ -195,6 +194,167 @@ CREATE TABLE IF NOT EXISTS tbproductoractividad (
     tbproductoractividadtipo VARCHAR(60) NOT NULL,
     tbproductoractividadfecha DATETIME NOT NULL,
     tbproductoractividadorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Clasificaciones comerciales del productor. COMPRADOR y VENDEDOR se validan
+-- en PHP; el motor no usa CHECK. Un productor puede tener periodos abiertos
+-- simultáneos si son de tipo distinto.
+CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo (
+    tbproductorclasificacionperiodoid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbproductorclasificacionperiodotipo VARCHAR(30) NOT NULL,
+    tbproductorclasificacionperiodofechainicio DATETIME NOT NULL,
+    tbproductorclasificacionperiodofechafin DATETIME NULL,
+    tbproductorclasificacionperiodomotivo VARCHAR(250) NULL
+) ENGINE=InnoDB;
+
+-- Identidad estable del animal. No guarda peso, edad actual ni dueño actual:
+-- esos datos cambian y viven como observaciones o hechos.
+CREATE TABLE IF NOT EXISTS tbanimal (
+    tbanimalid INT NOT NULL,
+    tbanimalcodigo VARCHAR(100) NULL,
+    tbanimalsexo VARCHAR(20) NULL,
+    tbanimalraza VARCHAR(100) NULL,
+    tbanimalfecharegistroensistema DATETIME NOT NULL,
+    tbanimalorigenregistro VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Observaciones históricas del animal. Cada fila guarda lo observado, cuándo,
+-- desde dónde y en qué contexto; no inventa fecha de nacimiento.
+CREATE TABLE IF NOT EXISTS tbanimalobservacion (
+    tbanimalobservacionid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbanimalobservacionfecha DATETIME NOT NULL,
+    tbanimalobservacionorigen VARCHAR(100) NOT NULL,
+    tbanimalobservacioncontexto VARCHAR(250) NULL,
+    tbanimalobservacionedadmeses INT NULL,
+    tbanimalobservacionpeso DECIMAL(10,2) NULL,
+    tbanimalobservacionproposito VARCHAR(80) NULL,
+    tbanimalobservacionestadoreproductivo VARCHAR(80) NULL,
+    tbanimalobservacionpartos INT NULL,
+    tbanimalobservacionlitrosleche DECIMAL(10,2) NULL,
+    tbanimalobservacionproduccion JSON NULL,
+    tbanimalobservacionsalud JSON NULL
+) ENGINE=InnoDB;
+
+-- Publicación del animal. Congela vendedor y finca al momento de publicar para
+-- no depender de relaciones futuras al reconstruir quién vendía.
+CREATE TABLE IF NOT EXISTS tbanimalpublicacion (
+    tbanimalpublicacionid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbproductorvendedorid INT NOT NULL,
+    tbfincaid INT NOT NULL,
+    tbanimalpublicacionfecha DATETIME NOT NULL,
+    tbanimalpublicacionprecio DECIMAL(12,2) NULL,
+    tbanimalpublicaciontitulo VARCHAR(150) NULL,
+    tbanimalpublicaciondescripcion VARCHAR(500) NULL,
+    tbanimalpublicacionestado VARCHAR(30) NOT NULL,
+    tbanimalpublicacionorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Hecho económico de compra. No define ciclo de estados porque Calidad no
+-- aprobó una semántica suficiente; el estado se decidirá en Backend.
+CREATE TABLE IF NOT EXISTS tbcompra (
+    tbcompraid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbproductorcompradorid INT NOT NULL,
+    tbfincaorigenid INT NULL,
+    tbcomprafecha DATE NOT NULL,
+    tbcomprahora TIME NULL,
+    tbcompralugar VARCHAR(250) NULL,
+    tbcompraprecio DECIMAL(12,2) NOT NULL,
+    tbpagometodoid INT NOT NULL,
+    tbcompraorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Hecho económico de venta. tbcompraid es opcional: el animal pudo nacer en la
+-- finca o existir antes del sistema.
+CREATE TABLE IF NOT EXISTS tbventa (
+    tbventaid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbproductorvendedorid INT NOT NULL,
+    tbproductorcompradorid INT NOT NULL,
+    tbfincaid INT NULL,
+    tbcompraid INT NULL,
+    tbventafecha DATE NOT NULL,
+    tbventahora TIME NULL,
+    tbventalugar VARCHAR(250) NULL,
+    tbventaprecio DECIMAL(12,2) NOT NULL,
+    tbpagometodoid INT NOT NULL,
+    tbventaedadmeses INT NULL,
+    tbventapeso DECIMAL(10,2) NULL,
+    tbventarazasnapshot VARCHAR(100) NULL,
+    tbventaorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Interacciones comerciales especializadas sobre animales: ME_GUSTA, SEGUIR y
+-- eventos equivalentes se validan en PHP junto con AGREGAR/RETIRAR.
+CREATE TABLE IF NOT EXISTS tbanimalinteraccion (
+    tbanimalinteraccionid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbanimalinteracciontipo VARCHAR(30) NOT NULL,
+    tbanimalinteraccionaccion VARCHAR(30) NOT NULL,
+    tbanimalinteraccionfecha DATETIME NOT NULL,
+    tbanimalinteraccionorigen VARCHAR(100) NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbcarrito (
+    tbcarritoid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbcarritofechacreacion DATETIME NOT NULL,
+    tbcarritoestado VARCHAR(30) NOT NULL
+) ENGINE=InnoDB;
+
+-- Historial de agregar/retirar animales del carrito. No se borra pasado.
+CREATE TABLE IF NOT EXISTS tbcarritoanimal (
+    tbcarritoanimalid INT NOT NULL,
+    tbcarritoid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbcarritoanimalaccion VARCHAR(30) NOT NULL,
+    tbcarritoanimalfecha DATETIME NOT NULL,
+    tbcarritoanimalorigen VARCHAR(100) NULL
+) ENGINE=InnoDB;
+
+-- Periodos de estado del transportista. La fecha real de inicio puede quedar
+-- NULL si no existe evidencia; no se usa fecha de migración como fecha real.
+CREATE TABLE IF NOT EXISTS tbtransportistaestadoperiodo (
+    tbtransportistaestadoperiodoid INT NOT NULL,
+    tbtransportistaid INT NOT NULL,
+    tbtransportistaestadoperiodoestado TINYINT(1) NOT NULL,
+    tbtransportistaestadoperiodofechainicio DATETIME NULL,
+    tbtransportistaestadoperiodofechafin DATETIME NULL,
+    tbtransportistaestadoperiodomotivo VARCHAR(250) NULL,
+    tbtransportistaestadoperiodofecharegistroensistema DATETIME NOT NULL
+) ENGINE=InnoDB;
+
+-- Flete realizado por un transportista. El método de pago usado se conserva
+-- aquí; cantidad semanal y método frecuente se derivan por consultas.
+CREATE TABLE IF NOT EXISTS tbtransportistaflete (
+    tbtransportistafleteid INT NOT NULL,
+    tbtransportistaid INT NOT NULL,
+    tbproductororigenid INT NULL,
+    tbfincaorigenid INT NULL,
+    tbdireccionorigenid INT NULL,
+    tbdirecciondestinoid INT NULL,
+    tbtransportistafletefecha DATE NOT NULL,
+    tbtransportistafletehora TIME NULL,
+    tbtransportistafletedescripcion VARCHAR(500) NULL,
+    tbtransportistafleteprecio DECIMAL(12,2) NULL,
+    tbpagometodoid INT NOT NULL,
+    tbtransportistafleteorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Reseñas históricas del transportista. El promedio se deriva con AVG.
+CREATE TABLE IF NOT EXISTS tbtransportistaresena (
+    tbtransportistaresenaid INT NOT NULL,
+    tbtransportistaid INT NOT NULL,
+    tbproductorid INT NOT NULL,
+    tbtransportistafleteid INT NULL,
+    tbtransportistaresenafecha DATETIME NOT NULL,
+    tbtransportistaresenacalificacion INT NOT NULL,
+    tbtransportistaresenacomentario VARCHAR(500) NULL,
+    tbtransportistaresenaorigen VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 
 -- fin del script de instalación completa

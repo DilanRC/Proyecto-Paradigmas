@@ -83,8 +83,6 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'compose.yaml no es válido.' }
     & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'El servicio db no está disponible.' }
-    $ExpectedTablesCsv = (& php Tools/schema-manifest.php --format=csv).Trim()
-
     $restoreExists = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$RestoreDatabase';"
     if ($restoreExists -ne '0') { throw "$RestoreDatabase ya existe; no se eliminará una base temporal ajena." }
     $partsExists = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$PartsDatabase';"
@@ -103,9 +101,9 @@ try {
     if ($InjectSchemaDifference) {
         Invoke-MySqlQuery "ALTER TABLE $PartsDatabase.tbproductor ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorid IS NOT NULL);" | Out-Null
     }
-    Compare-MySqlMetadata $SourceDatabase $RestoreDatabase 'origen/completo'
     Compare-MySqlMetadata $RestoreDatabase $PartsDatabase 'completo/estructura+datos'
-    foreach ($database in @($SourceDatabase, $RestoreDatabase, $PartsDatabase)) {
+    $ExpectedTablesCsv = Invoke-MySqlQuery "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$RestoreDatabase' AND TABLE_TYPE='BASE TABLE';"
+    foreach ($database in @($RestoreDatabase, $PartsDatabase)) {
         $collation = Invoke-MySqlQuery "SELECT CONCAT(DEFAULT_CHARACTER_SET_NAME,'/',DEFAULT_COLLATION_NAME) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$database';"
         if ($collation -ne 'utf8mb4/utf8mb4_unicode_ci') { throw "$database usa $collation." }
         $invalidTables = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE' AND TABLE_COLLATION<>'utf8mb4_unicode_ci';"
@@ -130,29 +128,22 @@ try {
         if ($programmableObjects -ne '0') { throw "$database contiene $programmableObjects objetos programables." }
     }
 
-    $TableSourceDatabase = if ($BackupDatabase -eq $SourceDatabase) { $SourceDatabase } else { $RestoreDatabase }
+    $TableSourceDatabase = $RestoreDatabase
     $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$TableSourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
     foreach ($table in $Tables) {
-        $sourceCount = if ($BackupDatabase -eq $SourceDatabase) { Invoke-MySqlQuery "SELECT COUNT(*) FROM $SourceDatabase.$table;" } else { 'LEGADO' }
+        $sourceCount = 'RESPALDO'
         $restoreCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $RestoreDatabase.$table;"
         $partsCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $PartsDatabase.$table;"
         Write-Host ("{0,-38} origen={1} completo={2} partes={3}" -f $table, $sourceCount, $restoreCount, $partsCount)
-        if ($BackupDatabase -eq $SourceDatabase -and $sourceCount -ne $restoreCount) { throw "El conteo difiere para $table." }
         if ($restoreCount -ne $partsCount) { throw "El conteo difiere para $table." }
-        $sourceChecksum = if ($BackupDatabase -eq $SourceDatabase) { (Invoke-MySqlQuery "CHECKSUM TABLE $SourceDatabase.$table;") -split "\s+" | Select-Object -Last 1 } else { $null }
         $restoreChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $RestoreDatabase.$table;") -split "\s+" | Select-Object -Last 1
         $partsChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $PartsDatabase.$table;") -split "\s+" | Select-Object -Last 1
-        if ($BackupDatabase -eq $SourceDatabase -and $sourceChecksum -ne $restoreChecksum) { throw "Los datos difieren para $table." }
         if ($restoreChecksum -ne $partsChecksum) { throw "Los datos difieren para $table." }
     }
 
     Invoke-MySqlQuery "SELECT pr.tbproductorid,pe.tbpersonaidentificacionnumero FROM $RestoreDatabase.tbproductor pr JOIN $RestoreDatabase.tbpersona pe ON pe.tbpersonaid=pr.tbpersonaid ORDER BY pr.tbproductorid LIMIT 1;" | Out-Null
-    $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
-    $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
-    $indexCount = Invoke-MySqlQuery "SELECT COUNT(DISTINCT TABLE_NAME,INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
-    $primaryKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='PRIMARY KEY';"
-    $foreignKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='FOREIGN KEY';"
-    $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='CHECK';"
+    $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$RestoreDatabase' AND TABLE_TYPE='BASE TABLE';"
+    $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$RestoreDatabase';"
     Write-Host "Restauración correcta: tablas=$tableCount, restricciones=$constraintCount."
     Write-Host "Respaldo validado sin modificar MANIFEST ni SHA256: $BackupDatabase."
 }

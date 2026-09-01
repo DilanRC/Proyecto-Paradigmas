@@ -213,3 +213,251 @@ SELECT 'D-13 tbcompradorestado fuera de dominio' AS diagnostico;
 SELECT tbcompradorid, tbcompradorestado
 FROM tbcomprador
 WHERE tbcompradorestado NOT IN (0, 1);
+
+-- D-14: identificadores repetidos en estructuras comerciales e históricas.
+SELECT 'D-14 identificadores comerciales repetidos' AS diagnostico;
+SELECT 'tbproductorclasificacionperiodo' AS tabla, tbproductorclasificacionperiodoid AS identificador, COUNT(*) AS repeticiones
+FROM tbproductorclasificacionperiodo GROUP BY tbproductorclasificacionperiodoid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbanimal', tbanimalid, COUNT(*) FROM tbanimal GROUP BY tbanimalid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbanimalobservacion', tbanimalobservacionid, COUNT(*) FROM tbanimalobservacion GROUP BY tbanimalobservacionid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbanimalpublicacion', tbanimalpublicacionid, COUNT(*) FROM tbanimalpublicacion GROUP BY tbanimalpublicacionid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbcompra', tbcompraid, COUNT(*) FROM tbcompra GROUP BY tbcompraid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbventa', tbventaid, COUNT(*) FROM tbventa GROUP BY tbventaid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbanimalinteraccion', tbanimalinteraccionid, COUNT(*) FROM tbanimalinteraccion GROUP BY tbanimalinteraccionid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbcarrito', tbcarritoid, COUNT(*) FROM tbcarrito GROUP BY tbcarritoid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbcarritoanimal', tbcarritoanimalid, COUNT(*) FROM tbcarritoanimal GROUP BY tbcarritoanimalid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbtransportistaestadoperiodo', tbtransportistaestadoperiodoid, COUNT(*) FROM tbtransportistaestadoperiodo GROUP BY tbtransportistaestadoperiodoid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbtransportistaflete', tbtransportistafleteid, COUNT(*) FROM tbtransportistaflete GROUP BY tbtransportistafleteid HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbtransportistaresena', tbtransportistaresenaid, COUNT(*) FROM tbtransportistaresena GROUP BY tbtransportistaresenaid HAVING COUNT(*) > 1;
+
+-- D-15: enlaces lógicos huérfanos de la capa comercial. Sin FK, el motor los
+-- acepta; esta consulta los deja visibles para Backend.
+SELECT 'D-15 enlaces comerciales huerfanos' AS diagnostico;
+SELECT 'tbproductorclasificacionperiodo.tbproductorid' AS enlace, tbproductorclasificacionperiodoid AS asociacion, cp.tbproductorid AS valor_sin_destino
+FROM tbproductorclasificacionperiodo cp LEFT JOIN tbproductor p ON p.tbproductorid = cp.tbproductorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbanimalobservacion.tbanimalid', o.tbanimalobservacionid, o.tbanimalid
+FROM tbanimalobservacion o LEFT JOIN tbanimal a ON a.tbanimalid = o.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbanimalpublicacion.tbanimalid', ap.tbanimalpublicacionid, ap.tbanimalid
+FROM tbanimalpublicacion ap LEFT JOIN tbanimal a ON a.tbanimalid = ap.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbanimalpublicacion.tbproductorvendedorid', ap.tbanimalpublicacionid, ap.tbproductorvendedorid
+FROM tbanimalpublicacion ap LEFT JOIN tbproductor p ON p.tbproductorid = ap.tbproductorvendedorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbanimalpublicacion.tbfincaid', ap.tbanimalpublicacionid, ap.tbfincaid
+FROM tbanimalpublicacion ap LEFT JOIN tbfinca f ON f.tbfincaid = ap.tbfincaid
+WHERE f.tbfincaid IS NULL
+UNION ALL
+SELECT 'tbcompra.tbanimalid', c.tbcompraid, c.tbanimalid
+FROM tbcompra c LEFT JOIN tbanimal a ON a.tbanimalid = c.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbcompra.tbproductorcompradorid', c.tbcompraid, c.tbproductorcompradorid
+FROM tbcompra c LEFT JOIN tbproductor p ON p.tbproductorid = c.tbproductorcompradorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbcompra.tbfincaorigenid', c.tbcompraid, c.tbfincaorigenid
+FROM tbcompra c LEFT JOIN tbfinca f ON f.tbfincaid = c.tbfincaorigenid
+WHERE c.tbfincaorigenid IS NOT NULL AND f.tbfincaid IS NULL
+UNION ALL
+SELECT 'tbcompra.tbpagometodoid', c.tbcompraid, c.tbpagometodoid
+FROM tbcompra c LEFT JOIN tbpagometodo p ON p.tbpagometodoid = c.tbpagometodoid
+WHERE p.tbpagometodoid IS NULL
+UNION ALL
+SELECT 'tbventa.tbanimalid', v.tbventaid, v.tbanimalid
+FROM tbventa v LEFT JOIN tbanimal a ON a.tbanimalid = v.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbventa.tbproductorvendedorid', v.tbventaid, v.tbproductorvendedorid
+FROM tbventa v LEFT JOIN tbproductor p ON p.tbproductorid = v.tbproductorvendedorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbventa.tbproductorcompradorid', v.tbventaid, v.tbproductorcompradorid
+FROM tbventa v LEFT JOIN tbproductor p ON p.tbproductorid = v.tbproductorcompradorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbventa.tbfincaid', v.tbventaid, v.tbfincaid
+FROM tbventa v LEFT JOIN tbfinca f ON f.tbfincaid = v.tbfincaid
+WHERE v.tbfincaid IS NOT NULL AND f.tbfincaid IS NULL
+UNION ALL
+SELECT 'tbventa.tbcompraid', v.tbventaid, v.tbcompraid
+FROM tbventa v LEFT JOIN tbcompra c ON c.tbcompraid = v.tbcompraid
+WHERE v.tbcompraid IS NOT NULL AND c.tbcompraid IS NULL
+UNION ALL
+SELECT 'tbventa.tbpagometodoid', v.tbventaid, v.tbpagometodoid
+FROM tbventa v LEFT JOIN tbpagometodo p ON p.tbpagometodoid = v.tbpagometodoid
+WHERE p.tbpagometodoid IS NULL;
+
+SELECT 'D-16 enlaces de funnel y transporte huerfanos' AS diagnostico;
+SELECT 'tbanimalinteraccion.tbproductorid' AS enlace, i.tbanimalinteraccionid AS asociacion, i.tbproductorid AS valor_sin_destino
+FROM tbanimalinteraccion i LEFT JOIN tbproductor p ON p.tbproductorid = i.tbproductorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbanimalinteraccion.tbanimalid', i.tbanimalinteraccionid, i.tbanimalid
+FROM tbanimalinteraccion i LEFT JOIN tbanimal a ON a.tbanimalid = i.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbcarrito.tbproductorid', c.tbcarritoid, c.tbproductorid
+FROM tbcarrito c LEFT JOIN tbproductor p ON p.tbproductorid = c.tbproductorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbcarritoanimal.tbcarritoid', ca.tbcarritoanimalid, ca.tbcarritoid
+FROM tbcarritoanimal ca LEFT JOIN tbcarrito c ON c.tbcarritoid = ca.tbcarritoid
+WHERE c.tbcarritoid IS NULL
+UNION ALL
+SELECT 'tbcarritoanimal.tbanimalid', ca.tbcarritoanimalid, ca.tbanimalid
+FROM tbcarritoanimal ca LEFT JOIN tbanimal a ON a.tbanimalid = ca.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbtransportistaestadoperiodo.tbtransportistaid', ep.tbtransportistaestadoperiodoid, ep.tbtransportistaid
+FROM tbtransportistaestadoperiodo ep LEFT JOIN tbtransportista t ON t.tbtransportistaid = ep.tbtransportistaid
+WHERE t.tbtransportistaid IS NULL
+UNION ALL
+SELECT 'tbtransportistaflete.tbtransportistaid', f.tbtransportistafleteid, f.tbtransportistaid
+FROM tbtransportistaflete f LEFT JOIN tbtransportista t ON t.tbtransportistaid = f.tbtransportistaid
+WHERE t.tbtransportistaid IS NULL
+UNION ALL
+SELECT 'tbtransportistaflete.tbproductororigenid', f.tbtransportistafleteid, f.tbproductororigenid
+FROM tbtransportistaflete f LEFT JOIN tbproductor p ON p.tbproductorid = f.tbproductororigenid
+WHERE f.tbproductororigenid IS NOT NULL AND p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbtransportistaflete.tbfincaorigenid', f.tbtransportistafleteid, f.tbfincaorigenid
+FROM tbtransportistaflete f LEFT JOIN tbfinca x ON x.tbfincaid = f.tbfincaorigenid
+WHERE f.tbfincaorigenid IS NOT NULL AND x.tbfincaid IS NULL
+UNION ALL
+SELECT 'tbtransportistaflete.tbdireccionorigenid', f.tbtransportistafleteid, f.tbdireccionorigenid
+FROM tbtransportistaflete f LEFT JOIN tbdireccion d ON d.tbdireccionid = f.tbdireccionorigenid
+WHERE f.tbdireccionorigenid IS NOT NULL AND d.tbdireccionid IS NULL
+UNION ALL
+SELECT 'tbtransportistaflete.tbdirecciondestinoid', f.tbtransportistafleteid, f.tbdirecciondestinoid
+FROM tbtransportistaflete f LEFT JOIN tbdireccion d ON d.tbdireccionid = f.tbdirecciondestinoid
+WHERE f.tbdirecciondestinoid IS NOT NULL AND d.tbdireccionid IS NULL
+UNION ALL
+SELECT 'tbtransportistaflete.tbpagometodoid', f.tbtransportistafleteid, f.tbpagometodoid
+FROM tbtransportistaflete f LEFT JOIN tbpagometodo p ON p.tbpagometodoid = f.tbpagometodoid
+WHERE p.tbpagometodoid IS NULL
+UNION ALL
+SELECT 'tbtransportistaresena.tbtransportistaid', r.tbtransportistaresenaid, r.tbtransportistaid
+FROM tbtransportistaresena r LEFT JOIN tbtransportista t ON t.tbtransportistaid = r.tbtransportistaid
+WHERE t.tbtransportistaid IS NULL
+UNION ALL
+SELECT 'tbtransportistaresena.tbproductorid', r.tbtransportistaresenaid, r.tbproductorid
+FROM tbtransportistaresena r LEFT JOIN tbproductor p ON p.tbproductorid = r.tbproductorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbtransportistaresena.tbtransportistafleteid', r.tbtransportistaresenaid, r.tbtransportistafleteid
+FROM tbtransportistaresena r LEFT JOIN tbtransportistaflete f ON f.tbtransportistafleteid = r.tbtransportistafleteid
+WHERE r.tbtransportistafleteid IS NOT NULL AND f.tbtransportistafleteid IS NULL;
+
+-- D-17: dominios lógicos confirmados pero validados por PHP, no por CHECK.
+SELECT 'D-17 dominios comerciales fuera de rango' AS diagnostico;
+SELECT 'tbproductorclasificacionperiodo.tipo' AS campo, tbproductorclasificacionperiodoid AS registro, tbproductorclasificacionperiodotipo AS valor
+FROM tbproductorclasificacionperiodo
+WHERE tbproductorclasificacionperiodotipo NOT IN ('COMPRADOR', 'VENDEDOR')
+UNION ALL
+SELECT 'tbanimalinteraccion.tipo', tbanimalinteraccionid, tbanimalinteracciontipo
+FROM tbanimalinteraccion
+WHERE tbanimalinteracciontipo NOT IN ('ME_GUSTA', 'SEGUIR', 'CARRITO', 'COMPRA')
+UNION ALL
+SELECT 'tbanimalinteraccion.accion', tbanimalinteraccionid, tbanimalinteraccionaccion
+FROM tbanimalinteraccion
+WHERE tbanimalinteraccionaccion NOT IN ('AGREGAR', 'RETIRAR')
+UNION ALL
+SELECT 'tbcarritoanimal.accion', tbcarritoanimalid, tbcarritoanimalaccion
+FROM tbcarritoanimal
+WHERE tbcarritoanimalaccion NOT IN ('AGREGAR', 'RETIRAR');
+
+-- D-18: periodos abiertos duplicados por entidad y tipo.
+SELECT 'D-18 periodos abiertos duplicados' AS diagnostico;
+SELECT 'tbproductorclasificacionperiodo' AS tabla, tbproductorid AS entidad, tbproductorclasificacionperiodotipo AS tipo, COUNT(*) AS abiertos
+FROM tbproductorclasificacionperiodo
+WHERE tbproductorclasificacionperiodofechafin IS NULL
+GROUP BY tbproductorid, tbproductorclasificacionperiodotipo
+HAVING COUNT(*) > 1
+UNION ALL
+SELECT 'tbtransportistaestadoperiodo', tbtransportistaid, CAST(tbtransportistaestadoperiodoestado AS CHAR), COUNT(*)
+FROM tbtransportistaestadoperiodo
+WHERE tbtransportistaestadoperiodofechafin IS NULL
+GROUP BY tbtransportistaid, tbtransportistaestadoperiodoestado
+HAVING COUNT(*) > 1;
+
+-- D-19: periodos solapados por productor/tipo o transportista.
+SELECT 'D-19 periodos solapados' AS diagnostico;
+SELECT 'tbproductorclasificacionperiodo' AS tabla, a.tbproductorclasificacionperiodoid AS periodo_a,
+       b.tbproductorclasificacionperiodoid AS periodo_b
+FROM tbproductorclasificacionperiodo a
+JOIN tbproductorclasificacionperiodo b
+  ON a.tbproductorid = b.tbproductorid
+ AND a.tbproductorclasificacionperiodotipo = b.tbproductorclasificacionperiodotipo
+ AND a.tbproductorclasificacionperiodoid < b.tbproductorclasificacionperiodoid
+ AND a.tbproductorclasificacionperiodofechainicio < COALESCE(b.tbproductorclasificacionperiodofechafin, '9999-12-31 23:59:59')
+ AND b.tbproductorclasificacionperiodofechainicio < COALESCE(a.tbproductorclasificacionperiodofechafin, '9999-12-31 23:59:59')
+UNION ALL
+SELECT 'tbtransportistaestadoperiodo', a.tbtransportistaestadoperiodoid, b.tbtransportistaestadoperiodoid
+FROM tbtransportistaestadoperiodo a
+JOIN tbtransportistaestadoperiodo b
+  ON a.tbtransportistaid = b.tbtransportistaid
+ AND a.tbtransportistaestadoperiodoid < b.tbtransportistaestadoperiodoid
+ AND a.tbtransportistaestadoperiodofechainicio IS NOT NULL
+ AND b.tbtransportistaestadoperiodofechainicio IS NOT NULL
+ AND a.tbtransportistaestadoperiodofechainicio < COALESCE(b.tbtransportistaestadoperiodofechafin, '9999-12-31 23:59:59')
+ AND b.tbtransportistaestadoperiodofechainicio < COALESCE(a.tbtransportistaestadoperiodofechafin, '9999-12-31 23:59:59');
+
+-- D-20: valores numéricos fuera de dominio lógico. PHP debe impedirlos; SQL
+-- directo puede insertarlos por ausencia deliberada de CHECK.
+SELECT 'D-20 valores comerciales fuera de dominio numerico' AS diagnostico;
+SELECT 'tbanimalobservacion.edadmeses' AS campo, tbanimalobservacionid AS registro, tbanimalobservacionedadmeses AS valor
+FROM tbanimalobservacion
+WHERE tbanimalobservacionedadmeses IS NOT NULL AND tbanimalobservacionedadmeses < 0
+UNION ALL
+SELECT 'tbanimalobservacion.peso', tbanimalobservacionid, tbanimalobservacionpeso
+FROM tbanimalobservacion
+WHERE tbanimalobservacionpeso IS NOT NULL AND tbanimalobservacionpeso < 0
+UNION ALL
+SELECT 'tbanimalobservacion.partos', tbanimalobservacionid, tbanimalobservacionpartos
+FROM tbanimalobservacion
+WHERE tbanimalobservacionpartos IS NOT NULL AND tbanimalobservacionpartos < 0
+UNION ALL
+SELECT 'tbanimalobservacion.litrosleche', tbanimalobservacionid, tbanimalobservacionlitrosleche
+FROM tbanimalobservacion
+WHERE tbanimalobservacionlitrosleche IS NOT NULL AND tbanimalobservacionlitrosleche < 0
+UNION ALL
+SELECT 'tbcompra.precio', tbcompraid, tbcompraprecio
+FROM tbcompra
+WHERE tbcompraprecio < 0
+UNION ALL
+SELECT 'tbventa.precio', tbventaid, tbventaprecio
+FROM tbventa
+WHERE tbventaprecio < 0
+UNION ALL
+SELECT 'tbventa.edadmeses', tbventaid, tbventaedadmeses
+FROM tbventa
+WHERE tbventaedadmeses IS NOT NULL AND tbventaedadmeses < 0
+UNION ALL
+SELECT 'tbventa.peso', tbventaid, tbventapeso
+FROM tbventa
+WHERE tbventapeso IS NOT NULL AND tbventapeso < 0
+UNION ALL
+SELECT 'tbtransportistaflete.precio', tbtransportistafleteid, tbtransportistafleteprecio
+FROM tbtransportistaflete
+WHERE tbtransportistafleteprecio IS NOT NULL AND tbtransportistafleteprecio < 0
+UNION ALL
+SELECT 'tbtransportistaresena.calificacion', tbtransportistaresenaid, tbtransportistaresenacalificacion
+FROM tbtransportistaresena
+WHERE tbtransportistaresenacalificacion < 1 OR tbtransportistaresenacalificacion > 5;

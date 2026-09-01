@@ -42,9 +42,9 @@ transformación existe para MySQL y Supabase/PostgreSQL. La migración remota no
 se ejecuta ni se activa por push sin snapshot confirmado y autorización
 expresa.
 
-## DEC-PER-005 - Quince tablas sin objetos de integridad
+## DEC-PER-005 - Tablas sin objetos de integridad
 
-El modelo final tiene exactamente 15 tablas y mantiene cero PK, FK, UNIQUE,
+El modelo final de base preparada tiene exactamente 27 tablas y mantiene cero PK, FK, UNIQUE,
 CHECK, índices, ENUM, defaults, triggers y objetos programables.
 
 ## DEC-C04-001 - Instrucción docente vigente
@@ -246,10 +246,11 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-mediante migraciones versionadas: 15 tablas, `tbpersona` como identidad única,
-`tbproductordireccion` normalizada y el mismo criterio de cero llaves,
-restricciones, índices y valores automáticos. El espejo sigue a MySQL; nunca al
-revés. Aplicar el cambio remoto requiere snapshot y autorización expresa.
+mediante migraciones versionadas: 27 tablas, `tbpersona` como identidad única,
+`tbproductordireccion` normalizada, estructura comercial histórica y el mismo
+criterio de cero llaves, restricciones, índices y valores automáticos. El
+espejo sigue a MySQL; nunca al revés. Aplicar el cambio remoto requiere
+snapshot y autorización expresa.
 
 ## DEC-16 - Ubicaciones GPS append-only
 
@@ -429,17 +430,74 @@ clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
 `tbcomprador` se conserva solo como legacy hasta migración explícita; Compra y
 Venta son hechos históricos propios.
 
-La representación aprobada para implementar después de T2 es usar dos tablas
-especializadas: `tbproductorcompradorperiodo` y
-`tbproductorvendedorperiodo`. Se eligió esta opción contra una tabla genérica
-de roles porque un Productor puede tener ambas clasificaciones a la vez y cada
-clasificación puede tener reglas de alta, pérdida y reactivación distintas.
+La representación vigente de base es `tbproductorclasificacionperiodo`, con
+`tbproductorclasificacionperiodotipo` validado por PHP como `COMPRADOR` o
+`VENDEDOR`. Un Productor puede tener ambos tipos abiertos simultáneamente. No
+se crean `tbvendedor`, `tbvendedorestadoperiodo`, `tbvendedoractividad` ni
+`tbcompradorestadoperiodo`.
 
 La matriz también deja PENDIENTE lo que no tiene evidencia suficiente:
 criterios y pesos del algoritmo, pérdida/reactivación automática,
 `tbanimalestado`, `tbcompraestado`, horario, cobertura, temporalidad de
-vehículo-transportista, obligatoriedad venta-compra, método de pago por hecho
-y captura de visualización por fila. Ningún punto PENDIENTE autoriza SQL.
+vehículo-transportista y captura de visualización por fila. Ningún punto
+PENDIENTE autoriza SQL.
+
+## DEC-DBREADY-001 - Estructura comercial lista para Backend
+
+La capa DB queda preparada con 12 tablas nuevas:
+`tbproductorclasificacionperiodo`, `tbanimal`, `tbanimalobservacion`,
+`tbanimalpublicacion`, `tbcompra`, `tbventa`, `tbanimalinteraccion`,
+`tbcarrito`, `tbcarritoanimal`, `tbtransportistaestadoperiodo`,
+`tbtransportistaflete` y `tbtransportistaresena`.
+
+`tbanimal` es identidad estable. Peso, edad, estado reproductivo, partos,
+litros de leche, producción y salud son observaciones históricas en
+`tbanimalobservacion`; no se inventa fecha de nacimiento. `tbanimalpublicacion`
+congela productor vendedor y finca del momento. `tbcompra` y `tbventa` son
+hechos económicos propios y guardan método de pago usado; `tbventa.tbcompraid`
+es NULL porque un animal pudo nacer en la finca o existir antes del sistema.
+No se crea `tbcompraestado` porque no hay ciclo de estados aprobado.
+
+El funnel confirmado vive en `tbanimalinteraccion` para `ME_GUSTA`, `SEGUIR`,
+`CARRITO` y `COMPRA`; `tbcarrito` y `tbcarritoanimal` representan colección e
+historial de agregar/retirar sin borrar pasado. No se captura cada
+visualización porque no está confirmada como requisito obligatorio.
+
+Transporte agrega `tbtransportistaestadoperiodo`, `tbtransportistaflete` y
+`tbtransportistaresena`. No se almacenan `cantidadfletessemanales`,
+`metodopagofrecuente` ni `calificacionpromedio`; se derivan con `COUNT`,
+`GROUP BY` y `AVG`. La fecha real de inicio de un transportista puede quedar
+NULL si no existe evidencia; `fecharegistroensistema` solo prueba cuándo el
+sistema registró el periodo.
+
+## DEC-DBREADY-002 - Migración sin pasado inventado
+
+`Database/Migrations/006estructuracomercialhistorica.sql` es idempotente y solo
+ejecuta `CREATE TABLE IF NOT EXISTS`. No hace `INSERT`, `UPDATE`, `DELETE` ni
+`ALTER TABLE tbcomprador`. Las bases existentes ganan la estructura nueva sin
+perder datos ni crear clasificaciones, animales, compras, ventas, interacciones,
+fletes o reseñas que nunca fueron registradas.
+
+## DEC-DBREADY-003 - Contrato de IDs para Backend
+
+Toda tabla nueva conserva IDs manuales. Backend debe usar `MAX(id)+1` bajo lock
+global de generación de ID por tabla y, cuando exista una invariante local,
+además un lock por entidad. Orden esperado: lock de entidad exterior si aplica,
+lock global de ID, escritura dentro de la misma transacción, commit y liberación
+en `finally`. Las consultas de diagnóstico detectan IDs repetidos, huérfanos,
+periodos abiertos duplicados, solapes y dominios fuera de lo que PHP debe
+validar. Esta decisión deja los locks en Backend especificados sin implementar
+endpoints ni algoritmo.
+
+## DEC-DBREADY-004 - Bits de estado restantes
+
+`tbpersonaestado`, `tbfincaestado`, `tbpagometodoactivo` y `tbvehiculoestado`
+no reciben históricos nuevos porque Calidad no aprobó semántica temporal
+defendible para esta fase. `tbtransportistaestado` sí tiene histórico confirmado
+y queda preparado en `tbtransportistaestadoperiodo`; mientras Backend mantenga
+ambos, el bit actual y el periodo abierto pueden divergir, por eso el
+diagnóstico cubre periodos duplicados y el modelo documenta que Backend debe
+sincronizarlos.
 
 ## DEC-T0-001 - SQL como fuente única de tablas
 
@@ -453,14 +511,16 @@ El manifest también rechaza scripts que mezclen nombres de base entre
 cubierto por una herramienta reutilizable y no por una condición aislada en un
 test.
 
-## DEC-23 - La matriz del tramo 12 confirma el esquema existente; no se crean tablas nuevas
+## DEC-23 - Matriz anterior del tramo 12
 
-El tramo 13 recibe del arquitecto `matriz-historica-tramo12.pdf` (resumen en
+Estado: SUPERADA por DEC-DBREADY-001.
+
+El tramo 13 recibió del arquitecto `matriz-historica-tramo12.pdf` (resumen en
 Decisiones.md del arquitecto) y su condición de entrega es "cada
 entidad/perfil confirmado tiene un mecanismo histórico coherente, sin
-histórico genérico que mezcle semánticas". Contrastando la matriz contra
-`Database/SqlScripts/000instalacioncompleta.sql` no aparece ninguna tabla ni
-columna faltante:
+histórico genérico que mezcle semánticas". En ese momento, contrastando la
+matriz contra `Database/SqlScripts/000instalacioncompleta.sql`, no aparecía
+ninguna tabla ni columna faltante:
 
 1. **Productor - Estado**: `tbproductorestadoperiodo` (creada en el tramo 2,
    poblada en el tramo 4/6) ya modela apertura/cierre de periodo con
@@ -489,24 +549,10 @@ columna faltante:
 y no se convierte en histórico universal, como exige la regla de base del
 tramo 13.
 
-Como no se crean tablas, `Database/Tests/comprobacionestructura.sql` sigue
-esperando exactamente 15 tablas y `Tests/naming_gate.php` sigue exigiendo
-las mismas tablas que ya validaba (incluida `tbproductoractividad` desde el
-tramo 2). Lo que sí cambia:
+Ese cierre queda como antecedente histórico. El contrato vigente sí crea tablas
+nuevas en DEC-DBREADY-001 y `Database/Tests/comprobacionestructura.sql` ahora
+espera 27 tablas.
 
-- `Database/Tests/diagnostico.sql` gana **D-12** (actividad con
-  `tbproductoractividadtipo` fuera del catálogo cerrado) y **D-13**
-  (`tbcompradorestado` fuera de `{0,1}`), y el bloque **D-07** de huérfanos
-  gana el enlace `tbproductoractividad.tbproductorid`.
-- `Documentation/DiccionarioDatos.md` documenta el catálogo cerrado de
-  actividad y por qué comprador y el vínculo persona-productor/comprador no
-  tienen tabla nueva.
-
-Verificado: instalación limpia (`docker compose down -v && up`) levanta sin
-errores, `Tests/naming_gate.php` pasa, `Database/Tests/diagnostico.sql`
-devuelve cero filas en D-00 a D-13 sobre datos válidos (conteo de tablas
-antes/después del tramo: 15/15, sin cambio), y ningún productor ni
-comprador queda con dos estados actuales incompatibles.
 ## DEC-21 - Fin del UPDATE destructivo de dirección
 
 `ProductorDireccion::actualizar()` deja de hacer `UPDATE` sobre la fila vigente de `tbdireccion`. Un cambio de

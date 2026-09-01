@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('quince_tablas', $manifest['table_count'] === 15,
-    'SQL crea exactamente quince tablas, incluida la identidad compartida tbpersona');
+$evaluate('veintisiete_tablas', $manifest['table_count'] === 27,
+    'SQL crea exactamente veintisiete tablas, incluida la identidad compartida tbpersona');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -75,10 +75,14 @@ $evaluate('diagnostico_sin_restriccion', str_contains($diagnostico, 'DETECTAN')
     'Las consultas de diagnóstico detectan inconsistencias sin impedirlas');
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
-$evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbbitacora', 'tbcomprador',
-    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
-    'tbproductoractividad', 'tbproductordireccion', 'tbproductorestadoperiodo',
-    'tbproductorubicacion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
+$evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbanimal',
+    'tbanimalinteraccion', 'tbanimalobservacion', 'tbanimalpublicacion',
+    'tbbitacora', 'tbcarrito', 'tbcarritoanimal', 'tbcompra', 'tbcomprador',
+    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
+    'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
+    'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorubicacion',
+    'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
+    'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'],
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
@@ -116,8 +120,29 @@ $evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "
 $evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es la entidad de negocio núcleo')
     && str_contains($matrizP0C, '`tbvendedor` no debe existir')
     && str_contains($matrizP0C, '`tbcomprador` queda como estructura legacy')
-    && str_contains($matrizP0C, '`tbproductorcompradorperiodo` y `tbproductorvendedorperiodo`'),
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo')
+    && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvendedor')
+    && !str_contains($schema, 'tbcompradorestadoperiodo'),
     'P0-C cierra Productor como núcleo y Comprador/Vendedor como clasificaciones históricas');
+$evaluate('comercio_historico_preparado', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimal')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalobservacion')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalpublicacion')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcompra')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbventa')
+    && str_contains($schema, 'tbcompraid INT NULL')
+    && !str_contains($schema, 'tbanimalfechanacimiento')
+    && !str_contains($schema, 'tbcompraestado'),
+    'Animal, observación, publicación, compra y venta quedan listos sin pasado inventado');
+$evaluate('funnel_y_transporte_preparados', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalinteraccion')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcarrito')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcarritoanimal')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistaestadoperiodo')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistaflete')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistaresena')
+    && !str_contains($schema, 'cantidadfletessemanales')
+    && !str_contains($schema, 'metodopagofrecuente')
+    && !str_contains($schema, 'calificacionpromedio'),
+    'Funnel y transporte quedan modelados sin guardar derivados');
 $evaluate('t3_actor_autenticado', str_contains($actorResolver, '/v1/auth/verify')
     && str_contains($actorResolver, 'tbpersonacorreoelectronico')
     && str_contains($actorResolver, 'new HttpException(\'La sesión verificada no tiene vínculo con una persona.\', 409)')

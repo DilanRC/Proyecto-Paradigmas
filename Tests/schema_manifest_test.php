@@ -5,16 +5,19 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/Tools/schema-manifest.php';
 
 $manifest = schema_manifest();
-$expectedTables = ['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion',
-    'tbpagometodo', 'tbpersona', 'tbproductor', 'tbproductoractividad', 'tbproductordireccion',
+$expectedTables = ['tbanimal', 'tbanimalinteraccion', 'tbanimalobservacion', 'tbanimalpublicacion',
+    'tbbitacora', 'tbcarrito', 'tbcarritoanimal', 'tbcompra', 'tbcomprador', 'tbdireccion',
+    'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
+    'tbproductoractividad', 'tbproductorclasificacionperiodo', 'tbproductordireccion',
     'tbproductorestadoperiodo', 'tbproductorubicacion', 'tbtransportista',
-    'tbtransportistavehiculo', 'tbvehiculo'];
+    'tbtransportistaestadoperiodo', 'tbtransportistaflete', 'tbtransportistaresena',
+    'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'];
 
 if ($manifest['database'] !== 'bdmercadoganadero') {
     throw new RuntimeException('El manifest debe leer bdmercadoganadero como base canónica.');
 }
-if ($manifest['table_count'] !== 15 || $manifest['tables_sorted'] !== $expectedTables) {
-    throw new RuntimeException('El manifest debe derivar las 15 tablas canónicas desde el SQL.');
+if ($manifest['table_count'] !== 27 || $manifest['tables_sorted'] !== $expectedTables) {
+    throw new RuntimeException('El manifest debe derivar las 27 tablas canónicas desde el SQL.');
 }
 
 try {
@@ -26,4 +29,4 @@ try {
     }
 }
 
-echo "OK schema_manifest_test: manifest derivado del SQL canónico y gate de base incoherente.\n";
+echo "OK schema_manifest_test: manifest derivado del SQL canónico de 27 tablas y gate de base incoherente.\n";

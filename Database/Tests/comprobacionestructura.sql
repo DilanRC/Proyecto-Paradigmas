@@ -44,6 +44,28 @@ DESCRIBE tbproductorubicacion;
 SELECT '--- tbproductoractividad' AS comprobacion;
 DESCRIBE tbproductoractividad;
 
+SELECT '--- tbproductorclasificacionperiodo' AS comprobacion;
+DESCRIBE tbproductorclasificacionperiodo;
+
+SELECT '--- animales y publicaciones' AS comprobacion;
+DESCRIBE tbanimal;
+DESCRIBE tbanimalobservacion;
+DESCRIBE tbanimalpublicacion;
+
+SELECT '--- compra y venta' AS comprobacion;
+DESCRIBE tbcompra;
+DESCRIBE tbventa;
+
+SELECT '--- funnel y carrito' AS comprobacion;
+DESCRIBE tbanimalinteraccion;
+DESCRIBE tbcarrito;
+DESCRIBE tbcarritoanimal;
+
+SELECT '--- transporte historico' AS comprobacion;
+DESCRIBE tbtransportistaestadoperiodo;
+DESCRIBE tbtransportistaflete;
+DESCRIBE tbtransportistaresena;
+
 -- Comprobación 2: el avance no introdujo llaves, restricciones ni índices.
 -- Resultado esperado: cero filas en las tres consultas.
 SELECT '--- restricciones declaradas (esperado: 0 filas)' AS comprobacion;
@@ -71,7 +93,7 @@ SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATA
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
 
--- Comprobación 4: exactamente 15 tablas base.
-SELECT COUNT(*) AS tablas_esperadas_15
+-- Comprobación 4: exactamente 27 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_27
 FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

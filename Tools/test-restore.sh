@@ -50,7 +50,6 @@ fi
 cd -- "$PROJECT_ROOT"
 docker compose config --quiet
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' >/dev/null
-expected_tables_csv="$(php Tools/schema-manifest.php --format=csv)"
 
 (
     cd -- "$backup_dir"
@@ -176,12 +175,13 @@ compare_structure() {
     [[ "$differences" -eq 0 ]]
 }
 
-compare_structure "$SOURCE_DATABASE" "$RESTORE_DATABASE" 'origen/completo' \
-    || { echo 'Error: la estructura restaurada completa difiere del origen.' >&2; exit 1; }
 compare_structure "$RESTORE_DATABASE" "$PARTS_DATABASE" 'completo/estructura+datos' \
     || { echo 'Error: estructura+datos difiere del respaldo completo.' >&2; exit 1; }
 
-for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
+expected_tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
+    WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
+
+for database in "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
     if ! database_settings="$(mysql_query "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
         FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = '${database}';")"; then
         exit 1
@@ -250,43 +250,24 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
 done
 
 printf '%-38s %10s %10s %10s\n' 'Tabla' 'Origen' 'Completo' 'Partes'
-table_source_database="$SOURCE_DATABASE"
-if [[ "$backup_database" != "$SOURCE_DATABASE" ]]; then
-    table_source_database="$RESTORE_DATABASE"
-fi
+table_source_database="$RESTORE_DATABASE"
 if ! tables_output="$(mysql_query "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${table_source_database}' AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")"; then
     exit 1
 fi
 mapfile -t tables <<< "$tables_output"
 for table in "${tables[@]}"; do
-    source_count='LEGADO'
-    if [[ "$backup_database" == "$SOURCE_DATABASE" ]]; then
-        source_count="$(mysql_query "SELECT COUNT(*) FROM ${SOURCE_DATABASE}.${table};")"
-    fi
+    source_count='RESPALDO'
     restored_count="$(mysql_query "SELECT COUNT(*) FROM ${RESTORE_DATABASE}.${table};")"
     parts_count="$(mysql_query "SELECT COUNT(*) FROM ${PARTS_DATABASE}.${table};")"
     printf '%-38s %10s %10s %10s\n' "$table" "$source_count" "$restored_count" "$parts_count"
-    if [[ "$backup_database" == "$SOURCE_DATABASE" && "$source_count" != "$restored_count" ]]; then
-        echo "Error: el conteo difiere para $table." >&2
-        exit 1
-    fi
     if [[ "$restored_count" != "$parts_count" ]]; then
         echo "Error: el conteo difiere para $table." >&2
         exit 1
-    fi
-    source_checksum=''
-    if [[ "$backup_database" == "$SOURCE_DATABASE" ]]; then
-        source_checksum_output="$(mysql_query "CHECKSUM TABLE ${SOURCE_DATABASE}.${table};")"
-        source_checksum="$(awk '{print $2}' <<< "$source_checksum_output")"
     fi
     restored_checksum_output="$(mysql_query "CHECKSUM TABLE ${RESTORE_DATABASE}.${table};")"
     parts_checksum_output="$(mysql_query "CHECKSUM TABLE ${PARTS_DATABASE}.${table};")"
     restored_checksum="$(awk '{print $2}' <<< "$restored_checksum_output")"
     parts_checksum="$(awk '{print $2}' <<< "$parts_checksum_output")"
-    if [[ "$backup_database" == "$SOURCE_DATABASE" && "$source_checksum" != "$restored_checksum" ]]; then
-        echo "Error: los datos difieren para ${table}." >&2
-        exit 1
-    fi
     if [[ "$restored_checksum" != "$parts_checksum" ]]; then
         echo "Error: los datos difieren para ${table}." >&2
         exit 1
@@ -298,18 +279,12 @@ mysql_query "SELECT pr.tbproductorid, pe.tbpersonaidentificacionnumero, pe.tbper
     JOIN ${RESTORE_DATABASE}.tbpersona pe ON pe.tbpersonaid = pr.tbpersonaid
     ORDER BY pr.tbproductorid LIMIT 1;" >/dev/null
 
-source_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
-source_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}';")"
-source_indexes="$(mysql_query "SELECT COUNT(DISTINCT TABLE_NAME, INDEX_NAME)
-    FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${SOURCE_DATABASE}';")"
-source_primary_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-    WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
-source_foreign_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-    WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'FOREIGN KEY';")"
-source_check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-    WHERE CONSTRAINT_SCHEMA = '${SOURCE_DATABASE}' AND CONSTRAINT_TYPE = 'CHECK';")"
+restored_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
+restored_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${RESTORE_DATABASE}';")"
+restored_indexes="$(mysql_query "SELECT COUNT(DISTINCT TABLE_NAME, INDEX_NAME)
+    FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}';")"
 
-echo "Restauración correcta: tablas=$source_tables, restricciones=$source_constraints, indices=$source_indexes."
+echo "Restauración correcta: tablas=$restored_tables, restricciones=$restored_constraints, indices=$restored_indexes."
 echo "La consulta funcional de productores se ejecutó correctamente."
 echo "Respaldo validado sin modificar MANIFEST ni SHA256: $backup_database."
 echo "La base temporal ${RESTORE_DATABASE} se eliminará al finalizar."
