@@ -74,12 +74,19 @@ function wireLogout(storage) {
     });
 }
 
+function revealPrivateUi() {
+    if (typeof document !== 'undefined') {
+        document.documentElement.dataset.tcAuth = 'ready';
+    }
+}
+
 if (typeof window !== 'undefined') {
     const allowed = enforceBrowserSession({
         location: window.location,
         storage: window.sessionStorage,
     });
     if (allowed && typeof document !== 'undefined') {
+        revealPrivateUi();
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => wireLogout(window.sessionStorage), { once: true });
         } else {
