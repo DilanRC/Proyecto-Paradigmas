@@ -15,7 +15,7 @@
     --tc-fa-family:'Font Awesome 7 Free';
 }
 
-/* Un unico contrato tipografico para todos los pseudo-iconos del sistema. */
+/* Un unico contrato tipografico para los pseudo-iconos de los paneles. */
 .tc-fa-solid::before,
 .search::before,
 .rural-panel__nav-item::before,
@@ -26,16 +26,12 @@
 .error-state__icon::before,
 .confirmation__icon::before,
 .toast__dismiss::before,
-#accion-pasar::before,
-#accion-guardar::before,
 .suggestion-combobox__leading-icon::before,
 .suggestion-combobox__option-icon::before,
 .rural-panel .row-actions .action::before,
 .pagination #pagina-anterior::before,
 .pagination #pagina-siguiente::before,
-.pagination #actualizar-lista::before,
-.login-form .button--primary::before,
-.landing-actions .button::before {
+.pagination #actualizar-lista::before {
     font-family:var(--tc-fa-family) !important;
     font-style:normal !important;
     font-variant:normal !important;
@@ -248,42 +244,6 @@
 .pagination #actualizar-lista::before {
     content:'\f021'; /* arrows-rotate */
     margin-right:6px;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Landing y login: iconos solo en acciones, no en parrafos decorativos        */
-/* -------------------------------------------------------------------------- */
-
-#accion-pasar,
-#accion-guardar {
-    font-size:0 !important;
-}
-
-#accion-pasar::before {
-    content:'\f04e'; /* forward */
-    font-size:18px;
-}
-
-#accion-guardar::before {
-    content:'\f004'; /* heart */
-    font-size:19px;
-}
-
-.login-form .button--primary,
-.landing-actions .button {
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    gap:9px;
-}
-
-.login-form .button--primary::before,
-.landing-actions .button[href='login.php']::before {
-    content:'\f2f6'; /* right-to-bracket */
-}
-
-.landing-actions .button[href='#red']::before {
-    content:'\f06e'; /* eye */
 }
 
 @media (prefers-reduced-motion:reduce) {
