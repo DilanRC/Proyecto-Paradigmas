@@ -12,11 +12,8 @@ declare(strict_types=1);
  */
 
 require __DIR__ . '/bootstrap.php';
-require_once dirname(__DIR__) . '/Application/Model/Comprador.php';
-require_once dirname(__DIR__) . '/Application/Controller/CompradorController.php';
 require_once dirname(__DIR__) . '/Tools/backfill-clasificacion-comprador.php';
 
-use Application\Controller\CompradorController;
 use Application\Model\ProductorClasificacionPeriodo;
 use Application\Service\CompradorClasificacionService;
 
@@ -78,6 +75,26 @@ function backfill_test_bitacora(PDO $db, string $identificacion): array
         'anterior' => $estado($fila['tbbitacoradatosanteriores']),
         'nuevo' => $estado($fila['tbbitacoradatosnuevos']),
     ], $sentencia->fetchAll());
+}
+
+/**
+ * El servicio escribe dentro de la transacción de quien llama, igual que hará
+ * T10. Esta envoltura reproduce ese contrato en las pruebas.
+ */
+function backfill_test_transaccion(PDO $db, callable $operacion): mixed
+{
+    $db->beginTransaction();
+    try {
+        $resultado = $operacion();
+        $db->commit();
+
+        return $resultado;
+    } catch (Throwable $error) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        throw $error;
+    }
 }
 
 function backfill_test_periodos(PDO $db, int $productorId): array
@@ -166,6 +183,8 @@ try {
     // ------------------------------------------------------------------
     // 2. BACKFILL, ya sin la fila incompatible.
     // ------------------------------------------------------------------
+    // Se retira solo la FILA legacy incompatible; la persona sin productor
+    // queda viva para el caso 9.
     $db->prepare('DELETE FROM tbcomprador WHERE tbpersonaid = :id')->execute(['id' => $personaHuerfanaId]);
     test_same(0, backfill_main(['backfill', '--apply']), 'El backfill limpio debe terminar en 0.');
 
@@ -265,57 +284,45 @@ try {
     }
 
     // ------------------------------------------------------------------
-    // 3. CRUD después del backfill.
+    // 3. Escritura de la clasificación después del backfill.
+    //
+    // Tras el paso (d) (DEC-DBREADY-008) ya no hay CRUD de comprador: el único
+    // punto de escritura es CompradorClasificacionService, por donde entrará
+    // T10 cuando exista. Estos casos ejercitan ese servicio directamente, que
+    // es exactamente el contrato que T10 va a usar.
     // ------------------------------------------------------------------
-    $controlador = new CompradorController($db, test_token('request'));
-    $payload = [
-        'identificacion' => ['tipoCodigo' => 'PASAPORTE', 'numero' => $documentoCrud],
-        'nombre' => 'Comprador Ficticio de Prueba',
-        'telefono' => '+506 8888-7777',
-        'correoElectronico' => 'comprador.backfill@example.test',
-    ];
-
-    // 9. Alta sin productor: error explícito, jamás un tbproductor inventado.
-    $sinProductor = $controlador->procesar('POST', [], $payload);
-    test_same(409, $sinProductor['status'], 'Crear comprador de una persona no productora debe fallar con 409.');
-    $productoresAntes = $db->prepare('SELECT COUNT(*) FROM tbproductor p
-        INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
-        WHERE pe.tbpersonaidentificacionnumero = :id');
-    $productoresAntes->execute(['id' => str_replace('-', '', $documentoCrud)]);
-    test_same(0, (int) $productoresAntes->fetchColumn(), 'El alta fallida no inventa un productor.');
-    $legacyCreado = $db->prepare('SELECT COUNT(*) FROM tbcomprador c
-        INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
-        WHERE pe.tbpersonaidentificacionnumero = :id');
-    $legacyCreado->execute(['id' => str_replace('-', '', $documentoCrud)]);
-    test_same(0, (int) $legacyCreado->fetchColumn(),
-        'El rollback deja la tabla legacy sin la fila que no se podía clasificar.');
-
-    // Ahora sí: la persona es productora y el alta abre la clasificación.
-    $productorCrud = test_create([
-        'nombre' => $payload['nombre'],
-        'telefono' => $payload['telefono'],
-        'correoElectronico' => $payload['correoElectronico'],
-    ], $documentoCrud);
+    $productorCrud = test_create([], $documentoCrud);
     $identificaciones[] = $productorCrud['identificacionNumero'];
     $productorCrudId = (int) $productorCrud['productorId'];
+    $identificacionCrud = $productorCrud['identificacionNumero'];
 
-    $creado = $controlador->procesar('POST', [], $payload);
-    test_same(201, $creado['status'], 'Con productor existente el alta funciona.');
-    test_same('ACTIVO', $creado['body']['data']['estado'], 'El estado mostrado sale de la clasificación.');
-    test_same(1, count(backfill_test_periodos($db, $productorCrudId)), 'El alta abre un periodo COMPRADOR.');
+    // 9. Sin productor no se escribe clasificación y nunca se inventa uno.
+    $personaSinProductor = backfill_test_persona_id($db, $documentoHuerfano);
+    $servicioHuerfano = new CompradorClasificacionService($db);
+    test_same(null, $servicioHuerfano->productorDePersona($personaSinProductor),
+        'Una persona sin productor no resuelve productor, y nadie se lo inventa.');
+    $productoresHuerfano = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbpersonaid = :id');
+    $productoresHuerfano->execute(['id' => $personaSinProductor]);
+    test_same(0, (int) $productoresHuerfano->fetchColumn(),
+        'Consultar por una persona sin productor no crea ninguno.');
+
+    // Alta de la clasificación.
+    test_same(true, backfill_test_transaccion($db, fn (): bool => $servicio->activar(
+        $productorCrudId, CompradorClasificacionService::MOTIVO_MIGRACION)),
+        'Abrir la clasificación de un productor sin periodo devuelve true.');
+    test_same(1, count(backfill_test_periodos($db, $productorCrudId)), 'Se abrió un periodo COMPRADOR.');
 
     // 4. Activar dos veces: un solo periodo abierto.
-    $identificacionCrud = $creado['body']['data']['identificacionNumero'];
-    $reactivado = $controlador->procesar('PATCH', [], ['identificacionNumero' => $identificacionCrud]);
-    test_same(200, $reactivado['status'], 'Reactivar un comprador ya activo responde 200.');
+    test_same(false, backfill_test_transaccion($db, fn (): bool => $servicio->activar(
+        $productorCrudId, CompradorClasificacionService::MOTIVO_MIGRACION)),
+        'Activar de nuevo no abre otro periodo y lo dice.');
     $periodos = backfill_test_periodos($db, $productorCrudId);
     test_same(1, count($periodos), 'Activar dos veces no abre un segundo periodo.');
     test_same(null, $periodos[0]['fin'], 'El único periodo sigue abierto.');
 
     // 5. Desactivar cierra y conserva.
-    $desactivado = $controlador->procesar('DELETE', [], ['identificacionNumero' => $identificacionCrud]);
-    test_same(200, $desactivado['status'], 'Desactivar responde 200.');
-    test_same('INACTIVO', $desactivado['body']['data']['estado'], 'El comprador desactivado se muestra inactivo.');
+    test_same(true, backfill_test_transaccion($db, fn (): bool => $servicio->desactivar($productorCrudId)),
+        'Cerrar la clasificación abierta devuelve true.');
     $periodos = backfill_test_periodos($db, $productorCrudId);
     test_same(1, count($periodos), 'Desactivar no borra el periodo: lo cierra.');
     test_assert($periodos[0]['fin'] !== null, 'El periodo queda cerrado con fecha de fin.');
@@ -323,20 +330,20 @@ try {
     $cerradoFin = $periodos[0]['fin'];
 
     // Desactivar de nuevo no toca la historia.
-    $controlador->procesar('DELETE', [], ['identificacionNumero' => $identificacionCrud]);
+    test_same(false, backfill_test_transaccion($db, fn (): bool => $servicio->desactivar($productorCrudId)),
+        'Desactivar dos veces no vuelve a cerrar.');
     $periodos = backfill_test_periodos($db, $productorCrudId);
     test_same(1, count($periodos), 'Desactivar dos veces no crea historia nueva.');
     test_same($cerradoFin, $periodos[0]['fin'], 'La fecha de cierre original no se modifica.');
 
-    // 6. Reactivar abre un periodo NUEVO; el anterior no se reabre.
-    $controlador->procesar('PATCH', [], ['identificacionNumero' => $identificacionCrud]);
+    // 6. Reabrir abre un periodo NUEVO; el anterior no se reabre.
+    backfill_test_transaccion($db, fn (): bool => $servicio->activar(
+        $productorCrudId, CompradorClasificacionService::MOTIVO_MIGRACION));
     $periodos = backfill_test_periodos($db, $productorCrudId);
-    test_same(2, count($periodos), 'Reactivar abre un periodo nuevo.');
+    test_same(2, count($periodos), 'Volver a clasificar abre un periodo nuevo.');
     test_same($cerradoId, (int) $periodos[0]['id'], 'El periodo viejo conserva su identificador.');
     test_same($cerradoFin, $periodos[0]['fin'], 'El periodo viejo sigue cerrado: no se reabre.');
     test_same(null, $periodos[1]['fin'], 'El periodo nuevo queda abierto.');
-    test_same(CompradorClasificacionService::MOTIVO_REACTIVACION, $periodos[1]['motivo'],
-        'La reactivación declara su motivo.');
 
     // 7. COMPRADOR y VENDEDOR simultáneos siguen siendo independientes.
     $clasificacion->ejecutarConBloqueo($productorCrudId, 'VENDEDOR', function () use ($db, $clasificacion, $productorCrudId): int {
@@ -355,30 +362,14 @@ try {
     });
     test_same(2, count($clasificacion->listarAbiertas($productorCrudId)),
         'COMPRADOR y VENDEDOR quedan abiertos a la vez.');
-    $controlador->procesar('DELETE', [], ['identificacionNumero' => $identificacionCrud]);
-    test_same(false, $clasificacion->esComprador($productorCrudId), 'Desactivar cierra COMPRADOR.');
+    backfill_test_transaccion($db, fn (): bool => $servicio->desactivar($productorCrudId));
+    test_same(false, $clasificacion->esComprador($productorCrudId), 'Cerrar COMPRADOR cierra solo COMPRADOR.');
     test_assert($clasificacion->consultarAbierto($productorCrudId, 'VENDEDOR') !== null,
         'Cerrar COMPRADOR no toca VENDEDOR.');
 
-    // La bitácora debe contar la transición real, no un no-op. Escribir la
-    // clasificación antes de capturar el estado anterior producía
-    // INACTIVO -> INACTIVO en DESACTIVAR y ACTIVO -> ACTIVO en REACTIVAR.
-    $transiciones = backfill_test_bitacora($db, $identificacionCrud);
-    test_same(
-        [
-            ['accion' => 'DESACTIVAR', 'anterior' => 'ACTIVO', 'nuevo' => 'INACTIVO'],
-            ['accion' => 'REACTIVAR', 'anterior' => 'INACTIVO', 'nuevo' => 'ACTIVO'],
-            ['accion' => 'DESACTIVAR', 'anterior' => 'ACTIVO', 'nuevo' => 'INACTIVO'],
-        ],
-        $transiciones,
-        'La bitácora registra el estado anterior real de cada transición.',
-    );
-    // Las llamadas repetidas (desactivar dos veces, reactivar ya activo) no
-    // deben haber dejado registros: no hubo transición.
-    test_same(3, count($transiciones), 'Las llamadas idempotentes no registran transiciones falsas.');
-
     // 8. Fallo entre cierre y apertura: ROLLBACK deja el estado original.
-    $controlador->procesar('PATCH', [], ['identificacionNumero' => $identificacionCrud]);
+    backfill_test_transaccion($db, fn (): bool => $servicio->activar(
+        $productorCrudId, CompradorClasificacionService::MOTIVO_MIGRACION));
     $antesDelFallo = backfill_test_periodos($db, $productorCrudId);
     $fallo = false;
     $db->beginTransaction();
@@ -394,50 +385,6 @@ try {
         'El rollback deja los periodos exactamente como estaban.');
     test_same(true, $clasificacion->esComprador($productorCrudId),
         'Tras el rollback el comprador sigue clasificado.');
-
-    // 8b. Fallo DESPUÉS de tocar la clasificación y antes de terminar la
-    // transición: el ROLLBACK debe devolver periodo, bit y bitácora.
-    $periodosAntes = backfill_test_periodos($db, $productorCrudId);
-    $bitacoraAntes = backfill_test_bitacora($db, $identificacionCrud);
-    $bitLegacy = $db->prepare('SELECT c.tbcompradorestado FROM tbcomprador c
-        INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
-        WHERE pe.tbpersonaidentificacionnumero = :id');
-    $bitLegacy->execute(['id' => $identificacionCrud]);
-    $bitAntes = (int) $bitLegacy->fetchColumn();
-
-    $estadoService = new \Application\Service\EstadoService(
-        new \Application\Model\Bitacora($db),
-        test_token('request'),
-    );
-    $modelo = new \Application\Model\Comprador($db);
-    $exploto = false;
-    $db->beginTransaction();
-    try {
-        $estadoService->transicionar(
-            fn ($clave) => $modelo->bloquear($clave),
-            fn ($clave) => $modelo->buscar($clave),
-            fn ($clave, $activo) => throw new RuntimeException('Fallo tras modificar la clasificación.'),
-            'tbcompradorestado',
-            0,
-            'Comprador no encontrado.',
-            $identificacionCrud,
-            'COMPRADOR',
-            'API_COMPRADORES',
-            $identificacionCrud,
-            estadoDeNegocio: static fn (array $fila): int => $fila['estado'] === 'ACTIVO' ? 1 : 0,
-            sincronizar: fn ($clave) => $servicio->desactivar($productorCrudId),
-        );
-    } catch (RuntimeException) {
-        $exploto = true;
-        $db->rollBack();
-    }
-    test_assert($exploto, 'La prueba debe haber forzado el fallo posterior a la clasificación.');
-    test_same($periodosAntes, backfill_test_periodos($db, $productorCrudId),
-        'El rollback restaura el periodo que la sincronización había cerrado.');
-    $bitLegacy->execute(['id' => $identificacionCrud]);
-    test_same($bitAntes, (int) $bitLegacy->fetchColumn(), 'El bit legacy queda como estaba.');
-    test_same($bitacoraAntes, backfill_test_bitacora($db, $identificacionCrud),
-        'Un fallo no deja rastro de transición en la bitácora.');
 } finally {
     foreach ([$documentoActivo, $documentoInactivo, $documentoCrud,
         $documentoCarreraA ?? null, $documentoCarreraB ?? null] as $documento) {
@@ -464,5 +411,5 @@ try {
             $documentoCarreraA ?? null, $documentoCarreraB ?? null])));
 }
 
-echo "OK comprador_backfill_test: precheck reporta legacy sin productor, backfill idempotente solo para activos, "
-    . "y el CRUD abre/cierra clasificación sin reabrir historia ni inventar productores.\n";
+echo "OK comprador_backfill_test: precheck reporta legacy sin productor, backfill idempotente y a prueba de "
+    . "carreras, y la clasificación se abre/cierra sin reabrir historia ni inventar productores.\n";

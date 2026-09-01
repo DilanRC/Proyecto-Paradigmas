@@ -167,49 +167,28 @@ test('cada panel conserva su endpoint', async () => {
 });
 
 // --- compradores -------------------------------------------------------------
-// Recuperado tras el retiro del tramo 7. El cuerpo debe coincidir con
-// CompradorController::validarComprador(), que rechaza cualquier campo extra
-// mediante rechazarCamposDesconocidos().
-import { buildCompradorPayload } from '../../Public/js/compradores.js';
+// El panel de compradores ya no envia ningun cuerpo: el CRUD legacy se retiro
+// en el paso (d) (DEC-DBREADY-008) y la vista quedo de solo lectura, porque
+// Comprador es una clasificacion derivada del comportamiento del productor.
+// La paridad que se prueba ahora es la contraria: que no haya vuelto a aparecer
+// un constructor de payload ni una escritura desde ese panel.
+import { formatearClasificadoDesde, describirOrigen } from '../../Public/js/compradores.js';
 
-const compradorBase = {
-    tipoCodigo: 'CEDULA_JURIDICA', numero: ' 3-101-111111 ', nombre: ' Carnes del Valle S.A. ',
-    telefono: ' +506 2222-3333 ', correoElectronico: '  Compras@Example.TEST ',
-};
-
-test('comprador nuevo: identificacion anidada y correo en minuscula', () => {
-    const payload = buildCompradorPayload(compradorBase);
-
-    assert.deepEqual(payload, {
-        identificacion: { tipoCodigo: 'CEDULA_JURIDICA', numero: '3-101-111111' },
-        nombre: 'Carnes del Valle S.A.',
-        telefono: '+506 2222-3333',
-        correoElectronico: 'compras@example.test',
-    });
-    assert.equal('identificacionNumeroOriginal' in payload, false, 'el alta no lo envia');
+test('el panel de compradores no construye cuerpos de escritura', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const fuente = await readFile(
+        new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
+    assert.equal(/buildCompradorPayload/.test(fuente), false, 'reaparecio el constructor de payload');
+    for (const metodo of ['POST', 'PUT', 'DELETE', 'PATCH']) {
+        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel volvio a emitir ${metodo}`);
+    }
 });
 
-test('comprador editado: agrega identificacionNumeroOriginal', () => {
-    const payload = buildCompradorPayload({
-        ...compradorBase, identificacionNumeroOriginal: '3-101-111111',
-    });
-
-    assert.equal(payload.identificacionNumeroOriginal, '3-101-111111');
+test('la clasificacion se muestra con su fecha y su origen', () => {
+    assert.equal(formatearClasificadoDesde(''), 'Sin fecha registrada');
+    assert.equal(formatearClasificadoDesde('no es fecha'), 'no es fecha');
+    assert.match(formatearClasificadoDesde('2026-09-01 10:15:00'), /2026/);
+    assert.equal(describirOrigen('MIGRACION_TBCOMPRADOR_LEGACY'), 'Migracion del registro anterior');
+    assert.equal(describirOrigen(''), 'Sin origen declarado');
 });
 
-test('comprador: solo los cuatro campos que el controlador permite', () => {
-    // `rechazarCamposDesconocidos` devuelve 422 ante cualquier clave de mas, asi
-    // que un campo extra en el payload romperia el alta entera.
-    assert.deepEqual(
-        Object.keys(buildCompradorPayload(compradorBase)).sort(),
-        ['correoElectronico', 'identificacion', 'nombre', 'telefono'],
-    );
-});
-
-test('comprador y transportista comparten exactamente la forma del cuerpo', () => {
-    // Ambas capacidades son persona + contacto; si una diverge, es un defecto.
-    assert.deepEqual(
-        Object.keys(buildCompradorPayload(compradorBase)).sort(),
-        Object.keys(buildTransportistaPayload(transportistaBase)).sort(),
-    );
-});

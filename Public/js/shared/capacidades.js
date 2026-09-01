@@ -24,7 +24,19 @@ export const CAPACIDADES = [
         api: 'api/productores.php',
         panel: 'productores.php',
     },
-    { clave: 'comprador', etiqueta: 'Comprador', alias: null, api: 'api/compradores.php', panel: 'compradores.php' },
+    {
+        clave: 'comprador',
+        etiqueta: 'Comprador',
+        alias: null,
+        api: 'api/compradores.php',
+        panel: 'compradores.php',
+        // Comprador no es una capacidad que alguien registre: es una
+        // clasificacion que el productor gana por su comportamiento. El
+        // endpoint responde 200 si tiene un periodo COMPRADOR abierto y 404 si
+        // no, asi que la consulta funciona igual, pero la etiqueta debe decir
+        // "clasificado" y no "registrado".
+        derivada: true,
+    },
     {
         clave: 'transportista',
         etiqueta: 'Transportista',
@@ -57,11 +69,14 @@ export function interpretarCapacidad(desenlace) {
 }
 
 /** Etiqueta que se muestra al usuario para una situacion ya interpretada. */
-export function describirCapacidad({ situacion, estado }) {
+export function describirCapacidad({ situacion, estado, derivada = false }) {
     if (situacion === 'registrado') {
+        if (derivada) {
+            return estado === 'ACTIVO' ? 'Clasificado actualmente' : 'Clasificado, persona inactiva';
+        }
         return estado === 'ACTIVO' ? 'Registrado y activo' : 'Registrado, inactivo';
     }
-    if (situacion === 'no-registrado') return 'No registrado';
+    if (situacion === 'no-registrado') return derivada ? 'Sin clasificacion vigente' : 'No registrado';
     return 'No se pudo comprobar';
 }
 

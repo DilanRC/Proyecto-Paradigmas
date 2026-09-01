@@ -203,9 +203,8 @@ if (str_contains($models, '->query(') || str_contains($models, '->exec(')
     || !str_contains($models, "'fecha' => gmdate('Y-m-d H:i:s')")) {
     throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular los ID en PHP.');
 }
-// Paso (a) del retiro de tbcomprador (DEC-DBREADY-005): la clasificación es la
-// única fuente de "es comprador". El bit legacy solo puede seguir apareciendo
-// dentro del CRUD heredado (Comprador.php) y su controlador.
+// Pasos (a) y (d) del retiro de tbcomprador (DEC-DBREADY-005/006/008): la
+// clasificación es la única fuente de "es comprador" y ya no queda CRUD legacy.
 $clasificacionModelo = file_get_contents("{$root}/Application/Model/ProductorClasificacionPeriodo.php");
 if (!str_contains($clasificacionModelo, 'public function esComprador(int $productorId): bool')) {
     throw new RuntimeException('ProductorClasificacionPeriodo debe responder "es comprador" desde los periodos.');
@@ -213,43 +212,59 @@ if (!str_contains($clasificacionModelo, 'public function esComprador(int $produc
 if (preg_match('/(FROM|JOIN|UPDATE|INTO)\s+tbcomprador\b/i', $clasificacionModelo)) {
     throw new RuntimeException('La clasificación no puede consultar la tabla legacy tbcomprador.');
 }
-foreach (glob("{$root}/Application/Model/*.php") as $modelo) {
-    if (basename($modelo) === 'Comprador.php') {
-        continue;
+foreach (['Application/Model/Comprador.php', 'Application/Controller/CompradorController.php'] as $retirado) {
+    if (file_exists("{$root}/{$retirado}")) {
+        throw new RuntimeException("El CRUD legacy de comprador volvió a aparecer: {$retirado}");
     }
-    if (str_contains((string) file_get_contents($modelo), 'tbcompradorestado')) {
-        throw new RuntimeException('Solo el CRUD legacy puede leer tbcompradorestado: ' . basename($modelo));
+}
+// Ningún modelo, servicio ni controlador puede volver a decidir negocio con el
+// bit legacy. La única lectura permitida de tbcomprador es la del backfill.
+foreach (array_merge(
+    glob("{$root}/Application/Model/*.php"),
+    glob("{$root}/Application/Service/*.php"),
+    glob("{$root}/Application/Controller/*.php"),
+) as $archivo) {
+    if (str_contains((string) file_get_contents($archivo), 'tbcompradorestado')) {
+        throw new RuntimeException('Nadie debe leer tbcompradorestado: ' . basename($archivo));
     }
 }
 
 // Paso (b) del retiro (DEC-DBREADY-007): las escrituras del CRUD legacy
 // espejan la clasificación y el estado mostrado ya no sale del bit.
 $servicioClasificacion = file_get_contents("{$root}/Application/Service/CompradorClasificacionService.php");
-$controladorComprador = file_get_contents("{$root}/Application/Controller/CompradorController.php");
-$modeloComprador = file_get_contents("{$root}/Application/Model/Comprador.php");
+$consultaComprador = file_get_contents("{$root}/Application/Controller/CompradorConsultaController.php");
+$apiComprador = file_get_contents("{$root}/Public/api/compradores.php");
+$vistaComprador = file_get_contents("{$root}/Application/View/compradores/index.php");
+$jsComprador = file_get_contents("{$root}/Public/js/compradores.js");
 $backfill = file_get_contents("{$root}/Tools/backfill-clasificacion-comprador.php");
-foreach ([
-    'MIGRACION_TBCOMPRADOR_LEGACY' => 'el backfill debe declarar su motivo',
-    'public function exigirProductor' => 'el alta exige productor existente',
-] as $fragmento => $motivo) {
-    if (!str_contains($servicioClasificacion, $fragmento)) {
-        throw new RuntimeException("CompradorClasificacionService: falta {$fragmento} ({$motivo}).");
-    }
+if (!str_contains($servicioClasificacion, 'MIGRACION_TBCOMPRADOR_LEGACY')) {
+    throw new RuntimeException('CompradorClasificacionService debe declarar el motivo de migración.');
 }
 if (preg_match('/INSERT\s+INTO\s+tbproductor\b/i', $servicioClasificacion . $backfill)) {
     throw new RuntimeException('Ni el backfill ni la clasificación pueden crear productores.');
 }
-foreach (['CompradorClasificacionService', 'abrirClasificacion', 'cerrarClasificacion'] as $uso) {
-    if (!str_contains($controladorComprador, $uso)) {
-        throw new RuntimeException("CompradorController debe usar {$uso}.");
+// Paso (d): la consulta es de solo lectura y la clasificación no se administra.
+foreach (["'POST', 'PUT', 'DELETE', 'PATCH' => \$this->respuesta(",
+    'listarClasificados'] as $soloLectura) {
+    if (!str_contains($consultaComprador, $soloLectura)) {
+        throw new RuntimeException("CompradorConsultaController debe conservar {$soloLectura}.");
     }
 }
-if (str_contains($controladorComprador, "(int) \$bloqueado['tbcompradorestado']")) {
-    throw new RuntimeException('El controlador ya no puede decidir negocio con el bit legacy.');
+if (!str_contains($apiComprador, "header('Allow: GET, OPTIONS');")) {
+    throw new RuntimeException('El endpoint de compradores debe declararse de solo lectura.');
 }
-if (!str_contains($modeloComprador, 'CLASIFICACION_ABIERTA')
-    || str_contains($modeloComprador, "(int) \$fila['tbcompradorestado'] === 1")) {
-    throw new RuntimeException('El estado mostrado de comprador debe salir de la clasificación abierta.');
+foreach (['id="crear-comprador"', 'id="formulario-comprador"', 'id="modal-desactivar"'] as $administrativo) {
+    if (str_contains($vistaComprador, $administrativo)) {
+        throw new RuntimeException("La vista de compradores no debe administrar: {$administrativo}");
+    }
+}
+foreach (["'POST'", "'PUT'", "'DELETE'", "'PATCH'", 'buildCompradorPayload'] as $escritura) {
+    if (str_contains($jsComprador, $escritura)) {
+        throw new RuntimeException("El panel de compradores no debe escribir: {$escritura}");
+    }
+}
+if (!str_contains($clasificacionModelo, 'public function listarClasificados')) {
+    throw new RuntimeException('La lista de compradores debe salir de la clasificación.');
 }
 
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");

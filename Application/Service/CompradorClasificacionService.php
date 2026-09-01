@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace Application\Service;
 
-use Application\HttpException;
 use Application\Model\ProductorClasificacionPeriodo;
 use PDO;
 
 /**
- * Paso (b) del retiro de la tabla legacy de comprador (DEC-DBREADY-005/007).
+ * Escritura de la clasificación COMPRADOR (DEC-DBREADY-005/007/008).
  *
- * Traduce el alta/baja del CRUD heredado a periodos de
- * `tbproductorclasificacionperiodo`. Comprador es una clasificación del
- * Productor: si la persona no es productora no hay dónde clasificarla y esta
- * capa falla explícitamente en vez de inventar un `tbproductor`.
+ * Único punto por el que se abre o cierra un periodo COMPRADOR. Hoy su único
+ * llamador es el backfill; cuando exista T10, el algoritmo que derive la
+ * clasificación del comportamiento debe entrar por aquí y no escribir la tabla
+ * a mano. Tras el paso (d) no queda ningún CRUD que clasifique: la
+ * clasificación dejó de ser una decisión administrativa.
+ *
+ * Nunca crea `tbproductor`: si la persona no es productora, no hay dónde
+ * clasificarla y quien llama decide qué hacer con ese caso.
  *
  * Las operaciones son idempotentes por definición del periodo abierto: activar
  * dos veces deja un solo periodo abierto y desactivar dos veces no toca la
@@ -24,8 +27,6 @@ use PDO;
 final class CompradorClasificacionService
 {
     public const TIPO = 'COMPRADOR';
-    public const MOTIVO_ALTA = 'ALTA_CRUD_COMPRADOR';
-    public const MOTIVO_REACTIVACION = 'REACTIVACION_CRUD_COMPRADOR';
     public const MOTIVO_MIGRACION = 'MIGRACION_TBCOMPRADOR_LEGACY';
 
     private ProductorClasificacionPeriodo $clasificacion;
@@ -48,27 +49,6 @@ final class CompradorClasificacionService
         }
 
         return $filas === [] ? null : (int) $filas[0]['tbproductorid'];
-    }
-
-    /**
-     * Igual que productorDePersona(), pero convierte la ausencia en un error de
-     * negocio explícito. Nunca crea el productor: esa decisión es de quien
-     * administra los datos, no de una migración ni de un CRUD.
-     */
-    public function exigirProductor(int $personaId, string $identificacion): int
-    {
-        $productorId = $this->productorDePersona($personaId);
-        if ($productorId === null) {
-            throw new HttpException(
-                'Comprador es una clasificación del Productor y esta persona no es productora. '
-                . 'Registre primero al productor.',
-                409,
-                null,
-                ['identificacion.numero' => "La persona {$identificacion} no tiene productor asociado."],
-            );
-        }
-
-        return $productorId;
     }
 
     /** Abre el periodo COMPRADOR si no hay uno abierto. Devuelve si abrió. */

@@ -142,6 +142,76 @@ final class ProductorClasificacionPeriodo
         return array_map(fn (array $fila): array => $this->mapear($fila), $sentencia->fetchAll());
     }
 
+    /**
+     * Productores con una clasificación abierta de ese tipo, con su identidad y
+     * desde cuándo están clasificados.
+     *
+     * Es la lectura que reemplaza al listado del CRUD legacy de comprador
+     * (DEC-DBREADY-008): la lista sale de los periodos, así que no puede
+     * mostrar a nadie que la clasificación no respalde.
+     *
+     * @return array{clasificados: array<int,array<string,mixed>>, total: int}
+     */
+    public function listarClasificados(string $tipo, string $busqueda, int $pagina, int $tamano): array
+    {
+        $tipoNormalizado = $this->normalizarTipo($tipo);
+        $origen = ' FROM tbproductorclasificacionperiodo cp
+                    INNER JOIN tbproductor pr ON pr.tbproductorid = cp.tbproductorid
+                    INNER JOIN tbpersona pe ON pe.tbpersonaid = pr.tbpersonaid
+                    WHERE cp.tbproductorclasificacionperiodotipo = :tipo
+                      AND cp.tbproductorclasificacionperiodofechafin IS NULL ';
+        $parametros = [':tipo' => $tipoNormalizado];
+        if ($busqueda !== '') {
+            $origen .= ' AND (pe.tbpersonanombre LIKE :nombre
+                              OR pe.tbpersonacorreoelectronico LIKE :correo
+                              OR pe.tbpersonaidentificacionnumero LIKE :identificacion) ';
+            $parametros[':nombre'] = "%{$busqueda}%";
+            $parametros[':correo'] = "%{$busqueda}%";
+            $parametros[':identificacion'] = '%'
+                . mb_strtoupper(preg_replace('/[ -]+/u', '', $busqueda) ?? '', 'UTF-8') . '%';
+        }
+
+        $conteo = $this->conexion->prepare('SELECT COUNT(*)' . $origen);
+        $conteo->execute($parametros);
+
+        $sentencia = $this->conexion->prepare(
+            'SELECT cp.tbproductorclasificacionperiodoid, cp.tbproductorid,
+                    cp.tbproductorclasificacionperiodofechainicio,
+                    cp.tbproductorclasificacionperiodomotivo,
+                    pe.tbpersonaidentificacionnumero, pe.tbpersonaidentificaciontipo,
+                    pe.tbpersonanombre, pe.tbpersonatelefono, pe.tbpersonacorreoelectronico,
+                    pe.tbpersonaestado'
+            . $origen
+            . ' ORDER BY pe.tbpersonanombre, pe.tbpersonaidentificacionnumero
+                LIMIT :limite OFFSET :desplazamiento'
+        );
+        foreach ($parametros as $nombre => $valor) {
+            $sentencia->bindValue($nombre, $valor);
+        }
+        $sentencia->bindValue(':limite', $tamano, PDO::PARAM_INT);
+        $sentencia->bindValue(':desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
+        $sentencia->execute();
+
+        return [
+            'clasificados' => array_map(static fn (array $fila): array => [
+                'periodoId' => (int) $fila['tbproductorclasificacionperiodoid'],
+                'productorId' => (int) $fila['tbproductorid'],
+                'identificacionNumero' => $fila['tbpersonaidentificacionnumero'],
+                'identificacion' => [
+                    'tipoCodigo' => $fila['tbpersonaidentificaciontipo'],
+                    'numero' => $fila['tbpersonaidentificacionnumero'],
+                ],
+                'nombre' => $fila['tbpersonanombre'],
+                'telefono' => $fila['tbpersonatelefono'],
+                'correoElectronico' => $fila['tbpersonacorreoelectronico'],
+                'clasificadoDesde' => $fila['tbproductorclasificacionperiodofechainicio'],
+                'motivo' => $fila['tbproductorclasificacionperiodomotivo'],
+                'personaEstado' => (int) $fila['tbpersonaestado'] === 1 ? 'ACTIVA' : 'INACTIVA',
+            ], $sentencia->fetchAll()),
+            'total' => (int) $conteo->fetchColumn(),
+        ];
+    }
+
     private function exigirLock(int $productorId, string $tipo): void
     {
         $esperado = self::PREFIJO_LOCK . $productorId . '_' . $tipo;
