@@ -107,6 +107,15 @@ misma transacción. Antes de autenticación usa `NO_AUTENTICADO` y
 PHP también envía la fecha, el actor y el origen como parámetros de la
 sentencia preparada; el motor no completa columnas automáticamente.
 
+Estado T3: cuando la API recibe `Authorization: Bearer <jwt>`, PHP valida el
+JWT con `GET /v1/auth/verify` del sidecar Supabase y resuelve el actor contra
+`tbpersona.tbpersonacorreoelectronico`. Un token inválido conserva 401/403, el
+sidecar caído o una respuesta no verificable responde 503, y un token válido
+sin vínculo único con Persona responde 409. Si no hay `Authorization`, se
+mantiene el modo local `NO_AUTENTICADO` para compatibilidad de desarrollo y
+pruebas. El `role` de Supabase queda como dato técnico de sesión; no crea roles
+de negocio ni capacidades.
+
 ## DEC-C04-007 - Entregas históricas
 
 Avance01 y Correcciones 01, 02 y 03 permanecen intactas. La nueva evidencia,

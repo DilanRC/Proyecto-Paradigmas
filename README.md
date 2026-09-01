@@ -110,6 +110,12 @@ El contrato está en `contracts/supabase-auth-v1.openapi.json`. La clave secreta
 no se versiona y solo debe agregarse a `.env` cuando exista una operación
 administrativa que la necesite.
 
+Las APIs PHP usan ese contrato cuando reciben `Authorization: Bearer <jwt>`.
+El `email` verificado debe coincidir de forma única con
+`tbpersona.tbpersonacorreoelectronico`; si no existe vínculo, la escritura falla
+con 409 y no inventa usuario. Sin encabezado `Authorization` se conserva el modo
+local `NO_AUTENTICADO`.
+
 ## Despliegue
 
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve

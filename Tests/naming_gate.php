@@ -13,6 +13,8 @@ $required = [
     'Database/Tests/comprobacionrelaciones.sql',
     'Database/Tests/diagnostico.sql',
     'Database/Migrations/001normalizadireccionproductor.sql',
+    'Application/Auth/ActorContext.php',
+    'Application/Auth/SupabaseActorResolver.php',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
     'Application/Model/ProductorEstadoPeriodo.php',
@@ -157,6 +159,20 @@ if (str_contains($models, '->query(') || str_contains($models, '->exec(')
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
 if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
     throw new RuntimeException('PDO debe usar sentencias preparadas nativas.');
+}
+$actorResolver = file_get_contents("{$root}/Application/Auth/SupabaseActorResolver.php");
+$actorContext = file_get_contents("{$root}/Application/Auth/ActorContext.php");
+$bitacora = file_get_contents("{$root}/Application/Model/Bitacora.php");
+$authActorTest = file_get_contents("{$root}/Tests/auth_actor_test.php");
+foreach (['/v1/auth/verify', 'tbpersonacorreoelectronico', 'PERSONA_AUTENTICADA',
+    'new HttpException(\'La sesión verificada no tiene vínculo con una persona.\', 409)',
+    'new HttpException(\'No fue posible validar la sesión.\', 503)'] as $authContract) {
+    if (!str_contains($actorResolver . $actorContext . $bitacora, $authContract)) {
+        throw new RuntimeException("T3 auth no documenta en código: {$authContract}");
+    }
+}
+if (preg_match('/MAX\s*\(\s*tbpersonaid\s*\)\s*\+\s*1/i', $authActorTest)) {
+    throw new RuntimeException('Tests/auth_actor_test.php no debe usar MAX(tbpersonaid)+1.');
 }
 $matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md");
 foreach ([

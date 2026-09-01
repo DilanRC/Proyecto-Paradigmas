@@ -14,6 +14,8 @@ $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
 require_once $testRoot . '/Application/HttpException.php';
+require_once $testRoot . '/Application/Auth/ActorContext.php';
+require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
@@ -168,6 +170,15 @@ function test_http_json(
     string $contentType = 'application/json',
     string $url = 'http://127.0.0.1/api/productores.php',
 ): array {
+    $baseUrl = getenv('TEST_BASE_URL');
+    if (is_string($baseUrl) && $baseUrl !== '') {
+        $url = preg_replace(
+            '/^http:\/\/127\.0\.0\.1(?=\/)/',
+            rtrim($baseUrl, '/'),
+            $url,
+            1
+        ) ?? $url;
+    }
     $headers = ['Accept: application/json'];
     if ($body !== null) {
         $headers[] = "Content-Type: {$contentType}";

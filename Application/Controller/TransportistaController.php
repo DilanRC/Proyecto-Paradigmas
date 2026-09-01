@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Application\Controller;
 
+use Application\Auth\ActorContext;
 use Application\HttpException;
 use Application\Model\Bitacora;
 use Application\Model\Transportista;
@@ -22,11 +23,11 @@ final class TransportistaController
     private EstadoService $estadoService;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null)
+    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $vehiculos = new TransportistaVehiculo($conexion);
         $this->transportista = new Transportista($conexion, $vehiculos);
-        $this->bitacora = new Bitacora($conexion);
+        $this->bitacora = new Bitacora($conexion, $actor);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
         $this->validacion = new ValidacionService();
         $this->estadoService = new EstadoService($this->bitacora, $this->solicitudId);

@@ -19,6 +19,7 @@
         "responses": {
           "200": { "description": "Verified Supabase user identity" },
           "401": { "description": "Missing or invalid JWT" },
+          "403": { "description": "Valid token without the required provider authorization" },
           "503": { "description": "Required environment is missing" }
         }
       }
