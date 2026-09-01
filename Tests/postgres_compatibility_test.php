@@ -25,4 +25,26 @@ test_assert(!str_contains($direccion, 'CONNECTION_ID'),
 test_assert(str_contains($direccion, 'profundidadBloqueoAlta'),
     'Direccion debe comprobar en memoria que el lock fue adquirido por su wrapper portable');
 
+// PostgreSQL rechaza FOR UPDATE junto a funciones de agregacion y produccion
+// corre sobre PostgreSQL. Una lectura con bloqueo escrita como
+// "SELECT MAX(...) ... FOR UPDATE" pasa en MySQL y revienta en produccion, y
+// las pruebas de este repositorio corren contra MySQL: nada la detendria.
+// Solo se inspeccionan las cadenas SQL literales; el count() de PHP no cuenta.
+foreach (glob("{$root}/Application/Model/*.php") as $modeloPhp) {
+    preg_match_all("/'((?:[^'\\\\]|\\\\.)*)'/s", file_get_contents($modeloPhp), $literales);
+    foreach ($literales[1] as $sqlLiteral) {
+        if (stripos($sqlLiteral, 'FOR UPDATE') === false) {
+            continue;
+        }
+        test_assert(
+            preg_match('/\\b(MAX|MIN|COUNT|SUM|AVG)\\s*\\(/i', $sqlLiteral) !== 1,
+            sprintf(
+                '%s combina una funcion de agregacion con FOR UPDATE; PostgreSQL lo rechaza. '
+                . 'Bloquee la fila del extremo con ORDER BY ... LIMIT 1 FOR UPDATE.',
+                basename($modeloPhp)
+            )
+        );
+    }
+}
+
 echo "OK postgres_compatibility_test: conexión Supabase y bloqueos duales configurados sin SQL exclusivo de MySQL en Direccion.\n";
