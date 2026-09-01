@@ -762,3 +762,51 @@ traia ninguno. Quedan 153 candidatos `RECONSTRUCCION_SEGURA` sin revisar y 126
 **Trazabilidad.** Las 20 figuran en `Documentation/correcciones-localidades.csv`
 con fuente `REVISION_MANUAL`, y su origen esta en
 `Documentation/localidades-por-revisar.csv` con la evidencia de cada una.
+
+## DEC-FRONT-17 - Validacion del telefono y dos reconstrucciones retiradas
+
+**El telefono no se validaba.** El campo era `type="tel"` con `maxlength="20"` y
+nada mas. Ese tipo no valida nada en los navegadores: admitia letras y cualquier
+cantidad de digitos, y el rechazo solo llegaba del servidor. Los tres
+controladores que reciben telefono (productor, comprador, transportista) aplican
+la misma regla: entre 1 y 20 caracteres, `/^\+?[0-9 ()-]+$/`, y entre 8 y 15
+digitos contando solo digitos.
+
+`Public/js/shared/telefono.js` traduce esa regla al atributo `pattern`:
+
+```
+(?=(?:\D*\d){8,15}\D*$)\+?[0-9 \(\)\-]+
+```
+
+El adelanto cuenta los digitos ignorando separadores, que es lo que hace el
+backend con `preg_replace('/\D+/', '')`; no se puede expresar con una clase
+suelta porque los digitos no van seguidos. Parentesis y guion van escapados
+porque `pattern` se compila con la bandera `v`, bajo la cual son reservados
+dentro de una clase; sin escapar, el navegador descarta el atributo en silencio
+y se vuelve al punto de partida. Se comprobo al escribirlo: la primera version,
+con `[0-9 ()\-]`, no compilaba.
+
+El modulo exporta ademas `telefonoValido()`, que reimplementa el juicio del
+backend, y una prueba contrasta las dos formas contra la misma tabla de 16
+casos. Si el patron y la funcion discrepan, una de las dos dejo de reflejar el
+contrato. Un gate adicional recorre los `pattern` de las cinco vistas y exige que
+todos compilen bajo `v`.
+
+Comprobado en navegador: `abcdefgh`, `1234567` y `1234567890123456` quedan
+rechazados con el mensaje y `aria-invalid`; `88887777` pasa.
+
+**Dos reconstrucciones retiradas.** Al agrupar los 153 candidatos
+`RECONSTRUCCION_SEGURA` por par de token aparecieron dos que producian ortografia
+imposible: `Rosalía` a `Rosalínda` y `Saíno` a `Sandíno`. Esas tildes no existen
+en espanol, y la razon de fondo es que la tilde del original es ortograficamente
+necesaria alli, lo que indica que el original no es una mutilacion sino una
+palabra distinta: `Rosalia` es nombre propio corriente y `saino` es el pecari,
+animal que da nombre a lugares. Pasan a `NO_CORREGIR`.
+
+Que la adyacencia entre la tilde y el punto de insercion no sirve como criterio
+quedo claro en el mismo analisis: `Méez` a `Méndez` y `Hernáez` a `Hernández` la
+tienen igual y son correctos. Lo que separa unos de otros es si la palabra
+resultante es ortografia valida, y eso no se decide con una heuristica.
+
+**Estado.** 151 `RECONSTRUCCION_SEGURA` en 43 grupos de par de token, 20 ya
+aplicadas y 128 `NO_CORREGIR`.
