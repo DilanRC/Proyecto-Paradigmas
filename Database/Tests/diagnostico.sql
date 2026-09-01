@@ -546,3 +546,44 @@ SELECT tbtransportistahorarioid, tbtransportistaid, tbtransportistahorariodiasem
        tbtransportistahorariohorainicio, tbtransportistahorariohorafin
 FROM tbtransportistahorario
 WHERE tbtransportistahorariohorafin <= tbtransportistahorariohorainicio;
+
+-- D-22: compradores legacy sin Productor. Comprador es una clasificacion del
+-- Productor (DEC-DBREADY-005/006), asi que una fila de tbcomprador cuya persona
+-- no es productora NO puede migrarse: no se inventa un Productor. Debe
+-- resolverse a mano antes de retirar la tabla legacy.
+SELECT 'D-22 comprador legacy sin productor' AS diagnostico;
+SELECT c.tbcompradorid, c.tbpersonaid, c.tbcompradorestado,
+       pe.tbpersonaidentificacionnumero, pe.tbpersonanombre
+FROM tbcomprador c
+INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+LEFT JOIN tbproductor p ON p.tbpersonaid = c.tbpersonaid
+WHERE p.tbproductorid IS NULL;
+
+-- D-23: comprador legacy activo, con Productor, sin periodo COMPRADOR abierto.
+-- Despues del backfill (Tools/backfill-clasificacion-comprador.php) y del
+-- cambio de escrituras esto debe ser cero: si aparece, la clasificacion quedo
+-- desincronizada del bit legacy y el panel mostraria un comprador como falso.
+SELECT 'D-23 comprador legacy activo sin clasificacion abierta' AS diagnostico;
+SELECT c.tbcompradorid, p.tbproductorid, pe.tbpersonaidentificacionnumero
+FROM tbcomprador c
+INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+INNER JOIN tbproductor p ON p.tbpersonaid = c.tbpersonaid
+LEFT JOIN tbproductorclasificacionperiodo cp
+       ON cp.tbproductorid = p.tbproductorid
+      AND cp.tbproductorclasificacionperiodotipo = 'COMPRADOR'
+      AND cp.tbproductorclasificacionperiodofechafin IS NULL
+WHERE c.tbcompradorestado = 1 AND pe.tbpersonaestado = 1
+  AND cp.tbproductorclasificacionperiodoid IS NULL;
+
+-- D-24: el reverso. Comprador legacy dado de baja que conserva la
+-- clasificacion abierta: desactivar debe cerrar el periodo, no dejarlo vivo.
+SELECT 'D-24 comprador legacy inactivo con clasificacion abierta' AS diagnostico;
+SELECT c.tbcompradorid, p.tbproductorid, cp.tbproductorclasificacionperiodoid
+FROM tbcomprador c
+INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+INNER JOIN tbproductor p ON p.tbpersonaid = c.tbpersonaid
+INNER JOIN tbproductorclasificacionperiodo cp
+        ON cp.tbproductorid = p.tbproductorid
+       AND cp.tbproductorclasificacionperiodotipo = 'COMPRADOR'
+       AND cp.tbproductorclasificacionperiodofechafin IS NULL
+WHERE c.tbcompradorestado = 0 OR pe.tbpersonaestado = 0;

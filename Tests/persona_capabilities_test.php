@@ -23,6 +23,15 @@ $persona = [
 $compradores = new CompradorController($db, test_token('persona-comprador'));
 $transportistas = new TransportistaController($db, test_token('persona-transportista'));
 try {
+    // Comprador es una clasificación del Productor (DEC-DBREADY-007): la
+    // persona debe ser productora antes de poder clasificarse como compradora.
+    test_same(409, $compradores->procesar('POST', [], $persona)['status'],
+        'Sin productor, la capacidad comprador se rechaza explícitamente');
+    test_create([
+        'nombre' => $persona['nombre'],
+        'telefono' => $persona['telefono'],
+        'correoElectronico' => $persona['correoElectronico'],
+    ], $id);
     test_same(201, $compradores->procesar('POST', [], $persona)['status'], 'Crea capacidad comprador');
     test_same(409, $compradores->procesar('POST', [], $persona)['status'], 'Rechaza capacidad comprador duplicada');
     test_same(409, $transportistas->procesar('POST', [], array_replace($persona, [
@@ -53,9 +62,14 @@ try {
     if ($personaId !== false) {
         $db->prepare('DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :id')
             ->execute(['id' => $id]);
+        $db->prepare('DELETE cp FROM tbproductorclasificacionperiodo cp
+            INNER JOIN tbproductor p ON p.tbproductorid = cp.tbproductorid
+            WHERE p.tbpersonaid = :id')->execute(['id' => $personaId]);
         foreach (['tbcomprador', 'tbtransportista'] as $tabla) {
             $db->prepare("DELETE FROM {$tabla} WHERE tbpersonaid = :id")->execute(['id' => $personaId]);
         }
+        $db->prepare('UPDATE tbpersona SET tbpersonaestado = 1 WHERE tbpersonaid = :id')->execute(['id' => $personaId]);
+        test_cleanup_productores([$id]);
         $db->prepare('DELETE FROM tbpersona WHERE tbpersonaid = :id')->execute(['id' => $personaId]);
     }
 }

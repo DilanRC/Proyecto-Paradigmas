@@ -1,9 +1,14 @@
 // Capacidades de una persona: productor (vendedor), comprador y transportista.
 //
 // DEC-PER-001 fija que `tbpersona` concentra a la persona y que la existencia de
-// una fila en `tbproductor`, `tbcomprador` o `tbtransportista` representa una
-// capacidad. No hay tabla de roles: la pregunta "esta persona es comprador?" se
-// responde consultando el endpoint de esa capacidad por identificacion.
+// una fila en `tbproductor` o `tbtransportista` representa una capacidad. No hay
+// tabla de roles: la pregunta se responde consultando el endpoint de esa
+// capacidad por identificacion.
+//
+// Comprador es la excepcion y no es una capacidad: es una clasificacion del
+// Productor (DEC-DBREADY-007). El endpoint sigue existiendo, pero el `estado`
+// que devuelve ya sale del periodo COMPRADOR abierto en
+// `tbproductorclasificacionperiodo`, no del bit de la tabla legacy.
 //
 // El contrato lo permite sin backend nuevo: GET ?identificacionNumero=X
 // devuelve 200 con los datos si la capacidad existe y 404 si no existe.

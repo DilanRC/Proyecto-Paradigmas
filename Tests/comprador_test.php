@@ -23,9 +23,29 @@ function test_comprador_controller(?string $requestId = null): CompradorControll
     return new CompradorController(test_db(), $requestId ?? test_token('request'));
 }
 
+/**
+ * Comprador es una clasificación del Productor (DEC-DBREADY-007), así que el
+ * alta exige que la persona ya sea productora. La fixture crea primero al
+ * productor con los MISMOS datos personales: si difirieran, tbpersona
+ * rechazaría la segunda capacidad por datos incompatibles.
+ */
+function test_create_productor_de_comprador(array $payload): void
+{
+    $respuesta = test_controller()->procesar('POST', [], [
+        'identificacion' => $payload['identificacion'],
+        'nombre' => $payload['nombre'],
+        'telefono' => $payload['telefono'],
+        'correoElectronico' => $payload['correoElectronico'],
+        'fincas' => [],
+    ]);
+    test_same(201, $respuesta['status'], 'La fixture debe crear primero al productor');
+}
+
 function test_create_comprador(array $overrides = [], ?string $number = null): array
 {
-    $response = test_comprador_controller()->procesar('POST', [], test_comprador_payload($number, $overrides));
+    $payload = test_comprador_payload($number, $overrides);
+    test_create_productor_de_comprador($payload);
+    $response = test_comprador_controller()->procesar('POST', [], $payload);
     test_same(201, $response['status'], 'La fixture debe responder HTTP 201');
     test_assert(($response['body']['success'] ?? false) === true, 'La fixture debe ser exitosa.');
     return $response['body']['data'];
@@ -33,6 +53,9 @@ function test_create_comprador(array $overrides = [], ?string $number = null): a
 
 function test_cleanup_compradores(array $identificaciones): void
 {
+    // Además de la fila legacy y su clasificación, hay que retirar el productor
+    // que la fixture creó para poder clasificar: test_cleanup_productores borra
+    // periodos de estado, actividad, fincas, direcciones y la persona.
     $ids = array_values(array_unique(array_filter(array_map('strval', $identificaciones))));
     if ($ids === []) return;
     $db = test_db();
@@ -40,13 +63,17 @@ function test_cleanup_compradores(array $identificaciones): void
     $db->beginTransaction();
     try {
         $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE cp FROM tbproductorclasificacionperiodo cp
+            INNER JOIN tbproductor p ON p.tbproductorid = cp.tbproductorid
+            INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
+            WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->prepare("DELETE c FROM tbcomprador c INNER JOIN tbpersona p ON p.tbpersonaid=c.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
-        $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();
     } catch (Throwable $exception) {
         if ($db->inTransaction()) $db->rollBack();
         throw $exception;
     }
+    test_cleanup_productores($ids);
 }
 
 $ids = [];
@@ -171,10 +198,15 @@ try {
          WHERE tbbitacoraregistroidentificacionnumero = :id AND tbbitacoraaccion = :accion'
     );
     $bitacora->execute(['id' => $creado['identificacionNumero'], 'accion' => 'CREAR']);
-    $filaBitacora = $bitacora->fetch();
-    test_assert($filaBitacora !== false, 'Debe existir un registro de bitácora para la creación del comprador');
-    test_same('COMPRADOR', $filaBitacora['tbbitacoraentidad'], 'La bitácora debe etiquetar la entidad como COMPRADOR');
-    test_same('API_COMPRADORES', $filaBitacora['tbbitacoraorigen'], 'La bitácora debe etiquetar el origen como API_COMPRADORES');
+    // La fixture crea antes al productor de esa persona, así que hay dos altas
+    // con la misma identificación: la del comprador debe ser la etiquetada
+    // COMPRADOR/API_COMPRADORES, y la del productor no puede apropiársela.
+    $filasBitacora = $bitacora->fetchAll();
+    $delComprador = array_values(array_filter($filasBitacora,
+        static fn (array $fila): bool => $fila['tbbitacoraorigen'] === 'API_COMPRADORES'));
+    test_same(1, count($delComprador), 'Debe existir un registro de bitácora para la creación del comprador');
+    test_same('COMPRADOR', $delComprador[0]['tbbitacoraentidad'], 'La bitácora debe etiquetar la entidad como COMPRADOR');
+    test_same('API_COMPRADORES', $delComprador[0]['tbbitacoraorigen'], 'La bitácora debe etiquetar el origen como API_COMPRADORES');
 } finally {
     test_cleanup_compradores($ids);
 }
