@@ -3,6 +3,7 @@
 // La sesión existente de este sprint vive en sessionStorage. Esta capa no la
 // convierte en autenticación de servidor: únicamente impide abrir los paneles
 // web sin pasar primero por login.php y conserva un destino local seguro.
+// La autorización real de API sigue perteneciendo al mecanismo Bearer/Supabase.
 
 export const SESSION_KEY = 'tindercows:login';
 
