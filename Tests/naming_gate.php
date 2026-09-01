@@ -135,7 +135,11 @@ $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
 if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
     throw new RuntimeException('PDO debe usar sentencias preparadas nativas.');
 }
-$js = file_get_contents("{$root}/Public/js/productores.js");
+// El panel se reparte entre su archivo de entrada y los modulos compartidos que
+// importa, asi que el control se busca sobre el grafo completo y no solo sobre
+// el archivo de entrada.
+$js = file_get_contents("{$root}/Public/js/productores.js")
+    . implode('', array_map('file_get_contents', glob("{$root}/Public/js/shared/*.js")));
 foreach (['fetch(', 'textContent', 'identificacionNumero', 'AbortController'] as $needle) {
     if (!str_contains($js, $needle)) throw new RuntimeException("Falta control UI {$needle}");
 }

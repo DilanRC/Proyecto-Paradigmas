@@ -11,24 +11,14 @@ function has(path, pattern, message) {
     assert(ok, `${path}: ${message}`);
 }
 
-function lacks(path, pattern, message) {
-    const source = read(path);
-    const found = pattern instanceof RegExp ? pattern.test(source) : source.includes(pattern);
-    assert(!found, `${path}: ${message}`);
-}
-
-function missing(path, message) {
-    assert(!fs.existsSync(path), `${path}: ${message}`);
-}
-
 // Productores: el formulario exige dirección y el POST debe aceptarla/persistirla.
 has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpoint de productores incorrecto');
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
 has('Public/js/productores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
 has(
-    'Application/Controller/ProductorController.php',
+    'Application/Service/ValidacionService.php',
     /\$permitidos = \['identificacion', 'nombre', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'\];/,
-    'POST/PUT deben reconocer direccionPrincipal'
+    'POST/PUT deben reconocer direccionPrincipal (contrato de validación unificado)'
 );
 has(
     'Application/Controller/ProductorController.php',
@@ -36,13 +26,22 @@ has(
     'el alta debe persistir la dirección recibida'
 );
 
-// Tramo 7: el módulo retirado no debe reaparecer en los paneles activos.
-for (const panel of ['productores', 'transportistas', 'vehiculos', 'pagometodos']) {
-    lacks(`Application/View/${panel}/index.php`, 'compradores.php', 'el menú conserva el enlace retirado');
+// Compradores, recuperado tras el retiro del tramo 7 (DEC-FRONT-12).
+for (const panel of ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos']) {
+    has(`Application/View/${panel}/index.php`, 'compradores.php', 'el menú perdió el enlace a Compradores');
 }
-missing('Application/View/compradores', 'la vista retirada volvió a existir');
-missing('Public/compradores.php', 'la ruta pública retirada volvió a existir');
-missing('Public/js/compradores.js', 'el JavaScript retirado volvió a existir');
+has('Public/js/compradores.js', "const API_URL = 'api/compradores.php';", 'endpoint de compradores incorrecto');
+has('Public/js/compradores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
+has(
+    'Application/Controller/CompradorController.php',
+    /\$permitidos = \['identificacion', 'nombre', 'telefono', 'correoElectronico'\];/,
+    'el panel envía exactamente los campos que el controlador acepta'
+);
+// El comprador no es una identidad aislada: la ficha consulta las tres capacidades.
+has('Public/js/compradores.js', 'consultarCapacidades', 'la ficha debe consultar las capacidades de la persona');
+for (const api of ['api/productores.php', 'api/compradores.php', 'api/transportistas.php']) {
+    has('Public/js/shared/capacidades.js', api, `el catálogo de capacidades no apunta a ${api}`);
+}
 
 // Transportistas y asignación de vehículos.
 has('Public/js/transportistas.js', "const API_URL = 'api/transportistas.php';", 'endpoint de transportistas incorrecto');
@@ -97,4 +96,4 @@ has(
     'DELETE de dirección de finca debe identificar productor y finca'
 );
 
-console.log('OK frontend_contract_test: contratos UI/API alineados en productores, pagos, transportistas, vehículos y direcciones de finca; Compradores continúa retirado.');
+console.log('OK frontend_contract_test: contratos UI/API alineados en productores, pagos, transportistas, vehículos y direcciones de finca; Compradores recuperado con sus capacidades.');

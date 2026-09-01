@@ -13,8 +13,12 @@ use Configuration\Database;
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
+require_once $testRoot . '/Application/HttpException.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
+}
+foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService'] as $testServicio) {
+    require_once $testRoot . "/Application/Service/{$testServicio}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
