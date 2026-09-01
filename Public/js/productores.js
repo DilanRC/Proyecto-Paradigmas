@@ -117,13 +117,17 @@ function initialize() {
         provincia: $('#direccion-provincia'),
         canton: $('#direccion-canton'),
         distrito: $('#direccion-distrito'),
+        pueblo: $('#direccion-pueblo'),
         listaDistritos: $('#lista-distritos'),
+        listaPueblos: $('#lista-pueblos'),
     });
     const direccionFinca = conectarDireccion({
         provincia: $('#finca-direccion-provincia'),
         canton: $('#finca-direccion-canton'),
         distrito: $('#finca-direccion-distrito'),
+        pueblo: $('#finca-direccion-pueblo'),
         listaDistritos: $('#lista-distritos-finca'),
+        listaPueblos: $('#lista-pueblos-finca'),
     });
 
     const submit = createSubmitGuard();
@@ -364,7 +368,6 @@ function initialize() {
             );
             const direccion = response.data?.direccionFinca ?? {};
             direccionFinca.aplicar(direccion);
-            $('#finca-direccion-pueblo').value = direccion.pueblo ?? '';
             $('#finca-direccion-senas').value = direccion.senas ?? '';
             fincaDireccionContexto.exists = true;
             elements.clearFincaAddress.hidden = false;
@@ -499,7 +502,6 @@ function initialize() {
         $('#telefono').value = producer.telefono ?? '';
         $('#correo-electronico').value = producer.correoElectronico ?? '';
         direccionPrincipal.aplicar(producer.direccionPrincipal ?? {});
-        $('#direccion-pueblo').value = producer.direccionPrincipal?.pueblo ?? '';
         $('#direccion-senas').value = producer.direccionPrincipal?.senas ?? '';
         elements.farms.value = (producer.fincas ?? []).map((farm) => farm.nombre).join('\n');
         elements.modalTitle.textContent = 'Editar productor';
