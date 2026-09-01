@@ -310,262 +310,64 @@ depender de una columna que ya no existe. La migración MySQL se renumeró a
 `004` porque `003` lo ocupa `003personacapacidades.sql`, y debe ejecutarse
 después de ella: primero se unifica la persona, luego se retira la columna.
 
-# Decisiones - Frontend del Avance II
-
-Namespace propio `DEC-FRONT-*`. La rama `DBA` ya ocupa `DEC-21` y `DEC-22`, de
-modo que numerar correlativo provocaria un conflicto de fusion. Todo este bloque
-es frontend, pruebas y documentacion: no toca `Database/`, `Application/Model/`,
-`Application/Controller/`, migraciones, semillas ni el algoritmo de recomendacion.
-
-## DEC-FRONT-01 - CSS en capas y purga por selector
-
-**Necesidad.** `styles.css` concentraba 25 KB en un archivo con una linea de 3421
-caracteres que mezclaba panel, tabla, badges y modales. Cualquier cambio obligaba
-a leer todo y arriesgaba tocar reglas ajenas.
-
-**Mecanismo.** Cinco capas con orden de cascada explicito: `tokens`, `base`,
-`components`, `panel`, `red-ganadera`. La division se hizo con un script que
-compara el conjunto de selectores antes y despues: 230 originales, 215 emitidos,
-15 muertos.
-
-**Beneficio.** Cada archivo tiene una responsabilidad y el diff de un cambio de
-componente ya no toca el sistema de paneles.
-
-**Costo.** Cinco peticiones de hoja en lugar de una. Sobre HTTP/2 y en local es
-irrelevante; se evito `@import`, que serializa las descargas.
-
-**Riesgo.** Reordenar reglas puede alterar la cascada entre selectores de igual
-especificidad. Se mitigo conservando el orden original dentro de cada capa y
-ordenando las capas de lo generico a lo especifico.
-
-**Limite.** El borrado de muertos es por selector, nunca por linea: `.brand` y
-`.brand strong` estaban muertos pero compartian la linea 4 con `.brand__icon`,
-que es el logo de las cinco vistas. Borrar la linea habria eliminado el logo.
-
-**Alternativa descartada.** Dejar el archivo unico y solo formatearlo: resuelve la
-legibilidad pero no la mezcla de responsabilidades ni permite razonar sobre la
-cascada.
-
-## DEC-FRONT-02 - Contraste verificado por calculo, no por criterio
-
-**Necesidad.** Nueve combinaciones de texto no alcanzaban el minimo AA de 4.5:1.
-Las peores eran la cabecera de tabla (2.52), el pie del sidebar (2.25) y la nota
-al pie del panel (2.05). Todas usaban `rgba()` sobre un fondo de color, que es
-precisamente lo que hunde el contraste.
-
-**Mecanismo.** Tokens opacos con el ratio calculado y anotado. Se eligieron los
-valores mas atenuados que aun cumplen (4.53-4.70:1) en lugar de subir todo a
-opacidad total. `Tests/frontend_contrast_test.mjs` recalcula cada par componiendo
-el alpha igual que el navegador y falla por debajo de 4.5.
-
-**Beneficio.** La accesibilidad deja de depender del ojo de quien revisa. La
-afirmacion es verificable y se defiende con un numero.
-
-**Costo.** El texto atenuado es algo menos tenue que antes; la jerarquia visual
-se conserva pero es mas suave.
-
-**Riesgo.** El gate conoce los fondos compuestos porque estan escritos en el
-propio test. Si alguien cambia un fondo en el CSS sin actualizar el test, el
-calculo se hace contra un fondo que ya no existe.
-
-**Limite.** Cubre texto. El contraste de bordes y de componentes no textuales
-(WCAG 1.4.11) no esta medido.
-
-**Alternativa descartada.** Un test que comprobara `css.includes('--color-muted')`.
-Verifica que el token existe, no que se lee.
-
-## DEC-FRONT-03 - Modulos ES con extension .js, sin tocar el servidor
-
-**Necesidad.** Cuatro de los cinco archivos de `Public/js` repetian los mismos
-diez ayudantes, y ninguno era importable: al ser IIFE sin exportaciones, no habia
-forma de probar su comportamiento.
-
-**Mecanismo.** `<script type="module">` y modulos en `Public/js/shared/`. La
-extension es `.js` mas un `Public/js/package.json` de una linea con
-`{"type":"module"}`: el navegador recibe `text/javascript`, que es el MIME
-garantizado para `.js`, y Node trata esos archivos como ESM.
-
-**Beneficio.** El mismo archivo se ejecuta en el navegador y se importa en las
-pruebas. La correccion no depende de la configuracion del servidor.
-
-**Costo.** Un archivo de 25 bytes servido publicamente en `/js/package.json`, con
-contenido inerte.
-
-**Riesgo.** Un navegador sin soporte de modulos deja el panel inerte, mientras
-que antes `defer` degradaba a funcionando. El codigo ya usaba `?.`, `??=`,
-`replaceChildren` y `dialog.showModal`, de modo que la linea base real ya era
-moderna; esto solo la hace explicita.
-
-**Limite.** No hay `nomodule` de reserva ni transpilacion.
-
-**Alternativa descartada.** `.mjs` mas `AddType application/javascript .mjs` en
-`docker/apache/000-default.conf`. Funciona, pero ata la correccion del frontend a
-la configuracion de Apache y deja de funcionar bajo `php -S` o cualquier otro
-host. Se prefirio la opcion cuya correccion no depende de nada externo.
-
-## DEC-FRONT-04 - Fallo HTTP y fallo de transporte se distinguen por estructura
-
-**Necesidad.** `request()` solo asignaba `status` cuando habia JSON. Al rechazarse
-`fetch`, el texto crudo del navegador ("Failed to fetch") llegaba al usuario y
-cualquier comprobacion tipo `error.status === 500` se evaluaba sobre un
-`TypeError`.
-
-**Mecanismo.** Dos formas distintas y no un campo suelto: `type:'http'` siempre
-trae `status` numerico; `type:'network'` lo trae en `null`. Se anade `kind`
-estable (`validation`, `not-found`, `conflict`, `server`, ...) y `retryable`.
-
-**Beneficio.** La vista decide por categoria y no por numero. Reintentar solo se
-ofrece cuando repetir puede cambiar el resultado: en 500 y en fallo de red, no en
-422, 404 ni 409.
-
-**Costo.** Una capa de traduccion entre `fetch` y el panel.
-
-**Riesgo.** Si la taxonomia perdiera `data`, se romperia en silencio el flujo de
-reactivacion, que lee `data.reactivacion.identificacionNumero` de un 409. Hay una
-prueba dedicada a esa preservacion.
-
-**Limite.** No hay reintento automatico ni retroceso exponencial: el reintento es
-una accion explicita de la persona.
-
-**Alternativa descartada.** Un unico campo `kind` sobre una forma comun. Distingue
-en la lectura pero permite seguir escribiendo `error.status` sobre un fallo que no
-tiene status.
-
-## DEC-FRONT-05 - Una lista vacia solo puede afirmarse tras una respuesta correcta
-
-**Necesidad.** El `catch` de los cuatro paneles llamaba a `render([], 0, size)`,
-que encendia el estado vacio. Un 500 o una caida de red se presentaban como
-"No se encontraron X": el sistema culpaba a la busqueda de un fallo propio.
-
-**Mecanismo.** Una maquina de estados pura con la invariante
-`showEmpty <=> phase === 'ready' && items.length === 0`, mas un estado de error
-propio con mensaje real y boton Reintentar. Cancelar no cambia de fase.
-
-**Beneficio.** El usuario distingue "no hay datos" de "no pudimos traerlos", que
-son dos situaciones con acciones distintas.
-
-**Costo.** Un estado mas que mantener en cada panel y su marcado.
-
-**Riesgo.** El reintento debe cancelar lo que este en vuelo y subir la secuencia;
-si no, una respuesta tardia pisaria a la reintentada.
-
-**Limite.** La maquina no distingue "vacio por filtro" de "vacio sin registros":
-ambos muestran el mismo mensaje.
-
-**Alternativa descartada.** Mostrar solo un toast de error sobre la lista vacia.
-Deja la pantalla afirmando algo falso cuando el toast desaparece.
-
-## DEC-FRONT-06 - Dos regiones vivas permanentes para las notificaciones
-
-**Necesidad.** El toast escribia el texto con el nodo en `hidden`, luego lo
-mostraba y ademas alternaba `role` entre `status` y `alert` sobre el mismo nodo.
-Un nodo `hidden` esta fuera del arbol de accesibilidad y cambiar el `role` en
-caliente no reinicia la observacion: el anuncio no llegaba.
-
-**Mecanismo.** Dos regiones siempre presentes y nunca ocultas con `hidden`: una
-`role="status"` cortes y otra `role="alert"` asertiva. Se ocultan por `:empty`.
-Los errores no se autodescartan; el resto si.
-
-**Beneficio.** El mensaje se escribe sobre una region que el lector ya estaba
-observando, y un error puede interrumpir sin convertir cada aviso en interrupcion.
-
-**Costo.** Dos nodos por vista en lugar de uno.
-
-**Riesgo.** Escribir en las dos regiones a la vez produciria un anuncio doble; el
-toaster limpia ambas antes de escribir.
-
-**Limite.** Los errores por campo no van al toast: viven junto a su control, como
-exige el formulario.
-
-**Alternativa descartada.** Un nodo unico con `role` dinamico, que es exactamente
-el defecto corregido.
-
-## DEC-FRONT-07 - Se extrae lo transversal; lo propio de un panel se queda
-
-**Necesidad.** Diez ayudantes repetidos en cuatro archivos. Pero siete eran
-identicos y seis divergian de verdad, y aplanar esas diferencias rompia la
-aplicacion.
-
-**Mecanismo.** Regla: un modulo compartido debe tener al menos dos consumidores
-reales o una responsabilidad transversal aislable. Las divergencias se vuelven
-parametros:
-
-| ID | Divergencia | Tratamiento |
-|---|---|---|
-| D1 | banderas de ocupado distintas por panel | parametro `isBusy` |
-| D2 | claves `fincas.N` solo en productores | parametro `collapsePrefixes` |
-| D3 | productores tiene dos formularios | un enlace de errores por formulario |
-| D4 | letra de reserva de las iniciales | se queda local |
-| D5 | formateadores de dominio | se quedan locales |
-| D6 | variable de registro pendiente | se queda local |
-
-**Beneficio.** Un arreglo se aplica una vez y no cuatro, sin perder el
-comportamiento particular de cada panel.
-
-**Costo.** Una indireccion mas entre el panel y el DOM.
-
-**Riesgo.** Aplanar D3 habria sido el error caro: el dialogo de direccion de finca
-habria pintado sus errores sobre el formulario principal.
-
-**Limite.** D4, D5 y D6 se dejan duplicados a proposito. Extraer una funcion de
-una linea usada una sola vez por panel anade mas indireccion que la que elimina.
-
-**Alternativa descartada.** Un ayudante universal con opciones para todo. Habria
-sido peor que la duplicacion original y mas dificil de leer.
-
-## DEC-FRONT-08 - Guardar no persiste: el bloqueo se documenta en vez de inventarse
-
-**Necesidad.** La vista principal ofrece guardar y pasar, y se pedia un contador.
-
-**Mecanismo.** Se busco la semantica en el repositorio antes de implementarla:
-no hay endpoint, ni tabla, ni una sola mencion de guardar, favorito o interes en
-`Documentation/`. Al no poder confirmar que sea estado meramente presentacional,
-los contadores viven en memoria de la pestana y la vista lo dice en texto visible.
-
-**Beneficio.** No se afirma una persistencia que el sistema no tiene. Si guardar
-representa una preferencia real de la persona usuaria, almacenarla solo en un
-navegador seria incorrecto y dificil de defender.
-
-**Costo.** El contador se pierde al recargar.
-
-**Riesgo.** Puede leerse como una funcion incompleta. Por eso el limite esta
-escrito en la interfaz y no solo aqui.
-
-**Limite.** Para que guardar signifique algo se necesita, como minimo: un actor
-autenticado, una tabla de interes por persona y productor, y endpoints de alta y
-baja. Nada de eso pertenece a este alcance.
-
-**Alternativa descartada.** `localStorage`. Sobrevive a la recarga, pero convierte
-una posible decision de negocio en un dato atrapado en un navegador, sin
-sincronizacion ni trazabilidad.
-
-## DEC-FRONT-09 - Los gates comprueban propiedades, no nombres de variables
-
-**Necesidad.** `naming_gate.php` y `ui_test.js` exigian que `fetch(`,
-`AbortController`, `listSequence` y `changingStatus` aparecieran literalmente
-dentro de `productores.js`. Repartir ese codigo los rompia aunque el
-comportamiento fuera identico: comprobaban el archivo, no la propiedad.
-
-**Mecanismo.** Los gates resuelven el grafo de modulos (entrada mas
-`shared/*.js`) y las aserciones pasan a describir la propiedad: cancelacion mas
-descarte por secuencia para las carreras, guarda sincrona para el doble envio, y
-que vacio y error sean distinguibles. Ademas, cada panel exporta su constructor de
-payload y se compara contra un cuerpo de referencia.
-
-**Beneficio.** El mayor riesgo de esta refactorizacion no era visual sino que la
-interfaz se viera bien y el backend recibiera otra cosa. La paridad de payload lo
-cubre por panel.
-
-**Costo.** Los gates son algo mas largos y hay que mantener los payloads de
-referencia.
-
-**Riesgo.** Un payload de referencia equivocado fijaria el error en vez del
-contrato. Se escribieron leyendo el codigo anterior, no el nuevo.
-
-**Limite.** `markFirstInvalid` depende del selector `:invalid`, que ningun sustituto
-de DOM puede honrar con honestidad. Se separo la parte pura, que si se prueba, y
-la linea que consulta al navegador queda para la verificacion manual.
-
-**Alternativa descartada.** Anadir jsdom. Daria fidelidad real de DOM, pero
-introduce la primera dependencia en la raiz del repositorio para un beneficio que
-la separacion de logica pura ya consigue.
+# Decisiones - Respaldo previo al remodelado
+
+## DEC-21 - Respaldo previo al remodelado (tramo 1)
+
+El tramo 2 se ejecutó antes que el tramo 1 porque solo agregaba tablas y no
+arriesgaba datos existentes; el tramo 6, que sí escribe sobre datos
+existentes, no podía arrancar sin un punto de reversión. Por eso se generó
+`Database/Backups/Avance02/`, etiquetado explícitamente como "previo al
+remodelado por tramos (EIF400)" en su `MANIFEST.md`, con
+`Tools/backup-database.sh Avance02` y verificado con `Tools/test-restore.sh
+Avance02`: quince tablas, cero PK/FK/CHECK/índices/AUTO_INCREMENT y
+restauración completa y por partes idénticas al origen (`APROBADO`). Los ocho
+respaldos anteriores (`Avance01` hasta `LineaBase`) se conservan intactos, tal
+como exige el plan.
+
+# Decisiones - Migrar lo que ya existe (tramo 6)
+
+## DEC-22 - Backfill de fecha de inicio en dirección histórica, y conteo de comprador
+
+`tbproductordireccionfechainicio` quedó nullable en
+`Migrations/002historicoproductor.sql` para no romper el `ALTER TABLE` sobre
+filas ya existentes; a esas filas heredadas nunca nadie les asignó una fecha
+de inicio porque no existía el concepto antes del tramo 2. La semilla
+`103exampleproductores.sql` insertaba `tbproductordireccion` sin esa columna
+y reproducía el mismo hueco en cada instalación limpia; se corrigió para
+fijar `NOW()` igual que ya hacía el periodo de estado.
+
+Para bases con datos heredados de antes del tramo 2,
+`Migrations/005backfilldireccionfechainicio.sql` asigna una única marca de
+tiempo (capturada una sola vez con `SET @fechaMigracion := NOW()`) a toda fila
+con `tbproductordireccionfechainicio IS NULL`; es la frase que hay que poder
+decir en la defensa: **"el histórico confiable empieza en la fecha de
+migración; los datos anteriores no existían en el modelo previo"**. Es
+idempotente (solo toca filas con la columna en `NULL`) y no inventa fechas
+distintas por productor porque no hay evidencia de cuándo empezó cada una.
+
+`Database/Tests/diagnostico.sql` se actualizó porque su D-01 verificaba una
+política ya reemplazada por DEC-18 (una sola dirección por productor): con
+histórico, tener varias filas cerradas es normal. D-01 ahora detecta
+productores con más de un periodo de dirección **abierto**, D-01b detecta
+productores sin ninguno abierto, y D-01c detecta periodos abiertos sin fecha
+de inicio (el síntoma exacto que corrige esta migración). Se agregaron
+también D-10 y D-11, equivalentes para `tbproductorestadoperiodo`, que no
+tenía ninguna consulta de diagnóstico propia.
+
+Conteo de `tbcomprador` en la instalación limpia de referencia: **0 filas**
+(sin datos heredados en este entorno). No es criterio para decidir si se
+borra la tabla — DEC-TRAMO-7 ya la conserva — sirve para confirmar que la
+corrección del tramo 7 no perdió compradores existentes. Si el equipo tiene
+una base de desarrollo compartida con compradores reales cargados, debe
+correrse `SELECT COUNT(*) FROM tbcomprador;` ahí antes de cerrar el tramo con
+el equipo, porque este conteo es local.
+
+Verificado: instalación limpia (`docker compose down -v && up`) levanta sin
+errores, `Tests/naming_gate.php` pasa, `Database/Tests/diagnostico.sql`
+devuelve cero filas en todas las consultas, y la suite PHP relevante
+(`schema_test`, `direccion_test`, `address_policy_test`,
+`productor_estado_periodo_test`, `productor_estado_flujo_test`,
+`comprador_test`, `productor_ubicacion_test`, `finca_direccion_test`) pasa
+completa. Ningún productor quedó sin periodo de dirección o estado abierto,
+ninguno con dos a la vez.
