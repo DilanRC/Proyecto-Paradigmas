@@ -19,7 +19,7 @@ require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
-foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService'] as $testServicio) {
+foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService', 'CompradorClasificacionService'] as $testServicio) {
     require_once $testRoot . "/Application/Service/{$testServicio}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';

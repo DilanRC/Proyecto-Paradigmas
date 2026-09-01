@@ -25,6 +25,14 @@ final class Comprador
         $this->persona = new Persona($conexion);
     }
 
+    /**
+     * Fuente de verdad del estado mostrado (paso 5 de DEC-DBREADY-007): el
+     * periodo COMPRADOR abierto, no el bit legacy. El bit sigue existiendo
+     * porque el CRUD todavía lo escribe, pero ya no decide negocio.
+     */
+    private const CLASIFICACION_ABIERTA =
+        'CASE WHEN cp.tbproductorclasificacionperiodoid IS NULL THEN 0 ELSE 1 END';
+
     private function seleccion(): string
     {
         return 'c.*, pe.tbpersonaidentificacionnumero AS tbcompradoridentificacionnumero,
@@ -32,16 +40,33 @@ final class Comprador
                 pe.tbpersonanombre AS tbcompradornombre,
                 pe.tbpersonatelefono AS tbcompradortelefono,
                 pe.tbpersonacorreoelectronico AS tbcompradorcorreoelectronico,
-                pe.tbpersonaestado';
+                pe.tbpersonaestado, p.tbproductorid, '
+                . self::CLASIFICACION_ABIERTA . ' AS tbcompradorclasificacionabierta';
+    }
+
+    /**
+     * Comprador legacy + su persona + la clasificación vigente del productor.
+     * El LEFT JOIN conserva las filas legacy sin productor: existen, no se
+     * borran en silencio y el diagnóstico D-22 las reporta.
+     */
+    private function origen(): string
+    {
+        return ' FROM tbcomprador c
+                 INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+                 LEFT JOIN tbproductor p ON p.tbpersonaid = c.tbpersonaid
+                 LEFT JOIN tbproductorclasificacionperiodo cp
+                        ON cp.tbproductorid = p.tbproductorid
+                       AND cp.tbproductorclasificacionperiodotipo = \'COMPRADOR\'
+                       AND cp.tbproductorclasificacionperiodofechafin IS NULL ';
     }
     public function listar(string $busqueda, string $estado, int $pagina, int $tamano): array
     {
         [$where, $parametros] = $this->filtros($busqueda, $estado);
-        $base = ' FROM tbcomprador c INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid ';
+        $base = $this->origen();
         $conteo = $this->conexion->prepare('SELECT COUNT(*)' . $base . $where);
         $conteo->execute($parametros);
         $sentencia = $this->conexion->prepare('SELECT ' . $this->seleccion() . $base . $where
-            . ' ORDER BY (c.tbcompradorestado * pe.tbpersonaestado) DESC, pe.tbpersonanombre,
+            . ' ORDER BY (' . self::CLASIFICACION_ABIERTA . ' * pe.tbpersonaestado) DESC, pe.tbpersonanombre,
                 pe.tbpersonaidentificacionnumero LIMIT :limite OFFSET :desplazamiento');
         foreach ($parametros as $nombre => $valor) {
             $sentencia->bindValue($nombre, $valor);
@@ -57,9 +82,8 @@ final class Comprador
     }
     public function buscar(string $id): ?array
     {
-        $sentencia = $this->conexion->prepare('SELECT ' . $this->seleccion()
-            . ' FROM tbcomprador c INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
-                WHERE pe.tbpersonaidentificacionnumero = :id');
+        $sentencia = $this->conexion->prepare('SELECT ' . $this->seleccion() . $this->origen()
+            . ' WHERE pe.tbpersonaidentificacionnumero = :id');
         $sentencia->execute(['id' => $id]);
         $filas = $sentencia->fetchAll();
         if (count($filas) > 1) {
@@ -75,6 +99,8 @@ final class Comprador
         $sentencia = $this->conexion->prepare('SELECT c.*, pe.tbpersonaestado FROM tbcomprador c
             INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
             WHERE c.tbpersonaid = :id FOR UPDATE');
+        // El periodo de clasificación no se bloquea aquí: lo protege el lock
+        // nombrado por productor+tipo de CompradorClasificacionService.
         $sentencia->execute(['id' => $persona['tbpersonaid']]);
         $filas = $sentencia->fetchAll();
         if (count($filas) > 1) throw new \RuntimeException('La capacidad de comprador está duplicada.');
@@ -117,7 +143,7 @@ final class Comprador
             ];
         }
         if ($estado !== 'TODOS') {
-            $condiciones[] = '(c.tbcompradorestado * pe.tbpersonaestado) = :estado';
+            $condiciones[] = '(' . self::CLASIFICACION_ABIERTA . ' * pe.tbpersonaestado) = :estado';
             $parametros[':estado'] = $estado === 'ACTIVO' ? 1 : 0;
         }
 
@@ -136,8 +162,10 @@ final class Comprador
             'nombre' => $fila['tbcompradornombre'],
             'telefono' => $fila['tbcompradortelefono'],
             'correoElectronico' => $fila['tbcompradorcorreoelectronico'],
-            'estado' => (int) $fila['tbcompradorestado'] === 1 && (int) $fila['tbpersonaestado'] === 1
-                ? 'ACTIVO' : 'INACTIVO',
+            'productorId' => $fila['tbproductorid'] === null ? null : (int) $fila['tbproductorid'],
+            // Estado de negocio = clasificación abierta + persona disponible.
+            'estado' => (int) $fila['tbcompradorclasificacionabierta'] === 1
+                && (int) $fila['tbpersonaestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
         ];
     }
 }

@@ -566,6 +566,99 @@ clasificación estará vacía para los compradores existentes: leer la
 clasificación en el panel hoy los mostraría a todos como no compradores.
 El orden importa y por eso (b) va después, con su propia migración de datos.
 
+## DEC-DBREADY-007 - Paso (b): backfill primero, escrituras después
+
+Segundo paso del retiro de la tabla legacy de comprador, con estrategia
+expandir → migrar → cortar. El orden no es negociable: si primero se cambiara la
+lectura del panel, todos los compradores legacy aparecerían como falso porque
+sus periodos todavía no existirían.
+
+### 1. Precheck
+
+El CRUD viejo trabaja sobre `tbpersona` y podía registrar un comprador sin que
+esa persona fuera productora. La clasificación exige `tbproductorid`, así que
+antes del backfill se auditan todas las filas legacy contra `tbproductor` por
+`tbpersonaid`:
+
+- `Tools/backfill-clasificacion-comprador.php --check` audita y no escribe.
+- `D-22 comprador legacy sin productor` en `Database/Tests/diagnostico.sql`
+  reporta lo mismo desde SQL.
+
+Si aparece una sola fila incompatible, el script aborta con código 1, imprime
+identificación, persona y nombre afectados, y no migra nada. **No se inventa un
+`tbproductor`**: quién es esa persona en el negocio es una decisión humana.
+
+Conteo en la instalación limpia de referencia: 0 compradores legacy, 0
+incompatibles. En una base con datos reales hay que correr el `--check` antes de
+tocar nada.
+
+### 2. Backfill
+
+Para cada comprador legacy **activo** (bit en 1 y persona activa) que tenga
+productor y no tenga periodo `COMPRADOR` abierto, se abre uno con
+`fechainicio` = momento de la migración y motivo
+`MIGRACION_TBCOMPRADOR_LEGACY`. Esa fecha significa "desde aquí hay evidencia
+confiable", no que la persona empezó a comprar ese día; el motivo explícito
+existe para que nadie lea la fecha como historia real.
+
+Para el comprador legacy **inactivo** no se abre nada ni se inventa un periodo
+cerrado: no se sabe cuándo dejó de serlo. La fila legacy se conserva hasta el
+retiro.
+
+La migración es idempotente: `activar()` no hace nada si ya hay un periodo
+abierto, así que correrla dos veces deja un solo periodo.
+
+Cada corrida deja snapshot CSV antes y después, y bitácora de progreso, en
+`/tmp/backfill-clasificacion-comprador/` (`tail -f .../progress.log`).
+
+### 3. Verificación
+
+Antes de tocar endpoints: todo comprador legacy activo migrable con exactamente
+un periodo abierto, todo inactivo con cero, cero duplicados y cero
+incompatibles. Lo vigilan `D-22`, `D-23` (activo sin clasificación abierta) y
+`D-24` (inactivo con clasificación abierta), más `D-18`/`D-19` que ya cubrían
+periodos abiertos duplicados y solapados.
+
+### 4. Escrituras
+
+`Application/Service/CompradorClasificacionService.php` traduce el CRUD a
+periodos, dentro de la transacción del llamador y bajo el lock nombrado por
+productor+tipo:
+
+- alta y reactivación abren `COMPRADOR`; repetirlas es idempotente;
+- baja cierra el periodo abierto; repetirla no modifica la historia cerrada;
+- reactivar abre un periodo **nuevo**, nunca reabre el cerrado;
+- sin productor existente no se escribe clasificación: el alta responde 409 con
+  el mensaje explícito y la transacción revierte también la fila legacy, así que
+  no se siguen creando compradores que la clasificación no pueda representar.
+
+Consecuencia visible: `POST /api/compradores.php` sobre una persona que no es
+productora ahora falla. Es el comportamiento correcto bajo el modelo aprobado, y
+es lo que impide que el problema del precheck se siga reproduciendo.
+
+### 5. Fuente de verdad
+
+El `estado` que devuelven la API y el panel sale de la clasificación abierta
+(`CASE` sobre el periodo `COMPRADOR` vigente por `tbpersonaestado`), no de
+`tbcompradorestado`. El filtro `ACTIVO/INACTIVO` y el orden del listado usan la
+misma expresión. El bit sigue escribiéndose para no romper la compatibilidad,
+pero ya no decide nada.
+
+### 6. Legacy
+
+No hay `DROP TABLE` en este tramo. Quedan los pasos (d) y (e): retirar modelo,
+controlador, endpoints y contrato de frontend, y recién después borrar la tabla
+con respaldo previo.
+
+### 7. Pruebas
+
+`Tests/comprador_backfill_test.php` cubre los nueve casos exigidos: legacy
+activo migrado, legacy inactivo sin periodo, backfill dos veces con un solo
+periodo, activar dos veces idempotente, desactivar conservando el periodo
+cerrado, reactivar abriendo uno nuevo sin reabrir el anterior, COMPRADOR y
+VENDEDOR independientes, rollback ante fallo entre cierre y apertura, y legacy
+sin productor con error explícito y cero creación silenciosa.
+
 ## DEC-DBREADY-002 - Migración sin pasado inventado
 
 `Database/Migrations/006estructuracomercialhistorica.sql` es idempotente y solo

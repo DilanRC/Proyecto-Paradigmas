@@ -41,7 +41,9 @@ La base `bdmercadoganadero` contiene exactamente 30 tablas:
 `tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
 de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
 `tbcomprador` es legacy de compatibilidad temporal: sobrevive mientras el CRUD
-actual dependa de ella y debe retirarse. Comprador y Vendedor son
+actual dependa de ella y debe retirarse. Su migración se audita y ejecuta con
+`php Tools/backfill-clasificacion-comprador.php --check` (audita) y `--apply`
+(migra); el estado que muestran API y panel ya sale de la clasificación. Comprador y Vendedor son
 clasificaciones del Productor y su única fuente de verdad es
 `tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`). Animal, publicación, compra,
 venta, funnel, carrito, fletes y reseñas quedan preparados en base para que

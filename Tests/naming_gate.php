@@ -182,7 +182,10 @@ foreach (['FROM tbproductordireccion', 'FROM tbfincadireccion', 'FROM tbvehiculo
     'tbproductoractividad.tbproductorid', 'D-12 actividad fuera del catalogo cerrado',
     'D-13 tbcompradorestado fuera de dominio', 'D-14 identificadores comerciales repetidos',
     'D-15 enlaces comerciales huerfanos', 'D-18 periodos abiertos duplicados',
-    'D-19 periodos solapados', 'D-20 valores comerciales fuera de dominio numerico'] as $consulta) {
+    'D-19 periodos solapados', 'D-20 valores comerciales fuera de dominio numerico',
+    'D-22 comprador legacy sin productor',
+    'D-23 comprador legacy activo sin clasificacion abierta',
+    'D-24 comprador legacy inactivo con clasificacion abierta'] as $consulta) {
     if (!str_contains($diagnostico, $consulta)) {
         throw new RuntimeException("El diagnóstico debe incluir {$consulta}");
     }
@@ -217,6 +220,36 @@ foreach (glob("{$root}/Application/Model/*.php") as $modelo) {
     if (str_contains((string) file_get_contents($modelo), 'tbcompradorestado')) {
         throw new RuntimeException('Solo el CRUD legacy puede leer tbcompradorestado: ' . basename($modelo));
     }
+}
+
+// Paso (b) del retiro (DEC-DBREADY-007): las escrituras del CRUD legacy
+// espejan la clasificación y el estado mostrado ya no sale del bit.
+$servicioClasificacion = file_get_contents("{$root}/Application/Service/CompradorClasificacionService.php");
+$controladorComprador = file_get_contents("{$root}/Application/Controller/CompradorController.php");
+$modeloComprador = file_get_contents("{$root}/Application/Model/Comprador.php");
+$backfill = file_get_contents("{$root}/Tools/backfill-clasificacion-comprador.php");
+foreach ([
+    'MIGRACION_TBCOMPRADOR_LEGACY' => 'el backfill debe declarar su motivo',
+    'public function exigirProductor' => 'el alta exige productor existente',
+] as $fragmento => $motivo) {
+    if (!str_contains($servicioClasificacion, $fragmento)) {
+        throw new RuntimeException("CompradorClasificacionService: falta {$fragmento} ({$motivo}).");
+    }
+}
+if (preg_match('/INSERT\s+INTO\s+tbproductor\b/i', $servicioClasificacion . $backfill)) {
+    throw new RuntimeException('Ni el backfill ni la clasificación pueden crear productores.');
+}
+foreach (['CompradorClasificacionService', 'abrirClasificacion', 'cerrarClasificacion'] as $uso) {
+    if (!str_contains($controladorComprador, $uso)) {
+        throw new RuntimeException("CompradorController debe usar {$uso}.");
+    }
+}
+if (str_contains($controladorComprador, "(int) \$bloqueado['tbcompradorestado']")) {
+    throw new RuntimeException('El controlador ya no puede decidir negocio con el bit legacy.');
+}
+if (!str_contains($modeloComprador, 'CLASIFICACION_ABIERTA')
+    || str_contains($modeloComprador, "(int) \$fila['tbcompradorestado'] === 1")) {
+    throw new RuntimeException('El estado mostrado de comprador debe salir de la clasificación abierta.');
 }
 
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");

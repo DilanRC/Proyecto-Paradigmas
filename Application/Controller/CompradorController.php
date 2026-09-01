@@ -8,6 +8,7 @@ use Application\Auth\ActorContext;
 use Application\HttpException;
 use Application\Model\Bitacora;
 use Application\Model\Comprador;
+use Application\Service\CompradorClasificacionService;
 use Application\Service\EstadoService;
 use Application\Service\ValidacionException;
 use Application\Service\ValidacionService;
@@ -20,6 +21,7 @@ final class CompradorController
     private Bitacora $bitacora;
     private ValidacionService $validacion;
     private EstadoService $estadoService;
+    private CompradorClasificacionService $clasificacion;
     private string $solicitudId;
 
     public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
@@ -29,6 +31,7 @@ final class CompradorController
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
         $this->validacion = new ValidacionService();
         $this->estadoService = new EstadoService($this->bitacora, $this->solicitudId);
+        $this->clasificacion = new CompradorClasificacionService($conexion);
     }
 
     public function procesar(string $metodo, array $consulta, array $cuerpo): array
@@ -118,6 +121,14 @@ final class CompradorController
                     );
                 }
                 $this->comprador->crear($datos);
+                // Paso (b): el alta abre la clasificación COMPRADOR del
+                // productor. Si la persona no es productora, esto lanza 409 y
+                // la transacción revierte también la fila legacy: no se crea un
+                // comprador que la clasificación no pueda representar.
+                $this->abrirClasificacion(
+                    $datos['identificacionNumero'],
+                    CompradorClasificacionService::MOTIVO_ALTA,
+                );
                 $nuevo = $this->comprador->buscar($datos['identificacionNumero']);
                 if ($nuevo === null) {
                     throw new \RuntimeException('No fue posible leer el comprador recién creado.');
@@ -153,13 +164,14 @@ final class CompradorController
             if ($bloqueado === null) {
                 throw new HttpException('Comprador no encontrado.', 404);
             }
-            if ((int) $bloqueado['tbcompradorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
+            $anterior = $this->comprador->buscar($identificacion);
+            // El estado lo decide la clasificación (paso 5), no el bit legacy.
+            if (($anterior['estado'] ?? 'INACTIVO') !== 'ACTIVO') {
                 throw new HttpException(
                     'El comprador está inactivo. Debe reactivarlo antes de actualizarlo.',
                     409,
                 );
             }
-            $anterior = $this->comprador->buscar($identificacion);
             $this->comprador->actualizar($identificacion, $datos);
             $nuevo = $this->comprador->buscar($identificacion);
             if ($nuevo === null) {
@@ -183,18 +195,25 @@ final class CompradorController
     private function desactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
-        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
-            fn ($clave) => $this->comprador->bloquear($clave),
-            fn ($clave) => $this->comprador->buscar($clave),
-            fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
-            'tbcompradorestado',
-            0,
-            'Comprador no encontrado.',
-            $identificacion,
-            'COMPRADOR',
-            'API_COMPRADORES',
-            $identificacion,
-        ));
+        $nuevo = $this->transaccion(function () use ($identificacion): array {
+            // Cerrar primero la clasificación y después escribir el bit deja
+            // ambos lados dentro de la misma transacción: si algo falla entre
+            // medio, el ROLLBACK devuelve el periodo abierto y el bit intacto.
+            $this->cerrarClasificacion($identificacion);
+
+            return $this->estadoService->transicionar(
+                fn ($clave) => $this->comprador->bloquear($clave),
+                fn ($clave) => $this->comprador->buscar($clave),
+                fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
+                'tbcompradorestado',
+                0,
+                'Comprador no encontrado.',
+                $identificacion,
+                'COMPRADOR',
+                'API_COMPRADORES',
+                $identificacion,
+            );
+        });
 
         return $this->respuesta(true, 'Comprador desactivado correctamente.', $nuevo);
     }
@@ -202,20 +221,63 @@ final class CompradorController
     private function reactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
-        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
-            fn ($clave) => $this->comprador->bloquear($clave),
-            fn ($clave) => $this->comprador->buscar($clave),
-            fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
-            'tbcompradorestado',
-            1,
-            'Comprador no encontrado.',
-            $identificacion,
-            'COMPRADOR',
-            'API_COMPRADORES',
-            $identificacion,
-        ));
+        $nuevo = $this->transaccion(function () use ($identificacion): array {
+            // Reactivar abre SIEMPRE un periodo nuevo: el anterior quedó
+            // cerrado y no se reabre, porque dejó de ser comprador de verdad
+            // en ese intervalo y esa historia no se toca.
+            $this->abrirClasificacion($identificacion, CompradorClasificacionService::MOTIVO_REACTIVACION);
+
+            return $this->estadoService->transicionar(
+                fn ($clave) => $this->comprador->bloquear($clave),
+                fn ($clave) => $this->comprador->buscar($clave),
+                fn ($clave, $activo) => $this->comprador->cambiarEstado($clave, $activo),
+                'tbcompradorestado',
+                1,
+                'Comprador no encontrado.',
+                $identificacion,
+                'COMPRADOR',
+                'API_COMPRADORES',
+                $identificacion,
+            );
+        });
 
         return $this->respuesta(true, 'Comprador reactivado correctamente.', $nuevo);
+    }
+
+    /**
+     * Abre la clasificación COMPRADOR del productor de esa identificación.
+     * Idempotente: si ya está abierta no crea otra. Exige productor existente
+     * y nunca lo crea.
+     */
+    private function abrirClasificacion(string $identificacion, string $motivo): void
+    {
+        $bloqueado = $this->comprador->bloquear($identificacion);
+        if ($bloqueado === null) {
+            throw new HttpException('Comprador no encontrado.', 404);
+        }
+        $productorId = $this->clasificacion->exigirProductor(
+            (int) $bloqueado['tbpersonaid'],
+            $identificacion,
+        );
+        $this->clasificacion->activar($productorId, $motivo);
+    }
+
+    /**
+     * Cierra la clasificación COMPRADOR si está abierta. Un comprador legacy
+     * sin productor no tiene clasificación que cerrar: se deja pasar, y el
+     * diagnóstico D-22 lo mantiene visible hasta que alguien lo resuelva.
+     */
+    private function cerrarClasificacion(string $identificacion): void
+    {
+        $bloqueado = $this->comprador->bloquear($identificacion);
+        if ($bloqueado === null) {
+            throw new HttpException('Comprador no encontrado.', 404);
+        }
+        $productorId = $this->clasificacion->productorDePersona((int) $bloqueado['tbpersonaid']);
+        if ($productorId === null) {
+            return;
+        }
+        $this->clasificacion->desactivar($productorId);
     }
 
     private function validarCuerpoPersona(array $cuerpo, bool $actualizacion): array
