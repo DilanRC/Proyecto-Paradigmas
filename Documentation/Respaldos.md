@@ -25,6 +25,17 @@ completa y por partes verificadas byte a byte contra el origen (`APROBADO` en
 `MANIFEST.md`). Los ocho respaldos anteriores (`Avance01` hasta `LineaBase`) no
 se tocaron, no se movieron y no se reorganizaron.
 
+## Checkpoint previo a la ampliación histórica (P0/T1)
+
+Antes de cualquier DDL posterior a P0-C se generó el checkpoint local
+`Database/Backups/Avance03/` desde el commit `3b8753b`. Sus tres dumps, su
+manifiesto y SHA256 se verificaron mediante restauración completa y por partes
+en las bases temporales del verificador: 15 tablas, cero restricciones y cero
+índices, sin diferencias de conteo. Los respaldos históricos no fueron
+modificados. Los dumps quedan fuera del control de versiones por la política
+de `.gitignore`; no se deben sustituir ni regenerar sin crear un checkpoint
+nuevo.
+
 ## Entrega vigente
 
 Corrección 04 no modifica los respaldos históricos hasta Corrección 03. El
