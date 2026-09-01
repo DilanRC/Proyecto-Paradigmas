@@ -318,7 +318,7 @@ docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
 node Tests/frontend_contract_test.js
-node Tests/frontend_retirement_eval.js
+node Tests/frontend_capacidades_eval.js
 node Tests/frontend_contrast_test.mjs
 node --test Tests/frontend/*.test.mjs
 python3 Tests/documentation_test.py

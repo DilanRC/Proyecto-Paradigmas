@@ -165,3 +165,51 @@ test('cada panel conserva su endpoint', async () => {
     assert.match(await leer('productores.js'), /const API_URL = 'api\/productores\.php';/);
     assert.match(await leer('productores.js'), /const FINCAS_DIRECCION_URL = 'api\/fincas-direccion\.php';/);
 });
+
+// --- compradores -------------------------------------------------------------
+// Recuperado tras el retiro del tramo 7. El cuerpo debe coincidir con
+// CompradorController::validarComprador(), que rechaza cualquier campo extra
+// mediante rechazarCamposDesconocidos().
+import { buildCompradorPayload } from '../../Public/js/compradores.js';
+
+const compradorBase = {
+    tipoCodigo: 'CEDULA_JURIDICA', numero: ' 3-101-111111 ', nombre: ' Carnes del Valle S.A. ',
+    telefono: ' +506 2222-3333 ', correoElectronico: '  Compras@Example.TEST ',
+};
+
+test('comprador nuevo: identificacion anidada y correo en minuscula', () => {
+    const payload = buildCompradorPayload(compradorBase);
+
+    assert.deepEqual(payload, {
+        identificacion: { tipoCodigo: 'CEDULA_JURIDICA', numero: '3-101-111111' },
+        nombre: 'Carnes del Valle S.A.',
+        telefono: '+506 2222-3333',
+        correoElectronico: 'compras@example.test',
+    });
+    assert.equal('identificacionNumeroOriginal' in payload, false, 'el alta no lo envia');
+});
+
+test('comprador editado: agrega identificacionNumeroOriginal', () => {
+    const payload = buildCompradorPayload({
+        ...compradorBase, identificacionNumeroOriginal: '3-101-111111',
+    });
+
+    assert.equal(payload.identificacionNumeroOriginal, '3-101-111111');
+});
+
+test('comprador: solo los cuatro campos que el controlador permite', () => {
+    // `rechazarCamposDesconocidos` devuelve 422 ante cualquier clave de mas, asi
+    // que un campo extra en el payload romperia el alta entera.
+    assert.deepEqual(
+        Object.keys(buildCompradorPayload(compradorBase)).sort(),
+        ['correoElectronico', 'identificacion', 'nombre', 'telefono'],
+    );
+});
+
+test('comprador y transportista comparten exactamente la forma del cuerpo', () => {
+    // Ambas capacidades son persona + contacto; si una diverge, es un defecto.
+    assert.deepEqual(
+        Object.keys(buildCompradorPayload(compradorBase)).sort(),
+        Object.keys(buildTransportistaPayload(transportistaBase)).sort(),
+    );
+});

@@ -63,6 +63,11 @@ const PAIRS = [
     ['rust-text-lead', PANEL_BG, 'descripcion de la cabecera de pagina'],
     ['rust-text-body', WHITE, 'cita del home'],
     ['badge-inactive-text', BADGE_BG, 'badge de estado inactivo'],
+    // Lista de capacidades en la ficha: las tres situaciones se distinguen
+    // ademas por color, asi que los tres tonos deben ser legibles.
+    ['muted', WHITE, 'situacion de una capacidad no registrada'],
+    ['primary-dark', WHITE, 'capacidad registrada y enlace a su panel'],
+    ['danger', WHITE, 'capacidad que no se pudo comprobar'],
 ];
 
 let failures = 0;

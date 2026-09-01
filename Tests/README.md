@@ -18,7 +18,7 @@ docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
 node Tests/frontend_contract_test.js
-node Tests/frontend_retirement_eval.js
+node Tests/frontend_capacidades_eval.js
 node Tests/frontend_contrast_test.mjs
 node --test Tests/frontend/*.test.mjs
 php services/supabase-database/tests/schema_test.php
@@ -33,10 +33,13 @@ el código, respetan `PORT` y conservan la creación idempotente de `tbfinca`.
 completos.
 
 `frontend_contract_test.js` verifica que los payloads y endpoints usados por los
-paneles activos de productores, métodos de pago, transportistas, vehículos y
+paneles de productores, compradores, métodos de pago, transportistas, vehículos y
 direcciones de finca sigan coincidiendo con los campos aceptados por sus
-controladores. También impide que el enlace, la vista, la ruta o el JavaScript
-de Compradores reaparezcan después de su retiro en el tramo 7.
+controladores.
 
-`frontend_retirement_eval.js` puntúa el retiro del frontend de Compradores y
-exige que todos los artefactos y enlaces retirados permanezcan ausentes.
+`frontend_capacidades_eval.js` sustituye a `frontend_retirement_eval.js`, que
+puntuaba la propiedad contraria mientras Comprador estuvo retirado del frontend.
+Ahora exige que las tres capacidades de una persona (productor, comprador y
+transportista) tengan vista, ruta y módulo, se alcancen entre sí desde cualquier
+menú, y que cada panel lea el parámetro `?q=` con el que la ficha enlaza a la
+misma persona en otra capacidad.

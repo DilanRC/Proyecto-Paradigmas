@@ -14,7 +14,17 @@ const js = `${fs.readFileSync('Public/js/productores.js', 'utf8')}\n${shared}`;
 const view = fs.readFileSync('Application/View/productores/index.php', 'utf8');
 
 assert(js.includes('fetch('), 'La UI debe usar fetch.');
-assert(!js.includes('window.location') && !js.includes('location.reload'), 'El CRUD no debe recargar la página.');
+// Lo que se prohibe es navegar o recargar, no leer la URL: la ficha de un
+// comprador enlaza a la misma persona en otro panel con ?q=<identificacion>, y
+// ese panel debe poder leer el parametro. Prohibir `window.location` entero
+// daba un falso positivo sobre esa lectura.
+const navega = [
+    /location\.reload\s*\(/, /location\.assign\s*\(/, /location\.replace\s*\(/,
+    /location\.href\s*=[^=]/, /window\.location\s*=[^=]/,
+];
+for (const patron of navega) {
+    assert(!patron.test(js), `El CRUD no debe recargar ni navegar la página: ${patron}`);
+}
 assert(js.includes('textContent'), 'Datos externos deben insertarse con textContent.');
 // La carrera de listados se evita cancelando la peticion anterior y descartando
 // las respuestas con secuencia vieja. La comprobacion es sobre esa propiedad, no
