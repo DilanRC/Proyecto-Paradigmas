@@ -77,6 +77,24 @@ for (const [name, background, label] of PAIRS) {
         `${ok ? 'OK' : 'FALLA'}   ${label}`,
     );
 }
+// Variantes de notificacion: color y fondo se leen del propio componente, de
+// modo que cambiar una de las dos se detecta aqui.
+const componentsCss = readFileSync(new URL('components.css', CSS_DIR), 'utf8');
+const toastVariants = [...componentsCss.matchAll(
+    /\.toast--(\w+)\s*\{[^}]*?color:\s*(#[0-9a-fA-F]{3,6})[^}]*?background:\s*(#[0-9a-fA-F]{3,6})/g,
+)];
+assert.ok(toastVariants.length >= 4, 'Se esperaban las variantes success, error, warning e info');
+
+for (const [, variant, fg, bg] of toastVariants) {
+    const ratio = contrast(parseHex(fg), parseHex(bg));
+    const ok = ratio >= AA_NORMAL;
+    if (!ok) failures += 1;
+    console.log(
+        `  .toast--${variant.padEnd(15)} ${bg}  ${ratio.toFixed(2).padStart(5)}   ${AA_NORMAL}    ` +
+        `${ok ? 'OK' : 'FALLA'}   notificacion ${variant}`,
+    );
+}
+
 assert.equal(failures, 0, `${failures} combinaciones de texto no alcanzan ${AA_NORMAL}:1`);
 
 // --- invariantes que impiden reintroducir el problema -----------------------------
@@ -100,5 +118,5 @@ for (const sheet of sheets) {
     }
 }
 
-console.log(`\nOK frontend_contrast_test: ${PAIRS.length} combinaciones cumplen AA y ` +
+console.log(`\nOK frontend_contrast_test: ${PAIRS.length + toastVariants.length} combinaciones cumplen AA y ` +
     `${sheets.length} hojas sin texto en rgba() ni tipografias fantasma.`);

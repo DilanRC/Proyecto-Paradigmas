@@ -386,3 +386,109 @@
 .top-bar__link:hover {
     text-decoration:underline;
 }
+
+/* --- Esqueleto de carga -----------------------------------------------------
+   Sustituye al velo con spinner: ocupa el sitio que ocupara el contenido, de
+   modo que la tabla no salta cuando llegan los datos. */
+.skeleton {
+    display:grid;
+    gap:10px;
+    padding:18px;
+}
+
+.skeleton__row {
+    height:44px;
+    border-radius:var(--small-radius);
+    background:linear-gradient(90deg,#eceee9 25%,#f6f7f4 50%,#eceee9 75%);
+    background-size:200% 100%;
+    animation:skeleton-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+    to { background-position:-200% 0; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .skeleton__row { animation:none; }
+}
+
+/* --- Estado de error, distinto del estado vacio -----------------------------
+   Un fallo de red o de servidor no es "no hay resultados": tiene icono propio,
+   mensaje real del fallo y una accion para reintentar. */
+.error-state {
+    min-height:230px;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    text-align:center;
+}
+
+.error-state:not([hidden]) { display:flex; }
+
+.error-state__icon {
+    display:grid;
+    width:54px;
+    height:54px;
+    place-items:center;
+    border-radius:18px;
+    color:var(--danger);
+    background:var(--danger-soft);
+    font-size:26px;
+    font-weight:800;
+}
+
+.error-state h2 { margin:12px 0 0; font-size:18px; }
+.error-state p { max-width:46ch; margin:0; color:var(--muted); }
+
+/* --- Notificaciones ---------------------------------------------------------
+   Dos regiones permanentes: una cortes y otra asertiva. Nunca se ocultan con
+   [hidden] porque un nodo oculto sale del arbol de accesibilidad y el lector
+   deja de observar sus cambios; se ocultan por :empty. */
+.toast-region {
+    position:fixed;
+    z-index:100;
+    right:24px;
+    bottom:24px;
+    display:grid;
+    gap:10px;
+    width:min(390px,calc(100% - 48px));
+    pointer-events:none;
+}
+
+.toast:empty { display:none; }
+
+.toast {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 18px;
+    border:1px solid transparent;
+    border-radius:12px;
+    background:var(--surface);
+    box-shadow:0 15px 45px rgba(16,34,22,.18);
+    font-weight:650;
+    pointer-events:auto;
+}
+
+.toast__text { flex:1; }
+
+.toast__action {
+    flex:0 0 auto;
+    padding:6px 12px;
+    border:1px solid currentColor;
+    border-radius:999px;
+    color:inherit;
+    background:transparent;
+    font-size:12px;
+    font-weight:750;
+}
+
+.toast--success { color:#125b36; background:#e5f6ec; }
+.toast--error   { color:#8f2229; background:#fdebed; }
+.toast--warning { color:#7a4b00; background:#fdf1dd; }
+.toast--info    { color:#1f4b6e; background:#e7f1f9; }
+
+@media (max-width:600px) {
+    .toast-region { right:16px; left:16px; bottom:16px; width:auto; }
+}
