@@ -10,6 +10,14 @@ const PREFIX = 'tindercows:draft';
 const IDENTITY_FIELDS = ['identificacionNumeroOriginal', 'vehiculoId', 'id'];
 const controllers = new WeakMap();
 
+function safeSessionStorage() {
+    try {
+        return globalThis.sessionStorage ?? null;
+    } catch {
+        return null;
+    }
+}
+
 function storageDisponible(storage) {
     return storage && typeof storage.getItem === 'function'
         && typeof storage.setItem === 'function'
@@ -128,12 +136,13 @@ export function applyFormValues(form, values = {}) {
 
 export function createFormDraft({
     form,
-    storage = globalThis.sessionStorage,
+    storage = undefined,
     debounceMs = 250,
     resolveContext = () => resolveDraftContext(form),
     restoreOnOpen = true,
 } = {}) {
-    if (!form || !storageDisponible(storage)) return null;
+    const actualStorage = storage === undefined ? safeSessionStorage() : storage;
+    if (!form || !storageDisponible(actualStorage)) return null;
 
     let timer = null;
     let restoring = false;
@@ -149,7 +158,7 @@ export function createFormDraft({
         const current = context();
         if (!current?.key) return false;
         try {
-            storage.setItem(current.key, JSON.stringify({
+            actualStorage.setItem(current.key, JSON.stringify({
                 version: VERSION,
                 savedAt: Date.now(),
                 values: captureFormValues(form),
@@ -177,7 +186,7 @@ export function createFormDraft({
         if (!current?.key) return false;
         let parsed;
         try {
-            const raw = storage.getItem(current.key);
+            const raw = actualStorage.getItem(current.key);
             if (!raw) return false;
             parsed = JSON.parse(raw);
         } catch {
@@ -205,7 +214,7 @@ export function createFormDraft({
         const current = context();
         if (!current?.key) return false;
         try {
-            storage.removeItem(current.key);
+            actualStorage.removeItem(current.key);
             dirty = false;
             return true;
         } catch {
@@ -224,8 +233,9 @@ export function createFormDraft({
     const dialog = form.closest?.('dialog') ?? null;
     if (restoreOnOpen && dialog) {
         const onOpen = () => { if (dialog.open) restoreNow(); };
-        if (typeof MutationObserver !== 'undefined') {
-            observer = new MutationObserver((records) => {
+        const Observer = globalThis.MutationObserver;
+        if (typeof Observer === 'function') {
+            observer = new Observer((records) => {
                 if (records.some((record) => record.attributeName === 'open')) onOpen();
             });
             observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
