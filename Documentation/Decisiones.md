@@ -731,3 +731,34 @@ haya entrado; y que `Sa Vicente` no se haya convertido en `Sand Vicente`.
 **Limite.** El generador aplica unicamente la columna `correccion_final` que
 escriba una persona. La columna `sugerencia` no se aplica nunca sola, ni siquiera
 en RECONSTRUCCION_SEGURA.
+
+## DEC-FRONT-16 - Aplicadas las veinte correcciones revisadas
+
+**Que se aplico.** Las 20 filas clasificadas como `REQUIERE_REVISION` en
+DEC-FRONT-15, tras confirmarlas una a una. Antes de aplicarlas se comprobo la
+evidencia de cada token reconstruido: en **16 de los 20** el token aparece en
+INEC dentro de **ese mismo distrito**, que es el criterio mas fuerte disponible.
+
+`Carrai` en el distrito `70503` se confirma solo: el distrito se llama Carrandi.
+
+Los cuatro sin evidencia mismo-distrito son `Muo -> Mundo` (dos veces),
+`Alejaro -> Alejandro` y `Caela -> Candela`. Se aceptaron porque al reponer la
+secuencia perdida no admiten otra lectura: de `MUO` solo sale `MUNDO`, y
+`ALEJANDRO` aparece 19 veces en el corpus.
+
+**Una confirmacion que no se busco.** El catalogo bajo de 13274 a 13273
+etiquetas. La que falta es `Sa Vicente`: al corregirlo a `San Vicente` colapso
+con el `San Vicente` que el distrito `40701` ya tenia. Que el nombre corregido
+coincida con uno preexistente del mismo distrito es evidencia independiente de
+que la correccion era la correcta, y de que la propuesta automatica anterior,
+`Sand Vicente`, era falsa.
+
+**Estado del catalogo.** 365 correcciones en total: 343 por cruce mismo-distrito
+con INEC, 2 por registro hermano dentro del propio XLSX y 20 por revision
+manual. 360 nombres contienen ya la secuencia `nd`, donde el XLSX del IGN no
+traia ninguno. Quedan 153 candidatos `RECONSTRUCCION_SEGURA` sin revisar y 126
+`NO_CORREGIR` que no deben tocarse.
+
+**Trazabilidad.** Las 20 figuran en `Documentation/correcciones-localidades.csv`
+con fuente `REVISION_MANUAL`, y su origen esta en
+`Documentation/localidades-por-revisar.csv` con la evidencia de cada una.

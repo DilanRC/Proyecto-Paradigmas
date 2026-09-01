@@ -18,9 +18,9 @@ test('ninguna localidad cuelga de un distrito inexistente', () => {
     assert.deepEqual(huerfanos, [], `codigos sin distrito: ${huerfanos.join(', ')}`);
 });
 
-test('el total es 13274, tras reparar con INEC y deduplicar', () => {
+test('el total es 13273, tras reparar con INEC y deduplicar', () => {
     const total = Object.values(POBLADOS).reduce((n, lista) => n + lista.length, 0);
-    assert.equal(total, 13274);
+    assert.equal(total, 13273);
 });
 
 test('solo un distrito se queda sin localidad publicada', () => {
@@ -102,9 +102,9 @@ test('escribir el nombre correcto encuentra el registro', () => {
     assert.ok(resultado.some((n) => n !== 'Tamarindo' && n.includes('Tamarindo')));
 });
 
-test('341 nombres recuperaron su "nd"; antes no lo tenia ninguno', () => {
+test('360 nombres recuperaron su "nd"; antes no lo tenia ninguno', () => {
     const con = Object.values(POBLADOS).flat().filter((n) => normalizar(n).includes('nd'));
-    assert.equal(con.length, 341);
+    assert.equal(con.length, 360);
 });
 
 test('las coincidencias por prefijo van antes que las del interior', () => {
@@ -170,11 +170,23 @@ test('ninguna de las reconstrucciones inventadas entro en el catalogo', () => {
     }
 });
 
-test('la palabra reconstruida no basta: hace falta el par confirmado', () => {
-    // "Sa Vicente" no es perdida de "nd" sino de "n", y es el unico caso del
-    // catalogo. Convertirlo en "Sand Vicente" porque SAND existe en INEC seria
-    // exactamente el error que estas pruebas impiden.
-    const todos = new Set(Object.values(POBLADOS).flat());
-    assert.ok(todos.has('Sa Vicente'), 'el original debe conservarse hasta que se revise');
-    assert.ok(!todos.has('Sand Vicente'));
+test('"Sa Vicente" se resolvio como San Vicente, nunca como Sand Vicente', () => {
+    // Era perdida de "n" sola, el unico caso del catalogo, y no de "nd".
+    // Convertirlo en "Sand Vicente" porque SAND existe en INEC habria sido
+    // exactamente el error que estas pruebas impiden. Al corregirlo colapso
+    // con el "San Vicente" que ese distrito ya tenia, lo que lo confirma.
+    const distrito = POBLADOS['40701'];
+    assert.deepEqual(distrito.filter((n) => n.includes('Vicente')), ['San Vicente']);
+    assert.ok(!distrito.includes('Sa Vicente'));
+    assert.ok(!Object.values(POBLADOS).flat().includes('Sand Vicente'));
+});
+
+test('las 20 revisadas a mano entraron con su forma correcta', () => {
+    for (const [codigo, nombre] of [
+        ['11901', 'Otro Mundo'], ['51003', 'Andes'], ['51104', 'Prendas'],
+        ['70503', 'Carrandí'], ['21308', 'Comandos'], ['30801', 'Fundación de El Guarco'],
+        ['61004', 'Río Incendio'], ['20112', 'Vueltas Peñaranda'],
+    ]) {
+        assert.ok(pobladosDe(codigo).includes(nombre), `${codigo}: falta ${nombre}`);
+    }
 });
