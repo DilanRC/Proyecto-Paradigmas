@@ -460,3 +460,64 @@ lista correcta, que es justamente lo que falta.
 
 **Limite.** Solo catalogo de frontend. No se creo tabla, endpoint ni validacion
 de servidor; el backend sigue aceptando las direcciones como texto.
+
+## DEC-FRONT-12 - Compradores vuelve al frontend y las capacidades se hacen visibles
+
+**Necesidad.** DEC-PER-001 fija que una persona no es un rol: `tbpersona`
+concentra a la persona y la existencia de una fila en `tbproductor`,
+`tbcomprador` o `tbtransportista` representa una capacidad. Esa lectura no era
+navegable. Comprador no tenia interfaz desde el tramo 7, y los tres paneles que
+si existian presentaban a cada capacidad como si fuera una identidad separada:
+nada indicaba que una misma persona pudiera ser dos cosas, ni ninguna.
+
+**Sustituye a DEC-TRAMO-7.** Aquel retiro fue de secuencia, no de defecto: "el
+retiro respeta el alcance secuencial del remodelado". El backend nunca se
+retiro. `CompradorController` conserva el CRUD completo y `Public/api/compradores.php`
+siguio respondiendo todo este tiempo, de modo que recuperar la interfaz no toco
+base de datos, modelo ni controlador.
+
+**Mecanismo.** Se reconstruyo el panel en la arquitectura vigente, no se
+revirtio el commit: modulos compartidos, CSS por capas, validacion por campo,
+notificaciones, vacio distinto de error y reintento. El cuerpo que envia es el
+mismo que el de transportista, y una prueba compara ambos porque las dos
+capacidades son persona mas contacto.
+
+`Public/js/shared/capacidades.js` responde "que es esta persona" sin backend
+nuevo: el contrato ya lo permitia, porque `GET ?identificacionNumero=X` devuelve
+200 con los datos si la capacidad existe y 404 si no existe. Las tres consultas
+van en paralelo.
+
+**Tres situaciones, no dos.** Una capacidad puede estar registrada, no
+registrada, o no haberse podido comprobar. Un 404 es una afirmacion del
+servidor; un fallo de red no afirma nada. Mostrar "No registrado" ante un corte
+de red seria declarar falso algo que no se verifico, el mismo defecto que separa
+"lista vacia" de "fallo al cargar". Comprobado en navegador: con la red caida
+las tres capacidades dicen "No se pudo comprobar" y ninguna dice "No registrado".
+
+**Vendedor.** No existe `tbvendedor` ni mencion alguna en el repositorio. En un
+mercado ganadero quien vende es el productor, que posee las fincas y el ganado,
+asi que la capacidad se rotula "Productor (vendedor)". No se creo tabla ni
+endpoint: habria exigido tocar base de datos, modelo y controlador.
+
+**Consecuencia.** Desde la ficha de un comprador se ve si esa misma persona es
+productor o transportista, y se salta a su panel con `?q=<identificacion>`.
+Verificado con Maria Fernandez Solano, productora activa: al registrarla como
+compradora el backend reutilizo la persona y la ficha muestra las dos
+capacidades activas y transportista no registrado.
+
+**Costo.** Tres peticiones adicionales al abrir una ficha. Se abortan al cerrar
+el detalle para que la respuesta lenta de una ficha no pinte sus capacidades
+sobre la siguiente.
+
+**Riesgo.** Que el enlace "Abrir panel" apunte a un panel que ignore `?q=`: la
+visita llegaria y mostraria la lista sin filtrar, pareciendo que funciona. Lo
+cubre el gate `enlace_profundo_*`, comprobado quitando la lectura en
+transportistas y verificando que falla.
+
+**Alternativa descartada.** Revertir el commit del retiro. Habria devuelto el
+panel escrito contra la arquitectura anterior, sin modulos compartidos ni
+distincion de vacio y error, y habria que rehacerlo entero.
+
+**Limite.** Solo frontend. No se creo tabla de roles, ni endpoint que devuelva
+las capacidades de una persona en una sola llamada; la ficha las compone desde
+los tres endpoints que ya existian.

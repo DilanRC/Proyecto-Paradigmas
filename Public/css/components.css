@@ -470,3 +470,74 @@
 @media (max-width:600px) {
     .toast-region { right:16px; left:16px; bottom:16px; width:auto; }
 }
+
+/* Capacidades de una persona dentro de la ficha de detalle. */
+.capacidades {
+    margin:24px 0 0;
+    padding:16px 0 0;
+    border-top:1px solid var(--border);
+}
+
+.capacidades__titulo {
+    margin:0;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:750;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
+.capacidades__nota {
+    margin:4px 0 12px;
+    color:var(--muted);
+    font-size:12px;
+}
+
+.capacidades__lista {
+    display:grid;
+    gap:8px;
+    margin:0;
+    padding:0;
+    list-style:none;
+}
+
+.capacidad {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px 12px;
+    align-items:baseline;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-left-width:3px;
+    border-radius:8px;
+    background:var(--surface);
+}
+
+.capacidad__nombre {
+    flex:1 1 auto;
+    font-size:14px;
+    font-weight:650;
+}
+
+.capacidad__estado {
+    font-size:12px;
+    color:var(--muted);
+}
+
+/* Registrado, no registrado y "no se pudo comprobar" son tres situaciones
+   distintas: un 404 afirma que la persona no tiene esa capacidad, mientras que
+   un fallo de red no afirma nada. El color lo distingue sin depender solo del
+   texto, y ninguna de las tres se apoya unicamente en el color. */
+.capacidad--registrado { border-left-color:var(--primary); }
+.capacidad--no-registrado { border-left-color:var(--border); }
+.capacidad--desconocido { border-left-color:var(--accent); }
+.capacidad--cargando { border-left-color:var(--border); }
+
+.capacidad--registrado .capacidad__estado { color:var(--primary-dark); }
+.capacidad--desconocido .capacidad__estado { color:var(--danger); }
+
+.capacidad__enlace {
+    font-size:12px;
+    font-weight:650;
+    color:var(--primary-dark);
+}

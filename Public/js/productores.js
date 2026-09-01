@@ -652,6 +652,11 @@ function initialize() {
             dialog.addEventListener('close', dialogs.restoreFocus);
         });
 
+
+    // La busqueda puede venir en la URL desde el enlace "Abrir panel" de otra
+    // capacidad, para caer directamente sobre la misma persona.
+    const inicial = new URLSearchParams(window.location.search).get('q');
+    if (inicial) elements.search.value = inicial;
     listProducers();
 }
 

@@ -10,6 +10,7 @@ import test from 'node:test';
 
 const PANELES = [
     ['productores', 'productores'],
+    ['compradores', 'compradores'],
     ['transportistas', 'transportistas'],
     ['vehiculos', 'vehiculos'],
     ['pagometodos', 'pagometodos'],
@@ -58,7 +59,7 @@ test('todas las vistas tienen las dos regiones vivas de notificacion', () => {
     }
 });
 
-test('los cuatro paneles distinguen vacio de error y ofrecen reintento', () => {
+test('los cinco paneles distinguen vacio de error y ofrecen reintento', () => {
     for (const [, vista] of PANELES.filter(([p]) => p !== 'home')) {
         const html = leer(`Application/View/${vista}/index.php`);
         assert.ok(html.includes('id="estado-vacio"'), `${vista}: falta el estado vacio`);
