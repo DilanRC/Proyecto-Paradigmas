@@ -5,6 +5,7 @@ import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
 } from './shared/list-state.js';
+import { conectarDireccion } from './shared/territorio.js';
 import { createToast } from './shared/toast.js';
 
 const API_URL = 'api/productores.php';
@@ -108,6 +109,22 @@ function initialize() {
     // sus errores sobre el formulario principal.
     const errores = bindFormErrors(elements.form, { collapsePrefixes: ['fincas'] });
     const erroresFinca = bindFormErrors(elements.fincaAddressForm);
+
+    // Provincia -> canton -> distrito, en los dos formularios que llevan
+    // direccion. El distrito sigue siendo texto libre con sugerencias: el
+    // catalogo de distritos aun no esta completo y no debe impedir escribir uno.
+    const direccionPrincipal = conectarDireccion({
+        provincia: $('#direccion-provincia'),
+        canton: $('#direccion-canton'),
+        distrito: $('#direccion-distrito'),
+        listaDistritos: $('#lista-distritos'),
+    });
+    const direccionFinca = conectarDireccion({
+        provincia: $('#finca-direccion-provincia'),
+        canton: $('#finca-direccion-canton'),
+        distrito: $('#finca-direccion-distrito'),
+        listaDistritos: $('#lista-distritos-finca'),
+    });
 
     const submit = createSubmitGuard();
     const statusChange = createSubmitGuard();
@@ -336,6 +353,7 @@ function initialize() {
         fincaDireccionContexto = { identificacionNumero, nombreFinca, exists: false };
         elements.fincaAddressForm.reset();
         erroresFinca.clearErrors();
+        direccionFinca.aplicar({});
         elements.clearFincaAddress.hidden = true;
         elements.fincaAddressTitle.textContent = `Dirección de ${nombreFinca}`;
         dialogs.open(elements.fincaAddressModal, { focus: $('#finca-direccion-provincia') });
@@ -345,9 +363,7 @@ function initialize() {
                 `${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`,
             );
             const direccion = response.data?.direccionFinca ?? {};
-            $('#finca-direccion-provincia').value = direccion.provincia ?? '';
-            $('#finca-direccion-canton').value = direccion.canton ?? '';
-            $('#finca-direccion-distrito').value = direccion.distrito ?? '';
+            direccionFinca.aplicar(direccion);
             $('#finca-direccion-pueblo').value = direccion.pueblo ?? '';
             $('#finca-direccion-senas').value = direccion.senas ?? '';
             fincaDireccionContexto.exists = true;
@@ -458,6 +474,7 @@ function initialize() {
         elements.form.reset();
         errores.clearErrors();
         renderTypeOptions();
+        direccionPrincipal.aplicar({});
         $('#identificacion-original').value = '';
         $('#identificacion-numero').readOnly = false;
         elements.reactivateExisting.hidden = true;
@@ -481,9 +498,7 @@ function initialize() {
         $('#nombre').value = producer.nombre ?? '';
         $('#telefono').value = producer.telefono ?? '';
         $('#correo-electronico').value = producer.correoElectronico ?? '';
-        $('#direccion-provincia').value = producer.direccionPrincipal?.provincia ?? '';
-        $('#direccion-canton').value = producer.direccionPrincipal?.canton ?? '';
-        $('#direccion-distrito').value = producer.direccionPrincipal?.distrito ?? '';
+        direccionPrincipal.aplicar(producer.direccionPrincipal ?? {});
         $('#direccion-pueblo').value = producer.direccionPrincipal?.pueblo ?? '';
         $('#direccion-senas').value = producer.direccionPrincipal?.senas ?? '';
         elements.farms.value = (producer.fincas ?? []).map((farm) => farm.nombre).join('\n');
