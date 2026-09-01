@@ -1,0 +1,27 @@
+# Respaldo — Avance02
+
+- Proyecto: TinderCows
+- Base de datos: dbmercadoganadero
+- Entrega: Avance02
+- Estado: previo al remodelado por tramos (EIF400) — respaldo del tramo 1 antes de tocar estado, dirección y ubicación históricos
+- Fecha y hora: 2026-08-29T23:54-06:00
+- Motor: MySQL 8.0.46
+- Rama: DBA
+- Commit candidato de código: 2249f29eb54a1d751533b7f0ecc4b3855fbc0cd6
+- Etiqueta oficial: avance-02
+- Responsable de exportación: Jeremi
+- Archivo completo: dbmercadoganadero_avance02_completo.sql
+- Archivo de estructura: dbmercadoganadero_avance02_estructura.sql
+- Archivo de datos: dbmercadoganadero_avance02_datos.sql
+- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y quince tablas
+- Restauración completa comprobada: Sí
+- Restauración estructura + datos comprobada: Sí
+- Bases temporales utilizadas: dbmercadoganadero_restore_test, dbmercadoganadero_restore_parts_test
+- Cantidad de tablas: 15
+- Cantidad de restricciones: 0
+- Cantidad de índices: 0
+- Cantidad de PRIMARY KEY: 0
+- Cantidad de FOREIGN KEY: 0
+- Cantidad de CHECK: 0
+- Resultado final: APROBADO
+- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, cero índices, cero AUTO_INCREMENT, intercalación y conteos sin diferencias.

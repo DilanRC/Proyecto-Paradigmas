@@ -36,12 +36,28 @@ UNION ALL
 SELECT 'tbtransportista', tbpersonaid, COUNT(*) FROM tbtransportista
 GROUP BY tbpersonaid HAVING COUNT(*) > 1;
 
--- D-01: productores con más de una dirección. Política: una residencia principal.
-SELECT 'D-01 productores con mas de una direccion' AS diagnostico;
-SELECT tbproductorid, COUNT(*) AS direcciones
+-- D-01: dirección del productor como histórico (DEC-18). Tener varias
+-- direcciones cerradas es normal; lo que rompe integridad es un productor
+-- con más de un periodo ABIERTO a la vez, o sin ninguno.
+SELECT 'D-01 productores con mas de un periodo de direccion abierto' AS diagnostico;
+SELECT tbproductorid, COUNT(*) AS periodos_abiertos
 FROM tbproductordireccion
+WHERE tbproductordireccionfechafin IS NULL
 GROUP BY tbproductorid
 HAVING COUNT(*) > 1;
+
+SELECT 'D-01b productores sin periodo de direccion abierto' AS diagnostico;
+SELECT p.tbproductorid
+FROM tbproductor p
+LEFT JOIN tbproductordireccion pd
+    ON pd.tbproductorid = p.tbproductorid AND pd.tbproductordireccionfechafin IS NULL
+WHERE pd.tbproductordireccionid IS NULL;
+
+SELECT 'D-01c periodos de direccion abiertos sin fecha de inicio' AS diagnostico;
+SELECT tbproductordireccionid, tbproductorid
+FROM tbproductordireccion
+WHERE tbproductordireccionfechafin IS NULL
+  AND tbproductordireccionfechainicio IS NULL;
 
 -- D-02: fincas con más de una dirección. Política: una dirección por finca.
 SELECT 'D-02 fincas con mas de una direccion' AS diagnostico;
@@ -151,3 +167,22 @@ FROM tbdireccion
 GROUP BY tbdireccionprovincia, tbdireccioncanton, tbdirecciondistrito,
          COALESCE(tbdireccionpueblo, ''), COALESCE(tbdireccionsenas, '')
 HAVING COUNT(*) > 1;
+
+-- D-10: estado del productor como histórico (DEC-18/DEC-19). Un productor no
+-- puede tener dos periodos de estado abiertos a la vez.
+SELECT 'D-10 productores con mas de un periodo de estado abierto' AS diagnostico;
+SELECT tbproductorid, COUNT(*) AS periodos_abiertos
+FROM tbproductorestadoperiodo
+WHERE tbproductorestadoperiodofechafin IS NULL
+GROUP BY tbproductorid
+HAVING COUNT(*) > 1;
+
+-- D-11: productor sin ningún periodo de estado abierto. Solo puede ocurrir
+-- con datos heredados sin migrar (Migrations/004eliminaestadoproductor.sql
+-- ya hace ese backfill); DEC-19 lo trata como INACTIVO por defecto.
+SELECT 'D-11 productores sin periodo de estado abierto' AS diagnostico;
+SELECT p.tbproductorid
+FROM tbproductor p
+LEFT JOIN tbproductorestadoperiodo ep
+    ON ep.tbproductorid = p.tbproductorid AND ep.tbproductorestadoperiodofechafin IS NULL
+WHERE ep.tbproductorestadoperiodoid IS NULL;
