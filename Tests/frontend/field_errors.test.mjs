@@ -69,3 +69,57 @@ test('pickFirstInvalid devuelve el primero en orden del documento', () => {
     assert.equal(primero.name, 'b');
     assert.equal(pickFirstInvalid(controles, () => false), null);
 });
+
+// --- mensajes de validacion del cliente --------------------------------------
+// Como el envio se cancela con preventDefault(), el globo nativo del navegador
+// nunca aparece. Sin estos mensajes el usuario veria los campos en rojo y ningun
+// texto que explique por que.
+
+import { describeValidity } from '../../Public/js/shared/field-errors.js';
+
+const control = (validity, extra = {}) => ({ validity: { valid: false, ...validity }, ...extra });
+
+test('un control valido no produce mensaje', () => {
+    assert.equal(describeValidity({ validity: { valid: true } }), '');
+    assert.equal(describeValidity(null), '');
+    assert.equal(describeValidity(undefined), '');
+});
+
+test('campo obligatorio vacio', () => {
+    assert.equal(describeValidity(control({ valueMissing: true })), 'Este campo es obligatorio.');
+});
+
+test('correo con formato invalido se nombra como correo', () => {
+    assert.equal(
+        describeValidity(control({ typeMismatch: true }, { type: 'email' })),
+        'Ingrese un correo electrónico válido.',
+    );
+    assert.equal(
+        describeValidity(control({ typeMismatch: true }, { type: 'url' })),
+        'El formato del valor no es válido.',
+    );
+});
+
+test('longitud minima y maxima citan el limite real del control', () => {
+    assert.equal(
+        describeValidity(control({ tooShort: true }, { minLength: 3 })),
+        'Debe contener al menos 3 caracteres.',
+    );
+    assert.equal(
+        describeValidity(control({ tooLong: true }, { maxLength: 150 })),
+        'No puede superar 150 caracteres.',
+    );
+});
+
+test('los mensajes son propios y no dependen del idioma del navegador', () => {
+    // validationMessage seria "Completa este campo" o "Please fill out this
+    // field" segun la configuracion; el texto mostrado no debe variar por eso.
+    const nativo = control({ valueMissing: true }, { validationMessage: 'Please fill out this field' });
+    assert.equal(describeValidity(nativo), 'Este campo es obligatorio.');
+});
+
+test('ante un motivo desconocido se prefiere el mensaje del navegador a no decir nada', () => {
+    const raro = control({}, { validationMessage: 'Motivo del navegador' });
+    assert.equal(describeValidity(raro), 'Motivo del navegador');
+    assert.equal(describeValidity(control({})), 'Revise este campo.');
+});

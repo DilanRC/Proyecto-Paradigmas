@@ -6,7 +6,7 @@
 // separado y el dialogo de direccion de finca no puede pintar sus errores
 // sobre el formulario principal.
 
-import { mapFieldErrors, pickFirstInvalid } from './field-errors.js';
+import { describeValidity, mapFieldErrors, pickFirstInvalid } from './field-errors.js';
 
 /** Estado de deshabilitado previo a un envio, por formulario. */
 const disabledBefore = new WeakMap();
@@ -43,20 +43,31 @@ export function bindFormErrors(form, { collapsePrefixes = [] } = {}) {
         if (slot) slot.textContent = '';
     }
 
-    function markNativeError(event) {
-        event.target.setAttribute('aria-invalid', 'true');
+    /** Marca un control invalido y escribe el motivo junto a el. */
+    function markInvalid(control) {
+        control.setAttribute('aria-invalid', 'true');
+        const slot = container(control.name);
+        if (slot && !slot.textContent) slot.textContent = describeValidity(control);
     }
 
-    /** Primer control que el navegador considera invalido. */
+    function markNativeError(event) {
+        markInvalid(event.target);
+    }
+
+    /**
+     * Marca TODOS los controles que el navegador rechaza y enfoca el primero.
+     *
+     * Escribe el motivo en cada uno: como el envio se cancela con
+     * preventDefault(), el globo nativo del navegador nunca llega a mostrarse y
+     * sin este texto el usuario veria los campos en rojo sin explicacion.
+     */
     function markFirstInvalid() {
-        const invalid = pickFirstInvalid(
-            form.querySelectorAll('input, select, textarea'),
-            (control) => typeof control.checkValidity === 'function' && !control.checkValidity(),
-        );
-        if (invalid) {
-            invalid.setAttribute('aria-invalid', 'true');
-            invalid.focus();
-        }
+        const controles = [...form.querySelectorAll('input, select, textarea')]
+            .filter((control) => typeof control.checkValidity === 'function');
+        controles.filter((control) => !control.checkValidity()).forEach(markInvalid);
+
+        const invalid = pickFirstInvalid(controles, (control) => !control.checkValidity());
+        invalid?.focus();
         return invalid;
     }
 
