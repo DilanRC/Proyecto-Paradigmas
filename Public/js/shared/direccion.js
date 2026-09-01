@@ -7,12 +7,13 @@
 // localidades de ese distrito.
 
 import {
-    cantones, codigoDistrito, distritos, llenarDatalist, llenarSelect, provincias,
+    cantones, codigoDistrito, distritos, llenarSelect, provincias,
 } from './territorio.js';
+import { createSuggestionCombobox } from './suggestion-combobox.js';
 
-// Las 13309 localidades pesan unas 200 KB frente a las 22 KB de la DTA. Cargarlas
+// Las 13273 localidades pesan unas 200 KB frente a las 22 KB de la DTA. Cargarlas
 // en cada visita, para un campo que muchas direcciones ni siquiera usan, seria
-// pagar diez veces el catalogo que si hace falta siempre. Se piden la primera
+// pagar casi diez veces el catalogo que si hace falta siempre. Se piden la primera
 // vez que se elige un distrito, y una sola vez por pagina.
 let promesaPoblados = null;
 function cargarPoblados() {
@@ -31,7 +32,24 @@ function cargarPoblados() {
 export function conectarDireccion({
     provincia, canton, distrito, pueblo = null, listaPueblos = null,
 }) {
-    let sugerenciasDe = null;
+    const sugerenciasPueblo = pueblo ? createSuggestionCombobox({
+        input: pueblo,
+        fallbackList: listaPueblos,
+        label: 'Sugerencias de pueblos y localidades',
+        emptyText: 'No hay coincidencias en este distrito',
+        loadingText: 'Cargando localidades…',
+        errorText: 'No fue posible cargar las localidades',
+        getMeta: () => distrito.value || 'Localidad',
+        getSuggestions: async (consulta) => {
+            const codigo = codigoDistrito(provincia.value, canton.value, distrito.value);
+            if (!codigo) return [];
+            const { buscarPoblados } = await cargarPoblados();
+            // El usuario puede cambiar de distrito mientras termina el import de
+            // 200 KB. Una respuesta vieja nunca debe aparecer bajo el nuevo.
+            if (codigoDistrito(provincia.value, canton.value, distrito.value) !== codigo) return [];
+            return buscarPoblados(codigo, consulta, { limite: 12 });
+        },
+    }) : null;
 
     function refrescarCantones({ conservar = false } = {}) {
         const elegido = conservar ? canton.value : '';
@@ -51,36 +69,14 @@ export function conectarDireccion({
     function refrescarPueblo({ conservar = false } = {}) {
         if (!pueblo) return;
         if (!conservar) pueblo.value = '';
-        sugerenciasDe = null;
-        llenarDatalist(listaPueblos, []);
         pueblo.disabled = distrito.value === '';
-        if (distrito.value !== '') sugerir();
-    }
-
-    /**
-     * Sugiere localidades del distrito elegido segun lo tecleado.
-     *
-     * Cada llamada comprueba que el distrito no haya cambiado antes de pintar:
-     * la carga del catalogo es asincrona y, sin esa comprobacion, elegir dos
-     * distritos seguidos dejaria que la respuesta lenta del primero pintara sus
-     * localidades sobre el segundo.
-     */
-    async function sugerir() {
-        if (!pueblo || !listaPueblos) return;
-        const codigo = codigoDistrito(provincia.value, canton.value, distrito.value);
-        if (!codigo) { llenarDatalist(listaPueblos, []); return; }
-        const consulta = pueblo.value;
-        const { buscarPoblados } = await cargarPoblados();
-        if (codigoDistrito(provincia.value, canton.value, distrito.value) !== codigo) return;
-        if (pueblo.value !== consulta) return;
-        sugerenciasDe = codigo;
-        llenarDatalist(listaPueblos, buscarPoblados(codigo, consulta));
+        sugerenciasPueblo?.setDisabled(pueblo.disabled);
+        if (!pueblo.disabled) sugerenciasPueblo?.refresh({ open: false });
     }
 
     provincia.addEventListener('change', () => refrescarCantones());
     canton.addEventListener('change', () => refrescarDistritos());
     distrito.addEventListener('change', () => refrescarPueblo());
-    pueblo?.addEventListener('input', () => { if (sugerenciasDe) sugerir(); });
 
     /** Carga una direccion guardada, conservando valores fuera del catalogo. */
     function aplicar({ provincia: p = '', canton: c = '', distrito: d = '', pueblo: pu = '' } = {}) {
@@ -92,9 +88,8 @@ export function conectarDireccion({
         if (pueblo) {
             pueblo.value = pu ?? '';
             pueblo.disabled = distrito.value === '';
-            sugerenciasDe = null;
-            llenarDatalist(listaPueblos, []);
-            if (distrito.value !== '') sugerir();
+            sugerenciasPueblo?.setDisabled(pueblo.disabled);
+            if (!pueblo.disabled) sugerenciasPueblo?.refresh({ open: false });
         }
     }
 
