@@ -530,6 +530,42 @@ versión anterior debe reinstalarse limpio: la corrección renombra y retira
 columnas y una migración aditiva no puede hacerlo sin perder o duplicar datos.
 Ningún entorno con datos reales tiene esas tablas todavía.
 
+## DEC-DBREADY-006 - Paso (a) del retiro de tbcomprador: la lectura
+
+Primer paso, y solo el primero, del plan de retiro de DEC-DBREADY-005. La
+pregunta "¿este productor es comprador?" ya no se responde con
+`tbcomprador.tbcompradorestado`: se responde con
+`ProductorClasificacionPeriodo::esComprador()`, que devuelve verdadero si y solo
+si existe un periodo `COMPRADOR` abierto.
+
+Semántica fijada por la prueba `Tests/comprador_clasificacion_test.php`:
+
+| Situación del productor | `esComprador()` |
+|---|---|
+| Sin ningún periodo `COMPRADOR` | `false` |
+| Periodo `COMPRADOR` abierto | `true` |
+| Periodo `COMPRADOR` cerrado | `false` |
+| `COMPRADOR` y `VENDEDOR` abiertos | `true` |
+
+Un periodo cerrado significa que lo fue y dejó de serlo; la fila no se borra.
+`COMPRADOR` y `VENDEDOR` son independientes, así que cerrar `VENDEDOR` no altera
+la respuesta de comprador. La prueba también verifica que la respuesta no
+depende del CRUD legacy: el productor del caso 4 nunca tuvo fila en
+`tbcomprador` y aun así el sistema lo reconoce como comprador.
+
+`Tests/naming_gate.php` impide la regresión: exige que
+`ProductorClasificacionPeriodo` declare `esComprador()`, prohíbe que lea
+`tbcomprador` y prohíbe que cualquier modelo distinto de `Comprador.php`
+(el CRUD heredado) toque `tbcompradorestado`.
+
+**Deliberadamente fuera de este paso.** No se cambia ninguna escritura: el CRUD
+de comprador sigue insertando y actualizando `tbcomprador` y su endpoint sigue
+devolviendo el `estado` derivado de ese bit. Cambiar eso es el paso (b) y es más
+delicado, porque hasta que las altas y bajas abran y cierren periodos, la
+clasificación estará vacía para los compradores existentes: leer la
+clasificación en el panel hoy los mostraría a todos como no compradores.
+El orden importa y por eso (b) va después, con su propia migración de datos.
+
 ## DEC-DBREADY-002 - Migración sin pasado inventado
 
 `Database/Migrations/006estructuracomercialhistorica.sql` es idempotente y solo

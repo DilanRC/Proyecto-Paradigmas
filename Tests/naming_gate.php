@@ -200,6 +200,25 @@ if (str_contains($models, '->query(') || str_contains($models, '->exec(')
     || !str_contains($models, "'fecha' => gmdate('Y-m-d H:i:s')")) {
     throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular los ID en PHP.');
 }
+// Paso (a) del retiro de tbcomprador (DEC-DBREADY-005): la clasificación es la
+// única fuente de "es comprador". El bit legacy solo puede seguir apareciendo
+// dentro del CRUD heredado (Comprador.php) y su controlador.
+$clasificacionModelo = file_get_contents("{$root}/Application/Model/ProductorClasificacionPeriodo.php");
+if (!str_contains($clasificacionModelo, 'public function esComprador(int $productorId): bool')) {
+    throw new RuntimeException('ProductorClasificacionPeriodo debe responder "es comprador" desde los periodos.');
+}
+if (preg_match('/(FROM|JOIN|UPDATE|INTO)\s+tbcomprador\b/i', $clasificacionModelo)) {
+    throw new RuntimeException('La clasificación no puede consultar la tabla legacy tbcomprador.');
+}
+foreach (glob("{$root}/Application/Model/*.php") as $modelo) {
+    if (basename($modelo) === 'Comprador.php') {
+        continue;
+    }
+    if (str_contains((string) file_get_contents($modelo), 'tbcompradorestado')) {
+        throw new RuntimeException('Solo el CRUD legacy puede leer tbcompradorestado: ' . basename($modelo));
+    }
+}
+
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
 if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
     throw new RuntimeException('PDO debe usar sentencias preparadas nativas.');
