@@ -184,11 +184,14 @@ test('el panel de compradores no construye cuerpos de escritura', async () => {
     }
 });
 
-test('la clasificacion se muestra con su fecha y su origen', () => {
+test('la clasificacion se muestra con su fecha y el origen real del periodo', () => {
     assert.equal(formatearClasificadoDesde(''), 'Sin fecha registrada');
     assert.equal(formatearClasificadoDesde('no es fecha'), 'no es fecha');
     assert.match(formatearClasificadoDesde('2026-09-01 10:15:00'), /2026/);
-    assert.equal(describirOrigen('MIGRACION_TBCOMPRADOR_LEGACY'), 'Migracion del registro anterior');
+    assert.equal(describirOrigen('MIGRACION_TBCOMPRADOR_LEGACY'), 'Migración del registro anterior');
+    assert.equal(describirOrigen('ALTA_CRUD_COMPRADOR'), 'Alta registrada antes del retiro del CRUD');
+    assert.equal(describirOrigen('REACTIVACION_CRUD_COMPRADOR'), 'Reactivación registrada antes del retiro del CRUD');
     assert.equal(describirOrigen(''), 'Sin origen declarado');
+    assert.equal(describirOrigen('T10_REGLA_FUTURA'), 'T10_REGLA_FUTURA',
+        'un motivo futuro no se inventa ni se oculta');
 });
-
