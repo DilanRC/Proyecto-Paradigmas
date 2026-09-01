@@ -1,4 +1,4 @@
-# DER - Persona con capacidades independientes
+# DER - Productor núcleo y compatibilidad legacy
 
 ```mermaid
 erDiagram
@@ -27,7 +27,7 @@ erDiagram
     tbbitacora { BIGINT tbbitacoraid VARCHAR tbbitacoraentidad VARCHAR tbbitacoraregistroidentificacionnumero VARCHAR tbbitacoraaccion DATETIME tbbitacorafecha JSON tbbitacoradatosanteriores JSON tbbitacoradatosnuevos VARCHAR tbbitacoraactortipo BIGINT tbbitacorausuarioid VARCHAR tbbitacoraorigen VARCHAR tbbitacorasolicitudid }
 
     tbpersona ||--o| tbproductor : "capacidad por tbpersonaid"
-    tbpersona ||--o| tbcomprador : "capacidad por tbpersonaid"
+    tbpersona ||--o| tbcomprador : "legacy por tbpersonaid"
     tbpersona ||--o| tbtransportista : "capacidad por tbpersonaid"
     tbproductor ||--|| tbproductordireccion : "residencia"
     tbproductordireccion }o--|| tbdireccion : "ubicacion"
@@ -41,13 +41,14 @@ erDiagram
     tbproductor ||--o{ tbproductoractividad : "actividad"
 ```
 
-## Identidad y capacidades
+## Identidad, capacidades y legacy
 
 `tbpersona` es la fuente única de identificación, tipo, nombre, teléfono,
-correo y disponibilidad global. `tbproductor`, `tbcomprador` y
-`tbtransportista` conservan sus IDs históricos y solo contienen el enlace
-`tbpersonaid` y su estado de participación. Una misma persona puede tener una,
-dos o las tres capacidades sin duplicar datos personales.
+correo y disponibilidad global. `tbproductor` y `tbtransportista` conservan sus
+IDs operativos y solo contienen el enlace `tbpersonaid` y su estado de
+participación. `tbcomprador` se conserva como estructura legacy; P0-C define
+que Comprador y Vendedor son clasificaciones históricas derivadas del
+Productor.
 
 El estado efectivo se calcula en PHP:
 
@@ -56,8 +57,8 @@ capacidad efectiva = tbpersonaestado activo Y perfil.estado activo
 ```
 
 Desactivar un perfil no afecta los otros. Desactivar `tbpersona` vuelve
-inoperantes las tres capacidades. `DELETE` de las APIs desactiva únicamente el
-perfil y `PATCH` únicamente lo reactiva, siempre que la persona esté activa.
+inoperantes las capacidades actuales. `DELETE` de las APIs desactiva únicamente
+el perfil y `PATCH` únicamente lo reactiva, siempre que la persona esté activa.
 
 ## Relaciones y política física
 

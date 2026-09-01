@@ -8,7 +8,10 @@ $schema = implode("\n", array_map('file_get_contents', $schemaFiles));
 $seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
 $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 $relaciones = file_get_contents("{$root}/Database/Tests/comprobacionrelaciones.sql");
-$docs = file_get_contents("{$root}/Documentation/Decisiones.md") . file_get_contents("{$root}/Documentation/DiccionarioDatos.md");
+$matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md");
+$docs = file_get_contents("{$root}/Documentation/Decisiones.md")
+    . file_get_contents("{$root}/Documentation/DiccionarioDatos.md")
+    . $matrizP0C;
 $readme = file_get_contents("{$root}/README.md");
 $restoreTool = file_get_contents("{$root}/Tools/test-restore.sh");
 $checks = [];
@@ -107,6 +110,11 @@ $evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "
     && !str_contains($restoreTool, 'mv -- "$manifest_temp" "$manifest_file"')
     && !str_contains($restoreTool, 'mv -- "$manifest_pending" "$manifest_file"'),
     'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
+$evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es la entidad de negocio núcleo')
+    && str_contains($matrizP0C, '`tbvendedor` no debe existir')
+    && str_contains($matrizP0C, '`tbcomprador` queda como estructura legacy')
+    && str_contains($matrizP0C, '`tbproductorcompradorperiodo` y `tbproductorvendedorperiodo`'),
+    'P0-C cierra Productor como núcleo y Comprador/Vendedor como clasificaciones históricas');
 $score = (int) round(100 * count(array_filter($checks, fn ($c) => $c['cumple'])) / count($checks));
 echo json_encode(['eval' => 'modelo_simplificado_profesor', 'score' => $score, 'threshold' => 100, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
 if ($score < 100) exit(1);

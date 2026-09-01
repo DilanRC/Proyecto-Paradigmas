@@ -23,15 +23,16 @@ La base `bdmercadoganadero` contiene exactamente 15 tablas:
 14. `tbproductorubicacion`
 15. `tbproductoractividad`
 
-`tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
-y `tbtransportista` son capacidades independientes enlazadas por `tbpersonaid`;
-una persona puede tener las tres y cada perfil conserva su ID histórico y su
-estado de participación. La ubicación física vive **únicamente** en
+`tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
+de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
+`tbcomprador` se conserva como estructura legacy de compatibilidad; P0-C
+define que Comprador y Vendedor son clasificaciones históricas derivadas del
+Productor. La ubicación física vive **únicamente** en
 `tbdireccion`: `tbproductordireccion` y
 `tbfincadireccion` solo guardan el enlace `tbdireccionid`, de modo que productor
 y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
-`Documentation/DER.md`, `Documentation/DiccionarioDatos.md` y
-`Database/Tests/README.md`.
+`Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
+`Documentation/DiccionarioDatos.md` y `Database/Tests/README.md`.
 
 El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
 columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
