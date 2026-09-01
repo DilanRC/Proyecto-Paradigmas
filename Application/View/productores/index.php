@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/panel.css">
     <link rel="stylesheet" href="css/red-ganadera.css">
-    <script src="js/productores.js" defer></script>
+    <script type="module" src="js/productores.js"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
@@ -64,7 +64,14 @@
                 <div class="table-container">
                     <table><thead><tr><th>Productor</th><th>Identificación</th><th>Contacto</th><th>Dirección principal</th><th>Fincas</th><th>Estado</th><th><span class="screen-reader-only">Acciones</span></th></tr></thead><tbody id="cuerpo-productores"></tbody></table>
                     <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>No se encontraron productores</h2><p>Modifique la búsqueda o cree el primer productor.</p></div>
-                    <div class="loading-state" id="estado-carga" aria-live="polite"><span class="loader" aria-hidden="true"></span>Cargando información…</div>
+                    <div class="error-state" id="estado-error" hidden><span class="error-state__icon" aria-hidden="true">!</span><h2>No fue posible cargar los productores</h2><p id="mensaje-error"></p><button class="button button--secondary" id="reintentar" type="button">Reintentar</button></div>
+                    <div class="skeleton" id="estado-carga" aria-hidden="true">
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                    </div>
                 </div>
             </section>
 
@@ -72,7 +79,7 @@
         </div>
     </main>
 
-    <dialog class="modal" id="modal-productor" aria-labelledby="titulo-modal">
+    <dialog class="modal" role="dialog" aria-modal="true" id="modal-productor" aria-labelledby="titulo-modal">
         <form id="formulario-productor" novalidate aria-busy="false">
             <div class="modal__header"><div><span class="label" id="subtitulo-modal">Nuevo registro</span><h2 id="titulo-modal">Crear productor</h2></div><button class="close-button" id="cerrar-modal" type="button" aria-label="Cerrar formulario">×</button></div>
             <div class="modal__content">
@@ -100,15 +107,15 @@
         </form>
     </dialog>
 
-    <dialog class="modal modal--confirmation" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar productor</h2><p id="mensaje-desactivar">El productor dejará de estar activo, pero conservará su dirección, fincas y bitácora.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
+    <dialog class="modal modal--confirmation" role="dialog" aria-modal="true" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar productor</h2><p id="mensaje-desactivar">El productor dejará de estar activo, pero conservará su dirección, fincas y bitácora.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
 
-    <dialog class="modal" id="modal-detalle" aria-labelledby="titulo-detalle">
+    <dialog class="modal" role="dialog" aria-modal="true" id="modal-detalle" aria-labelledby="titulo-detalle">
         <div class="modal__header"><div><span class="label">Ficha del productor</span><h2 id="titulo-detalle">Detalle</h2></div><button class="close-button" id="cerrar-detalle" type="button" aria-label="Cerrar detalle">×</button></div>
         <div class="modal__content"><dl class="detail-grid" id="detalle-contenido"></dl></div>
         <div class="modal__actions"><button class="button button--secondary" id="cerrar-detalle-secundario" type="button">Cerrar</button><button class="button button--primary" id="editar-desde-detalle" type="button">Editar</button></div>
     </dialog>
 
-    <dialog class="modal" id="modal-direccion-finca" aria-labelledby="titulo-direccion-finca">
+    <dialog class="modal" role="dialog" aria-modal="true" id="modal-direccion-finca" aria-labelledby="titulo-direccion-finca">
         <form id="formulario-direccion-finca" novalidate aria-busy="false">
             <div class="modal__header"><div><span class="label" id="subtitulo-direccion-finca">Finca</span><h2 id="titulo-direccion-finca">Dirección de la finca</h2></div><button class="close-button" id="cerrar-direccion-finca" type="button" aria-label="Cerrar">×</button></div>
             <div class="modal__content">
@@ -123,6 +130,9 @@
             <div class="modal__actions"><button class="button button--secondary" id="cancelar-direccion-finca" type="button">Cancelar</button><button class="button button--danger" id="vaciar-direccion-finca" type="button" hidden>Vaciar dirección</button><button class="button button--primary" id="guardar-direccion-finca" type="submit">Guardar dirección</button></div>
         </form>
     </dialog>
-    <div class="notification" id="notificacion" role="status" aria-live="polite" hidden></div>
+    <div class="toast-region">
+        <div class="toast" id="toast-status" role="status" aria-live="polite"></div>
+        <div class="toast" id="toast-alert" role="alert" aria-live="assertive"></div>
+    </div>
 </body>
 </html>

@@ -48,3 +48,120 @@ test('el panel conserva su endpoint', async () => {
 
     assert.match(source, /const API_URL = 'api\/vehiculos\.php';/);
 });
+
+// --- metodos de pago ---------------------------------------------------------
+import { buildPagoMetodoPayload } from '../../Public/js/pagometodos.js';
+
+test('metodo de pago nuevo: nombre, descripcion y activo', () => {
+    const payload = buildPagoMetodoPayload({ nombre: 'Efectivo', descripcion: 'Pago en efectivo' });
+
+    assert.deepEqual(payload, { nombre: 'Efectivo', descripcion: 'Pago en efectivo', activo: true });
+    assert.equal('id' in payload, false);
+});
+
+test('metodo de pago editado: agrega id numerico y conserva activo', () => {
+    const payload = buildPagoMetodoPayload({ nombre: 'Tarjeta', descripcion: 'Con tarjeta', id: '3' });
+
+    assert.deepEqual(payload, { nombre: 'Tarjeta', descripcion: 'Con tarjeta', activo: true, id: 3 });
+});
+
+// --- transportistas ----------------------------------------------------------
+import { buildTransportistaPayload } from '../../Public/js/transportistas.js';
+
+const transportistaBase = {
+    tipoCodigo: 'PASAPORTE', numero: ' AB1234 ', nombre: ' Juan Perez ',
+    telefono: ' +506 8888-7777 ', correoElectronico: '  Juan@Example.TEST ',
+};
+
+test('transportista nuevo: identificacion anidada y correo en minuscula', () => {
+    const payload = buildTransportistaPayload(transportistaBase);
+
+    assert.deepEqual(payload, {
+        identificacion: { tipoCodigo: 'PASAPORTE', numero: 'AB1234' },
+        nombre: 'Juan Perez',
+        telefono: '+506 8888-7777',
+        correoElectronico: 'juan@example.test',
+    });
+    assert.equal('identificacionNumeroOriginal' in payload, false, 'el alta no lo envia');
+});
+
+test('transportista editado: agrega identificacionNumeroOriginal', () => {
+    const payload = buildTransportistaPayload({
+        ...transportistaBase, identificacionNumeroOriginal: 'AB1234',
+    });
+
+    assert.equal(payload.identificacionNumeroOriginal, 'AB1234');
+});
+
+// --- productores -------------------------------------------------------------
+import { buildFincaDireccionPayload, buildProductorPayload } from '../../Public/js/productores.js';
+
+const productorBase = {
+    tipoCodigo: 'CEDULA_FISICA', numero: ' 1-1111-1111 ', nombre: ' Maria Solano ',
+    telefono: ' 88881111 ', correoElectronico: ' Maria@Example.TEST ',
+    provincia: ' Heredia ', canton: ' Heredia ', distrito: ' Mercedes ',
+    pueblo: '', senas: '   ', fincas: '',
+};
+
+test('productor nuevo: direccion anidada y opcionales en null', () => {
+    const payload = buildProductorPayload(productorBase);
+
+    assert.deepEqual(payload, {
+        identificacion: { tipoCodigo: 'CEDULA_FISICA', numero: '1-1111-1111' },
+        nombre: 'Maria Solano',
+        telefono: '88881111',
+        correoElectronico: 'maria@example.test',
+        direccionPrincipal: {
+            provincia: 'Heredia', canton: 'Heredia', distrito: 'Mercedes',
+            pueblo: null, senas: null,
+        },
+        fincas: [],
+    });
+});
+
+test('REGRESION: los campos opcionales vacios viajan como null, no como cadena', () => {
+    // El backend acepta null; una cadena vacia se guardaria como texto vacio.
+    const payload = buildProductorPayload({ ...productorBase, pueblo: '  ', senas: '' });
+
+    assert.equal(payload.direccionPrincipal.pueblo, null);
+    assert.equal(payload.direccionPrincipal.senas, null);
+});
+
+test('las fincas se parten por linea, se recortan y se descartan las vacias', () => {
+    const payload = buildProductorPayload({
+        ...productorBase, fincas: ' Finca El Roble \n\n  Finca Valle Verde\n   \n',
+    });
+
+    assert.deepEqual(payload.fincas, [
+        { nombre: 'Finca El Roble' },
+        { nombre: 'Finca Valle Verde' },
+    ]);
+});
+
+test('la direccion de finca conserva su envoltura direccionFinca', () => {
+    const payload = buildFincaDireccionPayload({
+        identificacionNumero: '111111111', nombreFinca: 'Finca El Roble',
+        provincia: 'Alajuela', canton: 'San Carlos', distrito: 'Quesada',
+        pueblo: 'Centro', senas: '',
+    });
+
+    assert.deepEqual(payload, {
+        identificacionNumero: '111111111',
+        nombreFinca: 'Finca El Roble',
+        direccionFinca: {
+            provincia: 'Alajuela', canton: 'San Carlos', distrito: 'Quesada',
+            pueblo: 'Centro', senas: null,
+        },
+    });
+});
+
+test('cada panel conserva su endpoint', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const leer = (f) => readFile(new URL(`../../Public/js/${f}`, import.meta.url), 'utf8');
+
+    assert.match(await leer('pagometodos.js'), /const API_URL = 'api\/pagometodos\.php';/);
+    assert.match(await leer('transportistas.js'), /const API_URL = 'api\/transportistas\.php';/);
+    assert.match(await leer('transportistas.js'), /const ASIGNACION_URL = 'api\/transportistas-vehiculos\.php';/);
+    assert.match(await leer('productores.js'), /const API_URL = 'api\/productores\.php';/);
+    assert.match(await leer('productores.js'), /const FINCAS_DIRECCION_URL = 'api\/fincas-direccion\.php';/);
+});
