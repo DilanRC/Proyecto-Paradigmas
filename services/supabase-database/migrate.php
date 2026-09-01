@@ -60,21 +60,27 @@ const EXPECTED_COLUMNS = [
         'tbproductorclasificacionperiodomotivo',
     ],
     'tbanimal' => [
-        'tbanimalid', 'tbanimalcodigo', 'tbanimalsexo', 'tbanimalraza',
-        'tbanimalfecharegistroensistema', 'tbanimalorigenregistro',
+        'tbanimalid', 'tbanimalidentificacion', 'tbanimalsexo', 'tbanimalraza',
+        'tbanimalcaracteristicas', 'tbanimalfecharegistroensistema', 'tbanimalorigenregistro',
     ],
-    'tbanimalobservacion' => [
-        'tbanimalobservacionid', 'tbanimalid', 'tbanimalobservacionfecha',
-        'tbanimalobservacionorigen', 'tbanimalobservacioncontexto',
-        'tbanimalobservacionedadmeses', 'tbanimalobservacionpeso',
-        'tbanimalobservacionproposito', 'tbanimalobservacionestadoreproductivo',
-        'tbanimalobservacionpartos', 'tbanimalobservacionlitrosleche',
-        'tbanimalobservacionproduccion', 'tbanimalobservacionsalud',
+    'tbanimalproduccionsalud' => [
+        'tbanimalproduccionsaludid', 'tbanimalid', 'tbanimalproduccionsaludfecha',
+        'tbanimalproduccionsaludorigen', 'tbanimalproduccionsaludcontexto',
+        'tbanimalproduccionsaludedadmeses', 'tbanimalproduccionsaludpeso',
+        'tbanimalproduccionsaludproposito', 'tbanimalproduccionsaludestadoreproductivo',
+        'tbanimalproduccionsaludpartos', 'tbanimalproduccionsaludlitrosleche',
+        'tbanimalproduccionsaludproduccion', 'tbanimalproduccionsaludsalud',
     ],
     'tbanimalpublicacion' => [
         'tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid', 'tbfincaid',
         'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio', 'tbanimalpublicaciontitulo',
-        'tbanimalpublicaciondescripcion', 'tbanimalpublicacionestado', 'tbanimalpublicacionorigen',
+        'tbanimalpublicaciondescripcion', 'tbanimalpublicacionorigen',
+    ],
+    'tbanimalpublicacionestadoperiodo' => [
+        'tbanimalpublicacionestadoperiodoid', 'tbanimalpublicacionid',
+        'tbanimalpublicacionestadoperiodoestado', 'tbanimalpublicacionestadoperiodofechainicio',
+        'tbanimalpublicacionestadoperiodofechafin', 'tbanimalpublicacionestadoperiodomotivo',
+        'tbanimalpublicacionestadoperiodoorigen',
     ],
     'tbcompra' => [
         'tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbfincaorigenid',
@@ -84,8 +90,8 @@ const EXPECTED_COLUMNS = [
     'tbventa' => [
         'tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid',
         'tbfincaid', 'tbcompraid', 'tbventafecha', 'tbventahora', 'tbventalugar',
-        'tbventaprecio', 'tbpagometodoid', 'tbventaedadmeses', 'tbventapeso',
-        'tbventarazasnapshot', 'tbventaorigen',
+        'tbventadireccionid', 'tbventaproposito', 'tbventaprecio', 'tbpagometodoid',
+        'tbventaedadmeses', 'tbventapeso', 'tbventarazasnapshot', 'tbventaorigen',
     ],
     'tbanimalinteraccion' => [
         'tbanimalinteraccionid', 'tbproductorid', 'tbanimalid',
@@ -93,7 +99,12 @@ const EXPECTED_COLUMNS = [
         'tbanimalinteraccionfecha', 'tbanimalinteraccionorigen',
     ],
     'tbcarrito' => [
-        'tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion', 'tbcarritoestado',
+        'tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion',
+    ],
+    'tbcarritoestadoperiodo' => [
+        'tbcarritoestadoperiodoid', 'tbcarritoid', 'tbcarritoestadoperiodoestado',
+        'tbcarritoestadoperiodofechainicio', 'tbcarritoestadoperiodofechafin',
+        'tbcarritoestadoperiodomotivo', 'tbcarritoestadoperiodoorigen',
     ],
     'tbcarritoanimal' => [
         'tbcarritoanimalid', 'tbcarritoid', 'tbanimalid', 'tbcarritoanimalaccion',
@@ -107,13 +118,20 @@ const EXPECTED_COLUMNS = [
     ],
     'tbtransportistaflete' => [
         'tbtransportistafleteid', 'tbtransportistaid', 'tbproductororigenid',
-        'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid',
+        'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid', 'tbvehiculoid',
         'tbtransportistafletefecha', 'tbtransportistafletehora',
-        'tbtransportistafletedescripcion', 'tbtransportistafleteprecio',
+        'tbtransportistafletedescripcion', 'tbtransportistafletecantidadcabezas',
+        'tbtransportistafletedistanciakm', 'tbtransportistafleteprecio',
         'tbpagometodoid', 'tbtransportistafleteorigen',
     ],
+    'tbtransportistahorario' => [
+        'tbtransportistahorarioid', 'tbtransportistaid', 'tbtransportistahorariodiasemana',
+        'tbtransportistahorariohorainicio', 'tbtransportistahorariohorafin',
+        'tbtransportistahorariofechainicio', 'tbtransportistahorariofechafin',
+        'tbtransportistahorarioorigen',
+    ],
     'tbtransportistaresena' => [
-        'tbtransportistaresenaid', 'tbtransportistaid', 'tbproductorid',
+        'tbtransportistaresenaid', 'tbtransportistaid', 'tbpersonaid',
         'tbtransportistafleteid', 'tbtransportistaresenafecha',
         'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
         'tbtransportistaresenaorigen',
@@ -206,7 +224,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 27 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 30 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -411,7 +429,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=27 migration=v6\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=30 migration=v6\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

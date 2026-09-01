@@ -49,8 +49,9 @@ DESCRIBE tbproductorclasificacionperiodo;
 
 SELECT '--- animales y publicaciones' AS comprobacion;
 DESCRIBE tbanimal;
-DESCRIBE tbanimalobservacion;
+DESCRIBE tbanimalproduccionsalud;
 DESCRIBE tbanimalpublicacion;
+DESCRIBE tbanimalpublicacionestadoperiodo;
 
 SELECT '--- compra y venta' AS comprobacion;
 DESCRIBE tbcompra;
@@ -60,9 +61,11 @@ SELECT '--- funnel y carrito' AS comprobacion;
 DESCRIBE tbanimalinteraccion;
 DESCRIBE tbcarrito;
 DESCRIBE tbcarritoanimal;
+DESCRIBE tbcarritoestadoperiodo;
 
 SELECT '--- transporte historico' AS comprobacion;
 DESCRIBE tbtransportistaestadoperiodo;
+DESCRIBE tbtransportistahorario;
 DESCRIBE tbtransportistaflete;
 DESCRIBE tbtransportistaresena;
 
@@ -93,7 +96,7 @@ SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATA
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
 
--- Comprobación 4: exactamente 27 tablas base.
-SELECT COUNT(*) AS tablas_esperadas_27
+-- Comprobación 4: exactamente 30 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_30
 FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

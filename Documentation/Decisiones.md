@@ -44,7 +44,7 @@ expresa.
 
 ## DEC-PER-005 - Tablas sin objetos de integridad
 
-El modelo final de base preparada tiene exactamente 27 tablas y mantiene cero PK, FK, UNIQUE,
+El modelo final de base preparada tiene exactamente 30 tablas y mantiene cero PK, FK, UNIQUE,
 CHECK, índices, ENUM, defaults, triggers y objetos programables.
 
 ## DEC-C04-001 - Instrucción docente vigente
@@ -246,7 +246,7 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-mediante migraciones versionadas: 27 tablas, `tbpersona` como identidad única,
+mediante migraciones versionadas: 30 tablas, `tbpersona` como identidad única,
 `tbproductordireccion` normalizada, estructura comercial histórica y el mismo
 criterio de cero llaves, restricciones, índices y valores automáticos. El
 espejo sigue a MySQL; nunca al revés. Aplicar el cambio remoto requiere
@@ -427,8 +427,8 @@ prueba de que la política nueva ya esté implementada.
 P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
 decisión vigente es: Productor es núcleo; Comprador y Vendedor son
 clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
-`tbcomprador` se conserva solo como legacy hasta migración explícita; Compra y
-Venta son hechos históricos propios.
+`tbcomprador` se conserva como marca de capacidad de compra de la persona y ese
+es su destino definitivo; Compra y Venta son hechos históricos propios.
 
 La representación vigente de base es `tbproductorclasificacionperiodo`, con
 `tbproductorclasificacionperiodotipo` validado por PHP como `COMPRADOR` o
@@ -445,14 +445,14 @@ PENDIENTE autoriza SQL.
 ## DEC-DBREADY-001 - Estructura comercial lista para Backend
 
 La capa DB queda preparada con 12 tablas nuevas:
-`tbproductorclasificacionperiodo`, `tbanimal`, `tbanimalobservacion`,
+`tbproductorclasificacionperiodo`, `tbanimal`, `tbanimalproduccionsalud`,
 `tbanimalpublicacion`, `tbcompra`, `tbventa`, `tbanimalinteraccion`,
 `tbcarrito`, `tbcarritoanimal`, `tbtransportistaestadoperiodo`,
 `tbtransportistaflete` y `tbtransportistaresena`.
 
 `tbanimal` es identidad estable. Peso, edad, estado reproductivo, partos,
 litros de leche, producción y salud son observaciones históricas en
-`tbanimalobservacion`; no se inventa fecha de nacimiento. `tbanimalpublicacion`
+`tbanimalproduccionsalud`; no se inventa fecha de nacimiento. `tbanimalpublicacion`
 congela productor vendedor y finca del momento. `tbcompra` y `tbventa` son
 hechos económicos propios y guardan método de pago usado; `tbventa.tbcompraid`
 es NULL porque un animal pudo nacer en la finca o existir antes del sistema.
@@ -469,6 +469,53 @@ Transporte agrega `tbtransportistaestadoperiodo`, `tbtransportistaflete` y
 `GROUP BY` y `AVG`. La fecha real de inicio de un transportista puede quedar
 NULL si no existe evidencia; `fecharegistroensistema` solo prueba cuándo el
 sistema registró el periodo.
+
+## DEC-DBREADY-005 - Pasada de concordancia contra la evidencia directa de Calidad
+
+Última revisión del esquema contra la evidencia directa, sin tocar Backend ni
+ampliar alcance. Ocho divergencias corregidas:
+
+1. **`tbcomprador` tiene destino definitivo.** Deja de estar "en tránsito hacia
+   una migración": es la marca de capacidad de compra de una `tbpersona`, con
+   las mismas tres columnas, igual que `tbtransportista`. No es entidad, no
+   recibe periodos y no se retira. La historia de la clasificación vive en
+   `tbproductorclasificacionperiodo`. Se elige conservarla, y no borrarla,
+   porque borrarla obligaría a reescribir modelo, controlador, API y frontend
+   de comprador sin que la evidencia de Calidad lo pida.
+2. **El flete recupera lo que se perdió al pasar a SQL.**
+   `tbtransportistaflete` gana `tbvehiculoid`, `tbtransportistafletecantidadcabezas`
+   y `tbtransportistafletedistanciakm`. Ninguna DEC los había descartado: se
+   cayeron sin justificación. Son NULL cuando no se conocen.
+3. **Horario de transportista.** `tbtransportistahorario` guarda día, hora de
+   inicio, hora de fin y periodo de vigencia. Cambiar el horario cierra el
+   periodo y abre otro; no se sobrescribe. La cobertura geográfica sigue
+   PENDIENTE porque no hay evidencia.
+4. **La reseña la firma la persona.** `tbtransportistaresena.tbproductorid` pasa
+   a `tbpersonaid`. Transportista y comprador son capacidades de persona;
+   exigir productor dejaba fuera a quien contrata un flete sin serlo.
+5. **`tbanimal` es la identidad aprobada.** `tbanimalcodigo` pasa a
+   `tbanimalidentificacion` y se agrega `tbanimalcaracteristicas`. Raza y sexo
+   se mantienen. Edad y peso siguen fuera de la identidad.
+6. **`tbanimalobservacion` se revierte a `tbanimalproduccionsalud`.** El nombre
+   genérico "observación" no aparece en la evidencia: Calidad pidió producción y
+   salud del animal. Se conserva la forma histórica (una fila por registro con
+   fecha, origen y contexto) porque eso sí es requisito; lo que cambia es el
+   nombre, que ahora dice qué guarda.
+7. **La venta recupera dirección y propósito.** `tbventadireccionid` y
+   `tbventaproposito`. No existe DEC que los descarte; se habían perdido.
+8. **Cero estados mutables sin histórico.** Se eliminan `tbcarritoestado` y
+   `tbanimalpublicacionestado`. Sus transiciones viven en
+   `tbcarritoestadoperiodo` y `tbanimalpublicacionestadoperiodo`, con la misma
+   regla de periodo abierto único que ya aplica a productor y transportista.
+   Los bits `tbpersonaestado`, `tbfincaestado`, `tbvehiculoestado` y
+   `tbpagometodoactivo` no cambian: son disponibilidad técnica, no estado de
+   negocio.
+
+El esquema queda en 30 tablas. La migración 006 sigue siendo solo
+`CREATE TABLE IF NOT EXISTS`, así que un entorno que ya la había corrido con la
+versión anterior debe reinstalarse limpio: la corrección renombra y retira
+columnas y una migración aditiva no puede hacerlo sin perder o duplicar datos.
+Ningún entorno con datos reales tiene esas tablas todavía.
 
 ## DEC-DBREADY-002 - Migración sin pasado inventado
 
@@ -551,7 +598,7 @@ tramo 13.
 
 Ese cierre queda como antecedente histórico. El contrato vigente sí crea tablas
 nuevas en DEC-DBREADY-001 y `Database/Tests/comprobacionestructura.sql` ahora
-espera 27 tablas.
+espera 30 tablas.
 
 ## DEC-21 - Fin del UPDATE destructivo de dirección
 

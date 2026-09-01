@@ -24,8 +24,9 @@ foreach ($modelos as $nombre => $codigo) {
 }
 
 $animal = $modelos['AnimalComercial'];
-foreach (['tbanimal', 'tbanimalobservacion', 'tbanimalpublicacion', 'tbcompra', 'tbventa',
-    'tbanimalinteraccion', 'tbcarrito', 'tbcarritoanimal'] as $tabla) {
+foreach (['tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
+    'tbanimalpublicacionestadoperiodo', 'tbcompra', 'tbventa',
+    'tbanimalinteraccion', 'tbcarrito', 'tbcarritoestadoperiodo', 'tbcarritoanimal'] as $tabla) {
     if (!str_contains($animal, "'{$tabla}'")) {
         throw new RuntimeException("AnimalComercial debe declarar lock para {$tabla}.");
     }
@@ -43,6 +44,21 @@ foreach (['tbcompradorestadoperiodo', 'tbvendedor'] as $prohibido) {
         if (str_contains(strtolower($codigo), $prohibido)) {
             throw new RuntimeException("{$nombre} no debe introducir {$prohibido}.");
         }
+    }
+}
+
+// Concordancia DEC-DBREADY-005: ningún estado de negocio se escribe como
+// columna sobrescribible desde los modelos.
+foreach (['tbcarritoestado ', 'tbanimalpublicacionestado ', 'tbanimalobservacion'] as $columnaMutable) {
+    if (str_contains($animal, $columnaMutable)) {
+        throw new RuntimeException("AnimalComercial no debe escribir {$columnaMutable}.");
+    }
+}
+$transporte = $modelos['TransportistaHistorico'];
+foreach (['tbvehiculoid', 'tbtransportistafletecantidadcabezas', 'tbtransportistafletedistanciakm',
+    'tbpersonaid'] as $dato) {
+    if (!str_contains($transporte, $dato)) {
+        throw new RuntimeException("TransportistaHistorico debe escribir {$dato}.");
     }
 }
 

@@ -148,12 +148,13 @@ try {
         'tbanimal',
         fn (): int => backend_db_transaccion(
             $db,
-            fn (): int => $animal->crearAnimal('ARETE-' . bin2hex(random_bytes(2)), 'HEMBRA', 'Brahman', 'TEST_BACKEND_DB'),
+            fn (): int => $animal->crearAnimal('ARETE-' . bin2hex(random_bytes(2)), 'HEMBRA', 'Brahman',
+                'TEST_BACKEND_DB', 'Manchas blancas, cuerno despuntado'),
         ),
     );
     $animalId = $idsAnimal[0];
     $idsObservacion[] = $animal->ejecutarConBloqueoAlta(
-        'tbanimalobservacion',
+        'tbanimalproduccionsalud',
         fn (): int => backend_db_transaccion(
             $db,
             fn (): int => $animal->registrarObservacion($animalId, [
@@ -183,6 +184,28 @@ try {
             ]),
         ),
     );
+    $identidadAnimal = $db->prepare(
+        'SELECT tbanimalidentificacion, tbanimalraza, tbanimalsexo, tbanimalcaracteristicas
+         FROM tbanimal WHERE tbanimalid = :id'
+    );
+    $identidadAnimal->execute(['id' => $animalId]);
+    $identidadFila = $identidadAnimal->fetch();
+    test_same('Manchas blancas, cuerno despuntado', $identidadFila['tbanimalcaracteristicas'],
+        'La identidad del animal guarda características aprobadas por Calidad.');
+    test_assert($identidadFila['tbanimalidentificacion'] !== null && $identidadFila['tbanimalraza'] !== null
+        && $identidadFila['tbanimalsexo'] !== null,
+        'La identidad del animal guarda identificación, raza y sexo.');
+
+    $estadoPublicacion = $db->prepare(
+        'SELECT tbanimalpublicacionestadoperiodoestado AS estado, tbanimalpublicacionestadoperiodofechafin AS fin
+         FROM tbanimalpublicacionestadoperiodo WHERE tbanimalpublicacionid = :id'
+    );
+    $estadoPublicacion->execute(['id' => $idsPublicacion[0]]);
+    $estadoPublicacionFilas = $estadoPublicacion->fetchAll();
+    test_same(1, count($estadoPublicacionFilas), 'La publicación abre exactamente un periodo de estado.');
+    test_same('PUBLICADA', $estadoPublicacionFilas[0]['estado'], 'El estado de publicación vive como periodo.');
+    test_same(null, $estadoPublicacionFilas[0]['fin'], 'El periodo de estado vigente queda abierto.');
+
     $idsCompra[] = $animal->ejecutarConBloqueoAlta(
         'tbcompra',
         fn (): int => backend_db_transaccion(
@@ -197,6 +220,14 @@ try {
             ]),
         ),
     );
+    $direccionConsulta = $db->prepare(
+        'SELECT tbdireccionid FROM tbproductordireccion
+         WHERE tbproductorid = :id AND tbproductordireccionfechafin IS NULL'
+    );
+    $direccionConsulta->execute(['id' => $vendedorId]);
+    $direccionVenta = $direccionConsulta->fetchColumn();
+    $direccionVenta = $direccionVenta === false ? null : (int) $direccionVenta;
+
     $idsVenta[] = $animal->ejecutarConBloqueoAlta(
         'tbventa',
         fn (): int => backend_db_transaccion(
@@ -205,6 +236,8 @@ try {
                 'fecha' => '2026-09-01',
                 'hora' => null,
                 'lugar' => 'Finca origen',
+                'direccionId' => $direccionVenta,
+                'proposito' => 'ENGORDE',
                 'precio' => '950000.00',
                 'pagoMetodoId' => 1,
                 'edadMeses' => 24,
@@ -243,12 +276,26 @@ try {
         ),
     );
 
-    $venta = $db->prepare('SELECT tbcompraid, tbventarazasnapshot FROM tbventa WHERE tbventaid = :id');
+    $venta = $db->prepare('SELECT tbcompraid, tbventarazasnapshot, tbventadireccionid, tbventaproposito
+        FROM tbventa WHERE tbventaid = :id');
     $venta->execute(['id' => $idsVenta[0]]);
     $ventaFila = $venta->fetch();
     test_same(null, $ventaFila['tbcompraid'], 'tbventa permite tbcompraid NULL.');
     test_same('Brahman declarado en publicación', $ventaFila['tbventarazasnapshot'],
         'La raza en venta queda como snapshot declarado.');
+    test_same('ENGORDE', $ventaFila['tbventaproposito'], 'La venta guarda el propósito pedido por Calidad.');
+    test_same($direccionVenta, $ventaFila['tbventadireccionid'] === null ? null : (int) $ventaFila['tbventadireccionid'],
+        'La venta guarda la dirección pedida por Calidad.');
+
+    $estadoCarrito = $db->prepare(
+        'SELECT tbcarritoestadoperiodoestado AS estado, tbcarritoestadoperiodofechafin AS fin
+         FROM tbcarritoestadoperiodo WHERE tbcarritoid = :id'
+    );
+    $estadoCarrito->execute(['id' => $idsCarrito[0]]);
+    $estadoCarritoFilas = $estadoCarrito->fetchAll();
+    test_same(1, count($estadoCarritoFilas), 'El carrito abre exactamente un periodo de estado.');
+    test_same('ABIERTO', $estadoCarritoFilas[0]['estado'], 'El estado del carrito vive como periodo.');
+    test_same(null, $estadoCarritoFilas[0]['fin'], 'El periodo de estado del carrito queda abierto.');
 
     $historialCarrito = $db->prepare('SELECT tbcarritoanimalaccion FROM tbcarritoanimal WHERE tbcarritoid = :id ORDER BY tbcarritoanimalid');
     $historialCarrito->execute(['id' => $idsCarrito[0]]);
@@ -278,16 +325,33 @@ try {
                 'fecha' => '2026-09-01',
                 'hora' => '12:00:00',
                 'descripcion' => 'Flete de prueba',
+                'cantidadCabezas' => 12,
+                'distanciaKm' => '87.40',
                 'precio' => '35000.00',
                 'pagoMetodoId' => 1,
                 'origen' => 'TEST_BACKEND_DB',
             ]),
         ),
     );
+    $fleteConsulta = $db->prepare(
+        'SELECT tbvehiculoid, tbtransportistafletecantidadcabezas AS cabezas,
+                tbtransportistafletedistanciakm AS distancia
+         FROM tbtransportistaflete WHERE tbtransportistafleteid = :id'
+    );
+    $fleteConsulta->execute(['id' => $idsFlete[0]]);
+    $fleteFila = $fleteConsulta->fetch();
+    test_same(12, (int) $fleteFila['cabezas'], 'El flete guarda la cantidad de cabezas.');
+    test_same(87.40, (float) $fleteFila['distancia'], 'El flete guarda la distancia recorrida.');
+    test_same(null, $fleteFila['tbvehiculoid'], 'El vehículo del flete es opcional y no se inventa.');
+
+    $personaConsulta = $db->prepare('SELECT tbpersonaid FROM tbproductor WHERE tbproductorid = :id');
+    $personaConsulta->execute(['id' => $compradorId]);
+    $personaComprador = (int) $personaConsulta->fetchColumn();
+
     $idsResena[] = $transporte->ejecutarConBloqueoResena(
         fn (): int => backend_db_transaccion(
             $db,
-            fn (): int => $transporte->registrarResena($transportista['transportistaId'], $compradorId, $idsFlete[0], [
+            fn (): int => $transporte->registrarResena($transportista['transportistaId'], $personaComprador, $idsFlete[0], [
                 'calificacion' => 5,
                 'comentario' => 'Servicio correcto.',
                 'origen' => 'TEST_BACKEND_DB',
@@ -308,7 +372,7 @@ try {
 
     $writesSinLock = [
         'tbanimal' => fn (): int => $animal->crearAnimal(null, null, null, 'TEST_BACKEND_DB'),
-        'tbanimalobservacion' => fn (): int => $animal->registrarObservacion($animalId, ['origen' => 'TEST_BACKEND_DB']),
+        'tbanimalproduccionsalud' => fn (): int => $animal->registrarObservacion($animalId, ['origen' => 'TEST_BACKEND_DB']),
         'tbanimalpublicacion' => fn (): int => $animal->publicarAnimal($animalId, $vendedorId, (int) $fincaId, [
             'estado' => 'PUBLICADA', 'origen' => 'TEST_BACKEND_DB',
         ]),
@@ -324,7 +388,7 @@ try {
         'tbtransportistaflete' => fn (): int => $transporte->registrarFlete($transportista['transportistaId'], [
             'fecha' => '2026-09-01', 'pagoMetodoId' => 1, 'origen' => 'TEST_BACKEND_DB',
         ]),
-        'tbtransportistaresena' => fn (): int => $transporte->registrarResena($transportista['transportistaId'], $compradorId, null, [
+        'tbtransportistaresena' => fn (): int => $transporte->registrarResena($transportista['transportistaId'], $personaComprador, null, [
             'calificacion' => 4, 'origen' => 'TEST_BACKEND_DB',
         ]),
     ];
@@ -343,12 +407,14 @@ try {
         ['tbtransportistaflete', 'tbtransportistafleteid', $idsFlete],
         ['tbtransportistaestadoperiodo', 'tbtransportistaestadoperiodoid', $idsTransportistaEstado],
         ['tbcarritoanimal', 'tbcarritoanimalid', $idsCarritoAnimal],
+        ['tbcarritoestadoperiodo', 'tbcarritoid', $idsCarrito],
         ['tbcarrito', 'tbcarritoid', $idsCarrito],
         ['tbanimalinteraccion', 'tbanimalinteraccionid', $idsInteraccion],
         ['tbventa', 'tbventaid', $idsVenta],
         ['tbcompra', 'tbcompraid', $idsCompra],
+        ['tbanimalpublicacionestadoperiodo', 'tbanimalpublicacionid', $idsPublicacion],
         ['tbanimalpublicacion', 'tbanimalpublicacionid', $idsPublicacion],
-        ['tbanimalobservacion', 'tbanimalobservacionid', $idsObservacion],
+        ['tbanimalproduccionsalud', 'tbanimalproduccionsaludid', $idsObservacion],
         ['tbanimal', 'tbanimalid', $idsAnimal],
         ['tbtransportista', 'tbtransportistaid', $idsTransportista],
         ['tbpersona', 'tbpersonaid', $idsPersonaTransportista],

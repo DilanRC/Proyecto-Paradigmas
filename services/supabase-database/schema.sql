@@ -128,27 +128,28 @@ CREATE TABLE IF NOT EXISTS public.tbproductorclasificacionperiodo (
 
 CREATE TABLE IF NOT EXISTS public.tbanimal (
     tbanimalid INTEGER NOT NULL,
-    tbanimalcodigo VARCHAR(100) NULL,
+    tbanimalidentificacion VARCHAR(100) NULL,
     tbanimalsexo VARCHAR(20) NULL,
     tbanimalraza VARCHAR(100) NULL,
+    tbanimalcaracteristicas VARCHAR(500) NULL,
     tbanimalfecharegistroensistema TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbanimalorigenregistro VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS public.tbanimalobservacion (
-    tbanimalobservacionid INTEGER NOT NULL,
+CREATE TABLE IF NOT EXISTS public.tbanimalproduccionsalud (
+    tbanimalproduccionsaludid INTEGER NOT NULL,
     tbanimalid INTEGER NOT NULL,
-    tbanimalobservacionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbanimalobservacionorigen VARCHAR(100) NOT NULL,
-    tbanimalobservacioncontexto VARCHAR(250) NULL,
-    tbanimalobservacionedadmeses INTEGER NULL,
-    tbanimalobservacionpeso NUMERIC(10,2) NULL,
-    tbanimalobservacionproposito VARCHAR(80) NULL,
-    tbanimalobservacionestadoreproductivo VARCHAR(80) NULL,
-    tbanimalobservacionpartos INTEGER NULL,
-    tbanimalobservacionlitrosleche NUMERIC(10,2) NULL,
-    tbanimalobservacionproduccion JSONB NULL,
-    tbanimalobservacionsalud JSONB NULL
+    tbanimalproduccionsaludfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbanimalproduccionsaludorigen VARCHAR(100) NOT NULL,
+    tbanimalproduccionsaludcontexto VARCHAR(250) NULL,
+    tbanimalproduccionsaludedadmeses INTEGER NULL,
+    tbanimalproduccionsaludpeso NUMERIC(10,2) NULL,
+    tbanimalproduccionsaludproposito VARCHAR(80) NULL,
+    tbanimalproduccionsaludestadoreproductivo VARCHAR(80) NULL,
+    tbanimalproduccionsaludpartos INTEGER NULL,
+    tbanimalproduccionsaludlitrosleche NUMERIC(10,2) NULL,
+    tbanimalproduccionsaludproduccion JSONB NULL,
+    tbanimalproduccionsaludsalud JSONB NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacion (
@@ -160,7 +161,6 @@ CREATE TABLE IF NOT EXISTS public.tbanimalpublicacion (
     tbanimalpublicacionprecio NUMERIC(12,2) NULL,
     tbanimalpublicaciontitulo VARCHAR(150) NULL,
     tbanimalpublicaciondescripcion VARCHAR(500) NULL,
-    tbanimalpublicacionestado VARCHAR(30) NOT NULL,
     tbanimalpublicacionorigen VARCHAR(100) NOT NULL
 );
 
@@ -187,6 +187,8 @@ CREATE TABLE IF NOT EXISTS public.tbventa (
     tbventafecha DATE NOT NULL,
     tbventahora TIME WITHOUT TIME ZONE NULL,
     tbventalugar VARCHAR(250) NULL,
+    tbventadireccionid INTEGER NULL,
+    tbventaproposito VARCHAR(80) NULL,
     tbventaprecio NUMERIC(12,2) NOT NULL,
     tbpagometodoid INTEGER NOT NULL,
     tbventaedadmeses INTEGER NULL,
@@ -208,8 +210,7 @@ CREATE TABLE IF NOT EXISTS public.tbanimalinteraccion (
 CREATE TABLE IF NOT EXISTS public.tbcarrito (
     tbcarritoid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
-    tbcarritofechacreacion TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbcarritoestado VARCHAR(30) NOT NULL
+    tbcarritofechacreacion TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcarritoanimal (
@@ -238,9 +239,12 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaflete (
     tbfincaorigenid INTEGER NULL,
     tbdireccionorigenid INTEGER NULL,
     tbdirecciondestinoid INTEGER NULL,
+    tbvehiculoid INTEGER NULL,
     tbtransportistafletefecha DATE NOT NULL,
     tbtransportistafletehora TIME WITHOUT TIME ZONE NULL,
     tbtransportistafletedescripcion VARCHAR(500) NULL,
+    tbtransportistafletecantidadcabezas INTEGER NULL,
+    tbtransportistafletedistanciakm NUMERIC(10,2) NULL,
     tbtransportistafleteprecio NUMERIC(12,2) NULL,
     tbpagometodoid INTEGER NOT NULL,
     tbtransportistafleteorigen VARCHAR(100) NOT NULL
@@ -249,12 +253,43 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaflete (
 CREATE TABLE IF NOT EXISTS public.tbtransportistaresena (
     tbtransportistaresenaid INTEGER NOT NULL,
     tbtransportistaid INTEGER NOT NULL,
-    tbproductorid INTEGER NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
     tbtransportistafleteid INTEGER NULL,
     tbtransportistaresenafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbtransportistaresenacalificacion INTEGER NOT NULL,
     tbtransportistaresenacomentario VARCHAR(500) NULL,
     tbtransportistaresenaorigen VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionestadoperiodo (
+    tbanimalpublicacionestadoperiodoid INTEGER NOT NULL,
+    tbanimalpublicacionid INTEGER NOT NULL,
+    tbanimalpublicacionestadoperiodoestado VARCHAR(30) NOT NULL,
+    tbanimalpublicacionestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbanimalpublicacionestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbanimalpublicacionestadoperiodomotivo VARCHAR(250) NULL,
+    tbanimalpublicacionestadoperiodoorigen VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbcarritoestadoperiodo (
+    tbcarritoestadoperiodoid INTEGER NOT NULL,
+    tbcarritoid INTEGER NOT NULL,
+    tbcarritoestadoperiodoestado VARCHAR(30) NOT NULL,
+    tbcarritoestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbcarritoestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbcarritoestadoperiodomotivo VARCHAR(250) NULL,
+    tbcarritoestadoperiodoorigen VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbtransportistahorario (
+    tbtransportistahorarioid INTEGER NOT NULL,
+    tbtransportistaid INTEGER NOT NULL,
+    tbtransportistahorariodiasemana VARCHAR(15) NOT NULL,
+    tbtransportistahorariohorainicio TIME WITHOUT TIME ZONE NOT NULL,
+    tbtransportistahorariohorafin TIME WITHOUT TIME ZONE NOT NULL,
+    tbtransportistahorariofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbtransportistahorariofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbtransportistahorarioorigen VARCHAR(100) NOT NULL
 );
 
 ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
@@ -274,7 +309,7 @@ ALTER TABLE public.tbbitacora ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcomprador ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductorclasificacionperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimal ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tbanimalobservacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimalproduccionsalud ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalpublicacion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcompra ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbventa ENABLE ROW LEVEL SECURITY;
@@ -284,3 +319,6 @@ ALTER TABLE public.tbcarritoanimal ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistaestadoperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistaflete ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistaresena ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimalpublicacionestadoperiodo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbcarritoestadoperiodo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbtransportistahorario ENABLE ROW LEVEL SECURITY;

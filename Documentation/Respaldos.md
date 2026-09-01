@@ -40,7 +40,7 @@ regenerar sin crear un checkpoint nuevo.
 
 ## Entrega vigente
 
-El contrato vigente usa `bdmercadoganadero` y 27 tablas. Los respaldos nuevos
+El contrato vigente usa `bdmercadoganadero` y 30 tablas. Los respaldos nuevos
 se generan con ese nombre; los respaldos históricos con prefijo
 `dbmercadoganadero` se conservan como evidencia y se restauran sin reescribir
 dumps, `MANIFEST.md` ni `SHA256SUMS.txt`.
@@ -68,7 +68,7 @@ tablas, columnas, metadatos de claves, CHECK, reglas referenciales, índices,
 intercalación, conteos y checksum de datos. Para respaldos del contrato vigente
 exige:
 
-- 27 tablas exactas, incluida `tbpersona`, clasificación histórica del
+- 30 tablas exactas, incluida `tbpersona`, clasificación histórica del
   Productor, animal, publicación, compra, venta, funnel, carrito y transporte;
 - cero restricciones totales;
 - cero PRIMARY KEY, FOREIGN KEY y CHECK;

@@ -1,4 +1,4 @@
-# DER - Productor núcleo y compatibilidad legacy
+# DER - Productor núcleo y capacidades de persona
 
 ```mermaid
 erDiagram
@@ -25,21 +25,24 @@ erDiagram
     tbproductorubicacion { INT tbproductorubicacionid INT tbproductorid DECIMAL tbproductorubicacionlatitud DECIMAL tbproductorubicacionlongitud DECIMAL tbproductorubicacionprecision DATETIME tbproductorubicacionfecha VARCHAR tbproductorubicacionorigen }
     tbproductoractividad { INT tbproductoractividadid INT tbproductorid VARCHAR tbproductoractividadtipo DATETIME tbproductoractividadfecha VARCHAR tbproductoractividadorigen }
     tbproductorclasificacionperiodo { INT tbproductorclasificacionperiodoid INT tbproductorid VARCHAR tbproductorclasificacionperiodotipo DATETIME tbproductorclasificacionperiodofechainicio DATETIME tbproductorclasificacionperiodofechafin VARCHAR tbproductorclasificacionperiodomotivo }
-    tbanimal { INT tbanimalid VARCHAR tbanimalcodigo VARCHAR tbanimalsexo VARCHAR tbanimalraza DATETIME tbanimalfecharegistroensistema VARCHAR tbanimalorigenregistro }
-    tbanimalobservacion { INT tbanimalobservacionid INT tbanimalid DATETIME tbanimalobservacionfecha VARCHAR tbanimalobservacionorigen VARCHAR tbanimalobservacioncontexto INT tbanimalobservacionedadmeses DECIMAL tbanimalobservacionpeso VARCHAR tbanimalobservacionproposito VARCHAR tbanimalobservacionestadoreproductivo INT tbanimalobservacionpartos DECIMAL tbanimalobservacionlitrosleche JSON tbanimalobservacionproduccion JSON tbanimalobservacionsalud }
-    tbanimalpublicacion { INT tbanimalpublicacionid INT tbanimalid INT tbproductorvendedorid INT tbfincaid DATETIME tbanimalpublicacionfecha DECIMAL tbanimalpublicacionprecio VARCHAR tbanimalpublicaciontitulo VARCHAR tbanimalpublicaciondescripcion VARCHAR tbanimalpublicacionestado VARCHAR tbanimalpublicacionorigen }
+    tbanimal { INT tbanimalid VARCHAR tbanimalidentificacion VARCHAR tbanimalsexo VARCHAR tbanimalraza VARCHAR tbanimalcaracteristicas DATETIME tbanimalfecharegistroensistema VARCHAR tbanimalorigenregistro }
+    tbanimalproduccionsalud { INT tbanimalproduccionsaludid INT tbanimalid DATETIME tbanimalproduccionsaludfecha VARCHAR tbanimalproduccionsaludorigen VARCHAR tbanimalproduccionsaludcontexto INT tbanimalproduccionsaludedadmeses DECIMAL tbanimalproduccionsaludpeso VARCHAR tbanimalproduccionsaludproposito VARCHAR tbanimalproduccionsaludestadoreproductivo INT tbanimalproduccionsaludpartos DECIMAL tbanimalproduccionsaludlitrosleche JSON tbanimalproduccionsaludproduccion JSON tbanimalproduccionsaludsalud }
+    tbanimalpublicacion { INT tbanimalpublicacionid INT tbanimalid INT tbproductorvendedorid INT tbfincaid DATETIME tbanimalpublicacionfecha DECIMAL tbanimalpublicacionprecio VARCHAR tbanimalpublicaciontitulo VARCHAR tbanimalpublicaciondescripcion VARCHAR tbanimalpublicacionorigen }
+    tbanimalpublicacionestadoperiodo { INT tbanimalpublicacionestadoperiodoid INT tbanimalpublicacionid VARCHAR tbanimalpublicacionestadoperiodoestado DATETIME tbanimalpublicacionestadoperiodofechainicio DATETIME tbanimalpublicacionestadoperiodofechafin VARCHAR tbanimalpublicacionestadoperiodomotivo VARCHAR tbanimalpublicacionestadoperiodoorigen }
     tbcompra { INT tbcompraid INT tbanimalid INT tbproductorcompradorid INT tbfincaorigenid DATE tbcomprafecha TIME tbcomprahora VARCHAR tbcompralugar DECIMAL tbcompraprecio INT tbpagometodoid VARCHAR tbcompraorigen }
-    tbventa { INT tbventaid INT tbanimalid INT tbproductorvendedorid INT tbproductorcompradorid INT tbfincaid INT tbcompraid DATE tbventafecha TIME tbventahora VARCHAR tbventalugar DECIMAL tbventaprecio INT tbpagometodoid INT tbventaedadmeses DECIMAL tbventapeso VARCHAR tbventarazasnapshot VARCHAR tbventaorigen }
+    tbventa { INT tbventaid INT tbanimalid INT tbproductorvendedorid INT tbproductorcompradorid INT tbfincaid INT tbcompraid DATE tbventafecha TIME tbventahora VARCHAR tbventalugar INT tbventadireccionid VARCHAR tbventaproposito DECIMAL tbventaprecio INT tbpagometodoid INT tbventaedadmeses DECIMAL tbventapeso VARCHAR tbventarazasnapshot VARCHAR tbventaorigen }
     tbanimalinteraccion { INT tbanimalinteraccionid INT tbproductorid INT tbanimalid VARCHAR tbanimalinteracciontipo VARCHAR tbanimalinteraccionaccion DATETIME tbanimalinteraccionfecha VARCHAR tbanimalinteraccionorigen }
-    tbcarrito { INT tbcarritoid INT tbproductorid DATETIME tbcarritofechacreacion VARCHAR tbcarritoestado }
+    tbcarrito { INT tbcarritoid INT tbproductorid DATETIME tbcarritofechacreacion }
+    tbcarritoestadoperiodo { INT tbcarritoestadoperiodoid INT tbcarritoid VARCHAR tbcarritoestadoperiodoestado DATETIME tbcarritoestadoperiodofechainicio DATETIME tbcarritoestadoperiodofechafin VARCHAR tbcarritoestadoperiodomotivo VARCHAR tbcarritoestadoperiodoorigen }
     tbcarritoanimal { INT tbcarritoanimalid INT tbcarritoid INT tbanimalid VARCHAR tbcarritoanimalaccion DATETIME tbcarritoanimalfecha VARCHAR tbcarritoanimalorigen }
     tbtransportistaestadoperiodo { INT tbtransportistaestadoperiodoid INT tbtransportistaid TINYINT tbtransportistaestadoperiodoestado DATETIME tbtransportistaestadoperiodofechainicio DATETIME tbtransportistaestadoperiodofechafin VARCHAR tbtransportistaestadoperiodomotivo DATETIME tbtransportistaestadoperiodofecharegistroensistema }
-    tbtransportistaflete { INT tbtransportistafleteid INT tbtransportistaid INT tbproductororigenid INT tbfincaorigenid INT tbdireccionorigenid INT tbdirecciondestinoid DATE tbtransportistafletefecha TIME tbtransportistafletehora VARCHAR tbtransportistafletedescripcion DECIMAL tbtransportistafleteprecio INT tbpagometodoid VARCHAR tbtransportistafleteorigen }
-    tbtransportistaresena { INT tbtransportistaresenaid INT tbtransportistaid INT tbproductorid INT tbtransportistafleteid DATETIME tbtransportistaresenafecha INT tbtransportistaresenacalificacion VARCHAR tbtransportistaresenacomentario VARCHAR tbtransportistaresenaorigen }
+    tbtransportistaflete { INT tbtransportistafleteid INT tbtransportistaid INT tbproductororigenid INT tbfincaorigenid INT tbdireccionorigenid INT tbdirecciondestinoid INT tbvehiculoid DATE tbtransportistafletefecha TIME tbtransportistafletehora VARCHAR tbtransportistafletedescripcion INT tbtransportistafletecantidadcabezas DECIMAL tbtransportistafletedistanciakm DECIMAL tbtransportistafleteprecio INT tbpagometodoid VARCHAR tbtransportistafleteorigen }
+    tbtransportistahorario { INT tbtransportistahorarioid INT tbtransportistaid VARCHAR tbtransportistahorariodiasemana TIME tbtransportistahorariohorainicio TIME tbtransportistahorariohorafin DATETIME tbtransportistahorariofechainicio DATETIME tbtransportistahorariofechafin VARCHAR tbtransportistahorarioorigen }
+    tbtransportistaresena { INT tbtransportistaresenaid INT tbtransportistaid INT tbpersonaid INT tbtransportistafleteid DATETIME tbtransportistaresenafecha INT tbtransportistaresenacalificacion VARCHAR tbtransportistaresenacomentario VARCHAR tbtransportistaresenaorigen }
     tbbitacora { BIGINT tbbitacoraid VARCHAR tbbitacoraentidad VARCHAR tbbitacoraregistroidentificacionnumero VARCHAR tbbitacoraaccion DATETIME tbbitacorafecha JSON tbbitacoradatosanteriores JSON tbbitacoradatosnuevos VARCHAR tbbitacoraactortipo BIGINT tbbitacorausuarioid VARCHAR tbbitacoraorigen VARCHAR tbbitacorasolicitudid }
 
     tbpersona ||--o| tbproductor : "capacidad por tbpersonaid"
-    tbpersona ||--o| tbcomprador : "legacy por tbpersonaid"
+    tbpersona ||--o| tbcomprador : "capacidad de compra por tbpersonaid"
     tbpersona ||--o| tbtransportista : "capacidad por tbpersonaid"
     tbproductor ||--|| tbproductordireccion : "residencia"
     tbproductordireccion }o--|| tbdireccion : "ubicacion"
@@ -52,7 +55,7 @@ erDiagram
     tbproductor ||--o{ tbproductorubicacion : "ubicaciones"
     tbproductor ||--o{ tbproductoractividad : "actividad"
     tbproductor ||--o{ tbproductorclasificacionperiodo : "comprador/vendedor"
-    tbanimal ||--o{ tbanimalobservacion : "observaciones"
+    tbanimal ||--o{ tbanimalproduccionsalud : "observaciones"
     tbanimal ||--o{ tbanimalpublicacion : "publicaciones"
     tbproductor ||--o{ tbanimalpublicacion : "vendedor congelado"
     tbfinca ||--o{ tbanimalpublicacion : "finca congelada"
@@ -70,16 +73,21 @@ erDiagram
     tbtransportista ||--o{ tbtransportistaestadoperiodo : "historico estado"
     tbtransportista ||--o{ tbtransportistaflete : "fletes"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
-    tbproductor ||--o{ tbtransportistaresena : "autor"
+    tbtransportista ||--o{ tbtransportistahorario : "horarios"
+    tbanimalpublicacion ||--o{ tbanimalpublicacionestadoperiodo : "estados"
+    tbcarrito ||--o{ tbcarritoestadoperiodo : "estados"
+    tbvehiculo ||--o{ tbtransportistaflete : "vehiculo usado"
+    tbpersona ||--o{ tbtransportistaresena : "autor"
 ```
 
-## Identidad, capacidades y legacy
+## Identidad y capacidades
 
 `tbpersona` es la fuente única de identificación, tipo, nombre, teléfono,
 correo y disponibilidad global. `tbproductor` es la entidad de negocio núcleo.
 Comprador y Vendedor no son tablas de entidad: son periodos independientes en
-`tbproductorclasificacionperiodo`. `tbcomprador` se conserva como estructura
-legacy; no se amplía y no tiene tabla de periodos propia.
+`tbproductorclasificacionperiodo`. `tbcomprador` es, en definitiva, la marca de
+capacidad de compra de la persona: no se amplía y no tiene tabla de periodos
+propia.
 
 El estado efectivo se calcula en PHP:
 
@@ -93,7 +101,7 @@ el perfil y `PATCH` únicamente lo reactiva, siempre que la persona esté activa
 
 ## Relaciones y política física
 
-El modelo contiene exactamente 27 tablas. Las líneas del DER son relaciones
+El modelo contiene exactamente 30 tablas. Las líneas del DER son relaciones
 conceptuales usadas por PHP. MySQL y PostgreSQL no declaran PK, FK, UNIQUE,
 CHECK, índices, ENUM, valores DEFAULT, AUTO_INCREMENT, triggers, rutinas ni
 eventos. En términos del contrato docente: el esquema mantiene cero claves y
@@ -106,7 +114,7 @@ reemplaza la residencia editable. Los IDs de perfiles y todas las relaciones
 existentes permanecen iguales durante la migración.
 
 `tbanimal` guarda identidad estable del animal. Peso, edad, producción y salud
-se guardan como observaciones en `tbanimalobservacion`. `tbanimalpublicacion`,
+se guardan como observaciones en `tbanimalproduccionsalud`. `tbanimalpublicacion`,
 `tbcompra` y `tbventa` congelan los productores, finca, método de pago y datos
 del hecho para reconstruir operaciones sin depender de relaciones futuras.
 `tbanimalinteraccion`, `tbcarrito` y `tbcarritoanimal` cubren el funnel

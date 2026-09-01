@@ -97,40 +97,54 @@ $expectedColumns = [
     'tbproductorclasificacionperiodo' => ['tbproductorclasificacionperiodoid', 'tbproductorid',
         'tbproductorclasificacionperiodotipo', 'tbproductorclasificacionperiodofechainicio',
         'tbproductorclasificacionperiodofechafin', 'tbproductorclasificacionperiodomotivo'],
-    'tbanimal' => ['tbanimalid', 'tbanimalcodigo', 'tbanimalsexo', 'tbanimalraza',
-        'tbanimalfecharegistroensistema', 'tbanimalorigenregistro'],
-    'tbanimalobservacion' => ['tbanimalobservacionid', 'tbanimalid', 'tbanimalobservacionfecha',
-        'tbanimalobservacionorigen', 'tbanimalobservacioncontexto', 'tbanimalobservacionedadmeses',
-        'tbanimalobservacionpeso', 'tbanimalobservacionproposito',
-        'tbanimalobservacionestadoreproductivo', 'tbanimalobservacionpartos',
-        'tbanimalobservacionlitrosleche', 'tbanimalobservacionproduccion', 'tbanimalobservacionsalud'],
+    'tbanimal' => ['tbanimalid', 'tbanimalidentificacion', 'tbanimalsexo', 'tbanimalraza',
+        'tbanimalcaracteristicas', 'tbanimalfecharegistroensistema', 'tbanimalorigenregistro'],
+    'tbanimalproduccionsalud' => ['tbanimalproduccionsaludid', 'tbanimalid', 'tbanimalproduccionsaludfecha',
+        'tbanimalproduccionsaludorigen', 'tbanimalproduccionsaludcontexto', 'tbanimalproduccionsaludedadmeses',
+        'tbanimalproduccionsaludpeso', 'tbanimalproduccionsaludproposito',
+        'tbanimalproduccionsaludestadoreproductivo', 'tbanimalproduccionsaludpartos',
+        'tbanimalproduccionsaludlitrosleche', 'tbanimalproduccionsaludproduccion', 'tbanimalproduccionsaludsalud'],
     'tbanimalpublicacion' => ['tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid',
         'tbfincaid', 'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio',
         'tbanimalpublicaciontitulo', 'tbanimalpublicaciondescripcion',
-        'tbanimalpublicacionestado', 'tbanimalpublicacionorigen'],
+        'tbanimalpublicacionorigen'],
+    'tbanimalpublicacionestadoperiodo' => ['tbanimalpublicacionestadoperiodoid',
+        'tbanimalpublicacionid', 'tbanimalpublicacionestadoperiodoestado',
+        'tbanimalpublicacionestadoperiodofechainicio', 'tbanimalpublicacionestadoperiodofechafin',
+        'tbanimalpublicacionestadoperiodomotivo', 'tbanimalpublicacionestadoperiodoorigen'],
     'tbcompra' => ['tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbfincaorigenid',
         'tbcomprafecha', 'tbcomprahora', 'tbcompralugar', 'tbcompraprecio', 'tbpagometodoid',
         'tbcompraorigen'],
     'tbventa' => ['tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid',
         'tbfincaid', 'tbcompraid', 'tbventafecha', 'tbventahora', 'tbventalugar',
-        'tbventaprecio', 'tbpagometodoid', 'tbventaedadmeses', 'tbventapeso',
-        'tbventarazasnapshot', 'tbventaorigen'],
+        'tbventadireccionid', 'tbventaproposito', 'tbventaprecio', 'tbpagometodoid',
+        'tbventaedadmeses', 'tbventapeso', 'tbventarazasnapshot', 'tbventaorigen'],
     'tbanimalinteraccion' => ['tbanimalinteraccionid', 'tbproductorid', 'tbanimalid',
         'tbanimalinteracciontipo', 'tbanimalinteraccionaccion', 'tbanimalinteraccionfecha',
         'tbanimalinteraccionorigen'],
-    'tbcarrito' => ['tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion', 'tbcarritoestado'],
+    'tbcarrito' => ['tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion'],
+    'tbcarritoestadoperiodo' => ['tbcarritoestadoperiodoid', 'tbcarritoid',
+        'tbcarritoestadoperiodoestado', 'tbcarritoestadoperiodofechainicio',
+        'tbcarritoestadoperiodofechafin', 'tbcarritoestadoperiodomotivo',
+        'tbcarritoestadoperiodoorigen'],
     'tbcarritoanimal' => ['tbcarritoanimalid', 'tbcarritoid', 'tbanimalid',
         'tbcarritoanimalaccion', 'tbcarritoanimalfecha', 'tbcarritoanimalorigen'],
     'tbtransportistaestadoperiodo' => ['tbtransportistaestadoperiodoid', 'tbtransportistaid',
         'tbtransportistaestadoperiodoestado', 'tbtransportistaestadoperiodofechainicio',
         'tbtransportistaestadoperiodofechafin', 'tbtransportistaestadoperiodomotivo',
         'tbtransportistaestadoperiodofecharegistroensistema'],
+    'tbtransportistahorario' => ['tbtransportistahorarioid', 'tbtransportistaid',
+        'tbtransportistahorariodiasemana', 'tbtransportistahorariohorainicio',
+        'tbtransportistahorariohorafin', 'tbtransportistahorariofechainicio',
+        'tbtransportistahorariofechafin', 'tbtransportistahorarioorigen'],
     'tbtransportistaflete' => ['tbtransportistafleteid', 'tbtransportistaid',
         'tbproductororigenid', 'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid',
-        'tbtransportistafletefecha', 'tbtransportistafletehora', 'tbtransportistafletedescripcion',
-        'tbtransportistafleteprecio', 'tbpagometodoid', 'tbtransportistafleteorigen'],
+        'tbvehiculoid', 'tbtransportistafletefecha', 'tbtransportistafletehora',
+        'tbtransportistafletedescripcion', 'tbtransportistafletecantidadcabezas',
+        'tbtransportistafletedistanciakm', 'tbtransportistafleteprecio', 'tbpagometodoid',
+        'tbtransportistafleteorigen'],
     'tbtransportistaresena' => ['tbtransportistaresenaid', 'tbtransportistaid',
-        'tbproductorid', 'tbtransportistafleteid', 'tbtransportistaresenafecha',
+        'tbpersonaid', 'tbtransportistafleteid', 'tbtransportistaresenafecha',
         'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
         'tbtransportistaresenaorigen'],
 ];
@@ -152,7 +166,7 @@ test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
 // depende de la aplicación. Lo que sigue ejercita el CRUD de productores, ahora
 // contra el contrato normalizado (tbproductordireccion como enlace + tbdireccion
 // como contenido real).
-echo "OK schema_test (estructura): veintisiete tablas, columnas exactas, cero claves, índices, "
+echo "OK schema_test (estructura): treinta tablas, columnas exactas, cero claves, índices, "
     . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
 $apiIds = [test_document(), test_document(), test_document()];
@@ -235,4 +249,4 @@ try {
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: veintisiete tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+echo "OK schema_test: treinta tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";

@@ -212,29 +212,30 @@ CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo (
 -- esos datos cambian y viven como observaciones o hechos.
 CREATE TABLE IF NOT EXISTS tbanimal (
     tbanimalid INT NOT NULL,
-    tbanimalcodigo VARCHAR(100) NULL,
+    tbanimalidentificacion VARCHAR(100) NULL,
     tbanimalsexo VARCHAR(20) NULL,
     tbanimalraza VARCHAR(100) NULL,
+    tbanimalcaracteristicas VARCHAR(500) NULL,
     tbanimalfecharegistroensistema DATETIME NOT NULL,
     tbanimalorigenregistro VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 
 -- Observaciones históricas del animal. Cada fila guarda lo observado, cuándo,
 -- desde dónde y en qué contexto; no inventa fecha de nacimiento.
-CREATE TABLE IF NOT EXISTS tbanimalobservacion (
-    tbanimalobservacionid INT NOT NULL,
+CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud (
+    tbanimalproduccionsaludid INT NOT NULL,
     tbanimalid INT NOT NULL,
-    tbanimalobservacionfecha DATETIME NOT NULL,
-    tbanimalobservacionorigen VARCHAR(100) NOT NULL,
-    tbanimalobservacioncontexto VARCHAR(250) NULL,
-    tbanimalobservacionedadmeses INT NULL,
-    tbanimalobservacionpeso DECIMAL(10,2) NULL,
-    tbanimalobservacionproposito VARCHAR(80) NULL,
-    tbanimalobservacionestadoreproductivo VARCHAR(80) NULL,
-    tbanimalobservacionpartos INT NULL,
-    tbanimalobservacionlitrosleche DECIMAL(10,2) NULL,
-    tbanimalobservacionproduccion JSON NULL,
-    tbanimalobservacionsalud JSON NULL
+    tbanimalproduccionsaludfecha DATETIME NOT NULL,
+    tbanimalproduccionsaludorigen VARCHAR(100) NOT NULL,
+    tbanimalproduccionsaludcontexto VARCHAR(250) NULL,
+    tbanimalproduccionsaludedadmeses INT NULL,
+    tbanimalproduccionsaludpeso DECIMAL(10,2) NULL,
+    tbanimalproduccionsaludproposito VARCHAR(80) NULL,
+    tbanimalproduccionsaludestadoreproductivo VARCHAR(80) NULL,
+    tbanimalproduccionsaludpartos INT NULL,
+    tbanimalproduccionsaludlitrosleche DECIMAL(10,2) NULL,
+    tbanimalproduccionsaludproduccion JSON NULL,
+    tbanimalproduccionsaludsalud JSON NULL
 ) ENGINE=InnoDB;
 
 -- Publicación del animal. Congela vendedor y finca al momento de publicar para
@@ -248,9 +249,21 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacion (
     tbanimalpublicacionprecio DECIMAL(12,2) NULL,
     tbanimalpublicaciontitulo VARCHAR(150) NULL,
     tbanimalpublicaciondescripcion VARCHAR(500) NULL,
-    tbanimalpublicacionestado VARCHAR(30) NOT NULL,
     tbanimalpublicacionorigen VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
+-- Transiciones de estado de la publicación. Reemplaza la columna mutable
+-- tbanimalpublicacionestado: el estado vigente es el periodo abierto
+-- (fechafin NULL) y el pasado nunca se sobrescribe.
+CREATE TABLE IF NOT EXISTS tbanimalpublicacionestadoperiodo (
+    tbanimalpublicacionestadoperiodoid INT NOT NULL,
+    tbanimalpublicacionid INT NOT NULL,
+    tbanimalpublicacionestadoperiodoestado VARCHAR(30) NOT NULL,
+    tbanimalpublicacionestadoperiodofechainicio DATETIME NOT NULL,
+    tbanimalpublicacionestadoperiodofechafin DATETIME NULL,
+    tbanimalpublicacionestadoperiodomotivo VARCHAR(250) NULL,
+    tbanimalpublicacionestadoperiodoorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
 
 -- Hecho económico de compra. No define ciclo de estados porque Calidad no
 -- aprobó una semántica suficiente; el estado se decidirá en Backend.
@@ -279,6 +292,8 @@ CREATE TABLE IF NOT EXISTS tbventa (
     tbventafecha DATE NOT NULL,
     tbventahora TIME NULL,
     tbventalugar VARCHAR(250) NULL,
+    tbventadireccionid INT NULL,
+    tbventaproposito VARCHAR(80) NULL,
     tbventaprecio DECIMAL(12,2) NOT NULL,
     tbpagometodoid INT NOT NULL,
     tbventaedadmeses INT NULL,
@@ -302,8 +317,7 @@ CREATE TABLE IF NOT EXISTS tbanimalinteraccion (
 CREATE TABLE IF NOT EXISTS tbcarrito (
     tbcarritoid INT NOT NULL,
     tbproductorid INT NOT NULL,
-    tbcarritofechacreacion DATETIME NOT NULL,
-    tbcarritoestado VARCHAR(30) NOT NULL
+    tbcarritofechacreacion DATETIME NOT NULL
 ) ENGINE=InnoDB;
 
 -- Historial de agregar/retirar animales del carrito. No se borra pasado.
@@ -315,6 +329,19 @@ CREATE TABLE IF NOT EXISTS tbcarritoanimal (
     tbcarritoanimalfecha DATETIME NOT NULL,
     tbcarritoanimalorigen VARCHAR(100) NULL
 ) ENGINE=InnoDB;
+-- Transiciones de estado del carrito. Reemplaza la columna mutable
+-- tbcarritoestado con la misma regla de periodo abierto único por carrito,
+-- aplicada por PHP.
+CREATE TABLE IF NOT EXISTS tbcarritoestadoperiodo (
+    tbcarritoestadoperiodoid INT NOT NULL,
+    tbcarritoid INT NOT NULL,
+    tbcarritoestadoperiodoestado VARCHAR(30) NOT NULL,
+    tbcarritoestadoperiodofechainicio DATETIME NOT NULL,
+    tbcarritoestadoperiodofechafin DATETIME NULL,
+    tbcarritoestadoperiodomotivo VARCHAR(250) NULL,
+    tbcarritoestadoperiodoorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
 
 -- Periodos de estado del transportista. La fecha real de inicio puede quedar
 -- NULL si no existe evidencia; no se usa fecha de migración como fecha real.
@@ -327,6 +354,19 @@ CREATE TABLE IF NOT EXISTS tbtransportistaestadoperiodo (
     tbtransportistaestadoperiodomotivo VARCHAR(250) NULL,
     tbtransportistaestadoperiodofecharegistroensistema DATETIME NOT NULL
 ) ENGINE=InnoDB;
+-- Horario declarado del transportista. Cada fila es un periodo de vigencia por
+-- día de la semana: cambiar el horario cierra el periodo y abre otro.
+CREATE TABLE IF NOT EXISTS tbtransportistahorario (
+    tbtransportistahorarioid INT NOT NULL,
+    tbtransportistaid INT NOT NULL,
+    tbtransportistahorariodiasemana VARCHAR(15) NOT NULL,
+    tbtransportistahorariohorainicio TIME NOT NULL,
+    tbtransportistahorariohorafin TIME NOT NULL,
+    tbtransportistahorariofechainicio DATETIME NOT NULL,
+    tbtransportistahorariofechafin DATETIME NULL,
+    tbtransportistahorarioorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
 
 -- Flete realizado por un transportista. El método de pago usado se conserva
 -- aquí; cantidad semanal y método frecuente se derivan por consultas.
@@ -337,9 +377,12 @@ CREATE TABLE IF NOT EXISTS tbtransportistaflete (
     tbfincaorigenid INT NULL,
     tbdireccionorigenid INT NULL,
     tbdirecciondestinoid INT NULL,
+    tbvehiculoid INT NULL,
     tbtransportistafletefecha DATE NOT NULL,
     tbtransportistafletehora TIME NULL,
     tbtransportistafletedescripcion VARCHAR(500) NULL,
+    tbtransportistafletecantidadcabezas INT NULL,
+    tbtransportistafletedistanciakm DECIMAL(10,2) NULL,
     tbtransportistafleteprecio DECIMAL(12,2) NULL,
     tbpagometodoid INT NOT NULL,
     tbtransportistafleteorigen VARCHAR(100) NOT NULL
@@ -349,7 +392,7 @@ CREATE TABLE IF NOT EXISTS tbtransportistaflete (
 CREATE TABLE IF NOT EXISTS tbtransportistaresena (
     tbtransportistaresenaid INT NOT NULL,
     tbtransportistaid INT NOT NULL,
-    tbproductorid INT NOT NULL,
+    tbpersonaid INT NOT NULL,
     tbtransportistafleteid INT NULL,
     tbtransportistaresenafecha DATETIME NOT NULL,
     tbtransportistaresenacalificacion INT NOT NULL,

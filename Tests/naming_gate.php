@@ -51,13 +51,14 @@ foreach ($forbiddenFiles as $file) {
 $sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $sql = implode("\n", array_map('file_get_contents', $sqlFiles));
 $manifest = schema_manifest();
-$expectedTables = ['tbanimal', 'tbanimalinteraccion', 'tbanimalobservacion', 'tbanimalpublicacion',
-    'tbbitacora', 'tbcarrito', 'tbcarritoanimal', 'tbcompra', 'tbcomprador', 'tbdireccion',
+$expectedTables = ['tbanimal', 'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
+    'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito', 'tbcarritoanimal',
+    'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador', 'tbdireccion',
     'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
     'tbproductoractividad', 'tbproductorclasificacionperiodo', 'tbproductordireccion',
     'tbproductorestadoperiodo', 'tbproductorubicacion', 'tbtransportista',
-    'tbtransportistaestadoperiodo', 'tbtransportistaflete', 'tbtransportistaresena',
-    'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'];
+    'tbtransportistaestadoperiodo', 'tbtransportistaflete', 'tbtransportistahorario',
+    'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'];
 if ($manifest['tables_sorted'] !== $expectedTables) {
     throw new RuntimeException('El listado de tablas no coincide con el SQL canónico.');
 }
@@ -88,7 +89,7 @@ foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $
 }
 $commercialFragments = [
     'tbproductorclasificacionperiodo' => 'clasificación histórica Comprador/Vendedor del Productor',
-    'tbanimalobservacionedadmeses INT NULL' => 'animal guarda edad observada, no fecha de nacimiento inventada',
+    'tbanimalproduccionsaludedadmeses INT NULL' => 'animal guarda edad observada, no fecha de nacimiento inventada',
     'tbanimalpublicacion' => 'publicación congela vendedor y finca',
     'tbcompra' => 'compra como hecho económico',
     'tbventa' => 'venta como hecho económico',
@@ -98,6 +99,15 @@ $commercialFragments = [
     'tbtransportistaestadoperiodo' => 'estado histórico de transportista confirmado',
     'tbtransportistaflete' => 'flete confirmado',
     'tbtransportistaresena' => 'reseña histórica confirmada',
+    'tbanimalcaracteristicas VARCHAR(500) NULL' => 'la identidad del animal incluye características',
+    'tbanimalidentificacion VARCHAR(100) NULL' => 'el animal se identifica, no se codifica',
+    'tbventadireccionid INT NULL' => 'la venta recupera dirección',
+    'tbventaproposito VARCHAR(80) NULL' => 'la venta recupera propósito',
+    'tbtransportistafletecantidadcabezas INT NULL' => 'el flete recupera cantidad de cabezas',
+    'tbtransportistafletedistanciakm DECIMAL(10,2) NULL' => 'el flete recupera distancia',
+    'tbtransportistahorariohorainicio TIME NOT NULL' => 'horario de transportista confirmado',
+    'tbcarritoestadoperiodofechafin DATETIME NULL' => 'el estado del carrito es histórico',
+    'tbanimalpublicacionestadoperiodofechafin DATETIME NULL' => 'el estado de la publicación es histórico',
     'tbpagometodoid INT NOT NULL' => 'método de pago se guarda en hechos',
 ];
 foreach ($commercialFragments as $fragment => $reason) {
@@ -106,7 +116,9 @@ foreach ($commercialFragments as $fragment => $reason) {
     }
 }
 foreach (['cantidadfletessemanales', 'metodopagofrecuente', 'calificacionpromedio',
-    'tbanimalfechanacimiento', 'tbcompraestado'] as $derivedOrUnapproved) {
+    'tbanimalfechanacimiento', 'tbcompraestado', 'tbanimalobservacion',
+    'tbcarritoestado VARCHAR', 'tbanimalpublicacionestado VARCHAR',
+    'tbanimaledad', 'tbanimalpeso'] as $derivedOrUnapproved) {
     if (str_contains($sql, $derivedOrUnapproved)) {
         throw new RuntimeException("Dato derivado o no aprobado en SQL: {$derivedOrUnapproved}");
     }
@@ -210,7 +222,7 @@ $matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md
 foreach ([
     'Productor es la entidad de negocio núcleo',
     '`tbvendedor` no debe existir',
-    '`tbcomprador` queda como estructura legacy',
+    '`tbcomprador` tiene destino definitivo',
     '`tbproductorclasificacionperiodo`',
     'Visualización por fila sigue como propuesta',
 ] as $decisionP0C) {
