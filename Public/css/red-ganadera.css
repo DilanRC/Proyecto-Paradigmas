@@ -496,3 +496,71 @@ body.rural {
     font-size:15px;
     font-weight:700;
 }
+
+/* --- Contadores de sesion ---------------------------------------------------
+   Rotulados como no persistentes: no hay endpoint para el interes de una
+   persona, asi que la vista no finge que lo hay. */
+.rural__counters {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+    margin:0 0 12px;
+}
+
+.rural__counter {
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(0,0,0,.18);
+}
+
+.rural__counter dt {
+    margin:0;
+    color:var(--wheat-text-muted);
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+}
+
+.rural__counter dd {
+    margin:4px 0 0;
+    color:var(--rural-wheat);
+    font-size:26px;
+    font-weight:700;
+    line-height:1;
+}
+
+.rural__counters-note,
+.rural__hint {
+    margin:0;
+    color:var(--wheat-text-muted);
+    font-size:12px;
+    line-height:1.6;
+}
+
+.rural__hint strong { color:var(--rural-wheat); }
+
+/* Marca de agua con las iniciales, en lugar de una fotografia de archivo que
+   no corresponde a la persona real del registro. */
+.rural__media--placeholder {
+    display:grid;
+    place-items:center;
+    background:linear-gradient(150deg,var(--rural-rust),#b34600);
+}
+
+.rural__media-initials {
+    color:var(--rural-wheat);
+    font-family:var(--font-serif);
+    font-size:clamp(48px,10vw,86px);
+    font-weight:700;
+    font-style:italic;
+    letter-spacing:.04em;
+}
+
+.rural__rating p#productor-posicion {
+    color:var(--rust-text-soft);
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+}
