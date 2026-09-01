@@ -98,19 +98,22 @@
 .table-container {
     position:relative;
     min-height:180px;
-    overflow-x:auto;
+    overflow-x:visible;
     border-top:1px solid var(--border);
 }
 
 table {
     width:100%;
+    table-layout:fixed;
     border-collapse:collapse;
 }
 
 th, td {
-    padding:16px 18px;
+    min-width:0;
+    padding:14px 12px;
     text-align:left;
     vertical-align:middle;
+    overflow-wrap:anywhere;
 }
 
 th {
@@ -128,13 +131,14 @@ td {
 
 .producer-summary {
     display:flex;
-    min-width:210px;
+    min-width:0;
     align-items:center;
     gap:12px;
 }
 
 .producer-summary>span:last-child {
     display:grid;
+    min-width:0;
 }
 
 .producer-summary small, .secondary-data {
@@ -142,9 +146,12 @@ td {
 }
 
 .row-actions {
-    min-width:150px;
+    display:flex;
+    min-width:0;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+    gap:6px;
     text-align:right;
-    white-space:nowrap;
 }
 
 @media (max-width:860px) {
@@ -185,7 +192,7 @@ td {
     display:block;
 }
 
-@media (max-width:760px) {
+@media (max-width:900px) {
     table, thead, tbody, tr, th, td {
         display:block;
     }
@@ -216,7 +223,6 @@ td {
         content:attr(data-label);
     }
     .row-actions {
-        display:flex;
         justify-content:flex-end;
         text-align:left;
     }
@@ -281,7 +287,7 @@ body.rural-panel {
     color:#fff;
     font-size:22px;
     font-weight:600;
-    letter-spacing:-.02em;
+    letter-spacing:0;
 }
 
 .rural-panel__sidebar-brand-name strong {
@@ -392,16 +398,7 @@ body.rural-panel {
 }
 
 .rural-panel__glow {
-    position:absolute;
-    top:0;
-    right:0;
-    z-index:0;
-    width:224px;
-    height:224px;
-    border-radius:50%;
-    background:rgba(245,222,179,.45);
-    filter:blur(64px);
-    pointer-events:none;
+    display:none;
 }
 
 .rural-panel__content {
@@ -414,7 +411,9 @@ body.rural-panel {
 
 .rural-panel__admin-row {
     display:flex;
+    flex-wrap:wrap;
     justify-content:flex-end;
+    gap:10px;
 }
 
 .rural-panel__admin-link {
@@ -452,7 +451,7 @@ body.rural-panel {
 
 .rural-panel .page-header h1 {
     font-size:clamp(40px,5.4vw,64px);
-    letter-spacing:-.045em;
+    letter-spacing:0;
 }
 
 .rural-panel .page-header p {
