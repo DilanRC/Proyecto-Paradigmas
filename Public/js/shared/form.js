@@ -7,11 +7,18 @@
 // sobre el formulario principal.
 
 import { describeValidity, mapFieldErrors, pickFirstInvalid } from './field-errors.js';
+import { clearFormDraftAfterSuccessfulClose, enableFormDraft } from './form-draft.js';
 
 /** Estado de deshabilitado previo a un envio, por formulario. */
 const disabledBefore = new WeakMap();
 
 export function bindFormErrors(form, { collapsePrefixes = [] } = {}) {
+    // Calidad pidio no perder lo escrito ante errores. Los formularios CRUD que
+    // tienen una identidad estable reciben automaticamente un borrador temporal
+    // en sessionStorage. Formularios secundarios sin identidad estable (por
+    // ejemplo direccion de finca) no se activan aqui para no mezclar contextos.
+    enableFormDraft(form);
+
     const container = (field) => form.querySelector(`[data-error-for="${CSS.escape(field)}"]`);
 
     function showErrors(errors) {
@@ -107,6 +114,11 @@ export function setSaving(form, value, { submitButton = null, savingLabel = 'Gua
         submitButton.textContent = submitButton.dataset.label;
         delete submitButton.dataset.label;
     }
+
+    // Los CRUD actuales cierran el dialogo solo despues de una respuesta 2xx.
+    // Si seguimos dentro del dialogo fue 422/409/500/red y el borrador debe
+    // sobrevivir. Si ya se cerro, el guardado termino bien y se elimina.
+    clearFormDraftAfterSuccessfulClose(form);
 }
 
 /**
