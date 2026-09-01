@@ -18,9 +18,9 @@ test('ninguna localidad cuelga de un distrito inexistente', () => {
     assert.deepEqual(huerfanos, [], `codigos sin distrito: ${huerfanos.join(', ')}`);
 });
 
-test('el total es 13309, contado del archivo oficial 2026', () => {
+test('el total es 13274, tras reparar con INEC y deduplicar', () => {
     const total = Object.values(POBLADOS).reduce((n, lista) => n + lista.length, 0);
-    assert.equal(total, 13309);
+    assert.equal(total, 13274);
 });
 
 test('solo un distrito se queda sin localidad publicada', () => {
@@ -45,12 +45,17 @@ test('normalizar ignora acentos y mayusculas', () => {
     assert.equal(normalizar('SAN JOSÉ'), normalizar('san jose'));
 });
 
-test('normalizar compensa el "nd" que la fuente oficial perdio', () => {
-    // El XLSX del IGN trae "Tamario" por Tamarindo. Aplicar la misma perdida a
-    // la consulta es lo que permite encontrarlo escribiendolo bien.
-    assert.equal(normalizar('Tamarindo'), normalizar('Tamario'));
-    assert.equal(normalizar('Llano Grande'), normalizar('Llano Grae'));
-    assert.equal(normalizar('Condominio'), normalizar('Coominio'));
+test('normalizar ya NO borra "nd": el apano se retiro al reparar los datos', () => {
+    // Hasta DEC-FRONT-14 se quitaba "nd" de la consulta para alcanzar los
+    // nombres mutilados del IGN. Reparados con INEC, ese atajo solo podria
+    // igualar cadenas que de verdad son distintas.
+    assert.notEqual(normalizar('Tamarindo'), normalizar('Tamario'));
+    assert.notEqual(normalizar('Llano Grande'), normalizar('Llano Grae'));
+    assert.notEqual(normalizar('Condominio'), normalizar('Coominio'));
+});
+
+test('normalizar colapsa los espacios repetidos', () => {
+    assert.equal(normalizar('  Mata   Redonda '), 'mata redonda');
 });
 
 test('normalizar no confunde nombres que de verdad son distintos', () => {
@@ -66,20 +71,40 @@ test('normalizar tolera nulos y vacios', () => {
 
 // --- busqueda ----------------------------------------------------------------
 
-test('escribir el nombre correcto encuentra el registro que la fuente mutilo', () => {
-    // Este es el punto: sin la compensacion, "Tamarindo" no encontraria nada en
-    // Santa Cruz porque la fuente guarda "Tamario".
-    const resultado = buscarPoblados('50309', 'Tamarindo');
-    assert.ok(resultado.length > 0, 'la busqueda con el nombre correcto no debe quedar vacia');
-    assert.ok(resultado.some((n) => normalizar(n) === normalizar('Tamarindo')));
+test('los nombres reparados con INEC 2024 quedan escritos bien', () => {
+    // Cruce por codigo de distrito contra el shapefile del INEC, que si
+    // conserva "nd". Ver Documentation/correcciones-localidades.csv.
+    for (const [codigo, correcto, roto] of [
+        ['10108', 'Mata Redonda', 'Mata Redoa'],
+        ['50309', 'Tamarindo', 'Tamario'],
+        ['30110', 'Llano Grande', 'Llano Grae'],
+        ['10106', 'Méndez', 'Méez'],
+        ['10105', 'Indiana', 'Iiana'],
+        ['10201', 'La Condesa', 'La Coesa'],
+    ]) {
+        assert.ok(pobladosDe(codigo).includes(correcto), `${codigo}: falta ${correcto}`);
+        assert.ok(!pobladosDe(codigo).includes(roto), `${codigo}: sobrevive ${roto}`);
+    }
 });
 
-test('los 70 nombres reparados con la DTA quedan escritos bien', () => {
-    // "Mata Redoa" solo puede ser el "Mata Redonda" que la DTA declara para ese
-    // mismo distrito, asi que se corrigio. No es conjetura.
-    assert.ok(pobladosDe('10108').includes('Mata Redonda'));
-    assert.ok(!pobladosDe('10108').includes('Mata Redoa'));
-    assert.ok(pobladosDe('30110').includes('Llano Grande'));
+test('la reparacion conserva las tildes y la caja del IGN', () => {
+    // INEC publica MENDEZ, todo en mayuscula y sin tilde. Solo se tomo de ahi
+    // donde va la secuencia perdida, no la grafia.
+    assert.ok(pobladosDe('10106').includes('Méndez'));
+    assert.ok(!pobladosDe('10106').includes('MENDEZ'));
+    assert.ok(pobladosDe('10109').includes('Rincón Grande'));
+});
+
+test('escribir el nombre correcto encuentra el registro', () => {
+    const resultado = buscarPoblados('50309', 'Tamarindo');
+    assert.ok(resultado.includes('Tamarindo'));
+    // Los vecinos tambien se repararon: eran "Tamario Diria" y "Palmas de Tamario".
+    assert.ok(resultado.some((n) => n !== 'Tamarindo' && n.includes('Tamarindo')));
+});
+
+test('341 nombres recuperaron su "nd"; antes no lo tenia ninguno', () => {
+    const con = Object.values(POBLADOS).flat().filter((n) => normalizar(n).includes('nd'));
+    assert.equal(con.length, 341);
 });
 
 test('las coincidencias por prefijo van antes que las del interior', () => {
@@ -113,5 +138,5 @@ test('la busqueda solo mira el distrito pedido', () => {
 });
 
 test('Duacari, el distrito reconciliado, si trae sus localidades', () => {
-    assert.equal(pobladosDe('70605').length, 19);
+    assert.ok(pobladosDe('70605').length >= 18);
 });

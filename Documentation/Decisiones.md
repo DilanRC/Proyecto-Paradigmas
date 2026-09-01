@@ -527,6 +527,11 @@ los tres endpoints que ya existian.
 
 ## DEC-FRONT-13 - Localidades oficiales y busqueda que compensa un defecto de la fuente
 
+> **Superada en parte por DEC-FRONT-14.** El apano de busqueda que se describe
+> aqui era explicitamente transitorio y ya se retiro: los nombres se repararon
+> contra INEC Localidades 2024. Lo que sigue documenta el defecto del IGN y por
+> que se acepto una solucion temporal.
+
 **Necesidad.** DEC-FRONT-11 dejo el catalogo a medias: 494 distritos cargados y
 cero localidades, porque el PDF de Centros Poblados no se podia extraer. El
 distrito quedo como texto libre y el pueblo sin ninguna ayuda, de modo que dos
@@ -590,3 +595,83 @@ lo dice, no porque se pueda deducir.
 de servidor; el backend sigue recibiendo la direccion como texto, con el mismo
 cuerpo que antes. La correccion de nombres vive en el catalogo generado, no en
 los datos ya guardados en la base.
+
+## DEC-FRONT-14 - Reparacion de localidades con INEC 2024 y retiro del apano de busqueda
+
+**Necesidad.** DEC-FRONT-13 dejo dos cosas abiertas. Los nombres que el XLSX del
+IGN publica mutilados seguian mutilados, y la busqueda los alcanzaba quitando la
+secuencia `nd` de lo que teclea el usuario. Ese mecanismo funcionaba, pero podia
+igualar cadenas que de verdad son distintas y, sobre todo, escondia un defecto
+de los datos en lugar de resolverlo. La arquitectura correcta es dato correcto
+mas busqueda normal, no dato incorrecto mas busqueda que imita el error.
+
+**Fuente correctiva.** INEC, *Localidades 2024* (`Localidades_MGN_2024`),
+shapefile en CR-SIRGAS/CRTM05, 66840 puntos, SHA-256
+`dc27c14948e289a1bd0f531e93051609b837ccd9f998cf43ef794e649cb3f9f6`. Se leyo el
+DBF directamente. Trae `COD_UGED`, el codigo de distrito de cinco digitos, que
+es la clave de cruce, y `NOMB_LOC`.
+
+**La mutilacion es del recurso IGN 2026, no de Costa Rica.** INEC conserva la
+secuencia: 2487 de sus nombres contienen `ND`, entre ellos `MATA REDONDA` (4),
+`TAMARINDO` (41), `LLANO GRANDE` (52), `CANAFISTULA` con enie (5) y
+`VILLARREAL` (16). El XLSX del IGN tiene cero en 8575 cadenas.
+
+**Metodo.** El cruce fue siempre `codigoDistrito + localidad`, nunca por nombre
+suelto. Para cada nombre del IGN se buscaron en el mismo distrito los candidatos
+de INEC cuya forma sin `ND` coincide con la del IGN, comparando sin tildes, sin
+caja y con espacios normalizados, pero **sin** quitar `nd` del lado de INEC.
+Resultado sobre 13455 registros:
+
+| Grupo | Registros |
+|---|---:|
+| A. Coinciden IGN e INEC | 7574 |
+| B. Corregibles sin ambiguedad con INEC | 343 |
+| C. Solo en IGN 2026, sin contraparte en INEC | 5538 |
+| D. Ambiguos | 2 |
+
+Los dos ambiguos resultaron ser el mismo lugar duplicado dentro del XLSX, una
+copia sana y otra mutilada, de modo que se resolvieron con evidencia interna:
+`Bosques De Lindora` junto a `Bosques de Liora`.
+
+**INEC dice donde, el IGN dice como se escribe.** INEC publica todo en mayuscula
+y sin tildes, asi que copiar su cadena habria degradado la grafia. Se reinserto
+la secuencia perdida en la posicion que INEC indica, conservando las tildes y la
+caja del IGN: `Méez` + `MENDEZ` produce `Méndez`, no `MENDEZ`. La caja de la
+secuencia repuesta se decide por el nombre completo y no por la letra contigua;
+mirar solo la anterior daba `INDiana` y `Plaza San ANDres`, porque la letra
+previa era la inicial mayuscula de la palabra.
+
+**Las 70 correcciones anteriores, auditadas.** Las que DEC-FRONT-13 hizo contra
+la tabla DTA se verificaron una a una contra INEC: **56 confirmadas, 0
+discrepantes, 14 sin cobertura en INEC**. Ninguna estaba mal. Las 14 restantes
+se sostienen en la DTA, que es fuente oficial, y quedan senaladas como no
+verificables por segunda fuente.
+
+**Precedencia.** La division administrativa es siempre IGN DTA 2026: 7
+provincias, 84 cantones, 494 distritos. INEC trae 491 codigos y **no** se usa
+para alterar esa estructura. INEC solo interviene sobre el nombre de una
+localidad, y unicamente cuando el registro pertenece al mismo distrito, el
+nombre del IGN presenta el defecto conocido y la correspondencia es unica.
+
+**Consecuencia.** 345 registros reparados con procedencia por fila en
+`Documentation/correcciones-localidades.csv`. 341 nombres recuperan su `nd`,
+donde antes no lo tenia ninguno. El catalogo queda en 13274 etiquetas tras
+deduplicar. `normalizar` volvio a ser lo que debe: minusculas, sin sensibilidad
+a tildes y espacios normalizados. Ya no borra `nd`.
+
+**Lo que sigue pendiente, y no se disimula.** Los 5538 nombres del grupo C no
+tienen contraparte en INEC para su distrito, casi siempre porque median dos anos
+entre ambos cortes. Sobre la parte comparable la tasa de mutilacion medida es
+del 4,33%, de modo que cabe esperar unos **240 nombres (1,8% del catalogo)
+todavia danados**. No se corrigen por conjetura y quedan tal como los publica la
+fuente. Al haber retirado el apano, esos nombres solo se encuentran escribiendo
+la forma que publica el IGN. Es el precio de no mentir sobre el dato.
+
+**Riesgo.** Que alguien reintroduzca el atajo. Lo cubre la prueba que exige
+`normalizar('Tamarindo') !== normalizar('Tamario')`, y la que fija en 341 los
+nombres con `nd`: si el catalogo se regenera desde el XLSX sin reparar, cae a
+cero y el gate falla.
+
+**Limite.** Solo frontend. No se creo tabla ni endpoint, y la correccion vive en
+el catalogo generado, no en las direcciones ya guardadas en la base. Conviene
+reportar el defecto al IGN; esta decision y el CSV son la evidencia.
