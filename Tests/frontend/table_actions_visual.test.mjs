@@ -11,6 +11,7 @@ import test from 'node:test';
 const panelCss = readFileSync(new URL('../../Public/css/panel.css', import.meta.url), 'utf8');
 const baseCss = readFileSync(new URL('../../Public/css/base.css', import.meta.url), 'utf8');
 const iconsCss = readFileSync(new URL('../../Public/css/icons.css', import.meta.url), 'utf8');
+const publicCss = readFileSync(new URL('../../Public/css/public-auth.css', import.meta.url), 'utf8');
 
 const views = [
     'home', 'login', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos',
@@ -71,13 +72,20 @@ test('los estados vacios heredan la identidad del modulo', () => {
     assert.ok(iconsCss.includes(".confirmation__icon::before {\n    content:'\\f28b'"));
 });
 
-test('crear y accesos principales usan iconos sin eliminar el texto', () => {
+test('crear y accesos privados usan iconos sin eliminar el texto', () => {
     assert.ok(iconsCss.includes('#crear-productor > span::before'));
     assert.ok(iconsCss.includes('#crear-vehiculo > span::before'));
     assert.ok(iconsCss.includes('#crear-pagometodo > span::before'));
     assert.ok(iconsCss.includes(".rural-panel__admin-link[href='./']::before"));
-    assert.ok(iconsCss.includes(".login-form .button--primary::before"));
-    assert.ok(iconsCss.includes(".landing-actions .button[href='#red']::before"));
+    assert.ok(iconsCss.includes(".rural-panel__admin-link[href$='login.php']::before"));
+});
+
+test('la nueva identidad publica usa Font Awesome desde su capa aislada', () => {
+    assert.ok(publicCss.includes("font-family:'Font Awesome 7 Free'"));
+    assert.ok(publicCss.includes('.public-cta::after'));
+    assert.ok(publicCss.includes('.auth-submit::after'));
+    assert.equal(iconsCss.includes('.landing-actions'), false, 'no debe sobrevivir CSS de la landing anterior');
+    assert.equal(iconsCss.includes('.login-form'), false, 'no debe sobrevivir CSS del login anterior');
 });
 
 test('las acciones conservan ayuda visual y foco de teclado', () => {
