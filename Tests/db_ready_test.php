@@ -41,10 +41,14 @@ foreach (['CREATE TABLE IF NOT EXISTS tbvendedor', 'tbcompradorestadoperiodo',
 test_assert(str_contains($schema, 'tbcompraid INT NULL'), 'tbventa debe permitir tbcompraid NULL');
 test_assert(substr_count($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador') === 1,
     'tbcomprador se conserva legacy sin tablas satélite');
-test_assert(str_contains($decisiones, '`tbcomprador` se conserva como marca de capacidad de compra')
-    && str_contains($diccionario, 'Marca de capacidad de compra de una persona')
-    && str_contains($der, 'tbcomprador : "capacidad de compra por tbpersonaid"'),
-    'Documentación debe fijar el destino definitivo de tbcomprador');
+test_assert(str_contains($decisiones, '`tbcomprador` se conserva solo como legacy')
+    && str_contains($decisiones, 'Trabajo de Backend que permite retirarla')
+    && str_contains($diccionario, 'Estructura legacy de compatibilidad temporal')
+    && str_contains($der, 'tbcomprador : "legacy por tbpersonaid"'),
+    'Documentación debe marcar tbcomprador como legacy temporal con plan de retiro');
+test_assert(!str_contains($decisiones, '`tbcomprador` tiene destino definitivo')
+    && !str_contains($diccionario, 'Marca de capacidad de compra de una persona'),
+    'tbcomprador no puede documentarse como capacidad permanente');
 
 // Concordancia con la evidencia directa de Calidad (DEC-DBREADY-005): cada dato
 // pedido tiene columna y ningún estado de negocio sobrevive como columna mutable.

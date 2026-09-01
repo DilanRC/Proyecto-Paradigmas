@@ -121,7 +121,8 @@ $evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "
     'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
 $evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es la entidad de negocio núcleo')
     && str_contains($matrizP0C, '`tbvendedor` no debe existir')
-    && str_contains($matrizP0C, '`tbcomprador` tiene destino definitivo')
+    && str_contains($matrizP0C, '`tbcomprador` es LEGACY de compatibilidad')
+    && str_contains($matrizP0C, '`tipo = COMPRADOR`')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo')
     && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvendedor')
     && !str_contains($schema, 'tbcompradorestadoperiodo'),

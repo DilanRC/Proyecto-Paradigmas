@@ -42,7 +42,7 @@ erDiagram
     tbbitacora { BIGINT tbbitacoraid VARCHAR tbbitacoraentidad VARCHAR tbbitacoraregistroidentificacionnumero VARCHAR tbbitacoraaccion DATETIME tbbitacorafecha JSON tbbitacoradatosanteriores JSON tbbitacoradatosnuevos VARCHAR tbbitacoraactortipo BIGINT tbbitacorausuarioid VARCHAR tbbitacoraorigen VARCHAR tbbitacorasolicitudid }
 
     tbpersona ||--o| tbproductor : "capacidad por tbpersonaid"
-    tbpersona ||--o| tbcomprador : "capacidad de compra por tbpersonaid"
+    tbpersona ||--o| tbcomprador : "legacy por tbpersonaid"
     tbpersona ||--o| tbtransportista : "capacidad por tbpersonaid"
     tbproductor ||--|| tbproductordireccion : "residencia"
     tbproductordireccion }o--|| tbdireccion : "ubicacion"
@@ -85,9 +85,9 @@ erDiagram
 `tbpersona` es la fuente única de identificación, tipo, nombre, teléfono,
 correo y disponibilidad global. `tbproductor` es la entidad de negocio núcleo.
 Comprador y Vendedor no son tablas de entidad: son periodos independientes en
-`tbproductorclasificacionperiodo`. `tbcomprador` es, en definitiva, la marca de
-capacidad de compra de la persona: no se amplía y no tiene tabla de periodos
-propia.
+`tbproductorclasificacionperiodo`, con `tipo = COMPRADOR` o `VENDEDOR`.
+`tbcomprador` es legacy de compatibilidad temporal mientras Backend dependa de
+ella: no se amplía, no tiene tabla de periodos propia y debe retirarse.
 
 El estado efectivo se calcula en PHP:
 
