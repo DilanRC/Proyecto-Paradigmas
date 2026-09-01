@@ -1,10 +1,12 @@
 # Esquema Supabase
 
 Servicio de migración PostgreSQL para el proyecto Supabase conectado a Vercel.
-Mantiene en `public` el equivalente de las quince tablas MySQL. `tbpersona`
+Mantiene en `public` el equivalente de las 27 tablas MySQL. `tbpersona`
 concentra identidad y contacto; `tbproductor`, `tbcomprador` y
 `tbtransportista` son capacidades independientes enlazadas por `tbpersonaid`.
-No declara claves, restricciones, índices, defaults ni objetos programables.
+El bloque comercial agrega clasificación histórica del Productor, animales,
+publicaciones, compra, venta, funnel, carrito, fletes y reseñas. No declara
+claves, restricciones, índices, defaults ni objetos programables.
 
 `migrate.php` se ejecuta antes de Apache cuando Vercel entrega `POSTGRES_URL` o
 `POSTGRES_URL_NON_POOLING`. La migración usa un bloqueo asesor transaccional,
@@ -18,7 +20,7 @@ contenedor sin borrar ni alterar datos existentes.
 Evidencia operativa esperada en los logs de Vercel:
 
 ```text
-supabase_schema_status=ready tables=15 migration=v5
+supabase_schema_status=ready tables=27 migration=v6
 ```
 
 No se debe ejecutar la migración remota hasta verificar un snapshot y recibir

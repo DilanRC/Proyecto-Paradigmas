@@ -54,6 +54,70 @@ const EXPECTED_COLUMNS = [
     'tbcomprador' => [
         'tbcompradorid', 'tbpersonaid', 'tbcompradorestado',
     ],
+    'tbproductorclasificacionperiodo' => [
+        'tbproductorclasificacionperiodoid', 'tbproductorid', 'tbproductorclasificacionperiodotipo',
+        'tbproductorclasificacionperiodofechainicio', 'tbproductorclasificacionperiodofechafin',
+        'tbproductorclasificacionperiodomotivo',
+    ],
+    'tbanimal' => [
+        'tbanimalid', 'tbanimalcodigo', 'tbanimalsexo', 'tbanimalraza',
+        'tbanimalfecharegistroensistema', 'tbanimalorigenregistro',
+    ],
+    'tbanimalobservacion' => [
+        'tbanimalobservacionid', 'tbanimalid', 'tbanimalobservacionfecha',
+        'tbanimalobservacionorigen', 'tbanimalobservacioncontexto',
+        'tbanimalobservacionedadmeses', 'tbanimalobservacionpeso',
+        'tbanimalobservacionproposito', 'tbanimalobservacionestadoreproductivo',
+        'tbanimalobservacionpartos', 'tbanimalobservacionlitrosleche',
+        'tbanimalobservacionproduccion', 'tbanimalobservacionsalud',
+    ],
+    'tbanimalpublicacion' => [
+        'tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid', 'tbfincaid',
+        'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio', 'tbanimalpublicaciontitulo',
+        'tbanimalpublicaciondescripcion', 'tbanimalpublicacionestado', 'tbanimalpublicacionorigen',
+    ],
+    'tbcompra' => [
+        'tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbfincaorigenid',
+        'tbcomprafecha', 'tbcomprahora', 'tbcompralugar', 'tbcompraprecio',
+        'tbpagometodoid', 'tbcompraorigen',
+    ],
+    'tbventa' => [
+        'tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid',
+        'tbfincaid', 'tbcompraid', 'tbventafecha', 'tbventahora', 'tbventalugar',
+        'tbventaprecio', 'tbpagometodoid', 'tbventaedadmeses', 'tbventapeso',
+        'tbventarazasnapshot', 'tbventaorigen',
+    ],
+    'tbanimalinteraccion' => [
+        'tbanimalinteraccionid', 'tbproductorid', 'tbanimalid',
+        'tbanimalinteracciontipo', 'tbanimalinteraccionaccion',
+        'tbanimalinteraccionfecha', 'tbanimalinteraccionorigen',
+    ],
+    'tbcarrito' => [
+        'tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion', 'tbcarritoestado',
+    ],
+    'tbcarritoanimal' => [
+        'tbcarritoanimalid', 'tbcarritoid', 'tbanimalid', 'tbcarritoanimalaccion',
+        'tbcarritoanimalfecha', 'tbcarritoanimalorigen',
+    ],
+    'tbtransportistaestadoperiodo' => [
+        'tbtransportistaestadoperiodoid', 'tbtransportistaid',
+        'tbtransportistaestadoperiodoestado', 'tbtransportistaestadoperiodofechainicio',
+        'tbtransportistaestadoperiodofechafin', 'tbtransportistaestadoperiodomotivo',
+        'tbtransportistaestadoperiodofecharegistroensistema',
+    ],
+    'tbtransportistaflete' => [
+        'tbtransportistafleteid', 'tbtransportistaid', 'tbproductororigenid',
+        'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid',
+        'tbtransportistafletefecha', 'tbtransportistafletehora',
+        'tbtransportistafletedescripcion', 'tbtransportistafleteprecio',
+        'tbpagometodoid', 'tbtransportistafleteorigen',
+    ],
+    'tbtransportistaresena' => [
+        'tbtransportistaresenaid', 'tbtransportistaid', 'tbproductorid',
+        'tbtransportistafleteid', 'tbtransportistaresenafecha',
+        'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
+        'tbtransportistaresenaorigen',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -142,7 +206,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de quince tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 27 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -337,7 +401,7 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v5'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v6'))");
     $connection->exec($schema);
     normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
@@ -347,7 +411,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=15 migration=v5\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=27 migration=v6\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

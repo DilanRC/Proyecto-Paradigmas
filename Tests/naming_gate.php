@@ -13,6 +13,7 @@ $required = [
     'Database/Tests/comprobacionrelaciones.sql',
     'Database/Tests/diagnostico.sql',
     'Database/Migrations/001normalizadireccionproductor.sql',
+    'Database/Migrations/006estructuracomercialhistorica.sql',
     'Application/Auth/ActorContext.php',
     'Application/Auth/SupabaseActorResolver.php',
     'Application/Model/Productor.php',
@@ -50,15 +51,19 @@ foreach ($forbiddenFiles as $file) {
 $sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $sql = implode("\n", array_map('file_get_contents', $sqlFiles));
 $manifest = schema_manifest();
-$expectedTables = ['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion',
-    'tbpagometodo', 'tbpersona', 'tbproductor', 'tbproductoractividad', 'tbproductordireccion',
+$expectedTables = ['tbanimal', 'tbanimalinteraccion', 'tbanimalobservacion', 'tbanimalpublicacion',
+    'tbbitacora', 'tbcarrito', 'tbcarritoanimal', 'tbcompra', 'tbcomprador', 'tbdireccion',
+    'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
+    'tbproductoractividad', 'tbproductorclasificacionperiodo', 'tbproductordireccion',
     'tbproductorestadoperiodo', 'tbproductorubicacion', 'tbtransportista',
-    'tbtransportistavehiculo', 'tbvehiculo'];
+    'tbtransportistaestadoperiodo', 'tbtransportistaflete', 'tbtransportistaresena',
+    'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'];
 if ($manifest['tables_sorted'] !== $expectedTables) {
     throw new RuntimeException('El listado de tablas no coincide con el SQL canónico.');
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
-    'tbparticipanteidentificacion ', 'tbproductorfinca'] as $obsolete) {
+    'tbparticipanteidentificacion ', 'tbproductorfinca', 'tbvendedor',
+    'tbcompradorestadoperiodo', 'tbvendedorestadoperiodo', 'tbvendedoractividad'] as $obsolete) {
     if (str_contains($sql, $obsolete)) throw new RuntimeException("Referencia obsoleta en SQL: {$obsolete}");
 }
 foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ', 'ON UPDATE', 'ON DELETE',
@@ -80,6 +85,31 @@ if (preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $sql, $coincidencia)) {
 }
 foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
+}
+$commercialFragments = [
+    'tbproductorclasificacionperiodo' => 'clasificación histórica Comprador/Vendedor del Productor',
+    'tbanimalobservacionedadmeses INT NULL' => 'animal guarda edad observada, no fecha de nacimiento inventada',
+    'tbanimalpublicacion' => 'publicación congela vendedor y finca',
+    'tbcompra' => 'compra como hecho económico',
+    'tbventa' => 'venta como hecho económico',
+    'tbcompraid INT NULL' => 'venta no obliga compra previa',
+    'tbanimalinteraccion' => 'funnel especializado por animal',
+    'tbcarritoanimalaccion VARCHAR(30) NOT NULL' => 'carrito conserva agregar/retirar',
+    'tbtransportistaestadoperiodo' => 'estado histórico de transportista confirmado',
+    'tbtransportistaflete' => 'flete confirmado',
+    'tbtransportistaresena' => 'reseña histórica confirmada',
+    'tbpagometodoid INT NOT NULL' => 'método de pago se guarda en hechos',
+];
+foreach ($commercialFragments as $fragment => $reason) {
+    if (!str_contains($sql, $fragment)) {
+        throw new RuntimeException("Falta {$fragment}: {$reason}");
+    }
+}
+foreach (['cantidadfletessemanales', 'metodopagofrecuente', 'calificacionpromedio',
+    'tbanimalfechanacimiento', 'tbcompraestado'] as $derivedOrUnapproved) {
+    if (str_contains($sql, $derivedOrUnapproved)) {
+        throw new RuntimeException("Dato derivado o no aprobado en SQL: {$derivedOrUnapproved}");
+    }
 }
 $modulosEsperados = 12; // 001createdatabase .. 012createtransportistavehiculo, unificados en 000instalacioncompleta.sql
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $modulosEsperados
@@ -138,7 +168,9 @@ $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 foreach (['FROM tbproductordireccion', 'FROM tbfincadireccion', 'FROM tbvehiculo',
     'FROM tbtransportistavehiculo', 'HAVING COUNT(*) > 1',
     'tbproductoractividad.tbproductorid', 'D-12 actividad fuera del catalogo cerrado',
-    'D-13 tbcompradorestado fuera de dominio'] as $consulta) {
+    'D-13 tbcompradorestado fuera de dominio', 'D-14 identificadores comerciales repetidos',
+    'D-15 enlaces comerciales huerfanos', 'D-18 periodos abiertos duplicados',
+    'D-19 periodos solapados', 'D-20 valores comerciales fuera de dominio numerico'] as $consulta) {
     if (!str_contains($diagnostico, $consulta)) {
         throw new RuntimeException("El diagnóstico debe incluir {$consulta}");
     }
@@ -179,7 +211,7 @@ foreach ([
     'Productor es la entidad de negocio núcleo',
     '`tbvendedor` no debe existir',
     '`tbcomprador` queda como estructura legacy',
-    '`tbproductorcompradorperiodo` y `tbproductorvendedorperiodo`',
+    '`tbproductorclasificacionperiodo`',
     'Visualización por fila sigue como propuesta',
 ] as $decisionP0C) {
     if (!str_contains($matrizP0C, $decisionP0C)) {

@@ -13,7 +13,7 @@ $check = static function (bool $condition, string $message): void {
 };
 
 $check($schema !== false && $migration !== false && $seed !== false, 'No se pudieron leer los artefactos SQL.');
-$check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 15, 'El esquema debe crear 15 tablas.');
+$check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 27, 'El esquema debe crear 27 tablas.');
 $check(str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbpersona'), 'Falta tbpersona.');
 foreach (['productor', 'comprador', 'transportista'] as $profile) {
     // tbproductor cierra en tbpersonaid: su estado vive en el histórico de periodos.

@@ -94,6 +94,45 @@ $expectedColumns = [
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid'],
     'tbcomprador' => ['tbcompradorid', 'tbpersonaid', 'tbcompradorestado'],
+    'tbproductorclasificacionperiodo' => ['tbproductorclasificacionperiodoid', 'tbproductorid',
+        'tbproductorclasificacionperiodotipo', 'tbproductorclasificacionperiodofechainicio',
+        'tbproductorclasificacionperiodofechafin', 'tbproductorclasificacionperiodomotivo'],
+    'tbanimal' => ['tbanimalid', 'tbanimalcodigo', 'tbanimalsexo', 'tbanimalraza',
+        'tbanimalfecharegistroensistema', 'tbanimalorigenregistro'],
+    'tbanimalobservacion' => ['tbanimalobservacionid', 'tbanimalid', 'tbanimalobservacionfecha',
+        'tbanimalobservacionorigen', 'tbanimalobservacioncontexto', 'tbanimalobservacionedadmeses',
+        'tbanimalobservacionpeso', 'tbanimalobservacionproposito',
+        'tbanimalobservacionestadoreproductivo', 'tbanimalobservacionpartos',
+        'tbanimalobservacionlitrosleche', 'tbanimalobservacionproduccion', 'tbanimalobservacionsalud'],
+    'tbanimalpublicacion' => ['tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid',
+        'tbfincaid', 'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio',
+        'tbanimalpublicaciontitulo', 'tbanimalpublicaciondescripcion',
+        'tbanimalpublicacionestado', 'tbanimalpublicacionorigen'],
+    'tbcompra' => ['tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbfincaorigenid',
+        'tbcomprafecha', 'tbcomprahora', 'tbcompralugar', 'tbcompraprecio', 'tbpagometodoid',
+        'tbcompraorigen'],
+    'tbventa' => ['tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid',
+        'tbfincaid', 'tbcompraid', 'tbventafecha', 'tbventahora', 'tbventalugar',
+        'tbventaprecio', 'tbpagometodoid', 'tbventaedadmeses', 'tbventapeso',
+        'tbventarazasnapshot', 'tbventaorigen'],
+    'tbanimalinteraccion' => ['tbanimalinteraccionid', 'tbproductorid', 'tbanimalid',
+        'tbanimalinteracciontipo', 'tbanimalinteraccionaccion', 'tbanimalinteraccionfecha',
+        'tbanimalinteraccionorigen'],
+    'tbcarrito' => ['tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion', 'tbcarritoestado'],
+    'tbcarritoanimal' => ['tbcarritoanimalid', 'tbcarritoid', 'tbanimalid',
+        'tbcarritoanimalaccion', 'tbcarritoanimalfecha', 'tbcarritoanimalorigen'],
+    'tbtransportistaestadoperiodo' => ['tbtransportistaestadoperiodoid', 'tbtransportistaid',
+        'tbtransportistaestadoperiodoestado', 'tbtransportistaestadoperiodofechainicio',
+        'tbtransportistaestadoperiodofechafin', 'tbtransportistaestadoperiodomotivo',
+        'tbtransportistaestadoperiodofecharegistroensistema'],
+    'tbtransportistaflete' => ['tbtransportistafleteid', 'tbtransportistaid',
+        'tbproductororigenid', 'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid',
+        'tbtransportistafletefecha', 'tbtransportistafletehora', 'tbtransportistafletedescripcion',
+        'tbtransportistafleteprecio', 'tbpagometodoid', 'tbtransportistafleteorigen'],
+    'tbtransportistaresena' => ['tbtransportistaresenaid', 'tbtransportistaid',
+        'tbproductorid', 'tbtransportistafleteid', 'tbtransportistaresenafecha',
+        'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
+        'tbtransportistaresenaorigen'],
 ];
 foreach ($expectedColumns as $table => $expected) {
     $statement = $db->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS
@@ -113,7 +152,7 @@ test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
 // depende de la aplicación. Lo que sigue ejercita el CRUD de productores, ahora
 // contra el contrato normalizado (tbproductordireccion como enlace + tbdireccion
 // como contenido real).
-echo "OK schema_test (estructura): quince tablas, columnas exactas, cero claves, índices, "
+echo "OK schema_test (estructura): veintisiete tablas, columnas exactas, cero claves, índices, "
     . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
 $apiIds = [test_document(), test_document(), test_document()];
@@ -191,7 +230,9 @@ try {
     $db->prepare('DELETE FROM tbdireccion WHERE tbdireccionid = :id')->execute(['id' => $orphanId]);
     $deleteDirect = $db->prepare('DELETE FROM tbproductor WHERE tbproductorid IN (?, ?)');
     $deleteDirect->execute($directProductorIds);
+    $deleteDirectPersona = $db->prepare('DELETE FROM tbpersona WHERE tbpersonaid IN (?, ?)');
+    $deleteDirectPersona->execute($directProductorIds);
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: quince tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+echo "OK schema_test: veintisiete tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
