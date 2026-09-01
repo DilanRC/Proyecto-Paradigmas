@@ -432,6 +432,18 @@ criterios y pesos del algoritmo, pérdida/reactivación automática,
 vehículo-transportista, obligatoriedad venta-compra, método de pago por hecho
 y captura de visualización por fila. Ningún punto PENDIENTE autoriza SQL.
 
+## DEC-T0-001 - SQL como fuente única de tablas
+
+`Database/SqlScripts/000instalacioncompleta.sql` es la fuente canónica del
+listado de tablas. `Tools/schema-manifest.php` extrae de ese SQL la base
+activa, las tablas en orden de creación y las tablas ordenadas para gates,
+tests y restore. No se edita un JSON o listado paralelo a mano.
+
+El manifest también rechaza scripts que mezclen nombres de base entre
+`CREATE DATABASE`, `ALTER DATABASE` y `USE`. Así el defecto de P0-A queda
+cubierto por una herramienta reutilizable y no por una condición aislada en un
+test.
+
 ## DEC-23 - La matriz del tramo 12 confirma el esquema existente; no se crean tablas nuevas
 
 El tramo 13 recibe del arquitecto `matriz-historica-tramo12.pdf` (resumen en

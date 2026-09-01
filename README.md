@@ -40,6 +40,10 @@ consecutivos y `tbproductordireccion`/`tbfinca` usan `tbproductorid` como
 asociación lógica. No existen tablas de participante, roles ni catálogos de
 roles.
 
+El listado de tablas se deriva del SQL canónico con
+`Tools/schema-manifest.php`; gates, tests y restore no deben mantener otro
+manifest editado a mano.
+
 Todos los valores, incluida la fecha de bitácora y los estados iniciales, se
 envían desde PHP mediante `PDO::prepare()` y parámetros enlazados. MySQL solo
 almacena los datos.

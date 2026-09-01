@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
+require_once "{$root}/Tools/schema-manifest.php";
 $required = [
     'Database/SqlScripts/000instalacioncompleta.sql',
     'Database/SeedData/101initialpagometodo.sql',
@@ -46,11 +47,13 @@ foreach ($forbiddenFiles as $file) {
 }
 $sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $sql = implode("\n", array_map('file_get_contents', $sqlFiles));
-foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador',
-    'tbdireccion', 'tbfincadireccion', 'tbpagometodo', 'tbtransportista', 'tbvehiculo',
-    'tbtransportistavehiculo', 'tbproductorestadoperiodo', 'tbproductorubicacion',
-    'tbproductoractividad'] as $table) {
-    if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
+$manifest = schema_manifest();
+$expectedTables = ['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion',
+    'tbpagometodo', 'tbpersona', 'tbproductor', 'tbproductoractividad', 'tbproductordireccion',
+    'tbproductorestadoperiodo', 'tbproductorubicacion', 'tbtransportista',
+    'tbtransportistavehiculo', 'tbvehiculo'];
+if ($manifest['tables_sorted'] !== $expectedTables) {
+    throw new RuntimeException('El listado de tablas no coincide con el SQL canónico.');
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
     'tbparticipanteidentificacion ', 'tbproductorfinca'] as $obsolete) {

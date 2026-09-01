@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
+require_once dirname(__DIR__) . '/Tools/schema-manifest.php';
 
 $db = test_db();
+$manifest = schema_manifest();
 $schemaStatement = $db->prepare("SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
     FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE() LIMIT 1");
 $schemaStatement->execute();
@@ -15,10 +17,8 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
-test_same(['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo',
-    'tbpersona', 'tbproductor', 'tbproductoractividad', 'tbproductordireccion', 'tbproductorestadoperiodo',
-    'tbproductorubicacion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
-    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente quince tablas singulares');
+test_same($manifest['tables_sorted'], array_column($tableRows, 'TABLE_NAME'),
+    'El modelo debe tener exactamente las tablas derivadas del SQL canónico');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
