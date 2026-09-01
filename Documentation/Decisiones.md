@@ -810,3 +810,41 @@ resultante es ortografia valida, y eso no se decide con una heuristica.
 
 **Estado.** 151 `RECONSTRUCCION_SEGURA` en 43 grupos de par de token, 20 ya
 aplicadas y 128 `NO_CORREGIR`.
+
+## DEC-FRONT-18 - Aplicados los 43 grupos seguros
+
+**Que se aplico.** Los 151 registros que quedaban en `RECONSTRUCCION_SEGURA`,
+agrupados en 43 pares de token. Nada de `NO_CORREGIR`, nada apoyado solo en
+parecido ortografico o en el modelo de trigramas, que ya se habia retirado en
+DEC-FRONT-15.
+
+Cada aplicacion se apoya en un par confirmado antes por cruce mismo-distrito con
+INEC en otro lugar del pais. Los seis grupos mayores concentran el 84% del
+trabajo: `HACIEA->HACIENDA` (30 casos, 38 confirmaciones), `GRAE->GRANDE` (21/37),
+`LIA->LINDA` (13/41), `LIAVISTA->LINDAVISTA` (8), `ALMEROS->ALMENDROS` (8/8) y
+`HOA->HONDA` (6/11).
+
+**Verificacion del conteo.** Los nombres que contienen `nd` pasaron de 360 a
+**511**, exactamente 151 mas, que es el numero de registros corregidos. El total
+del catalogo no se movio, 13273, de modo que ninguna correccion colapso con otra:
+0 duplicados dentro de un distrito, 0 huerfanos, 494 distritos.
+
+**Excluidos a proposito.** `Rosalía` y `Saíno` siguen tal cual, por DEC-FRONT-17.
+Los 128 `NO_CORREGIR` no se tocaron.
+
+**Reproducibilidad.** El catalogo no se edito a mano en ningun momento:
+`Tools/generar-catalogo-territorial.py` lo regenera desde las dos fuentes mas la
+columna `correccion_final` del CSV revisado, y se comprobo que reproduce el
+archivo embarcado byte a byte. Las 173 aplicaciones figuran en
+`Documentation/correcciones-localidades.csv` con origen `REVISION_MANUAL`, y su
+criterio y evidencia en `Documentation/localidades-por-revisar.csv`.
+
+**Gate de regresion.** Una prueba fija un ejemplo real por cada grupo grande, con
+su codigo de distrito, y exige que la forma corregida este y la mutilada no.
+Otra exige que `Rosalínda` y `Sandíno` no hayan entrado, y las que ya existian
+siguen cubriendo `Rondads`, `Hanondi` y `Findelds`.
+
+**Estado final del catalogo.** 518 correcciones: 343 por cruce mismo-distrito, 2
+por registro hermano del propio XLSX y 173 por revision manual. Quedan los 128
+intocables y los aproximadamente 240 nombres estimados sin contraparte en INEC
+que ya documentaba DEC-FRONT-14.

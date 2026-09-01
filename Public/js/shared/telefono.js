@@ -48,3 +48,40 @@ export function telefonoValido(valor) {
     const digitos = (texto.match(/\d/g) ?? []).length;
     return digitos >= 8 && digitos <= 15;
 }
+
+/**
+ * Deja el texto con solo los caracteres que admite el contrato. Puro.
+ *
+ * El `+` se conserva unicamente en la primera posicion, que es donde lo admite
+ * el backend; escrito en medio no es un prefijo y se descarta.
+ */
+export function sanearTelefono(valor) {
+    const texto = String(valor ?? '');
+    const prefijo = texto.startsWith('+') ? '+' : '';
+    return prefijo + texto.slice(prefijo.length).replace(/[^0-9 ()-]/g, '');
+}
+
+/**
+ * Impide teclear caracteres que el campo no admite.
+ *
+ * El atributo `pattern` sigue siendo la validacion de verdad; esto es comodidad;
+ * sin ello se puede escribir "aaaaaaaa" y el campo no protesta hasta enviar, que
+ * es tarde para darse cuenta. Al filtrar en el momento, el campo solo llega a
+ * contener lo que el backend puede aceptar.
+ *
+ * El cursor se recoloca descontando los caracteres eliminados por delante de el.
+ * Sin ese ajuste, corregir un digito en medio de un numero manda el cursor al
+ * final en cada pulsacion.
+ */
+export function aplicarRestriccionTelefono(input) {
+    input.addEventListener('input', () => {
+        const antes = input.value;
+        const despues = sanearTelefono(antes);
+        if (antes === despues) return;
+        const cursor = input.selectionStart ?? despues.length;
+        const eliminados = cursor - sanearTelefono(antes.slice(0, cursor)).length;
+        input.value = despues;
+        const destino = Math.max(0, cursor - eliminados);
+        input.setSelectionRange(destino, destino);
+    });
+}

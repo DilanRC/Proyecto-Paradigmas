@@ -26,7 +26,9 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 10301,Tica Lia Etapa 1,Tica Linda Etapa 1,INEC_LOCALIDADES_2024
 10301,Los Coes,Los Condes,INEC_LOCALIDADES_2024
 10301,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
+10302,Liavista,Lindavista,REVISION_MANUAL
 10303,La Leyea,La Leyenda,INEC_LOCALIDADES_2024
+10304,Méez,Méndez,REVISION_MANUAL
 10307,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 10309,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 10311,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
@@ -36,8 +38,11 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 10402,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 10406,Caelarita,Candelarita,INEC_LOCALIDADES_2024
 10408,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
+10501,Haciea Tres Marías,Hacienda Tres Marías,REVISION_MANUAL
+10502,Bajo Quebrada Hoa,Bajo Quebrada Honda,REVISION_MANUAL
 10601,Fernaa,Fernanda,INEC_LOCALIDADES_2024
 10603,Monte Redoo,Monte Redondo,INEC_LOCALIDADES_2024
+10604,Rancho Grae,Rancho Grande,REVISION_MANUAL
 10607,Cuesta Grae,Cuesta Grande,INEC_LOCALIDADES_2024
 10701,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 10701,Haciea Los Maderos,Hacienda Los Maderos,INEC_LOCALIDADES_2024
@@ -45,6 +50,7 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 10701,Haciea Los Bambues,Hacienda Los Bambues,INEC_LOCALIDADES_2024
 10701,Haciea Colón,Hacienda Colón,INEC_LOCALIDADES_2024
 10701,Los Laureles De La Iia,Los Laureles De La India,INEC_LOCALIDADES_2024
+10704,Quebrada Grae,Quebrada Grande,REVISION_MANUAL
 10705,Llano Grae,Llano Grande,INEC_LOCALIDADES_2024
 10801,Iepeencia,Independencia,INEC_LOCALIDADES_2024
 10801,Don Fernao,Don Fernando,INEC_LOCALIDADES_2024
@@ -57,24 +63,34 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 10807,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 10901,Aguas Lias,Aguas Lindas,INEC_LOCALIDADES_2024
 10901,Obao,Obando,INEC_LOCALIDADES_2024
+10901,Area,Andrea,REVISION_MANUAL
+10901,Haciea Del Valle,Hacienda Del Valle,REVISION_MANUAL
 10903,Liora,Lindora,INEC_LOCALIDADES_2024
 10903,Houras,Honduras,INEC_LOCALIDADES_2024
 10903,Bosques de Liora,Bosques de Lindora,INEC_LOCALIDADES_2024
 10903,Bosques De Liora,Bosques De Lindora,INEC_LOCALIDADES_2024
 10903,Haciea Liora,Hacienda Lindora,INEC_LOCALIDADES_2024
 10903,La Escoida,La Escondida,INEC_LOCALIDADES_2024
+10903,La Estancia De Liora,La Estancia De Lindora,REVISION_MANUAL
 10904,Mata Grae,Mata Grande,INEC_LOCALIDADES_2024
 10904,Haciea del Sol,Hacienda del Sol,INEC_LOCALIDADES_2024
 10904,Alora,Alondra,INEC_LOCALIDADES_2024
+10904,Residencial La Haciea,Residencial La Hacienda,REVISION_MANUAL
 10905,Haciea Real,Hacienda Real,INEC_LOCALIDADES_2024
 10905,Cerro Baeras,Cerro Banderas,INEC_LOCALIDADES_2024
 10905,Haciea Paraiso,Hacienda Paraiso,INEC_LOCALIDADES_2024
 10906,Bosque Escoido,Bosque Escondido,INEC_LOCALIDADES_2024
+11001,Juan Pablo Seguo,Juan Pablo Segundo,REVISION_MANUAL
 11002,Pueblo Escoido,Pueblo Escondido,INEC_LOCALIDADES_2024
 11002,Río Lio,Río Lindo,INEC_LOCALIDADES_2024
 11002,Lia,Linda,INEC_LOCALIDADES_2024
 11004,Vista Grae,Vista Grande,INEC_LOCALIDADES_2024
+11004,Almeros,Almendros,REVISION_MANUAL
+11004,Vista Grae Dos,Vista Grande Dos,REVISION_MANUAL
 11005,Alajuelia,Alajuelinda,INEC_LOCALIDADES_2024
+11102,Holaa,Holanda,REVISION_MANUAL
+11102,Haciea La  Abigail,Hacienda La Abigail,REVISION_MANUAL
+11102,Haciea Abigail,Hacienda Abigail,REVISION_MANUAL
 11103,Villa Area,Villa Andrea,INEC_LOCALIDADES_2024
 11104,Normaia,Normandia,INEC_LOCALIDADES_2024
 11104,Aalucia,Andalucia,INEC_LOCALIDADES_2024
@@ -82,10 +98,13 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 11105,Cerro Iio,Cerro Indio,INEC_LOCALIDADES_2024
 11105,Lotes Méez,Lotes Méndez,INEC_LOCALIDADES_2024
 11202,Hoonada,Hondonada,INEC_LOCALIDADES_2024
+11204,Liavista,Lindavista,REVISION_MANUAL
 11301,Los Aes,Los Andes,INEC_LOCALIDADES_2024
+11301,Liavista,Lindavista,REVISION_MANUAL
 11305,Los Almeros,Los Almendros,INEC_LOCALIDADES_2024
 11401,Olia,Olinda,INEC_LOCALIDADES_2024
 11401,La Alora,La Alondra,INEC_LOCALIDADES_2024
+11401,Alora,Alondra,REVISION_MANUAL
 11403,Are Challe,Andre Challe,INEC_LOCALIDADES_2024
 11403,Lio Horizonte,Lindo Horizonte,INEC_LOCALIDADES_2024
 11501,La Roa,La Ronda,INEC_LOCALIDADES_2024
@@ -94,9 +113,13 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 11503,Paso Hoo,Paso Hondo,INEC_LOCALIDADES_2024
 11504,Arómeda,Andrómeda,INEC_LOCALIDADES_2024
 11601,Valle Escoido,Valle Escondido,INEC_LOCALIDADES_2024
+11601,Haciea Valle Verde,Hacienda Valle Verde,REVISION_MANUAL
 11603,Sitio Caelillal,Sitio Candelillal,REVISION_MANUAL
 11701,Quebrada Grae,Quebrada Grande,INEC_LOCALIDADES_2024
+11701,Baera,Bandera,REVISION_MANUAL
+11701,Las Ares,Las Andres,REVISION_MANUAL
 11702,Bajo La Baera,Bajo La Bandera,INEC_LOCALIDADES_2024
+11703,Alto Iio,Alto Indio,REVISION_MANUAL
 11801,Haciea Vieja,Hacienda Vieja,INEC_LOCALIDADES_2024
 11801,Aromeda,Andromeda,INEC_LOCALIDADES_2024
 11801,Coo Prado,Condo Prado,INEC_LOCALIDADES_2024
@@ -112,16 +135,25 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 11903,Fernao Volio,Fernando Volio,INEC_LOCALIDADES_2024
 11903,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
 11904,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+11904,Sitio Camino de los iios,Sitio Camino de los indios,REVISION_MANUAL
 11906,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 12001,El Escoite,El Escondite,INEC_LOCALIDADES_2024
 12002,San Arés,San Andrés,INEC_LOCALIDADES_2024
+12002,Llano Grae,Llano Grande,REVISION_MANUAL
 12006,Escoido,Escondido,INEC_LOCALIDADES_2024
 20101,La Iepeencia,La Independencia,INEC_LOCALIDADES_2024
 20101,La Rotoa,La Rotonda,INEC_LOCALIDADES_2024
+20101,Acequia Grae,Acequia Grande,REVISION_MANUAL
 20102,Portón de Aalucia,Portón de Andalucia,INEC_LOCALIDADES_2024
+20103,Calle Saoval,Calle Sandoval,REVISION_MANUAL
 20104,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
 20104,Jacaraa Del Llano,Jacaranda Del Llano,INEC_LOCALIDADES_2024
+20104,Loma Lia Dos,Loma Linda Dos,REVISION_MANUAL
+20104,Loma Lia Uno,Loma Linda Uno,REVISION_MANUAL
 20105,Haciea Los Reyes,Hacienda Los Reyes,INEC_LOCALIDADES_2024
+20107,Haciea Alsacia,Hacienda Alsacia,REVISION_MANUAL
+20107,Lia Vista,Linda Vista,REVISION_MANUAL
+20107,Lia Vista,Linda Vista,REVISION_MANUAL
 20108,Haciea Espinal,Hacienda Espinal,INEC_LOCALIDADES_2024
 20109,Río Seguo,Río Segundo,INEC_LOCALIDADES_2024
 20109,El Seero,El Sendero,INEC_LOCALIDADES_2024
@@ -134,13 +166,18 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 20112,Buenos Aires (Lia Vista),Buenos Aires (Linda Vista),INEC_LOCALIDADES_2024
 20112,Vueltas Peñaraa,Vueltas Peñaranda,REVISION_MANUAL
 20113,La Maarina,La Mandarina,INEC_LOCALIDADES_2024
+20113,Maarina,Mandarina,REVISION_MANUAL
+20203,Valle Escoido (La Pista),Valle Escondido (La Pista),REVISION_MANUAL
 20207,Fernáez,Fernández,INEC_LOCALIDADES_2024
+20211,Calle Méez,Calle Méndez,REVISION_MANUAL
 20213,Tesoro Escoido,Tesoro Escondido,INEC_LOCALIDADES_2024
 20301,Haciea Peters,Hacienda Peters,INEC_LOCALIDADES_2024
+20301,Lia Vista,Linda Vista,REVISION_MANUAL
 20305,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 20307,Puerto Escoido,Puerto Escondido,INEC_LOCALIDADES_2024
 20307,Haciea El Paseo,Hacienda El Paseo,INEC_LOCALIDADES_2024
 20402,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
+20403,Quebrada Grae,Quebrada Grande,REVISION_MANUAL
 20404,Poza Redoa,Poza Redonda,INEC_LOCALIDADES_2024
 20503,La Maarina,La Mandarina,INEC_LOCALIDADES_2024
 20503,Paraiso Escoido,Paraiso Escondido,INEC_LOCALIDADES_2024
@@ -150,6 +187,13 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 20601,Oropeola,Oropendola,INEC_LOCALIDADES_2024
 20601,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 20602,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+20604,Quebrada Hoa,Quebrada Honda,REVISION_MANUAL
+20605,Haciea Miramonte,Hacienda Miramonte,REVISION_MANUAL
+20606,Rincón Elizoo,Rincón Elizondo,REVISION_MANUAL
+20606,Río Grae,Río Grande,REVISION_MANUAL
+20606,Lia Vista,Linda Vista,REVISION_MANUAL
+20606,Río Grae,Río Grande,REVISION_MANUAL
+20703,Calle Fernáez,Calle Fernández,REVISION_MANUAL
 20705,Caelaria,Candelaria,INEC_LOCALIDADES_2024
 20707,Elizoo,Elizondo,INEC_LOCALIDADES_2024
 20804,Sea,Senda,INEC_LOCALIDADES_2024
@@ -157,18 +201,28 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 20901,Escoido,Escondido,INEC_LOCALIDADES_2024
 20901,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
 20901,Los Almeros,Los Almendros,INEC_LOCALIDADES_2024
+20901,Alto Vias,Alto Vindas,REVISION_MANUAL
 20903,Haciea Vieja,Hacienda Vieja,INEC_LOCALIDADES_2024
 20903,Haciea Nueva,Hacienda Nueva,INEC_LOCALIDADES_2024
 20905,Haciea Los Ceibos,Hacienda Los Ceibos,INEC_LOCALIDADES_2024
+20905,Haciea Don Fernao,Hacienda Don Fernando,REVISION_MANUAL
 21001,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
 21001,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
+21001,Lia Vista (Tesalia),Linda Vista (Tesalia),REVISION_MANUAL
 21001,Abuancia (Concepción),Abundancia (Concepción),REVISION_MANUAL
 21002,José Seguo,José Segundo,INEC_LOCALIDADES_2024
+21004,Calle Hernáez,Calle Hernández,REVISION_MANUAL
+21004,Calle Méez,Calle Méndez,REVISION_MANUAL
 21006,Puerto Escoido,Puerto Escondido,INEC_LOCALIDADES_2024
 21006,Quebrada Grae,Quebrada Grande,INEC_LOCALIDADES_2024
 21006,Disneylaia,Disneylandia,INEC_LOCALIDADES_2024
+21006,Piedra Alegre (Quebrada Grae),Piedra Alegre (Quebrada Grande),REVISION_MANUAL
+21007,Lia Vista,Linda Vista,REVISION_MANUAL
 21008,Lio,Lindo,INEC_LOCALIDADES_2024
+21010,Lia Vista,Linda Vista,REVISION_MANUAL
 21011,San Fernao,San Fernando,INEC_LOCALIDADES_2024
+21011,Almeros,Almendros,REVISION_MANUAL
+21011,Tabla Grae (San Pedro),Tabla Grande (San Pedro),REVISION_MANUAL
 21012,San Arés,San Andrés,INEC_LOCALIDADES_2024
 21013,Baeras,Banderas,INEC_LOCALIDADES_2024
 21201,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
@@ -180,62 +234,95 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 21308,Comaos,Comandos,REVISION_MANUAL
 21401,Hernáez,Hernández,INEC_LOCALIDADES_2024
 21401,San Alejaro,San Alejandro,REVISION_MANUAL
+21401,Hernáez (Los Ángeles),Hernández (Los Ángeles),REVISION_MANUAL
 21403,San Arés,San Andrés,INEC_LOCALIDADES_2024
+21403,Quebrada Grae,Quebrada Grande,REVISION_MANUAL
 21404,San Fernao,San Fernando,INEC_LOCALIDADES_2024
 21501,San Arés,San Andrés,INEC_LOCALIDADES_2024
 30104,Baerilla,Banderilla,INEC_LOCALIDADES_2024
 30104,Haciea La Lima,Hacienda La Lima,INEC_LOCALIDADES_2024
+30104,Roa,Ronda,REVISION_MANUAL
 30105,Haciea de Oro,Hacienda de Oro,INEC_LOCALIDADES_2024
 30105,Alejarinas,Alejandrinas,INEC_LOCALIDADES_2024
 30105,Haciea Real,Hacienda Real,INEC_LOCALIDADES_2024
 30105,Seeros del Este,Senderos del Este,INEC_LOCALIDADES_2024
+30105,Loma Lia,Loma Linda,REVISION_MANUAL
 30106,Haciea del Rey,Hacienda del Rey,INEC_LOCALIDADES_2024
 30109,Valle Escoido,Valle Escondido,INEC_LOCALIDADES_2024
 30110,Llano Grae,Llano Grande,INEC_LOCALIDADES_2024
 30201,Barro Hoo,Barro Hondo,INEC_LOCALIDADES_2024
 30201,Piedra Grae,Piedra Grande,INEC_LOCALIDADES_2024
+30201,Paora,Pandora,REVISION_MANUAL
+30203,Calle Obao,Calle Obando,REVISION_MANUAL
+30204,Piedra Grae,Piedra Grande,REVISION_MANUAL
+30205,Haciea Jacaraa,Hacienda Jacaranda,REVISION_MANUAL
 30301,Vistas De La Haciea,Vistas De La Hacienda,INEC_LOCALIDADES_2024
 30303,Haciea Imperial,Hacienda Imperial,INEC_LOCALIDADES_2024
 30303,Jacaraas,Jacarandas,INEC_LOCALIDADES_2024
 30303,Haciea Sacramento,Hacienda Sacramento,INEC_LOCALIDADES_2024
+30303,Haciea Gregal,Hacienda Gregal,REVISION_MANUAL
+30303,Calle Obao,Calle Obando,REVISION_MANUAL
+30306,Tista Hernáez,Tista Hernández,REVISION_MANUAL
 30307,Holaés,Holandés,INEC_LOCALIDADES_2024
+30308,Liavista (Loma Gobierno),Lindavista (Loma Gobierno),REVISION_MANUAL
+30308,Liavista,Lindavista,REVISION_MANUAL
 30401,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 30401,Bajo El Iio,Bajo El Indio,INEC_LOCALIDADES_2024
 30403,Hacieita,Haciendita,REVISION_MANUAL
+30403,Almeros,Almendros,REVISION_MANUAL
 30501,Hacieita,Haciendita,REVISION_MANUAL
 30502,Piedra Grae,Piedra Grande,INEC_LOCALIDADES_2024
+30502,Las Golorinas,Las Golondrinas,REVISION_MANUAL
+30505,Saoval,Sandoval,REVISION_MANUAL
 30508,Piedra Redoa,Piedra Redonda,INEC_LOCALIDADES_2024
 30509,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+30512,Valle Escoido,Valle Escondido,REVISION_MANUAL
 30601,Llano Grae,Llano Grande,INEC_LOCALIDADES_2024
 30603,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 30701,José Jesús Méez,José Jesús Méndez,INEC_LOCALIDADES_2024
+30701,Cerro Grae,Cerro Grande,REVISION_MANUAL
+30702,Dagoberto Méez Carpio,Dagoberto Méndez Carpio,REVISION_MANUAL
 30801,Sabana Grae,Sabana Grande,INEC_LOCALIDADES_2024
 30801,Haciea Vieja,Hacienda Vieja,INEC_LOCALIDADES_2024
 30801,La Haciea,La Hacienda,INEC_LOCALIDADES_2024
 30801,Fuación de El Guarco,Fundación de El Guarco,REVISION_MANUAL
+30801,Jacaraas,Jacarandas,REVISION_MANUAL
+30802,Seeros del Sol,Senderos del Sol,REVISION_MANUAL
 40101,San Fernao,San Fernando,INEC_LOCALIDADES_2024
 40101,La Iia,La India,INEC_LOCALIDADES_2024
 40102,María Fernaa,María Fernanda,INEC_LOCALIDADES_2024
 40103,Haciea San Agustin,Hacienda San Agustin,INEC_LOCALIDADES_2024
+40104,Lia del Norte,Linda del Norte,REVISION_MANUAL
+40105,Haciea Fátima,Hacienda Fátima,REVISION_MANUAL
 40204,Haciea Nueva,Hacienda Nueva,INEC_LOCALIDADES_2024
 40205,La Roa,La Ronda,INEC_LOCALIDADES_2024
+40305,Calle Roa,Calle Ronda,REVISION_MANUAL
+40401,Coominio Colonial,Condominio Colonial,REVISION_MANUAL
 40403,Samarcaa,Samarcanda,INEC_LOCALIDADES_2024
 40501,Puerto Escoido,Puerto Escondido,INEC_LOCALIDADES_2024
+40502,Villa del Seero,Villa del Sendero,REVISION_MANUAL
+40504,Cerro Redoo,Cerro Redondo,REVISION_MANUAL
+40504,Calle Hernáez,Calle Hernández,REVISION_MANUAL
 40601,Fuerte Iio,Fuerte Indio,INEC_LOCALIDADES_2024
 40602,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 40701,Villa Fernao,Villa Fernando,INEC_LOCALIDADES_2024
 40701,Hacieas De La Rivera,Haciendas De La Rivera,INEC_LOCALIDADES_2024
 40701,Sa Vicente,San Vicente,REVISION_MANUAL
+40701,Vistas de Liora,Vistas de Lindora,REVISION_MANUAL
 40702,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 40702,Haciea Belén,Hacienda Belén,INEC_LOCALIDADES_2024
+40702,Vista Lia,Vista Linda,REVISION_MANUAL
+40703,Calle Lia Vista,Calle Linda Vista,REVISION_MANUAL
 40801,Haciea Las Flores,Hacienda Las Flores,INEC_LOCALIDADES_2024
 40802,Aeres,Anderes,INEC_LOCALIDADES_2024
 40901,Rosalia,Rosalinda,INEC_LOCALIDADES_2024
 40901,Alejara,Alejandra,INEC_LOCALIDADES_2024
 40902,María Fernaa,María Fernanda,INEC_LOCALIDADES_2024
 40902,Maria Fernaa,Maria Fernanda,INEC_LOCALIDADES_2024
+41001,Loma Lia la Gerika,Loma Linda la Gerika,REVISION_MANUAL
 41002,Llano Grae,Llano Grande,INEC_LOCALIDADES_2024
 41002,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+41002,Quebrada Grae,Quebrada Grande,REVISION_MANUAL
 41003,Isla Grae,Isla Grande,INEC_LOCALIDADES_2024
 50101,Coega,Condega,INEC_LOCALIDADES_2024
 50101,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
@@ -243,14 +330,30 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 50101,Haciea Tayacán,Hacienda Tayacán,INEC_LOCALIDADES_2024
 50101,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 50101,Los Almerales,Los Almendrales,INEC_LOCALIDADES_2024
+50101,Sitio Llano Grae,Sitio Llano Grande,REVISION_MANUAL
+50101,Haciea Birmania,Hacienda Birmania,REVISION_MANUAL
+50101,Haciea El Real,Hacienda El Real,REVISION_MANUAL
+50101,Haciea Tempisque,Hacienda Tempisque,REVISION_MANUAL
+50101,Haciea,Hacienda,REVISION_MANUAL
+50101,Pedro Hernáez,Pedro Hernández,REVISION_MANUAL
 50102,Sitio Muo Nuevo,Sitio Mundo Nuevo,REVISION_MANUAL
+50102,Haciea Los Ahogados,Hacienda Los Ahogados,REVISION_MANUAL
+50103,Haciea El Querpe,Hacienda El Querpe,REVISION_MANUAL
+50103,Nueva Zelaa,Nueva Zelanda,REVISION_MANUAL
+50104,Haciea Horizontes,Hacienda Horizontes,REVISION_MANUAL
+50104,Haciea Monte Galán,Hacienda Monte Galán,REVISION_MANUAL
+50104,Haciea Santo Tomas,Hacienda Santo Tomas,REVISION_MANUAL
 50105,Curubaé,Curubandé,INEC_LOCALIDADES_2024
 50201,Hoores,Hondores,INEC_LOCALIDADES_2024
 50201,Sabana Grae,Sabana Grande,INEC_LOCALIDADES_2024
 50201,Rio Grae,Rio Grande,INEC_LOCALIDADES_2024
+50201,Cerro Redoo,Cerro Redondo,REVISION_MANUAL
+50202,Sitio Grae,Sitio Grande,REVISION_MANUAL
 50203,Camino Los Obao,Camino Los Obando,INEC_LOCALIDADES_2024
+50203,Tamario,Tamarindo,REVISION_MANUAL
 50204,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 50205,San Fernao,San Fernando,INEC_LOCALIDADES_2024
+50205,Bajo Escoido,Bajo Escondido,REVISION_MANUAL
 50207,Cuesta Grae,Cuesta Grande,INEC_LOCALIDADES_2024
 50301,Tulita Saino,Tulita Sandino,INEC_LOCALIDADES_2024
 50301,Tamario,Tamarindo,INEC_LOCALIDADES_2024
@@ -272,38 +375,70 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 50309,El Saal,El Sandal,INEC_LOCALIDADES_2024
 50309,Cristal Sas,Cristal Sands,REVISION_MANUAL
 50309,Calle Refuores,Calle Refundores,REVISION_MANUAL
+50309,Haciea Pinilla,Hacienda Pinilla,REVISION_MANUAL
 50401,La Poza Lia,La Poza Linda,INEC_LOCALIDADES_2024
 50401,Tamario,Tamarindo,INEC_LOCALIDADES_2024
+50401,Sitio Chagüite Grae,Sitio Chagüite Grande,REVISION_MANUAL
+50401,Haciea Mojica,Hacienda Mojica,REVISION_MANUAL
+50402,Haciea Nispero,Hacienda Nispero,REVISION_MANUAL
+50501,Haciea El Viejo,Hacienda El Viejo,REVISION_MANUAL
 50503,Obaito,Obandito,INEC_LOCALIDADES_2024
 50503,Cocomario,Cocomarindo,INEC_LOCALIDADES_2024
 50503,Los Almeros de Ocotal,Los Almendros de Ocotal,INEC_LOCALIDADES_2024
 50601,Paso Hoo,Paso Hondo,INEC_LOCALIDADES_2024
+50602,Sitio Quebrada Hoa,Sitio Quebrada Honda,REVISION_MANUAL
 50604,Paso Hoo,Paso Hondo,INEC_LOCALIDADES_2024
 50702,Caelaria,Candelaria,INEC_LOCALIDADES_2024
 50703,San Juan Grae,San Juan Grande,INEC_LOCALIDADES_2024
+50704,Almeros,Almendros,REVISION_MANUAL
 50802,Quebrada Grae,Quebrada Grande,INEC_LOCALIDADES_2024
 50905,Quebrada Grae,Quebrada Grande,INEC_LOCALIDADES_2024
 50906,Quebrada Nao,Quebrada Nando,INEC_LOCALIDADES_2024
 50906,Caelillo,Candelillo,REVISION_MANUAL
 51002,Argeora,Argendora,INEC_LOCALIDADES_2024
 51003,Aes,Andes,REVISION_MANUAL
+51003,San Fernao,San Fernando,REVISION_MANUAL
+51004,Sitio El Escoido,Sitio El Escondido,REVISION_MANUAL
+51004,Sitio Potrero Grae,Sitio Potrero Grande,REVISION_MANUAL
 51104,Preas,Prendas,REVISION_MANUAL
 60104,Montaña Grae,Montaña Grande,INEC_LOCALIDADES_2024
+60104,Cerro Iio,Cerro Indio,REVISION_MANUAL
 60105,San Fernao,San Fernando,INEC_LOCALIDADES_2024
 60105,Río Grae,Río Grande,INEC_LOCALIDADES_2024
+60107,Alto Méez,Alto Méndez,REVISION_MANUAL
+60107,Altos Fernáez,Altos Fernández,REVISION_MANUAL
 60108,Riojalaia,Riojalandia,INEC_LOCALIDADES_2024
+60108,Riojalaia 2,Riojalandia 2,REVISION_MANUAL
+60108,Almeros,Almendros,REVISION_MANUAL
+60111,Bajos de Fernáez,Bajos de Fernández,REVISION_MANUAL
 60112,Pueblo Redoo,Pueblo Redondo,INEC_LOCALIDADES_2024
 60114,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 60114,Pueblo Redoo,Pueblo Redondo,INEC_LOCALIDADES_2024
+60114,Rancho Grae,Rancho Grande,REVISION_MANUAL
+60115,Liavista,Lindavista,REVISION_MANUAL
 60202,San Juan Grae,San Juan Grande,INEC_LOCALIDADES_2024
+60206,Haciea La Moncha,Hacienda La Moncha,REVISION_MANUAL
+60206,Haciea Mata de Guinea,Hacienda Mata de Guinea,REVISION_MANUAL
+60206,Haciea Playa Lia,Hacienda Playa Linda,REVISION_MANUAL
+60206,Haciea Salinas,Hacienda Salinas,REVISION_MANUAL
+60206,Quebrada Hoa,Quebrada Honda,REVISION_MANUAL
 60301,Santa Caelaria,Santa Candelaria,INEC_LOCALIDADES_2024
 60301,Zona PIECO,Zona PIndECO,INEC_LOCALIDADES_2024
 60302,Bajos del Río Grae,Bajos del Río Grande,INEC_LOCALIDADES_2024
+60302,Río Grae,Río Grande,REVISION_MANUAL
 60303,Potrero Grae,Potrero Grande,INEC_LOCALIDADES_2024
+60303,Tamario,Tamarindo,REVISION_MANUAL
+60303,San Arés (Las Vueltas de San Arés),San Andrés (Las Vueltas de San Arés),REVISION_MANUAL
+60306,Quebrada Hoa,Quebrada Honda,REVISION_MANUAL
 60308,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+60309,Llano Grae,Llano Grande,REVISION_MANUAL
 60401,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+60403,Calle El Tamario,Calle El Tamarindo,REVISION_MANUAL
 60501,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
+60501,Liavista,Lindavista,REVISION_MANUAL
 60502,Quebrada Grae,Quebrada Grande,INEC_LOCALIDADES_2024
+60503,Puerto Escoido,Puerto Escondido,REVISION_MANUAL
+60504,Quebrada Grae,Quebrada Grande,REVISION_MANUAL
 60601,Rancho Grae,Rancho Grande,INEC_LOCALIDADES_2024
 60601,Haciea Pacifica,Hacienda Pacifica,INEC_LOCALIDADES_2024
 60602,San Arés,San Andrés,INEC_LOCALIDADES_2024
@@ -313,30 +448,43 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 60701,Puerto Escoido,Puerto Escondido,INEC_LOCALIDADES_2024
 60701,San Arés,San Andrés,INEC_LOCALIDADES_2024
 60701,Nueva Zelaa,Nueva Zelanda,INEC_LOCALIDADES_2024
+60701,Rotoa,Rotonda,REVISION_MANUAL
+60704,Quebrada Hoa,Quebrada Honda,REVISION_MANUAL
+60801,Liavista,Lindavista,REVISION_MANUAL
 60802,Piedra de Caela,Piedra de Candela,REVISION_MANUAL
 60805,Fila Méez,Fila Méndez,INEC_LOCALIDADES_2024
 60901,Baera,Bandera,INEC_LOCALIDADES_2024
 60901,Los Almeros,Los Almendros,INEC_LOCALIDADES_2024
 60901,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
 61001,Salas Vias,Salas Vindas,INEC_LOCALIDADES_2024
+61001,Bajo Iios,Bajo Indios,REVISION_MANUAL
 61004,Tamario,Tamarindo,INEC_LOCALIDADES_2024
 61004,Río Inceio,Río Incendio,REVISION_MANUAL
+61004,María Fernaa,María Fernanda,REVISION_MANUAL
 61101,Puerto Escoido,Puerto Escondido,INEC_LOCALIDADES_2024
 61101,Costa Lia,Costa Linda,INEC_LOCALIDADES_2024
 61101,Haciea Jaco,Hacienda Jaco,INEC_LOCALIDADES_2024
+61201,Liora,Lindora,REVISION_MANUAL
 61301,Río Piro (Coyua),Río Piro (Coyunda),INEC_LOCALIDADES_2024
 61301,Sáalo,Sándalo,INEC_LOCALIDADES_2024
 61301,Puerto Escoido,Puerto Escondido,INEC_LOCALIDADES_2024
+61301,Iepeencia,Independencia,REVISION_MANUAL
 70101,Almeros,Almendros,INEC_LOCALIDADES_2024
+70101,Juan Pablo Seguo,Juan Pablo Segundo,REVISION_MANUAL
 70102,Paora,Pandora,INEC_LOCALIDADES_2024
 70102,Llano Grae,Llano Grande,INEC_LOCALIDADES_2024
 70102,San Arés,San Andrés,INEC_LOCALIDADES_2024
 70102,Villas Paora,Villas Pandora,INEC_LOCALIDADES_2024
+70102,Paora Oeste,Pandora Oeste,REVISION_MANUAL
 70103,Saoval,Sandoval,INEC_LOCALIDADES_2024
 70103,Loma Lia,Loma Linda,INEC_LOCALIDADES_2024
 70104,Doonia,Dondonia,REVISION_MANUAL
 70201,Rancho Redoo,Rancho Redondo,INEC_LOCALIDADES_2024
+70201,Almeros,Almendros,REVISION_MANUAL
+70201,Valle Escoido,Valle Escondido,REVISION_MANUAL
 70202,Anita Grae,Anita Grande,INEC_LOCALIDADES_2024
+70203,Iio,Indio,REVISION_MANUAL
+70203,Almeros,Almendros,REVISION_MANUAL
 70204,Lores,Londres,INEC_LOCALIDADES_2024
 70206,Puerto Lio,Puerto Lindo,INEC_LOCALIDADES_2024
 70206,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
@@ -347,15 +495,19 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 70301,Escoido,Escondido,INEC_LOCALIDADES_2024
 70302,Río Hoo,Río Hondo,INEC_LOCALIDADES_2024
 70302,Gra View States,Grand View States,INEC_LOCALIDADES_2024
+70302,Haciea Ojo de Agua,Hacienda Ojo de Agua,REVISION_MANUAL
 70304,Las Vivieas,Las Viviendas,INEC_LOCALIDADES_2024
 70305,Lia Vista,Linda Vista,INEC_LOCALIDADES_2024
 70307,Maryla,Maryland,INEC_LOCALIDADES_2024
 70401,Sa Box,Sand Box,INEC_LOCALIDADES_2024
 70401,Akberie (Piedra Grae),Akberie (Piedra Grande),INEC_LOCALIDADES_2024
+70401,Huberie (Rancho Grae),Huberie (Rancho Grande),REVISION_MANUAL
 70402,Gaoca,Gandoca,INEC_LOCALIDADES_2024
 70402,Llano Grae,Llano Grande,INEC_LOCALIDADES_2024
 70403,López Tial,López Tindal,INEC_LOCALIDADES_2024
+70404,Sitio Piedra Grae,Sitio Piedra Grande,REVISION_MANUAL
 70501,Moonguillo,Mondonguillo,INEC_LOCALIDADES_2024
+70502,Almeros,Almendros,REVISION_MANUAL
 70503,San Edmuo,San Edmundo,INEC_LOCALIDADES_2024
 70503,Iio,Indio,INEC_LOCALIDADES_2024
 70503,Los Almeros,Los Almendros,INEC_LOCALIDADES_2024
@@ -364,3 +516,4 @@ codigoDistrito,ign_2026_original,nombre_corregido,fuenteNombre
 70603,Quebrada Hoa,Quebrada Honda,INEC_LOCALIDADES_2024
 70604,Irlaa,Irlanda,INEC_LOCALIDADES_2024
 70605,Calia,Calinda,INEC_LOCALIDADES_2024
+70605,San Edmuo,San Edmundo,REVISION_MANUAL

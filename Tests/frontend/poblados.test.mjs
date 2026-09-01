@@ -102,9 +102,11 @@ test('escribir el nombre correcto encuentra el registro', () => {
     assert.ok(resultado.some((n) => n !== 'Tamarindo' && n.includes('Tamarindo')));
 });
 
-test('360 nombres recuperaron su "nd"; antes no lo tenia ninguno', () => {
+test('511 nombres recuperaron su "nd"; antes no lo tenia ninguno', () => {
+    // El XLSX del IGN no traia ni uno. 345 salieron del cruce automatico con
+    // INEC y 173 de las revisiones confirmadas a mano.
     const con = Object.values(POBLADOS).flat().filter((n) => normalizar(n).includes('nd'));
-    assert.equal(con.length, 360);
+    assert.equal(con.length, 511);
 });
 
 test('las coincidencias por prefijo van antes que las del interior', () => {
@@ -188,5 +190,42 @@ test('las 20 revisadas a mano entraron con su forma correcta', () => {
         ['61004', 'Río Incendio'], ['20112', 'Vueltas Peñaranda'],
     ]) {
         assert.ok(pobladosDe(codigo).includes(nombre), `${codigo}: falta ${nombre}`);
+    }
+});
+
+// --- los 43 grupos de par de token aplicados tras revision -------------------
+
+test('cada par de token revisado produjo su forma correcta en el catalogo', () => {
+    // Un ejemplo por grupo grande. Si alguien regenera el catalogo sin la
+    // columna correccion_final, estos vuelven a su forma mutilada y falla aqui.
+    for (const [codigo, correcto, roto] of [
+        ['10501', 'Hacienda Tres Marías', 'Haciea Tres Marías'],
+        ['10604', 'Rancho Grande', 'Rancho Grae'],
+        ['20104', 'Loma Linda Dos', 'Loma Lia Dos'],
+        ['10302', 'Lindavista', 'Liavista'],
+        ['11004', 'Almendros', 'Almeros'],
+        ['10502', 'Bajo Quebrada Honda', 'Bajo Quebrada Hoa'],
+        ['20203', 'Valle Escondido (La Pista)', 'Valle Escoido (La Pista)'],
+        ['10304', 'Méndez', 'Méez'],
+        ['21004', 'Calle Hernández', 'Calle Hernáez'],
+        ['10903', 'La Estancia De Lindora', 'La Estancia De Liora'],
+        ['11703', 'Alto Indio', 'Alto Iio'],
+        ['20703', 'Calle Fernández', 'Calle Fernáez'],
+        ['50203', 'Tamarindo', 'Tamario'],
+    ]) {
+        const lista = pobladosDe(codigo);
+        assert.ok(lista.includes(correcto), `${codigo}: falta ${correcto}`);
+        assert.ok(!lista.includes(roto), `${codigo}: sobrevive ${roto}`);
+    }
+});
+
+test('las dos reconstrucciones de ortografia imposible quedaron fuera', () => {
+    // La tilde del original es necesaria ahi, senal de que no son mutilaciones
+    // sino palabras distintas: Rosalia es nombre propio y saino es el pecari.
+    const todos = Object.values(POBLADOS).flat();
+    assert.ok(todos.includes('Rosalía'));
+    assert.ok(todos.includes('Saíno'));
+    for (const invento of ['Rosalínda', 'Sandíno']) {
+        assert.ok(!todos.includes(invento), `entro ${invento}`);
     }
 });

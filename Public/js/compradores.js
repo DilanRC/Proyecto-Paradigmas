@@ -2,6 +2,7 @@ import { request } from './shared/api.js';
 import { consultarCapacidades, describirCapacidad } from './shared/capacidades.js';
 import { createDialogController } from './shared/dialog.js';
 import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
+import { aplicarRestriccionTelefono } from './shared/telefono.js';
 import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
@@ -462,6 +463,9 @@ function initialize() {
     elements.form.addEventListener('input', errores.clearControlError);
     elements.form.addEventListener('change', errores.clearControlError);
     elements.types.addEventListener('change', updateIdentificationInputMode);
+    // El campo solo llega a contener lo que el backend admite; el atributo
+    // pattern sigue siendo la validacion, esto evita escribir lo imposible.
+    aplicarRestriccionTelefono($('#telefono'));
     elements.reactivateExisting.addEventListener('click', reactivateExistingBuyer);
     elements.close.addEventListener('click', closeForm);
     elements.cancel.addEventListener('click', closeForm);

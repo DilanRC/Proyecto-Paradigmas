@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { PATRON_TELEFONO, TITULO_TELEFONO, telefonoValido } from '../../Public/js/shared/telefono.js';
+import {
+    PATRON_TELEFONO, TITULO_TELEFONO, sanearTelefono, telefonoValido,
+} from '../../Public/js/shared/telefono.js';
 
 const VISTAS = ['productores', 'compradores', 'transportistas'];
 const leer = (r) => readFileSync(new URL(`../../${r}`, import.meta.url), 'utf8');
@@ -86,4 +88,39 @@ test('todos los pattern de todas las vistas compilan bajo la bandera v', () => {
             );
         }
     }
+});
+
+// --- filtrado en vivo ---------------------------------------------------------
+
+test('sanear deja solo lo que el contrato admite', () => {
+    // Lo que el usuario reporto: se podia escribir "aaaaaaaa" y el campo callaba
+    // hasta enviar el formulario.
+    assert.equal(sanearTelefono('aaaaaaaaaaaa'), '');
+    assert.equal(sanearTelefono('8888a7777'), '88887777');
+    assert.equal(sanearTelefono('abc123def456'), '123456');
+    assert.equal(sanearTelefono('8.8.8.8'), '8888');
+});
+
+test('sanear no estropea un numero ya valido', () => {
+    for (const bueno of ['88887777', '+506 8888-7777', '(506) 2222 3333', '+50688887777']) {
+        assert.equal(sanearTelefono(bueno), bueno, `saneo de mas: ${bueno}`);
+    }
+});
+
+test('el mas solo vale como prefijo', () => {
+    assert.equal(sanearTelefono('+50688887777'), '+50688887777');
+    assert.equal(sanearTelefono('8888+7777'), '88887777', 'en medio no es prefijo');
+    assert.equal(sanearTelefono('++506'), '+506', 'no se repite');
+});
+
+test('lo que sobrevive al saneo sigue pudiendo ser invalido', () => {
+    // El filtrado es comodidad, no validacion: quita caracteres imposibles pero
+    // no arregla la cantidad de digitos. Esa sigue siendo tarea del pattern.
+    assert.equal(sanearTelefono('123'), '123');
+    assert.equal(telefonoValido('123'), false);
+});
+
+test('sanear tolera nulos', () => {
+    assert.equal(sanearTelefono(null), '');
+    assert.equal(sanearTelefono(undefined), '');
 });
