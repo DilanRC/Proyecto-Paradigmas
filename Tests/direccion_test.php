@@ -151,12 +151,13 @@ try {
     test_same('', $delValido['body']['data']['direccionPrincipal']['canton'], 'DELETE debe vaciar cantón');
     test_same(null, $delValido['body']['data']['direccionPrincipal']['pueblo'], 'DELETE debe vaciar pueblo (NULL)');
 
-    $conteoFila = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion WHERE tbproductorid = :id');
-    $conteoFila->execute(['id' => $productorId]);
+    $abiertos = $db->prepare('SELECT COUNT(*) FROM tbproductordireccion
+        WHERE tbproductorid = :id AND tbproductordireccionfechafin IS NULL');
+    $abiertos->execute(['id' => $productorId]);
     test_same(
         1,
-        (int) $conteoFila->fetchColumn(),
-        'DELETE no debe borrar físicamente la fila; preserva la invariante 1:1 (vacía, no ausente)'
+        (int) $abiertos->fetchColumn(),
+        'DELETE/vaciar conserva exactamente un periodo de dirección abierto (vacío), nunca más'
     );
 
     // Productor inactivo.

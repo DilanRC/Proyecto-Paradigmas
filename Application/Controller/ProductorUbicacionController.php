@@ -4,24 +4,13 @@ declare(strict_types=1);
 
 namespace Application\Controller;
 
+use Application\HttpException;
 use Application\Model\Bitacora;
 use Application\Model\Productor;
 use Application\Model\ProductorUbicacion;
 use DateTime;
 use PDO;
 use Throwable;
-
-final class ProductorUbicacionHttpException extends \RuntimeException
-{
-    public function __construct(
-        string $message,
-        public readonly int $estadoHttp = 400,
-        public readonly array $errores = [],
-        public readonly ?array $datos = null,
-    ) {
-        parent::__construct($message);
-    }
-}
 
 /**
  * API append-only de ubicaciones GPS del productor (plan §9, §14-16).
@@ -50,13 +39,13 @@ final class ProductorUbicacionController
             return match ($metodo) {
                 'GET' => $this->listar($consulta),
                 'POST' => $this->registrar($cuerpo),
-                'PUT', 'PATCH', 'DELETE' => throw new ProductorUbicacionHttpException(
+                'PUT', 'PATCH', 'DELETE' => throw new HttpException(
                     'Las ubicaciones son append-only: no se permite modificar ni eliminar registros.',
                     405,
                 ),
-                default => throw new ProductorUbicacionHttpException('Método no permitido.', 405),
+                default => throw new HttpException('Método no permitido.', 405),
             };
-        } catch (ProductorUbicacionHttpException $excepcion) {
+        } catch (HttpException $excepcion) {
             return $this->respuesta(
                 false,
                 $excepcion->getMessage(),
@@ -72,12 +61,12 @@ final class ProductorUbicacionController
         $datos = $this->validarRegistro($cuerpo);
         $productor = $this->productor->buscarPorId($datos['productorId']);
         if ($productor === null) {
-            throw new ProductorUbicacionHttpException('Productor no encontrado.', 404, [
+            throw new HttpException('Productor no encontrado.', 404, null, [
                 'productorId' => 'No existe un productor con ese identificador.',
             ]);
         }
         if ((int) $productor['tbproductorestado'] !== 1 || (int) $productor['tbpersonaestado'] !== 1) {
-            throw new ProductorUbicacionHttpException('El productor está inactivo.', 409, [
+            throw new HttpException('El productor está inactivo.', 409, null, [
                 'productorId' => 'Solo productores activos pueden registrar ubicaciones.',
             ]);
         }
@@ -128,7 +117,7 @@ final class ProductorUbicacionController
         $errores = [];
         $productorId = $this->enteroConsulta($consulta['productorId'] ?? null, 'productorId', $errores);
         if ($errores !== []) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
+            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         }
 
         if (isset($consulta['desde']) || isset($consulta['hasta'])) {
@@ -146,7 +135,7 @@ final class ProductorUbicacionController
             $errores['tamano'] = 'Debe estar entre 1 y 100.';
         }
         if ($errores !== []) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
+            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         }
 
         return $this->respuesta(true, 'Ubicaciones consultadas correctamente.',
@@ -173,7 +162,7 @@ final class ProductorUbicacionController
         }
 
         if ($errores !== []) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
+            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         }
 
         return [
@@ -236,7 +225,7 @@ final class ProductorUbicacionController
         $fin = $this->fechaConsulta($hasta, 'hasta', $formatos, '23:59:59');
 
         if ($inicio > $fin) {
-            throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, [
+            throw new HttpException('Revise los campos indicados.', 422, null, [
                 'desde' => 'La fecha inicial debe ser anterior o igual a la final.',
             ]);
         }
@@ -258,7 +247,7 @@ final class ProductorUbicacionController
             }
         }
 
-        throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, [
+        throw new HttpException('Revise los campos indicados.', 422, null, [
             $campo => 'Debe usar el formato Y-m-d H:i:s o Y-m-d.',
         ]);
     }
@@ -302,7 +291,7 @@ final class ProductorUbicacionController
         foreach ($desconocidos as $campo) {
             $errores[$campo] = 'Campo no permitido.';
         }
-        throw new ProductorUbicacionHttpException('Revise los campos indicados.', 422, $errores);
+        throw new HttpException('Revise los campos indicados.', 422, null, $errores);
     }
 
     private function transaccion(callable $operacion): mixed
