@@ -2,7 +2,8 @@
 
 **Estado:** APROBADA E IMPLEMENTADA  
 **Alcance:** paso (d) del retiro de `tbcomprador`  
-**Paso siguiente de la deuda legacy:** (e), retirar la tabla únicamente después de validar la migración real y con respaldo previo.
+**Paso siguiente de la deuda legacy:** (e), retirar la tabla únicamente después de validar la migración real y con respaldo previo.  
+**Supera:** cualquier texto previo de DEC-DBREADY-005/007 que todavía describa el paso (d) como pendiente o presente al Productor como alias de Vendedor.
 
 ## Conclusión
 
@@ -138,11 +139,12 @@ rollback operativo previo al paso (e) conserva la evidencia legacy necesaria.
 Backend y contrato read-only:
 
 ```bash
+docker compose exec -T app php Tests/naming_gate.php
+docker compose exec -T app php Tests/comprador_retiro_gate.php
 docker compose exec -T app php Tests/comprador_clasificacion_test.php
 docker compose exec -T app php Tests/comprador_backfill_test.php
 docker compose exec -T app php Tests/comprador_consulta_test.php
 docker compose exec -T app php Tests/persona_capabilities_test.php
-docker compose exec -T app php Tests/naming_gate.php
 docker compose exec -T app php Tests/backend_db_ready_test.php
 docker compose exec -T app php Tests/diagnostico_test.php
 ```
