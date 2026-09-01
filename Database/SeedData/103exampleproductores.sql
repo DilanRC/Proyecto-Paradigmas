@@ -89,15 +89,18 @@ WHERE NOT EXISTS (SELECT 1 FROM tbdireccion WHERE tbdireccionid = 2);
 UPDATE tbproductordireccion SET tbdireccionid = 1 WHERE tbproductorid = 1;
 UPDATE tbproductordireccion SET tbdireccionid = 2 WHERE tbproductorid = 2;
 
+-- fechainicio se fija aquí porque tbproductordireccion ya es histórica
+-- (tramo 6 del remodelado EIF400): un enlace nunca queda abierto sin fecha.
 INSERT INTO tbproductordireccion (
     tbproductordireccionid,
     tbproductorid,
-    tbdireccionid
+    tbdireccionid,
+    tbproductordireccionfechainicio
 )
-SELECT 1, 1, 1
+SELECT 1, 1, 1, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorid = 1)
 UNION ALL
-SELECT 2, 2, 2
+SELECT 2, 2, 2, NOW()
 WHERE NOT EXISTS (SELECT 1 FROM tbproductordireccion WHERE tbproductorid = 2);
 
 UPDATE tbfinca SET tbfincaestado = 1
