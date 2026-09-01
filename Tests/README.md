@@ -5,6 +5,8 @@ Ejecutar sobre una base limpia inicializada con Docker:
 ```bash
 docker compose exec -T app php Tests/naming_gate.php
 docker compose exec -T app php Tests/db_ready_test.php
+docker compose exec -T app php Tests/backend_db_ready_test.php
+docker compose exec -T app php Tests/backend_db_ready_eval.php
 docker compose exec -T app php Tests/diagnostico_test.php
 docker compose exec -T app php Tests/deployment_test.php
 docker compose exec -T app php Tests/postgres_compatibility_test.php
