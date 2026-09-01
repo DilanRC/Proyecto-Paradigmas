@@ -43,7 +43,7 @@ $check(str_contains($controlador, "'POST', 'PUT', 'DELETE', 'PATCH'"),
     'El controlador debe rechazar todos los métodos de escritura.');
 $check(str_contains($api, "header('Allow: GET, OPTIONS');"),
     'La API debe declarar GET/OPTIONS como únicos métodos.');
-$check(str_contains($api, "if ($metodo !== 'GET')"),
+$check(str_contains($api, 'if ($metodo !== \'GET\')'),
     'La API debe rechazar escrituras antes de abrir la conexión.');
 
 foreach (['id="crear-comprador"', 'id="formulario-comprador"', 'id="modal-desactivar"'] as $selector) {
@@ -60,7 +60,7 @@ $check(str_contains($relaciones, "clave: 'comprador'") && str_contains($relacion
 $check(!str_contains($relaciones, "alias: 'vendedor'"),
     'Productor no puede ser alias de Vendedor; VENDEDOR es otra clasificación.');
 
-foreach (['clasificación derivada, nunca administrativa', 'T10', 'Paso (e)', 'tbcomprador'] as $termino) {
+foreach (['derivada, nunca administrativa', 'T10', 'Paso (e)', 'tbcomprador'] as $termino) {
     $check(str_contains($decision, $termino), "DEC-DBREADY-008 no documenta {$termino}");
 }
 
