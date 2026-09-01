@@ -374,6 +374,22 @@ ninguno con dos a la vez.
 
 # Decisiones - Esquema histórico transversal (tramo 13)
 
+## DEC-26 - La conclusión del Tramo 13 queda SUPERADA por evidencia posterior de Calidad
+
+**Estado: SUPERADA, no eliminada.** La DEC-23 siguiente fue válida contra la
+matriz disponible al cerrar el PR #21: por eso confirmó las quince tablas y
+dejó `tbcomprador` sin histórico profundo. La evidencia posterior, aprobada
+por Calidad, cambia el contrato: Productor es el núcleo y Comprador/Vendedor
+son clasificaciones derivadas de su comportamiento; Compra y Venta son hechos
+históricos; y el funnel debe registrar al menos me gusta, seguir, carrito y
+compra.
+
+Esta decisión no autoriza SQL todavía. P0-C debe definir el destino de
+`tbcomprador`, la representación temporal de las clasificaciones y las
+políticas de transición antes de ampliar el esquema. D-12 y D-13 se conservan
+como trazabilidad del diagnóstico previo: no se borran ni se reinterpretan como
+prueba de que la política nueva ya esté implementada.
+
 ## DEC-23 - La matriz del tramo 12 confirma el esquema existente; no se crean tablas nuevas
 
 El tramo 13 recibe del arquitecto `matriz-historica-tramo12.pdf` (resumen en
