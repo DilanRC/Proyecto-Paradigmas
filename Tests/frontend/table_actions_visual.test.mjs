@@ -1,77 +1,88 @@
-// Contrato de presentacion de las tablas CRUD rurales y del sistema de iconos.
+// Contrato visual de iconografia y tablas CRUD rurales.
 //
-// CF4 usa @fortawesome/fontawesome-free 6.7.2. Paradigmas fija la misma version
-// en una capa CSS global; los botones conservan su texto real en el DOM para que
-// el icono nunca sustituya el nombre accesible de la accion.
+// La biblioteca es global y la seleccion de iconos es semantica: modulo,
+// accion y estado deben ser reconocibles sin convertir toda la interfaz en
+// decoracion. Los botones conservan su texto real en el DOM.
 
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-const leer = (ruta) => readFileSync(new URL(`../../${ruta}`, import.meta.url), 'utf8');
-const panel = leer('Public/css/panel.css');
-const base = leer('Public/css/base.css');
-const icons = leer('Public/css/icons.css');
+const panelCss = readFileSync(new URL('../../Public/css/panel.css', import.meta.url), 'utf8');
+const baseCss = readFileSync(new URL('../../Public/css/base.css', import.meta.url), 'utf8');
+const iconsCss = readFileSync(new URL('../../Public/css/icons.css', import.meta.url), 'utf8');
+
+const views = [
+    'home', 'login', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos',
+];
 
 test('el contenido rural deja de limitar la tabla a 1030 px', () => {
-    assert.ok(panel.includes('width:min(100%,1380px)'), 'el panel debe aprovechar el ancho disponible');
-    assert.ok(!panel.includes('max-width:1030px'), 'no debe sobrevivir el limite estrecho anterior');
-    assert.ok(panel.includes('overflow-x:auto'), 'una tabla ancha debe degradar con scroll horizontal');
+    assert.ok(panelCss.includes('width:min(100%,1380px)'), 'el panel debe aprovechar el ancho disponible');
+    assert.ok(!panelCss.includes('max-width:1030px'), 'no debe sobrevivir el limite estrecho anterior');
+    assert.ok(panelCss.includes('overflow-x:auto'), 'una tabla ancha debe degradar con scroll horizontal');
 });
 
-test('Paradigmas usa la misma biblioteca y version de iconos que CF4', () => {
-    assert.ok(base.startsWith("@import url('./icons.css?v=fa-6.7.2');"),
-        'base.css debe cargar la capa global de iconos');
-    assert.ok(icons.includes('@fortawesome/fontawesome-free@6.7.2/css/all.min.css'),
-        'debe fijarse Font Awesome Free 6.7.2, igual que CF4');
-    assert.ok(icons.includes("--tc-fa-family:'Font Awesome 6 Free'"));
-});
+test('Paradigmas usa Font Awesome Free 7.3.1 de forma global', () => {
+    assert.ok(baseCss.includes("./icons.css?v=fa-7.3.1"), 'base.css debe invalidar cache con la version nueva');
+    assert.ok(
+        iconsCss.includes('@fortawesome/fontawesome-free@7.3.1/css/all.min.css'),
+        'la version de Font Awesome debe quedar fijada a 7.3.1',
+    );
+    assert.ok(iconsCss.includes("--tc-fa-family:'Font Awesome 7 Free'"));
 
-test('las acciones de fila usan glifos Font Awesome del ActionBtn de CF4', () => {
-    assert.ok(panel.includes('.rural-panel .row-actions .action'));
-    assert.ok(panel.includes('width:34px'));
-    assert.ok(panel.includes('height:34px'));
-
-    for (const [action, glyph] of [
-        ['ver', '\\f06e'],
-        ['editar', '\\f044'],
-        ['desactivar', '\\f05e'],
-        ['reactivar', '\\f058'],
-    ]) {
-        assert.ok(icons.includes(`.action--${action}::before`), `falta icono para ${action}`);
-        assert.ok(icons.includes(`content:'${glyph}'`), `falta glifo Font Awesome para ${action}`);
-    }
-    assert.ok(icons.includes('mask-image:none !important'),
-        'la capa global debe anular los SVG mask del prototipo anterior');
-});
-
-test('la misma biblioteca cubre navegacion, busqueda, dialogos y estados', () => {
-    for (const selector of [
-        '.search::before',
-        '.rural-panel__nav-item::before',
-        '.close-button::before',
-        '.empty-state__icon::before',
-        '.error-state__icon::before',
-        '#accion-pasar::before',
-        '#accion-guardar::before',
-        '.suggestion-combobox__leading-icon::before',
-    ]) {
-        assert.ok(icons.includes(selector), `falta cobertura global para ${selector}`);
+    for (const view of views) {
+        const html = readFileSync(new URL(`../../Application/View/${view}/index.php`, import.meta.url), 'utf8');
+        assert.ok(html.includes('css/base.css'), `${view} debe heredar la capa global de iconos`);
     }
 });
 
-test('landing, login y todos los paneles cargan base.css y heredan Font Awesome', () => {
-    for (const vista of [
-        'home', 'login', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos',
-    ]) {
-        const html = leer(`Application/View/${vista}/index.php`);
-        assert.ok(html.includes('css/base.css'), `${vista}: no carga la capa base global`);
+test('la navegacion usa iconos ganaderos diferenciados por modulo', () => {
+    const expected = new Map([
+        ['productores.php', '\\f6c8'], // cow
+        ['compradores.php', '\\f2b5'], // handshake
+        ['transportistas.php', '\\f48b'], // truck-fast
+        ['vehiculos.php', '\\f63c'], // truck-pickup
+        ['pagometodos.php', '\\f555'], // wallet
+    ]);
+
+    for (const [href, glyph] of expected) {
+        assert.ok(iconsCss.includes(`href$='${href}']::before { content:'${glyph}'`), `falta icono semantico para ${href}`);
     }
+});
+
+test('las acciones CRUD distinguen ver editar pausar y restaurar', () => {
+    assert.ok(iconsCss.includes(".action--ver::before { content:'\\f06e'"), 'ver debe usar eye');
+    assert.ok(iconsCss.includes(".action--editar::before { content:'\\f044'"), 'editar debe usar pen-to-square');
+    assert.ok(iconsCss.includes(".action--desactivar::before { content:'\\f28b'"), 'desactivar debe comunicar pausa reversible');
+    assert.ok(iconsCss.includes(".action--reactivar::before { content:'\\f2ea'"), 'reactivar debe comunicar restauracion');
+    assert.ok(!iconsCss.includes(".action--desactivar::before { content:'\\f05e'"), 'ban no debe representar un estado reversible');
+});
+
+test('pueblo diferencia buscar de una sugerencia de ubicacion', () => {
+    assert.ok(iconsCss.includes(".suggestion-combobox__leading-icon::before {\n    content:'\\f002'"));
+    assert.ok(iconsCss.includes(".suggestion-combobox__option-icon::before {\n    content:'\\f3c5'"));
+});
+
+test('los estados vacios heredan la identidad del modulo', () => {
+    for (const panel of ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos']) {
+        assert.ok(iconsCss.includes(`#panel-${panel} .empty-state__icon::before`), `falta empty state de ${panel}`);
+    }
+    assert.ok(iconsCss.includes(".error-state__icon::before {\n    content:'\\f071'"));
+    assert.ok(iconsCss.includes(".confirmation__icon::before {\n    content:'\\f28b'"));
+});
+
+test('crear y accesos principales usan iconos sin eliminar el texto', () => {
+    assert.ok(iconsCss.includes('#crear-productor > span::before'));
+    assert.ok(iconsCss.includes('#crear-vehiculo > span::before'));
+    assert.ok(iconsCss.includes('#crear-pagometodo > span::before'));
+    assert.ok(iconsCss.includes(".rural-panel__admin-link[href='./']::before"));
+    assert.ok(iconsCss.includes(".login-form .button--primary::before"));
+    assert.ok(iconsCss.includes(".landing-actions .button[href='#red']::before"));
 });
 
 test('las acciones conservan ayuda visual y foco de teclado', () => {
     for (const label of ['Ver detalle', 'Editar', 'Desactivar', 'Reactivar']) {
-        assert.ok(panel.includes(`content:\"${label}\"`), `falta tooltip ${label}`);
+        assert.ok(panelCss.includes(`content:\"${label}\"`), `falta tooltip ${label}`);
     }
-    assert.ok(panel.includes('.row-actions .action:focus-visible'));
+    assert.ok(panelCss.includes('.row-actions .action:focus-visible'));
 });
