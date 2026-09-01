@@ -81,6 +81,26 @@ if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $mod
     || !str_contains($sql, 'ALTER DATABASE dbmercadoganadero')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
 }
+// El script debe nombrar una sola base. Comprobar solo ALTER DATABASE dejaba pasar
+// un CREATE DATABASE con otro nombre: el commit 3ab6d98 creo bdmercadoganadero
+// mientras ALTER y USE seguian en dbmercadoganadero, y una instalacion sin
+// compose fallaba porque la base del ALTER no existia. Compose lo ocultaba
+// porque MYSQL_DATABASE ya creaba la base antes de correr el script.
+preg_match_all('/(?:CREATE DATABASE(?: IF NOT EXISTS)?|ALTER DATABASE|USE)\s+`?([A-Za-z0-9_]+)`?/i', $sql, $bases);
+$nombresBase = array_unique($bases[1]);
+if (count($nombresBase) !== 1) {
+    throw new RuntimeException(
+        'El script de instalacion nombra varias bases de datos ('
+        . implode(', ', $nombresBase)
+        . '); CREATE, ALTER y USE deben referirse a la misma.'
+    );
+}
+if ($nombresBase[0] !== 'dbmercadoganadero') {
+    throw new RuntimeException(
+        "La base canonica es dbmercadoganadero y el script usa {$nombresBase[0]}; "
+        . 'Configuration/Database.php y .env.example fijan ese contrato.'
+    );
+}
 $avance = [
     'tbdireccionid INT NOT NULL' => 'tbdireccion y tbproductordireccion usan el identificador de ubicación',
     'tbfincadireccionid INT NOT NULL' => 'la asociación finca-dirección necesita identificador propio',
