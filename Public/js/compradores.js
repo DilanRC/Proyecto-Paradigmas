@@ -1,16 +1,12 @@
 // Panel de compradores: solo lectura.
 //
-// El CRUD legacy se retiro en el paso (d) (DEC-DBREADY-008). Comprador no es un
-// registro que alguien de de alta: es una clasificacion que el productor gana
-// por su comportamiento, y su unica fuente de verdad es
-// `tbproductorclasificacionperiodo` con un periodo COMPRADOR abierto.
+// El CRUD legacy se retiró en el paso (d). Comprador no es un registro que
+// alguien dé de alta: es una clasificación del Productor cuya única fuente de
+// verdad es `tbproductorclasificacionperiodo` con un periodo COMPRADOR abierto.
 //
-// Por eso este modulo no tiene formulario, ni boton de crear, ni desactivar, ni
-// editar. No es una simplificacion pendiente de completar: agregar esa accion
-// volveria a convertir la clasificacion en un dato capturado a mano.
-//
-// Mientras el mecanismo que deriva la clasificacion del comportamiento (T10) no
-// exista, esta lista solo muestra lo ya registrado y no crece.
+// Este módulo no tiene formulario ni acciones de crear, editar, desactivar o
+// reactivar. Mientras T10 no exista, muestra únicamente clasificaciones ya
+// registradas o migradas; no genera nuevas.
 
 import { request } from './shared/api.js';
 import { consultarCapacidades, describirCapacidad } from './shared/capacidades.js';
@@ -21,7 +17,7 @@ import {
 import { createToast } from './shared/toast.js';
 
 const API_URL = 'api/compradores.php';
-const ETIQUETAS = { singular: 'comprador', plural: 'compradores' };
+const ETIQUETAS = { singular: 'productor clasificado', plural: 'productores clasificados' };
 
 /** Iniciales del productor clasificado; la letra de reserva es de este panel. */
 function getInitials(name = '') {
@@ -29,7 +25,7 @@ function getInitials(name = '') {
         .map((part) => part.charAt(0).toUpperCase()).join('') || 'C';
 }
 
-/** Fecha legible del inicio de la clasificacion. Pura, para poder probarla. */
+/** Fecha legible del inicio de la clasificación. Pura, para poder probarla. */
 export function formatearClasificadoDesde(valor) {
     if (typeof valor !== 'string' || valor.trim() === '') return 'Sin fecha registrada';
     const fecha = new Date(valor.replace(' ', 'T'));
@@ -37,10 +33,15 @@ export function formatearClasificadoDesde(valor) {
     return fecha.toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-/** Traduce el motivo guardado en el periodo a algo legible. Pura. */
+/** Traduce motivos técnicos/legacy a texto defendible para la vista. */
 export function describirOrigen(motivo) {
-    if (motivo === 'MIGRACION_TBCOMPRADOR_LEGACY') return 'Migracion del registro anterior';
-    return motivo && motivo.trim() !== '' ? motivo : 'Sin origen declarado';
+    const etiquetas = {
+        MIGRACION_TBCOMPRADOR_LEGACY: 'Migración del registro anterior',
+        ALTA_CRUD_COMPRADOR: 'Alta registrada antes del retiro del CRUD',
+        REACTIVACION_CRUD_COMPRADOR: 'Reactivación registrada antes del retiro del CRUD',
+    };
+    if (typeof motivo !== 'string' || motivo.trim() === '') return 'Sin origen declarado';
+    return etiquetas[motivo] ?? motivo;
 }
 
 function initialize() {
@@ -101,7 +102,7 @@ function initialize() {
         const nombre = document.createElement('span');
         nombre.textContent = item.nombre;
         identidad.append(avatar, nombre);
-        identidad.setAttribute('aria-label', `Ver la clasificacion de ${item.nombre}`);
+        identidad.setAttribute('aria-label', `Ver la clasificación de ${item.nombre}`);
         persona.appendChild(identidad);
 
         const identificacion = document.createElement('td');
@@ -120,7 +121,14 @@ function initialize() {
         const origen = document.createElement('td');
         origen.textContent = describirOrigen(item.motivo);
 
-        row.append(persona, identificacion, contacto, desde, origen);
+        const disponibilidad = document.createElement('td');
+        const personaActiva = item.personaEstado === 'ACTIVA';
+        const badge = document.createElement('span');
+        badge.className = `badge badge--${personaActiva ? 'active' : 'inactive'}`;
+        badge.textContent = personaActiva ? 'Persona activa' : 'Persona inactiva';
+        disponibilidad.appendChild(badge);
+
+        row.append(persona, identificacion, contacto, desde, origen, disponibilidad);
         return row;
     }
 
@@ -184,19 +192,19 @@ function initialize() {
         } catch (error) {
             if (error?.name === 'AbortError') return;
             elements.capacities.setAttribute('aria-busy', 'false');
-            toast.alert(error?.message ?? 'No fue posible consultar las capacidades.');
+            toast.alert(error?.message ?? 'No fue posible consultar las relaciones de la persona.');
         }
     }
 
     function createDetail(item) {
         const fragment = document.createDocumentFragment();
         const filas = [
-            ['Identificacion', `${item.identificacion?.tipoCodigo ?? ''} ${item.identificacionNumero}`.trim()],
-            ['Telefono', item.telefono],
-            ['Correo electronico', item.correoElectronico],
+            ['Identificación', `${item.identificacion?.tipoCodigo ?? ''} ${item.identificacionNumero}`.trim()],
+            ['Teléfono', item.telefono],
+            ['Correo electrónico', item.correoElectronico],
             ['Clasificado desde', formatearClasificadoDesde(item.clasificadoDesde)],
-            ['Origen de la clasificacion', describirOrigen(item.motivo)],
-            ['Persona', item.personaEstado === 'ACTIVA' ? 'Activa' : 'Inactiva'],
+            ['Origen de la clasificación', describirOrigen(item.motivo)],
+            ['Disponibilidad de la persona', item.personaEstado === 'ACTIVA' ? 'Activa' : 'Inactiva'],
         ];
         filas.forEach(([etiqueta, valor]) => {
             const dt = document.createElement('dt');
