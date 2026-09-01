@@ -4,7 +4,7 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $archivos = array_map(static fn(string $n): string => (string) file_get_contents($root . $n), [
     '/Application/Model/Persona.php', '/Application/Model/Productor.php',
-    '/Application/Model/Comprador.php', '/Application/Model/Transportista.php',
+    '/Application/Model/Transportista.php',
 ]);
 $todo = implode("\n", $archivos);
 $criterios = [

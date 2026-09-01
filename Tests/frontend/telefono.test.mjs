@@ -8,7 +8,9 @@ import {
     PATRON_TELEFONO, TITULO_TELEFONO, sanearTelefono, telefonoValido,
 } from '../../Public/js/shared/telefono.js';
 
-const VISTAS = ['productores', 'compradores', 'transportistas'];
+// Compradores salio de la lista: su vista quedo de solo lectura en el paso (d)
+// (DEC-DBREADY-008) y ya no tiene formulario ni campo de telefono.
+const VISTAS = ['productores', 'transportistas'];
 const leer = (r) => readFileSync(new URL(`../../${r}`, import.meta.url), 'utf8');
 
 // Tabla unica: la misma que juzgan el patron y la funcion. Los valores esperados
@@ -63,7 +65,7 @@ test('un valor vacio no lo acepta la funcion; el campo es required', () => {
     assert.equal(telefonoValido(undefined), false);
 });
 
-test('las tres vistas llevan exactamente el patron del modulo', () => {
+test('las vistas con formulario llevan exactamente el patron del modulo', () => {
     for (const vista of VISTAS) {
         const html = leer(`Application/View/${vista}/index.php`);
         const campo = html.match(/<input id="telefono"[^>]*>/)[0];

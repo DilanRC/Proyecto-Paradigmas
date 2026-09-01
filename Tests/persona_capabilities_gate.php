@@ -11,7 +11,15 @@ $check = static function (bool $condition, string $message): void {
 };
 $check($persona !== false, 'No se pudo leer Persona.php.');
 
-foreach (['Productor', 'Comprador', 'Transportista'] as $capacidad) {
+// Comprador salió de la lista: dejó de ser una capacidad con modelo propio y
+// pasó a ser una clasificación del Productor (DEC-DBREADY-008). Su modelo se
+// retiró en el paso (d) y no debe volver.
+$check(!file_exists("{$root}/Application/Model/Comprador.php"),
+    'El modelo legacy de comprador volvió a aparecer.');
+$check(!file_exists("{$root}/Application/Controller/CompradorController.php"),
+    'El CRUD legacy de comprador volvió a aparecer.');
+
+foreach (['Productor', 'Transportista'] as $capacidad) {
     $modelo = file_get_contents("{$root}/Application/Model/{$capacidad}.php");
     $check($modelo !== false, "No se pudo leer {$capacidad}.php.");
     $check(str_contains($modelo, 'INNER JOIN tbpersona'), "{$capacidad} no consulta tbpersona mediante JOIN.");
