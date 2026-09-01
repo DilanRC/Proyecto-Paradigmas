@@ -43,3 +43,40 @@ export function firstErrorField(entries) {
 export function pickFirstInvalid(controls, isInvalid) {
     return [...controls].find((control) => isInvalid(control)) ?? null;
 }
+
+/**
+ * Mensaje en espanol para un control que el navegador considera invalido.
+ *
+ * No se usa `control.validationMessage` porque depende del idioma del navegador
+ * ("Completa este campo", "Please fill out this field") y no concuerda con el
+ * tono de los mensajes que devuelve el backend. Aqui se redacta a partir del
+ * motivo concreto para que la validacion del cliente y la del servidor se lean
+ * igual.
+ *
+ * @param {{validity: object, minLength?: number, maxLength?: number, type?: string,
+ *          validationMessage?: string}} control
+ */
+export function describeValidity(control) {
+    const v = control?.validity;
+    if (!v || v.valid) return '';
+
+    if (v.valueMissing) return 'Este campo es obligatorio.';
+    if (v.typeMismatch) {
+        return control.type === 'email'
+            ? 'Ingrese un correo electrónico válido.'
+            : 'El formato del valor no es válido.';
+    }
+    if (v.tooShort) {
+        return `Debe contener al menos ${control.minLength} caracteres.`;
+    }
+    if (v.tooLong) {
+        return `No puede superar ${control.maxLength} caracteres.`;
+    }
+    if (v.patternMismatch) return 'El formato del valor no es válido.';
+    if (v.rangeUnderflow || v.rangeOverflow || v.stepMismatch) {
+        return 'El valor está fuera del rango permitido.';
+    }
+    if (v.badInput) return 'El valor introducido no se puede interpretar.';
+    // Motivo desconocido: se prefiere el mensaje del navegador a no decir nada.
+    return control.validationMessage || 'Revise este campo.';
+}
