@@ -320,6 +320,7 @@ node Tests/ui_test.js
 node Tests/frontend_contract_test.js
 node Tests/frontend_retirement_eval.js
 node Tests/frontend_contrast_test.mjs
+node --test Tests/frontend/*.test.mjs
 python3 Tests/documentation_test.py
 cd services/supabase-server && npm test && npm run eval
 php services/supabase-database/tests/schema_test.php
