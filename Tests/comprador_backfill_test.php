@@ -45,6 +45,41 @@ function backfill_test_persona_id(PDO $db, string $identificacion): int
     return (int) $sentencia->fetchColumn();
 }
 
+/**
+ * Transiciones de estado registradas en bitácora para esa identificación, con
+ * el `estado` que quedó guardado en datosanteriores y datosnuevos.
+ *
+ * @return array<int,array{accion: string, anterior: ?string, nuevo: ?string}>
+ */
+function backfill_test_bitacora(PDO $db, string $identificacion): array
+{
+    $sentencia = $db->prepare(
+        'SELECT tbbitacoraaccion, tbbitacoradatosanteriores, tbbitacoradatosnuevos
+         FROM tbbitacora
+         WHERE tbbitacoraregistroidentificacionnumero = :id
+           AND tbbitacoraorigen = :origen
+           AND tbbitacoraaccion IN (:desactivar, :reactivar)
+         ORDER BY tbbitacoraid'
+    );
+    $sentencia->execute([
+        'id' => $identificacion,
+        'origen' => 'API_COMPRADORES',
+        'desactivar' => 'DESACTIVAR',
+        'reactivar' => 'REACTIVAR',
+    ]);
+    $estado = static function (mixed $json): ?string {
+        $decodificado = json_decode((string) $json, true);
+
+        return is_array($decodificado) ? ($decodificado['estado'] ?? null) : null;
+    };
+
+    return array_map(static fn (array $fila): array => [
+        'accion' => $fila['tbbitacoraaccion'],
+        'anterior' => $estado($fila['tbbitacoradatosanteriores']),
+        'nuevo' => $estado($fila['tbbitacoradatosnuevos']),
+    ], $sentencia->fetchAll());
+}
+
 function backfill_test_periodos(PDO $db, int $productorId): array
 {
     $sentencia = $db->prepare(
@@ -248,6 +283,23 @@ try {
     test_assert($clasificacion->consultarAbierto($productorCrudId, 'VENDEDOR') !== null,
         'Cerrar COMPRADOR no toca VENDEDOR.');
 
+    // La bitácora debe contar la transición real, no un no-op. Escribir la
+    // clasificación antes de capturar el estado anterior producía
+    // INACTIVO -> INACTIVO en DESACTIVAR y ACTIVO -> ACTIVO en REACTIVAR.
+    $transiciones = backfill_test_bitacora($db, $identificacionCrud);
+    test_same(
+        [
+            ['accion' => 'DESACTIVAR', 'anterior' => 'ACTIVO', 'nuevo' => 'INACTIVO'],
+            ['accion' => 'REACTIVAR', 'anterior' => 'INACTIVO', 'nuevo' => 'ACTIVO'],
+            ['accion' => 'DESACTIVAR', 'anterior' => 'ACTIVO', 'nuevo' => 'INACTIVO'],
+        ],
+        $transiciones,
+        'La bitácora registra el estado anterior real de cada transición.',
+    );
+    // Las llamadas repetidas (desactivar dos veces, reactivar ya activo) no
+    // deben haber dejado registros: no hubo transición.
+    test_same(3, count($transiciones), 'Las llamadas idempotentes no registran transiciones falsas.');
+
     // 8. Fallo entre cierre y apertura: ROLLBACK deja el estado original.
     $controlador->procesar('PATCH', [], ['identificacionNumero' => $identificacionCrud]);
     $antesDelFallo = backfill_test_periodos($db, $productorCrudId);
@@ -265,6 +317,50 @@ try {
         'El rollback deja los periodos exactamente como estaban.');
     test_same(true, $clasificacion->esComprador($productorCrudId),
         'Tras el rollback el comprador sigue clasificado.');
+
+    // 8b. Fallo DESPUÉS de tocar la clasificación y antes de terminar la
+    // transición: el ROLLBACK debe devolver periodo, bit y bitácora.
+    $periodosAntes = backfill_test_periodos($db, $productorCrudId);
+    $bitacoraAntes = backfill_test_bitacora($db, $identificacionCrud);
+    $bitLegacy = $db->prepare('SELECT c.tbcompradorestado FROM tbcomprador c
+        INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+        WHERE pe.tbpersonaidentificacionnumero = :id');
+    $bitLegacy->execute(['id' => $identificacionCrud]);
+    $bitAntes = (int) $bitLegacy->fetchColumn();
+
+    $estadoService = new \Application\Service\EstadoService(
+        new \Application\Model\Bitacora($db),
+        test_token('request'),
+    );
+    $modelo = new \Application\Model\Comprador($db);
+    $exploto = false;
+    $db->beginTransaction();
+    try {
+        $estadoService->transicionar(
+            fn ($clave) => $modelo->bloquear($clave),
+            fn ($clave) => $modelo->buscar($clave),
+            fn ($clave, $activo) => throw new RuntimeException('Fallo tras modificar la clasificación.'),
+            'tbcompradorestado',
+            0,
+            'Comprador no encontrado.',
+            $identificacionCrud,
+            'COMPRADOR',
+            'API_COMPRADORES',
+            $identificacionCrud,
+            estadoDeNegocio: static fn (array $fila): int => $fila['estado'] === 'ACTIVO' ? 1 : 0,
+            sincronizar: fn ($clave) => $servicio->desactivar($productorCrudId),
+        );
+    } catch (RuntimeException) {
+        $exploto = true;
+        $db->rollBack();
+    }
+    test_assert($exploto, 'La prueba debe haber forzado el fallo posterior a la clasificación.');
+    test_same($periodosAntes, backfill_test_periodos($db, $productorCrudId),
+        'El rollback restaura el periodo que la sincronización había cerrado.');
+    $bitLegacy->execute(['id' => $identificacionCrud]);
+    test_same($bitAntes, (int) $bitLegacy->fetchColumn(), 'El bit legacy queda como estaba.');
+    test_same($bitacoraAntes, backfill_test_bitacora($db, $identificacionCrud),
+        'Un fallo no deja rastro de transición en la bitácora.');
 } finally {
     foreach ([$documentoActivo, $documentoInactivo, $documentoCrud] as $documento) {
         $canonico = str_replace('-', '', $documento);
