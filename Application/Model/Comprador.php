@@ -6,6 +6,16 @@ namespace Application\Model;
 
 use PDO;
 
+/**
+ * CRUD legacy de `tbcomprador` (DEC-DBREADY-005).
+ *
+ * Comprador es una clasificación del Productor, no una capacidad de Persona:
+ * la pregunta "¿es comprador?" se responde con
+ * `ProductorClasificacionPeriodo::esComprador()`. `tbcompradorestado` es solo
+ * el bit de alta/baja del CRUD heredado y no debe usarse como respuesta a esa
+ * pregunta en código nuevo. Esta clase se retira cuando Backend complete los
+ * pasos (b) a (e) del plan de retiro.
+ */
 final class Comprador
 {
     private Persona $persona;

@@ -114,6 +114,21 @@ final class ProductorClasificacionPeriodo
         return $filas === [] ? null : $this->mapear($filas[0]);
     }
 
+    /**
+     * Responde "¿este productor es comprador?" leyendo la única fuente de
+     * verdad de la clasificación: un periodo COMPRADOR abierto.
+     *
+     * Paso (a) del retiro de la tabla legacy de comprador (DEC-DBREADY-005).
+     * Ninguna lectura nueva debe preguntarlo con el bit de alta/baja del CRUD
+     * heredado: ese bit no representa la clasificación. Un periodo
+     * cerrado significa que lo fue y ya no lo es; COMPRADOR y VENDEDOR son
+     * independientes, así que tener VENDEDOR abierto no altera la respuesta.
+     */
+    public function esComprador(int $productorId): bool
+    {
+        return $this->consultarAbierto($productorId, 'COMPRADOR') !== null;
+    }
+
     public function listarAbiertas(int $productorId): array
     {
         $sentencia = $this->conexion->prepare(
