@@ -1,21 +1,25 @@
 /*
  * Sistema global de iconos de TinderCows.
- * Usa exactamente la misma biblioteca y version declarada por CF4:
- * @fortawesome/fontawesome-free 6.7.2.
  *
- * Paradigmas no tiene pipeline npm para CSS, por eso se consume el paquete
- * publicado en jsDelivr. Todas las vistas cargan base.css, asi que esta capa
- * alcanza landing, login y los cinco paneles CRUD sin duplicar enlaces.
+ * Paradigmas usa Font Awesome Free 7.3.1, independiente de la version congelada
+ * en CF4. La politica visual es semantica: los iconos ayudan a reconocer modulo,
+ * accion o estado; no se agregan a cada texto solo por decoracion.
+ *
+ * Como este frontend PHP no tiene pipeline npm para CSS, se fija la version del
+ * paquete publicado en jsDelivr. Todas las vistas cargan base.css y heredan esta
+ * capa sin repetir dependencias.
  */
-@import url('https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css');
+@import url('https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css');
 
 :root {
-    --tc-fa-family:'Font Awesome 6 Free';
+    --tc-fa-family:'Font Awesome 7 Free';
 }
 
+/* Un unico contrato tipografico para todos los pseudo-iconos del sistema. */
 .tc-fa-solid::before,
 .search::before,
 .rural-panel__nav-item::before,
+.rural-panel__admin-link::before,
 .page-header .button--primary > span[aria-hidden='true']::before,
 .close-button::before,
 .empty-state__icon::before,
@@ -29,7 +33,9 @@
 .rural-panel .row-actions .action::before,
 .pagination #pagina-anterior::before,
 .pagination #pagina-siguiente::before,
-.pagination #actualizar-lista::before {
+.pagination #actualizar-lista::before,
+.login-form .button--primary::before,
+.landing-actions .button::before {
     font-family:var(--tc-fa-family) !important;
     font-style:normal !important;
     font-variant:normal !important;
@@ -38,7 +44,10 @@
     -webkit-font-smoothing:antialiased;
 }
 
-/* Busqueda: reemplaza los SVG heredados por fa-magnifying-glass. */
+/* -------------------------------------------------------------------------- */
+/* Busqueda y ubicacion                                                        */
+/* -------------------------------------------------------------------------- */
+
 .search svg,
 .suggestion-combobox__leading-icon svg,
 .suggestion-combobox__option-icon svg {
@@ -51,110 +60,94 @@
     top:50%;
     left:15px;
     color:#7b867f;
-    content:'\f002';
+    content:'\f002'; /* magnifying-glass */
     font-size:15px;
     line-height:1;
     pointer-events:none;
     transform:translateY(-50%);
 }
 
-.suggestion-combobox__leading-icon::before,
-.suggestion-combobox__option-icon::before {
-    content:'\f002';
+.suggestion-combobox__leading-icon::before {
+    content:'\f002'; /* magnifying-glass */
     font-size:14px;
     line-height:1;
 }
 
-/* Navegacion lateral con la misma familia visual en todos los modulos. */
+/* Cada sugerencia es una ubicacion, no otra busqueda. */
+.suggestion-combobox__option-icon::before {
+    content:'\f3c5'; /* location-dot */
+    font-size:14px;
+    line-height:1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Navegacion: cada modulo tiene una silueta propia y reconocible              */
+/* -------------------------------------------------------------------------- */
+
 .rural-panel__nav-item {
     justify-content:flex-start !important;
     gap:11px !important;
 }
 
 .rural-panel__nav-item::before {
-    width:18px;
-    flex:0 0 18px;
+    width:19px;
+    flex:0 0 19px;
     color:currentColor;
     font-size:14px;
     line-height:1;
     text-align:center;
 }
 
-.rural-panel__nav-item[href$='productores.php']::before { content:'\f007'; }
-.rural-panel__nav-item[href$='compradores.php']::before { content:'\f07a'; }
-.rural-panel__nav-item[href$='transportistas.php']::before { content:'\f0d1'; }
-.rural-panel__nav-item[href$='vehiculos.php']::before { content:'\f1b9'; }
-.rural-panel__nav-item[href$='pagometodos.php']::before { content:'\f09d'; }
+.rural-panel__nav-item[href$='productores.php']::before { content:'\f6c8'; } /* cow */
+.rural-panel__nav-item[href$='compradores.php']::before { content:'\f2b5'; } /* handshake */
+.rural-panel__nav-item[href$='transportistas.php']::before { content:'\f48b'; } /* truck-fast */
+.rural-panel__nav-item[href$='vehiculos.php']::before { content:'\f63c'; } /* truck-pickup */
+.rural-panel__nav-item[href$='pagometodos.php']::before { content:'\f555'; } /* wallet */
 
 .rural-panel__nav-dot {
     margin-left:auto;
 }
 
-/* Botones Crear: conserva el span existente y cambia solo su dibujo. */
+/* Accesos superiores: texto primero, icono discreto. */
+.rural-panel__admin-link {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+}
+
+.rural-panel__admin-link[href='./']::before { content:'\f015'; } /* house */
+.rural-panel__admin-link[href$='login.php']::before { content:'\f2f6'; } /* right-to-bracket */
+
+/* -------------------------------------------------------------------------- */
+/* Crear: la accion conserva texto y gana contexto segun la entidad            */
+/* -------------------------------------------------------------------------- */
+
 .page-header .button--primary > span[aria-hidden='true'] {
     font-size:0 !important;
 }
 
 .page-header .button--primary > span[aria-hidden='true']::before {
-    content:'\2b';
+    display:inline-block;
+    width:16px;
     font-size:13px;
     line-height:1;
+    text-align:center;
 }
 
-/* Cierres de dialogo y toast con fa-xmark. */
-.close-button,
-.toast__dismiss {
-    font-size:0 !important;
+#crear-productor > span::before,
+#crear-comprador > span::before,
+#crear-transportista > span::before { content:'\f234'; } /* user-plus */
+#crear-vehiculo > span::before { content:'\f63c'; } /* truck-pickup */
+#crear-pagometodo > span::before { content:'\f555'; } /* wallet */
+
+/* -------------------------------------------------------------------------- */
+/* Acciones de tabla: estado temporal != prohibicion                           */
+/* -------------------------------------------------------------------------- */
+
+.rural-panel .row-actions {
+    flex-wrap:nowrap;
 }
 
-.close-button::before,
-.toast__dismiss::before {
-    content:'\f00d';
-    font-size:15px;
-    line-height:1;
-}
-
-/* Estados globales. */
-.empty-state__icon,
-.error-state__icon,
-.confirmation__icon {
-    font-size:0 !important;
-}
-
-.empty-state__icon::before {
-    content:'\f01c';
-    font-size:23px;
-    line-height:1;
-}
-
-.error-state__icon::before,
-.confirmation__icon::before {
-    content:'\f071';
-    font-size:22px;
-    line-height:1;
-}
-
-/* Landing: sustituye los glifos tipograficos del dock por Font Awesome. */
-#accion-pasar,
-#accion-guardar {
-    font-size:0 !important;
-}
-
-#accion-pasar::before {
-    content:'\f00d';
-    font-size:20px;
-}
-
-#accion-guardar::before {
-    content:'\f004';
-    font-size:19px;
-}
-
-/*
- * Acciones de tabla al patron ActionBtn de CF4.
- * El texto real del button sigue en el DOM. Estas reglas fuerzan Font Awesome
- * sobre los SVG mask heredados del primer prototipo de la tabla.
- */
 .rural-panel .row-actions .action::before {
     display:inline-block !important;
     width:auto !important;
@@ -167,30 +160,140 @@
     line-height:1 !important;
 }
 
-.rural-panel .row-actions .action--ver::before { content:'\f06e' !important; }
-.rural-panel .row-actions .action--editar::before { content:'\f044' !important; }
-.rural-panel .row-actions .action--desactivar::before { content:'\f05e' !important; }
-.rural-panel .row-actions .action--reactivar::before { content:'\f058' !important; }
+.rural-panel .row-actions .action--ver::before { content:'\f06e' !important; } /* eye */
+.rural-panel .row-actions .action--editar::before { content:'\f044' !important; } /* pen-to-square */
+.rural-panel .row-actions .action--desactivar::before { content:'\f28b' !important; } /* circle-pause */
+.rural-panel .row-actions .action--reactivar::before { content:'\f2ea' !important; } /* rotate-left */
 
-/* Paginacion: conserva el texto y agrega iconos de la misma biblioteca. */
+/* El color tambien comunica intencion sin depender solo del icono. */
+.rural-panel .row-actions .action--desactivar {
+    color:#a65025;
+    background:rgba(166,80,37,.08);
+}
+
+.rural-panel .row-actions .action--desactivar:hover {
+    background:rgba(166,80,37,.16);
+}
+
+.rural-panel .row-actions .action--reactivar {
+    color:#26744a;
+    background:rgba(38,116,74,.08);
+}
+
+.rural-panel .row-actions .action--reactivar:hover {
+    background:rgba(38,116,74,.16);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Estados: el vacio identifica el modulo; el error se mantiene universal      */
+/* -------------------------------------------------------------------------- */
+
+.empty-state__icon,
+.error-state__icon,
+.confirmation__icon {
+    font-size:0 !important;
+}
+
+.empty-state__icon::before {
+    content:'\f01c'; /* inbox, fallback */
+    font-size:23px;
+    line-height:1;
+}
+
+#panel-productores .empty-state__icon::before { content:'\f6c8'; } /* cow */
+#panel-compradores .empty-state__icon::before { content:'\f2b5'; } /* handshake */
+#panel-transportistas .empty-state__icon::before { content:'\f48b'; } /* truck-fast */
+#panel-vehiculos .empty-state__icon::before { content:'\f63c'; } /* truck-pickup */
+#panel-pagometodos .empty-state__icon::before { content:'\f555'; } /* wallet */
+
+.error-state__icon::before {
+    content:'\f071'; /* triangle-exclamation */
+    font-size:22px;
+    line-height:1;
+}
+
+/* Desactivar es una pausa reversible, no una eliminacion. */
+.confirmation__icon::before {
+    content:'\f28b'; /* circle-pause */
+    font-size:22px;
+    line-height:1;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Dialogos, toasts y paginacion                                               */
+/* -------------------------------------------------------------------------- */
+
+.close-button,
+.toast__dismiss {
+    font-size:0 !important;
+}
+
+.close-button::before,
+.toast__dismiss::before {
+    content:'\f00d'; /* xmark */
+    font-size:15px;
+    line-height:1;
+}
+
 .pagination #pagina-anterior::before {
-    content:'\f060';
+    content:'\f053'; /* chevron-left */
     margin-right:6px;
 }
 
 .pagination #pagina-siguiente::before {
-    content:'\f061';
+    content:'\f054'; /* chevron-right */
     margin-right:6px;
 }
 
 .pagination #actualizar-lista::before {
-    content:'\f021';
+    content:'\f021'; /* arrows-rotate */
     margin-right:6px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Landing y login: iconos solo en acciones, no en parrafos decorativos        */
+/* -------------------------------------------------------------------------- */
+
+#accion-pasar,
+#accion-guardar {
+    font-size:0 !important;
+}
+
+#accion-pasar::before {
+    content:'\f04e'; /* forward */
+    font-size:18px;
+}
+
+#accion-guardar::before {
+    content:'\f004'; /* heart */
+    font-size:19px;
+}
+
+.login-form .button--primary,
+.landing-actions .button {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+}
+
+.login-form .button--primary::before,
+.landing-actions .button[href='login.php']::before {
+    content:'\f2f6'; /* right-to-bracket */
+}
+
+.landing-actions .button[href='#red']::before {
+    content:'\f06e'; /* eye */
 }
 
 @media (prefers-reduced-motion:reduce) {
     .fa-spin,
-    .fa-pulse {
+    .fa-pulse,
+    .fa-beat,
+    .fa-bounce,
+    .fa-fade,
+    .fa-flip,
+    .fa-shake {
         animation:none !important;
     }
 }
