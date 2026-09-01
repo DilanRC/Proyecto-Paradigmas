@@ -1,5 +1,6 @@
 import { request } from './shared/api.js';
 import { createDialogController } from './shared/dialog.js';
+import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
@@ -51,7 +52,7 @@ function initialize() {
         form: $('#formulario-transportista'), modalTitle: $('#titulo-modal'),
         modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'),
         save: $('#guardar-transportista'), reactivateExisting: $('#reactivar-existente'),
-        types: $('#identificacion-tipo'), deactivateModal: $('#modal-desactivar'),
+        types: $('#identificacion-tipo'), idHint: $('#ayuda-identificacion-numero'), deactivateModal: $('#modal-desactivar'),
         deactivateMessage: $('#mensaje-desactivar'), cancelDeactivate: $('#cancelar-desactivacion'),
         confirmDeactivate: $('#confirmar-desactivacion'), detailModal: $('#modal-detalle'),
         detailTitle: $('#titulo-detalle'), detailContent: $('#detalle-contenido'),
@@ -358,9 +359,16 @@ function initialize() {
         updateIdentificationInputMode();
     }
 
+    /**
+     * El numero admite caracteres distintos segun el tipo, con los mismos
+     * patrones que valida el backend. Al cambiar de tipo se limpia un error
+     * previo: la regla cambio y el mensaje anterior ya no describe nada.
+     */
     function updateIdentificationInputMode() {
-        $('#identificacion-numero').inputMode =
-            ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'].includes(elements.types.value) ? 'numeric' : 'text';
+        aplicarRestriccionIdentificacion(
+            $('#identificacion-numero'), elements.types.value, { hint: elements.idHint },
+        );
+        errores.clearControlError({ target: $('#identificacion-numero') });
     }
 
     function resetForm() {
