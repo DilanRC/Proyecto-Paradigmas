@@ -15,6 +15,7 @@ const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const home = read('../../Application/View/home/index.php');
 const login = read('../../Application/View/login/index.php');
 const publicCss = read('../../Public/css/public-auth.css');
+const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
 
 const PRIVATE_MODULES = [
@@ -95,6 +96,11 @@ test('una ruta privada sin sesión vuelve al login conservando destino local', (
     assert.equal(loginTarget(location.pathname), 'login.php?next=productores.php');
     assert.equal(enforceBrowserSession({ location, storage }), false);
     assert.equal(redirected, 'login.php?next=productores.php');
+});
+
+test('los paneles privados fallan cerrados hasta que auth-gate valida sesión', () => {
+    assert.ok(baseCss.includes('body.rural-panel {\n    visibility:hidden;'));
+    assert.ok(baseCss.includes("html[data-tc-auth='ready'] body.rural-panel"));
 });
 
 test('todos los módulos privados pasan por api.js y api.js activa auth-gate', () => {
