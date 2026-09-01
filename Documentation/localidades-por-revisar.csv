@@ -47,8 +47,8 @@ codigoDistrito,provincia,canton,distrito,nombre_actual,sugerencia,correccion_fin
 21004,Alajuela,San Carlos,Aguas Zarcas,Calle Hernáez,Calle Hernández,,RECONSTRUCCION_SEGURA,HERNAEZ->HERNANDEZ confirmado x2 en distrito 21401
 21004,Alajuela,San Carlos,Aguas Zarcas,Calle Méez,Calle Méndez,,RECONSTRUCCION_SEGURA,MEEZ->MENDEZ confirmado x4 en distrito 10106
 21006,Alajuela,San Carlos,Pital,Piedra Alegre (Quebrada Grae),Piedra Alegre (Quebrada Grande),,RECONSTRUCCION_SEGURA,GRAE)->GRANDE) confirmado x1 en distrito 70401
-21006,Alajuela,San Carlos,Pital,Rosalía,Rosalínda,,RECONSTRUCCION_SEGURA,ROSALIA->ROSALINDA confirmado x1 en distrito 40901
-21006,Alajuela,San Carlos,Pital,Saíno,Sandíno,,RECONSTRUCCION_SEGURA,SAINO->SANDINO confirmado x1 en distrito 50301
+21006,Alajuela,San Carlos,Pital,Rosalía,,,NO_CORREGIR,la reconstruccion 'Rosalínda' no es ortografia espanola valida: esa tilde no existiria. Ademas el original es un nombre legitimo por si mismo (Rosalia es nombre propio corriente)
+21006,Alajuela,San Carlos,Pital,Saíno,,,NO_CORREGIR,"la reconstruccion 'Sandíno' no es ortografia espanola valida: esa tilde no existiria. Ademas el original es un nombre legitimo por si mismo (saino es el pecari, animal que da nombre a lugares)"
 21007,Alajuela,San Carlos,La Fortuna,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
 21010,Alajuela,San Carlos,Venado,Lia Vista,Linda Vista,,RECONSTRUCCION_SEGURA,LIA->LINDA confirmado x41 en distrito 10105
 21011,Alajuela,San Carlos,Cutris,Almeros,Almendros,,RECONSTRUCCION_SEGURA,ALMEROS->ALMENDROS confirmado x8 en distrito 11305
