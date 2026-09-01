@@ -50,8 +50,21 @@ export function createToast({ polite, assertive }, { timeouts = TIMEOUTS } = {})
         }
 
         const delay = timeouts[type] ?? 0;
-        // Un error persiste: si se desvanece solo, el usuario puede no llegar a leerlo.
-        if (delay > 0) timer = window.setTimeout(clear, delay);
+        if (delay > 0) {
+            timer = window.setTimeout(clear, delay);
+        } else {
+            // Un error no se desvanece solo, para que de tiempo a leerlo. A
+            // cambio necesita una forma explicita de cerrarlo: sin ella el
+            // mensaje de una operacion vieja se queda en pantalla sobre la
+            // siguiente.
+            const dismiss = document.createElement('button');
+            dismiss.type = 'button';
+            dismiss.className = 'toast__dismiss';
+            dismiss.textContent = '×';
+            dismiss.setAttribute('aria-label', 'Descartar notificación');
+            dismiss.addEventListener('click', clear);
+            region.append(dismiss);
+        }
     }
 
     return {

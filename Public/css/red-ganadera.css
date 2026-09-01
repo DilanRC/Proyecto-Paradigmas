@@ -27,6 +27,9 @@ body.rural {
 
 @media (min-width:901px) {
     .rural__aside {
+        /* La tarjeta se solapa 9% sobre el aside (margin-left:-9%). Sin esta
+           reserva el texto de la barra queda debajo de la tarjeta y no se lee. */
+        padding-right:112px;
         width:38%;
         min-height:100vh;
     }
