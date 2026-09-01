@@ -3,13 +3,18 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TinderCows: encuentra la pareja perfecta para tu ganado">
-    <title>TinderCows — Match ganadero</title>
+    <meta name="description" content="TinderCows: red ganadera de productores activos">
+    <title>TinderCows — Red ganadera</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="js/home.js" defer></script>
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/panel.css">
+    <link rel="stylesheet" href="css/red-ganadera.css">
+    <script type="module" src="js/home.js"></script>
 </head>
 <body class="rural">
     <div class="rural__admin">
@@ -22,88 +27,101 @@
             <span class="rural__brand-name">Tinder<strong>Cows</strong></span>
         </div>
 
-        <div class="rural__tabs" role="tablist" aria-label="Secciones">
-            <button class="rural__tab rural__tab--active" type="button" role="tab" aria-selected="true">Matches</button>
-            <button class="rural__tab" type="button" role="tab" aria-selected="false">Mensajes</button>
-        </div>
-
-        <h3 class="rural__label">Mi manada</h3>
-        <div class="rural__herd">
-            <div class="rural__avatar" title="Trueno"><img src="https://images.pexels.com/photos/11556841/pexels-photo-11556841.jpeg?auto=compress&cs=tinysrgb&w=150&q=70" alt="Trueno" loading="lazy" decoding="async"><i class="rural__avatar-dot" aria-hidden="true"></i></div>
-            <div class="rural__avatar rural__avatar--muted" title="Bella"><img src="https://images.pexels.com/photos/27207635/pexels-photo-27207635.jpeg?auto=compress&cs=tinysrgb&w=150&q=70" alt="Bella" loading="lazy" decoding="async"></div>
-            <div class="rural__avatar rural__avatar--muted" title="Luna"><img src="https://images.unsplash.com/photo-1624210681638-9ecd10500b05?auto=format&w=150&q=70&fit=crop" alt="Luna" loading="lazy" decoding="async"></div>
-            <button class="rural__avatar rural__avatar--add" type="button" aria-label="Agregar a la manada">+</button>
-        </div>
+        <h3 class="rural__label">Sesión actual</h3>
+        <dl class="rural__counters">
+            <div class="rural__counter">
+                <dt>Guardados</dt>
+                <dd id="contador-guardados">0</dd>
+            </div>
+            <div class="rural__counter">
+                <dt>Revisados</dt>
+                <dd id="contador-revisados">0</dd>
+            </div>
+        </dl>
+        <p class="rural__counters-note">
+            Los contadores viven solo en esta pestaña. No existe todavía un
+            endpoint para registrar el interés de una persona, así que no se
+            inventa una persistencia que el sistema no tiene.
+        </p>
 
         <div class="rural__messages">
-            <h3 class="rural__label">Mensajes directos</h3>
-            <div class="rural__thread">
-                <div class="rural__avatar rural__avatar--sm" aria-hidden="true"><img src="https://i.pravatar.cc/100?u=mateo-rivera-tindercows" alt="" loading="lazy" decoding="async"></div>
-                <div class="rural__thread-body">
-                    <div class="rural__thread-head"><b>Mateo Rivera</b><time>Ahora</time></div>
-                    <p>"Trueno es un ejemplar excepcional, ¿coordinamos una visita al rancho?"</p>
-                </div>
-            </div>
-            <div class="rural__thread rural__thread--muted">
-                <div class="rural__avatar rural__avatar--sm" aria-hidden="true"><img src="https://i.pravatar.cc/100?u=rancho-la-gloria-tindercows" alt="" loading="lazy" decoding="async"></div>
-                <div class="rural__thread-body">
-                    <div class="rural__thread-head"><b>Rancho La Gloria</b><time>Ayer</time></div>
-                    <p>"El lote de novillas ya está verificado."</p>
-                </div>
-            </div>
+            <h3 class="rural__label">Cómo funciona</h3>
+            <p class="rural__hint">
+                Se recorren los productores <strong>activos</strong> en el orden
+                que devuelve la API. Ese orden es una decisión del backend: esta
+                vista solamente lo representa.
+            </p>
         </div>
-
     </aside>
 
     <main class="rural__main">
-        <article class="rural__card">
-            <nav class="rural__card-nav">
-                <button class="rural__card-tab rural__card-tab--active" type="button">Galería</button>
-                <button class="rural__card-tab" type="button">Ficha técnica</button>
-                <button class="rural__card-tab" type="button">Producción</button>
-            </nav>
+        <article class="rural__card" id="estado-carga" aria-hidden="true">
+            <div class="rural__media rural__media--placeholder"></div>
+            <div class="rural__body">
+                <div class="skeleton">
+                    <div class="skeleton__row"></div>
+                    <div class="skeleton__row"></div>
+                    <div class="skeleton__row"></div>
+                </div>
+            </div>
+        </article>
 
-            <div class="rural__media">
-                <img src="https://images.unsplash.com/photo-1598974357035-0d439e28ccaf?auto=format&w=1200&q=75&fit=crop" alt="Lucero, toro Brahman de Finca El Roble" loading="lazy" decoding="async">
+        <article class="rural__card" id="tarjeta-productor" hidden>
+            <div class="rural__media rural__media--placeholder">
+                <span class="rural__media-initials" id="productor-iniciales" aria-hidden="true"></span>
                 <div class="rural__media-badges">
-                    <span class="rural__badge">Brahman Puro</span>
-                    <span class="rural__badge rural__badge--accent">Semental A+</span>
+                    <span class="rural__badge" id="productor-estado">Activo</span>
                 </div>
             </div>
 
             <div class="rural__body">
                 <div class="rural__heading">
                     <div>
-                        <h1>Lucero</h1>
-                        <p class="rural__sub-identity"><span data-finca>Finca El Roble</span> <span aria-hidden="true">•</span> 480 kg</p>
+                        <h1 id="productor-nombre">—</h1>
+                        <p class="rural__sub-identity">
+                            <span id="productor-finca">Sin fincas</span>
+                            <span aria-hidden="true">•</span>
+                            <span id="productor-ubicacion">Sin dirección</span>
+                        </p>
                     </div>
-                    <div class="rural__rating" aria-label="5 de 5 estrellas">
-                        <span aria-hidden="true">★★★★★</span>
-                        <p>Rating del productor</p>
+                    <div class="rural__rating">
+                        <p id="productor-posicion">—</p>
                     </div>
                 </div>
 
-                <p class="rural__quote">"Ejemplar Brahman de alta pureza genética, criado en libertad en las colinas de Heredia. Estructura ósea imponente y temperamento noble, ideal para mejora de hato."</p>
-
-                <div class="rural__producer">
-                    <div class="rural__producer-profile">
-                        <div class="rural__avatar rural__avatar--lg"><img src="https://images.unsplash.com/photo-1622834613016-eb976dc462bd?auto=format&w=200&q=75&fit=crop" alt="María Fernández Solano" loading="lazy" decoding="async"><i class="rural__avatar-check" aria-hidden="true">✓</i></div>
-                        <div>
-                            <p class="rural__producer-title">Ganadero principal</p>
-                            <p class="rural__producer-name">María Fernández Solano</p>
-                            <p class="rural__producer-meta"><span class="rural__cert">Certificado TinderCows</span> <span aria-hidden="true">•</span> 12 lotes vendidos</p>
-                        </div>
-                    </div>
-                    <a class="button button--primary" href="productores.php">Ver catálogo</a>
-                </div>
+                <dl class="detail-grid">
+                    <dt>Identificación</dt><dd id="productor-identificacion">—</dd>
+                    <dt>Teléfono</dt><dd id="productor-telefono">—</dd>
+                    <dt>Correo electrónico</dt><dd id="productor-correo">—</dd>
+                    <dt>Fincas</dt><dd id="productor-fincas" class="detail--full">—</dd>
+                </dl>
             </div>
         </article>
 
-        <div class="rural__dock">
-            <button class="rural__dock-btn" type="button" aria-label="Pasar">✕</button>
-            <button class="rural__dock-btn" type="button" aria-label="Guardar">♥</button>
-            <button class="rural__dock-btn rural__dock-btn--primary" type="button">Contactar</button>
+        <div class="empty-state" id="estado-vacio" hidden>
+            <span class="empty-state__icon" aria-hidden="true">♧</span>
+            <h2>No hay productores activos</h2>
+            <p>Cuando se registre un productor activo aparecerá aquí.</p>
+            <a class="button button--primary" href="productores.php">Ir a administración</a>
+        </div>
+
+        <div class="error-state" id="estado-error" hidden>
+            <span class="error-state__icon" aria-hidden="true">!</span>
+            <h2>No fue posible cargar la red ganadera</h2>
+            <p id="mensaje-error"></p>
+            <button class="button button--secondary" id="reintentar" type="button">Reintentar</button>
+        </div>
+
+        <div class="rural__dock" id="acciones" hidden>
+            <button class="rural__dock-btn" id="accion-pasar" type="button" aria-label="Pasar al siguiente productor">✕</button>
+            <button class="rural__dock-btn" id="accion-guardar" type="button" aria-label="Guardar en esta sesión">♥</button>
+            <a class="rural__dock-btn rural__dock-btn--primary" id="accion-contactar" href="productores.php">Ver en administración</a>
         </div>
     </main>
+
+    <div class="toast-region">
+        <div class="toast" id="toast-status" role="status" aria-live="polite"></div>
+        <div class="toast" id="toast-alert" role="alert" aria-live="assertive"></div>
+    </div>
 </body>
 </html>

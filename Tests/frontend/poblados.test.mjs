@@ -1,0 +1,231 @@
+// Centros poblados y su busqueda tolerante al defecto de la fuente.
+
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { POBLADOS, buscarPoblados, normalizar, pobladosDe } from '../../Public/js/shared/poblados.js';
+import { cantones, codigoDistrito, distritos, provincias } from '../../Public/js/shared/territorio.js';
+
+const CODIGOS = new Set(provincias()
+    .flatMap((p) => cantones(p).flatMap((c) => distritos(p, c).map((d) => codigoDistrito(p, c, d)))));
+
+test('hay una entrada por cada uno de los 494 distritos', () => {
+    assert.equal(Object.keys(POBLADOS).length, 494);
+});
+
+test('ninguna localidad cuelga de un distrito inexistente', () => {
+    const huerfanos = Object.keys(POBLADOS).filter((codigo) => !CODIGOS.has(codigo));
+    assert.deepEqual(huerfanos, [], `codigos sin distrito: ${huerfanos.join(', ')}`);
+});
+
+test('el total es 13273, tras reparar con INEC y deduplicar', () => {
+    const total = Object.values(POBLADOS).reduce((n, lista) => n + lista.length, 0);
+    assert.equal(total, 13273);
+});
+
+test('solo un distrito se queda sin localidad publicada', () => {
+    assert.equal(Object.values(POBLADOS).filter((lista) => lista.length === 0).length, 1);
+});
+
+test('no hay localidades repetidas dentro de un distrito', () => {
+    for (const [codigo, lista] of Object.entries(POBLADOS)) {
+        assert.equal(new Set(lista).size, lista.length, `${codigo} repite localidades`);
+    }
+});
+
+test('un distrito desconocido devuelve lista vacia y no rompe', () => {
+    assert.deepEqual(pobladosDe('99999'), []);
+    assert.deepEqual(buscarPoblados('99999', 'algo'), []);
+});
+
+// --- normalizacion -----------------------------------------------------------
+
+test('normalizar ignora acentos y mayusculas', () => {
+    assert.equal(normalizar('Pérez Zeledón'), normalizar('perez zeledon'));
+    assert.equal(normalizar('SAN JOSÉ'), normalizar('san jose'));
+});
+
+test('normalizar ya NO borra "nd": el apano se retiro al reparar los datos', () => {
+    // Hasta DEC-FRONT-14 se quitaba "nd" de la consulta para alcanzar los
+    // nombres mutilados del IGN. Reparados con INEC, ese atajo solo podria
+    // igualar cadenas que de verdad son distintas.
+    assert.notEqual(normalizar('Tamarindo'), normalizar('Tamario'));
+    assert.notEqual(normalizar('Llano Grande'), normalizar('Llano Grae'));
+    assert.notEqual(normalizar('Condominio'), normalizar('Coominio'));
+});
+
+test('normalizar colapsa los espacios repetidos', () => {
+    assert.equal(normalizar('  Mata   Redonda '), 'mata redonda');
+});
+
+test('normalizar no confunde nombres que de verdad son distintos', () => {
+    assert.notEqual(normalizar('Guácimo'), normalizar('Guápiles'));
+    assert.notEqual(normalizar('San Isidro'), normalizar('San Rafael'));
+});
+
+test('normalizar tolera nulos y vacios', () => {
+    assert.equal(normalizar(null), '');
+    assert.equal(normalizar(undefined), '');
+    assert.equal(normalizar('   '), '');
+});
+
+// --- busqueda ----------------------------------------------------------------
+
+test('los nombres reparados con INEC 2024 quedan escritos bien', () => {
+    // Cruce por codigo de distrito contra el shapefile del INEC, que si
+    // conserva "nd". Ver Documentation/correcciones-localidades.csv.
+    for (const [codigo, correcto, roto] of [
+        ['10108', 'Mata Redonda', 'Mata Redoa'],
+        ['50309', 'Tamarindo', 'Tamario'],
+        ['30110', 'Llano Grande', 'Llano Grae'],
+        ['10106', 'Méndez', 'Méez'],
+        ['10105', 'Indiana', 'Iiana'],
+        ['10201', 'La Condesa', 'La Coesa'],
+    ]) {
+        assert.ok(pobladosDe(codigo).includes(correcto), `${codigo}: falta ${correcto}`);
+        assert.ok(!pobladosDe(codigo).includes(roto), `${codigo}: sobrevive ${roto}`);
+    }
+});
+
+test('la reparacion conserva las tildes y la caja del IGN', () => {
+    // INEC publica MENDEZ, todo en mayuscula y sin tilde. Solo se tomo de ahi
+    // donde va la secuencia perdida, no la grafia.
+    assert.ok(pobladosDe('10106').includes('Méndez'));
+    assert.ok(!pobladosDe('10106').includes('MENDEZ'));
+    assert.ok(pobladosDe('10109').includes('Rincón Grande'));
+});
+
+test('escribir el nombre correcto encuentra el registro', () => {
+    const resultado = buscarPoblados('50309', 'Tamarindo');
+    assert.ok(resultado.includes('Tamarindo'));
+    // Los vecinos tambien se repararon: eran "Tamario Diria" y "Palmas de Tamario".
+    assert.ok(resultado.some((n) => n !== 'Tamarindo' && n.includes('Tamarindo')));
+});
+
+test('511 nombres recuperaron su "nd"; antes no lo tenia ninguno', () => {
+    // El XLSX del IGN no traia ni uno. 345 salieron del cruce automatico con
+    // INEC y 173 de las revisiones confirmadas a mano.
+    const con = Object.values(POBLADOS).flat().filter((n) => normalizar(n).includes('nd'));
+    assert.equal(con.length, 511);
+});
+
+test('las coincidencias por prefijo van antes que las del interior', () => {
+    const resultado = buscarPoblados('10101', 'san', { limite: 25 });
+    const primerInterior = resultado.findIndex((n) => !normalizar(n).startsWith(normalizar('san')));
+    if (primerInterior !== -1) {
+        const posteriores = resultado.slice(primerInterior);
+        assert.ok(
+            posteriores.every((n) => !normalizar(n).startsWith(normalizar('san'))),
+            'un resultado por prefijo aparece despues de uno por interior',
+        );
+    }
+});
+
+test('una consulta vacia sugiere el principio de la lista', () => {
+    const resultado = buscarPoblados('10101', '');
+    assert.ok(resultado.length > 0);
+    assert.deepEqual(resultado, pobladosDe('10101').slice(0, resultado.length));
+});
+
+test('el limite se respeta', () => {
+    assert.ok(buscarPoblados('10101', '', { limite: 3 }).length <= 3);
+    assert.ok(buscarPoblados('10101', 'a', { limite: 5 }).length <= 5);
+});
+
+test('la busqueda solo mira el distrito pedido', () => {
+    const codigo = '70605';
+    for (const nombre of buscarPoblados(codigo, '', { limite: 50 })) {
+        assert.ok(pobladosDe(codigo).includes(nombre), `${nombre} no pertenece a ${codigo}`);
+    }
+});
+
+test('Duacari, el distrito reconciliado, si trae sus localidades', () => {
+    assert.ok(pobladosDe('70605').length >= 18);
+});
+
+// --- proteccion contra reparaciones inventadas --------------------------------
+//
+// Un modelo estadistico propuso en su dia insertar "nd" donde "sonaba probable",
+// y eso convertia nombres legitimos en disparates: Roads en Rondads, Hanoi en
+// Hanondi, McKenzie en McKezinde. La ausencia de un nombre en INEC no prueba que
+// este mutilado; solo prueba que INEC no lo cubre. Estas pruebas fijan que esas
+// propuestas nunca llegaron al catalogo.
+
+test('los nombres legitimos que la heuristica queria cambiar siguen intactos', () => {
+    const todos = new Set(Object.values(POBLADOS).flat());
+    for (const nombre of [
+        'Roads', 'Hanoi', 'Fields', 'McKenzie', 'Kezia', 'Wong', 'Tirol',
+        'Zaida', 'Zafira', 'Williamsburg', 'Bohío', 'Callao', 'Yolaa',
+    ]) {
+        assert.ok(todos.has(nombre), `${nombre}: desaparecio del catalogo`);
+    }
+});
+
+test('ninguna de las reconstrucciones inventadas entro en el catalogo', () => {
+    const todos = new Set(Object.values(POBLADOS).flat().map((n) => normalizar(n)));
+    for (const invento of [
+        'Rondads', 'Hanondi', 'Findelds', 'McKezinde', 'Kezinda', 'Wndong',
+        'Tindrol', 'Zandida', 'Zafindra', 'Willindamsburg', 'Bohindo',
+        'Callando', 'Undaca', 'Ondurut', 'Sukinda', 'Sand Vicente',
+    ]) {
+        assert.ok(!todos.has(normalizar(invento)), `entro una reconstruccion inventada: ${invento}`);
+    }
+});
+
+test('"Sa Vicente" se resolvio como San Vicente, nunca como Sand Vicente', () => {
+    // Era perdida de "n" sola, el unico caso del catalogo, y no de "nd".
+    // Convertirlo en "Sand Vicente" porque SAND existe en INEC habria sido
+    // exactamente el error que estas pruebas impiden. Al corregirlo colapso
+    // con el "San Vicente" que ese distrito ya tenia, lo que lo confirma.
+    const distrito = POBLADOS['40701'];
+    assert.deepEqual(distrito.filter((n) => n.includes('Vicente')), ['San Vicente']);
+    assert.ok(!distrito.includes('Sa Vicente'));
+    assert.ok(!Object.values(POBLADOS).flat().includes('Sand Vicente'));
+});
+
+test('las 20 revisadas a mano entraron con su forma correcta', () => {
+    for (const [codigo, nombre] of [
+        ['11901', 'Otro Mundo'], ['51003', 'Andes'], ['51104', 'Prendas'],
+        ['70503', 'Carrandí'], ['21308', 'Comandos'], ['30801', 'Fundación de El Guarco'],
+        ['61004', 'Río Incendio'], ['20112', 'Vueltas Peñaranda'],
+    ]) {
+        assert.ok(pobladosDe(codigo).includes(nombre), `${codigo}: falta ${nombre}`);
+    }
+});
+
+// --- los 43 grupos de par de token aplicados tras revision -------------------
+
+test('cada par de token revisado produjo su forma correcta en el catalogo', () => {
+    // Un ejemplo por grupo grande. Si alguien regenera el catalogo sin la
+    // columna correccion_final, estos vuelven a su forma mutilada y falla aqui.
+    for (const [codigo, correcto, roto] of [
+        ['10501', 'Hacienda Tres Marías', 'Haciea Tres Marías'],
+        ['10604', 'Rancho Grande', 'Rancho Grae'],
+        ['20104', 'Loma Linda Dos', 'Loma Lia Dos'],
+        ['10302', 'Lindavista', 'Liavista'],
+        ['11004', 'Almendros', 'Almeros'],
+        ['10502', 'Bajo Quebrada Honda', 'Bajo Quebrada Hoa'],
+        ['20203', 'Valle Escondido (La Pista)', 'Valle Escoido (La Pista)'],
+        ['10304', 'Méndez', 'Méez'],
+        ['21004', 'Calle Hernández', 'Calle Hernáez'],
+        ['10903', 'La Estancia De Lindora', 'La Estancia De Liora'],
+        ['11703', 'Alto Indio', 'Alto Iio'],
+        ['20703', 'Calle Fernández', 'Calle Fernáez'],
+        ['50203', 'Tamarindo', 'Tamario'],
+    ]) {
+        const lista = pobladosDe(codigo);
+        assert.ok(lista.includes(correcto), `${codigo}: falta ${correcto}`);
+        assert.ok(!lista.includes(roto), `${codigo}: sobrevive ${roto}`);
+    }
+});
+
+test('las dos reconstrucciones de ortografia imposible quedaron fuera', () => {
+    // La tilde del original es necesaria ahi, senal de que no son mutilaciones
+    // sino palabras distintas: Rosalia es nombre propio y saino es el pecari.
+    const todos = Object.values(POBLADOS).flat();
+    assert.ok(todos.includes('Rosalía'));
+    assert.ok(todos.includes('Saíno'));
+    for (const invento of ['Rosalínda', 'Sandíno']) {
+        assert.ok(!todos.includes(invento), `entro ${invento}`);
+    }
+});

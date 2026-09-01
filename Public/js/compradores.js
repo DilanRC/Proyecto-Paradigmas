@@ -1,4 +1,5 @@
 import { request } from './shared/api.js';
+import { consultarCapacidades, describirCapacidad } from './shared/capacidades.js';
 import { createDialogController } from './shared/dialog.js';
 import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 import { aplicarRestriccionTelefono } from './shared/telefono.js';
@@ -8,13 +9,11 @@ import {
 } from './shared/list-state.js';
 import { createToast } from './shared/toast.js';
 
-const API_URL = 'api/transportistas.php';
-const VEHICULOS_URL = 'api/vehiculos.php';
-const ASIGNACION_URL = 'api/transportistas-vehiculos.php';
-const ETIQUETAS = { singular: 'transportista', plural: 'transportistas' };
+const API_URL = 'api/compradores.php';
+const ETIQUETAS = { singular: 'comprador', plural: 'compradores' };
 
 /** Cuerpo enviado a la API. Exportado para la prueba de paridad de contrato. */
-export function buildTransportistaPayload({
+export function buildCompradorPayload({
     tipoCodigo, numero, nombre, telefono, correoElectronico, identificacionNumeroOriginal = '',
 }) {
     const data = {
@@ -29,61 +28,52 @@ export function buildTransportistaPayload({
     return data;
 }
 
-/** Iniciales del transportista; la letra de reserva es propia de este panel. */
+/** Iniciales del comprador; la letra de reserva es propia de este panel. */
 function getInitials(name = '') {
     return name.split(/\s+/).filter(Boolean).slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase()).join('') || 'T';
-}
-
-function formatVehicles(vehiculos) {
-    return Array.isArray(vehiculos) && vehiculos.length
-        ? vehiculos.map((vehiculo) => vehiculo.placa).join(', ')
-        : 'Sin vehículos';
+        .map((part) => part.charAt(0).toUpperCase()).join('') || 'C';
 }
 
 function initialize() {
     const $ = (selector) => document.querySelector(selector);
     const elements = {
-        body: $('#cuerpo-transportistas'), empty: $('#estado-vacio'), error: $('#estado-error'),
+        body: $('#cuerpo-compradores'), empty: $('#estado-vacio'), error: $('#estado-error'),
         errorMessage: $('#mensaje-error'), retry: $('#reintentar'), loading: $('#estado-carga'),
-        panel: $('#panel-transportistas'), total: $('#total-transportistas'),
-        search: $('#busqueda-transportista'), status: $('#filtro-estado'), refresh: $('#actualizar-lista'),
+        panel: $('#panel-compradores'), total: $('#total-compradores'),
+        search: $('#busqueda-comprador'), status: $('#filtro-estado'), refresh: $('#actualizar-lista'),
         previous: $('#pagina-anterior'), next: $('#pagina-siguiente'), page: $('#pagina-actual'),
-        create: $('#crear-transportista'), modal: $('#modal-transportista'),
-        form: $('#formulario-transportista'), modalTitle: $('#titulo-modal'),
+        create: $('#crear-comprador'), modal: $('#modal-comprador'),
+        form: $('#formulario-comprador'), modalTitle: $('#titulo-modal'),
         modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'),
-        save: $('#guardar-transportista'), reactivateExisting: $('#reactivar-existente'),
-        types: $('#identificacion-tipo'), idHint: $('#ayuda-identificacion-numero'), deactivateModal: $('#modal-desactivar'),
-        deactivateMessage: $('#mensaje-desactivar'), cancelDeactivate: $('#cancelar-desactivacion'),
-        confirmDeactivate: $('#confirmar-desactivacion'), detailModal: $('#modal-detalle'),
-        detailTitle: $('#titulo-detalle'), detailContent: $('#detalle-contenido'),
+        save: $('#guardar-comprador'), reactivateExisting: $('#reactivar-existente'),
+        types: $('#identificacion-tipo'), idHint: $('#ayuda-identificacion-numero'),
+        deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
+        cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'),
+        detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'),
+        detailContent: $('#detalle-contenido'), capacities: $('#lista-capacidades'),
         closeDetail: $('#cerrar-detalle'), closeDetailSecondary: $('#cerrar-detalle-secundario'),
-        editFromDetail: $('#editar-desde-detalle'), openAssign: $('#abrir-asignar-vehiculo'),
-        assignModal: $('#modal-asignar-vehiculo'), assignForm: $('#formulario-asignar-vehiculo'),
-        assignSelect: $('#asignar-vehiculo-select'), closeAssign: $('#cerrar-asignar'),
-        cancelAssign: $('#cancelar-asignacion'),
+        editFromDetail: $('#editar-desde-detalle'),
         toastPolite: $('#toast-status'), toastAssertive: $('#toast-alert'),
     };
 
-    const transportistas = new Map();
+    const compradores = new Map();
     const toast = createToast({ polite: elements.toastPolite, assertive: elements.toastAssertive });
     const errores = bindFormErrors(elements.form);
     const submit = createSubmitGuard();
     const statusChange = createSubmitGuard();
-    const assign = createSubmitGuard();
-    // D1: este panel vigila ademas la asignacion de vehiculos.
     const dialogs = createDialogController({
-        isBusy: () => submit.busy || statusChange.busy || assign.busy,
+        isBusy: () => submit.busy || statusChange.busy,
     });
 
     let state = createListState({ pageSize: 25 });
     let tiposIdentificacion = [];
     let listController = null;
-    let transportistaPendiente = null;
-    let transportistaDetalle = null;
+    let capacityController = null;
+    let compradorPendiente = null;
+    let compradorDetalle = null;
     let searchTimer = 0;
 
-    async function listCarriers({ page = state.page } = {}) {
+    async function listBuyers({ page = state.page } = {}) {
         listController?.abort();
         listController = new AbortController();
         const started = nextRequest(state, { page });
@@ -100,9 +90,9 @@ function initialize() {
             const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
             tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion)
                 ? response.data.catalogos.tiposIdentificacion : [];
-            const list = Array.isArray(response.data?.transportistas) ? response.data.transportistas : [];
-            transportistas.clear();
-            list.forEach((carrier) => transportistas.set(carrier.identificacionNumero, carrier));
+            const list = Array.isArray(response.data?.compradores) ? response.data.compradores : [];
+            compradores.clear();
+            list.forEach((buyer) => compradores.set(buyer.identificacionNumero, buyer));
             state = applyResult(state, {
                 sequence: started.sequence,
                 items: list,
@@ -134,7 +124,7 @@ function initialize() {
         elements.body.replaceChildren();
         if (!view.showList) return;
         const fragment = document.createDocumentFragment();
-        state.items.forEach((carrier) => fragment.appendChild(createRow(carrier)));
+        state.items.forEach((buyer) => fragment.appendChild(createRow(buyer)));
         elements.body.appendChild(fragment);
     }
 
@@ -154,34 +144,32 @@ function initialize() {
         return button;
     }
 
-    function createRow(carrier) {
+    function createRow(buyer) {
         const row = document.createElement('tr');
-        row.dataset.id = carrier.identificacionNumero;
-        const carrierCell = createCell('Transportista');
+        row.dataset.id = buyer.identificacionNumero;
+        const buyerCell = createCell('Comprador');
         const summary = document.createElement('div'); summary.className = 'producer-summary';
         const avatar = document.createElement('span');
         avatar.className = 'avatar';
-        avatar.textContent = getInitials(carrier.nombre);
+        avatar.textContent = getInitials(buyer.nombre);
         const details = document.createElement('span');
-        const name = document.createElement('strong'); name.textContent = carrier.nombre || 'Sin nombre';
+        const name = document.createElement('strong'); name.textContent = buyer.nombre || 'Sin nombre';
         const email = document.createElement('small');
-        email.textContent = carrier.correoElectronico || 'Sin correo';
-        details.append(name, email); summary.append(avatar, details); carrierCell.appendChild(summary);
+        email.textContent = buyer.correoElectronico || 'Sin correo';
+        details.append(name, email); summary.append(avatar, details); buyerCell.appendChild(summary);
 
         const identificationCell = createCell('Identificación');
         const type = document.createElement('small');
         type.className = 'secondary-data';
-        type.textContent = carrier.identificacion?.tipoCodigo || 'Sin tipo';
+        type.textContent = buyer.identificacion?.tipoCodigo || 'Sin tipo';
         const number = document.createElement('span');
-        number.textContent = carrier.identificacionNumero;
+        number.textContent = buyer.identificacionNumero;
         identificationCell.append(type, number);
 
         const contactCell = createCell('Contacto');
-        contactCell.textContent = carrier.telefono || 'Sin teléfono';
-        const vehiclesCell = createCell('Vehículos');
-        vehiclesCell.textContent = formatVehicles(carrier.vehiculos);
+        contactCell.textContent = buyer.telefono || 'Sin teléfono';
         const statusCell = createCell('Estado');
-        const active = carrier.estado === 'ACTIVO';
+        const active = buyer.estado === 'ACTIVO';
         const badge = document.createElement('span');
         badge.className = `badge badge--${active ? 'active' : 'inactive'}`;
         badge.textContent = active ? 'Activo' : 'Inactivo';
@@ -189,159 +177,116 @@ function initialize() {
 
         const actionsCell = createCell('Acciones');
         actionsCell.className = 'row-actions';
-        actionsCell.append(createActionButton('ver', 'Ver', carrier.identificacionNumero));
+        actionsCell.append(createActionButton('ver', 'Ver', buyer.identificacionNumero));
         if (active) {
             actionsCell.append(
-                createActionButton('editar', 'Editar', carrier.identificacionNumero),
-                createActionButton('desactivar', 'Desactivar', carrier.identificacionNumero),
+                createActionButton('editar', 'Editar', buyer.identificacionNumero),
+                createActionButton('desactivar', 'Desactivar', buyer.identificacionNumero),
             );
         } else {
-            actionsCell.append(createActionButton('reactivar', 'Reactivar', carrier.identificacionNumero));
+            actionsCell.append(createActionButton('reactivar', 'Reactivar', buyer.identificacionNumero));
         }
-        row.append(carrierCell, identificationCell, contactCell, vehiclesCell, statusCell, actionsCell);
+        row.append(buyerCell, identificationCell, contactCell, statusCell, actionsCell);
         return row;
     }
 
     function handleTableAction(event) {
         const button = event.target.closest('[data-action]');
         if (!button) return;
-        const carrier = transportistas.get(button.dataset.id);
-        if (!carrier) return toast.error('No se encontró el transportista seleccionado.');
-        if (button.dataset.action === 'ver') openDetail(carrier);
-        if (button.dataset.action === 'editar') openEditForm(carrier);
-        if (button.dataset.action === 'desactivar') openDeactivation(carrier);
-        if (button.dataset.action === 'reactivar') reactivateCarrier(carrier);
+        const buyer = compradores.get(button.dataset.id);
+        if (!buyer) return toast.error('No se encontró el comprador seleccionado.');
+        if (button.dataset.action === 'ver') openDetail(buyer);
+        if (button.dataset.action === 'editar') openEditForm(buyer);
+        if (button.dataset.action === 'desactivar') openDeactivation(buyer);
+        if (button.dataset.action === 'reactivar') reactivateBuyer(buyer);
         return undefined;
     }
 
-    function openDetail(carrier) {
-        transportistaDetalle = carrier;
-        elements.detailTitle.textContent = carrier.nombre || 'Transportista';
+    function openDetail(buyer) {
+        compradorDetalle = buyer;
+        elements.detailTitle.textContent = buyer.nombre || 'Comprador';
         const fragment = document.createDocumentFragment();
         [
-            ['Identificación', `${carrier.identificacion?.tipoCodigo ?? 'Sin tipo'} · ${carrier.identificacionNumero}`],
-            ['Estado', carrier.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'],
-            ['Teléfono', carrier.telefono || '—'],
-            ['Correo electrónico', carrier.correoElectronico || '—'],
+            ['Identificación', `${buyer.identificacion?.tipoCodigo ?? 'Sin tipo'} · ${buyer.identificacionNumero}`],
+            ['Estado', buyer.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'],
+            ['Teléfono', buyer.telefono || '—'],
+            ['Correo electrónico', buyer.correoElectronico || '—'],
         ].forEach(([etiqueta, valor]) => {
             const dt = document.createElement('dt'); dt.textContent = etiqueta;
             const dd = document.createElement('dd'); dd.textContent = valor;
             fragment.append(dt, dd);
         });
-
-        const vehiculos = Array.isArray(carrier.vehiculos) ? carrier.vehiculos : [];
-        if (vehiculos.length === 0) {
-            const dt = document.createElement('dt'); dt.textContent = 'Vehículos';
-            const dd = document.createElement('dd'); dd.textContent = 'Sin vehículos asignados';
-            fragment.append(dt, dd);
-        } else {
-            vehiculos.forEach((vehiculo) => {
-                const dt = document.createElement('dt'); dt.textContent = 'Vehículo';
-                const dd = document.createElement('dd');
-                const label = document.createElement('span');
-                label.textContent = `${vehiculo.placa} — ${vehiculo.modelo}`;
-                const removeButton = document.createElement('button');
-                removeButton.type = 'button';
-                removeButton.className = 'link-button';
-                removeButton.dataset.vehiculoId = String(vehiculo.vehiculoId);
-                removeButton.textContent = 'Quitar';
-                removeButton.setAttribute('aria-label', `Quitar el vehículo ${vehiculo.placa}`);
-                dd.append(label, document.createTextNode(' — '), removeButton);
-                fragment.append(dt, dd);
-            });
-        }
         elements.detailContent.replaceChildren(fragment);
         dialogs.open(elements.detailModal, { focus: elements.closeDetail });
+        loadCapacities(buyer.identificacionNumero);
     }
 
-    function closeDetail() { dialogs.close(elements.detailModal); transportistaDetalle = null; }
+    /**
+     * Que capacidades tiene la persona detras de esta identificacion.
+     *
+     * La consulta se aborta al cerrar el detalle: sin eso, abrir dos fichas
+     * seguidas dejaria que la respuesta lenta de la primera pintara sus
+     * capacidades sobre la segunda.
+     */
+    async function loadCapacities(identificacionNumero) {
+        capacityController?.abort();
+        capacityController = new AbortController();
+        const { signal } = capacityController;
+        elements.capacities.setAttribute('aria-busy', 'true');
+        elements.capacities.replaceChildren(createCapacityItem({
+            etiqueta: 'Consultando capacidades…', situacion: 'cargando',
+        }));
+
+        const capacidades = await consultarCapacidades(identificacionNumero, {
+            requestImpl: (url) => request(url, { signal }),
+        });
+        if (signal.aborted) return;
+
+        elements.capacities.setAttribute('aria-busy', 'false');
+        const fragment = document.createDocumentFragment();
+        capacidades.forEach((capacidad) => fragment.appendChild(createCapacityItem(capacidad)));
+        elements.capacities.replaceChildren(fragment);
+    }
+
+    function createCapacityItem(capacidad) {
+        const item = document.createElement('li');
+        item.className = `capacidad capacidad--${capacidad.situacion}`;
+        const nombre = document.createElement('span');
+        nombre.className = 'capacidad__nombre';
+        nombre.textContent = capacidad.alias
+            ? `${capacidad.etiqueta} (${capacidad.alias})`
+            : capacidad.etiqueta;
+        item.appendChild(nombre);
+        if (capacidad.situacion === 'cargando') return item;
+
+        const estado = document.createElement('span');
+        estado.className = 'capacidad__estado';
+        estado.textContent = describirCapacidad(capacidad);
+        item.appendChild(estado);
+        // La capacidad actual ya se esta viendo; enlazar a su propio panel no
+        // lleva a ninguna parte nueva.
+        if (capacidad.situacion === 'registrado' && capacidad.clave !== 'comprador') {
+            const enlace = document.createElement('a');
+            enlace.className = 'capacidad__enlace';
+            enlace.href = `${capacidad.panel}?q=${encodeURIComponent(capacidad.identificacionNumero ?? '')}`;
+            enlace.textContent = 'Abrir panel';
+            enlace.setAttribute('aria-label', `Abrir el panel de ${capacidad.etiqueta}`);
+            item.appendChild(enlace);
+        }
+        return item;
+    }
+
+    function closeDetail() {
+        capacityController?.abort();
+        dialogs.close(elements.detailModal);
+        compradorDetalle = null;
+    }
 
     function editFromDetail() {
-        if (!transportistaDetalle) return;
-        const carrier = transportistaDetalle;
+        if (!compradorDetalle) return;
+        const buyer = compradorDetalle;
         closeDetail();
-        openEditForm(carrier);
-    }
-
-    function handleUnassignClick(event) {
-        const button = event.target.closest('[data-vehiculo-id]');
-        if (!button) return undefined;
-        const vehiculoId = Number(button.dataset.vehiculoId);
-        return assign.run(async () => {
-            button.disabled = true;
-            try {
-                const response = await request(ASIGNACION_URL, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ vehiculoId }),
-                });
-                toast.success(response.message);
-                closeDetail();
-                await listCarriers();
-            } catch (error) {
-                toast.error(error.message);
-                button.disabled = false;
-            }
-        });
-    }
-
-    function openAssignDialog() {
-        if (!transportistaDetalle) return;
-        elements.assignSelect.replaceChildren(new Option('Cargando vehículos…', ''));
-        dialogs.open(elements.assignModal, { focus: elements.assignSelect });
-        loadActiveVehicles();
-    }
-
-    async function loadActiveVehicles() {
-        try {
-            const response = await request(
-                `${VEHICULOS_URL}?${new URLSearchParams({ estado: 'ACTIVO', tamanoPagina: '100' })}`,
-            );
-            const list = Array.isArray(response.data?.vehiculos) ? response.data.vehiculos : [];
-            const fragment = document.createDocumentFragment();
-            const placeholder = document.createElement('option');
-            placeholder.value = ''; placeholder.textContent = 'Seleccione un vehículo';
-            fragment.appendChild(placeholder);
-            list.forEach((vehiculo) => {
-                const option = document.createElement('option');
-                option.value = String(vehiculo.vehiculoId);
-                option.textContent = `${vehiculo.placa} — ${vehiculo.modelo}`;
-                fragment.appendChild(option);
-            });
-            elements.assignSelect.replaceChildren(fragment);
-            if (list.length === 0) toast.warning('No hay vehículos activos disponibles para asignar.');
-        } catch (error) {
-            elements.assignSelect.replaceChildren(new Option('No se pudieron cargar los vehículos', ''));
-            toast.error(error.message);
-        }
-    }
-
-    function closeAssignDialog() { if (!assign.busy) dialogs.close(elements.assignModal); }
-
-    function confirmAssignment(event) {
-        event.preventDefault();
-        if (!transportistaDetalle) return undefined;
-        const vehiculoId = Number(elements.assignSelect.value || 0);
-        if (!vehiculoId) { toast.warning('Seleccione un vehículo.'); return undefined; }
-        return assign.run(async () => {
-            elements.assignForm.setAttribute('aria-busy', 'true');
-            try {
-                const response = await request(ASIGNACION_URL, {
-                    method: 'PUT',
-                    body: JSON.stringify({
-                        identificacionNumero: transportistaDetalle.identificacionNumero,
-                        vehiculoId,
-                    }),
-                });
-                toast.success(response.message);
-                dialogs.close(elements.assignModal);
-                closeDetail();
-                await listCarriers();
-            } catch (error) {
-                toast.error(error.message);
-            } finally {
-                elements.assignForm.setAttribute('aria-busy', 'false');
-            }
-        });
+        openEditForm(buyer);
     }
 
     function renderTypeOptions() {
@@ -384,35 +329,35 @@ function initialize() {
 
     function openCreateForm() {
         resetForm();
-        elements.modalTitle.textContent = 'Crear transportista';
+        elements.modalTitle.textContent = 'Crear comprador';
         elements.modalSubtitle.textContent = 'Nuevo registro';
-        elements.save.textContent = 'Guardar transportista';
+        elements.save.textContent = 'Guardar comprador';
         dialogs.open(elements.modal, { focus: elements.types });
     }
 
-    function openEditForm(carrier) {
+    function openEditForm(buyer) {
         resetForm();
-        $('#identificacion-original').value = carrier.identificacionNumero;
-        elements.types.value = carrier.identificacion?.tipoCodigo ?? '';
-        $('#identificacion-numero').value = carrier.identificacionNumero;
+        $('#identificacion-original').value = buyer.identificacionNumero;
+        elements.types.value = buyer.identificacion?.tipoCodigo ?? '';
+        $('#identificacion-numero').value = buyer.identificacionNumero;
         $('#identificacion-numero').readOnly = true;
-        $('#nombre').value = carrier.nombre ?? '';
-        $('#telefono').value = carrier.telefono ?? '';
-        $('#correo-electronico').value = carrier.correoElectronico ?? '';
-        elements.modalTitle.textContent = 'Editar transportista';
+        $('#nombre').value = buyer.nombre ?? '';
+        $('#telefono').value = buyer.telefono ?? '';
+        $('#correo-electronico').value = buyer.correoElectronico ?? '';
+        elements.modalTitle.textContent = 'Editar comprador';
         elements.modalSubtitle.textContent = 'Actualizar registro';
         elements.save.textContent = 'Guardar cambios';
         dialogs.open(elements.modal, { focus: $('#nombre') });
     }
 
-    function saveCarrier(event) {
+    function saveBuyer(event) {
         event.preventDefault();
         return submit.run(async () => {
             errores.clearErrors();
             if (!elements.form.checkValidity()) { errores.markFirstInvalid(); return; }
             const original = $('#identificacion-original').value;
             const editing = original !== '';
-            const data = buildTransportistaPayload({
+            const data = buildCompradorPayload({
                 tipoCodigo: elements.types.value,
                 numero: $('#identificacion-numero').value,
                 nombre: $('#nombre').value,
@@ -428,7 +373,7 @@ function initialize() {
                 });
                 dialogs.close(elements.modal);
                 toast.success(response.message);
-                await listCarriers();
+                await listBuyers();
             } catch (error) {
                 if (error.errors) errores.showErrors(error.errors);
                 if (!editing && error.status === 409) offerReactivation(error);
@@ -447,20 +392,20 @@ function initialize() {
         elements.reactivateExisting.focus();
     }
 
-    function reactivateExistingCarrier() {
+    function reactivateExistingBuyer() {
         const identificacionNumero = elements.reactivateExisting.dataset.id || '';
         if (!identificacionNumero) return undefined;
         return changeStatus('PATCH', { identificacionNumero }, () => dialogs.close(elements.modal));
     }
 
-    function openDeactivation(carrier) {
-        transportistaPendiente = carrier;
+    function openDeactivation(buyer) {
+        compradorPendiente = buyer;
         elements.deactivateMessage.textContent =
-            `${carrier.nombre} quedará inactivo. Sus vehículos asignados y su bitácora se conservarán.`;
+            `${buyer.nombre} dejará de comprar. Sus otras capacidades y su bitácora se conservarán.`;
         dialogs.open(elements.deactivateModal, { focus: elements.confirmDeactivate });
     }
 
-    function changeStatus(method, carrier, afterSuccess = null) {
+    function changeStatus(method, buyer, afterSuccess = null) {
         return statusChange.run(async () => {
             const controls = document.querySelectorAll(
                 '[data-action], #confirmar-desactivacion, #reactivar-existente',
@@ -469,11 +414,11 @@ function initialize() {
             try {
                 const response = await request(API_URL, {
                     method,
-                    body: JSON.stringify({ identificacionNumero: carrier.identificacionNumero }),
+                    body: JSON.stringify({ identificacionNumero: buyer.identificacionNumero }),
                 });
                 afterSuccess?.();
                 toast.success(response.message);
-                await listCarriers();
+                await listBuyers();
             } catch (error) {
                 toast.error(error.message);
             } finally {
@@ -482,38 +427,38 @@ function initialize() {
         });
     }
 
-    function deactivateCarrier() {
-        if (!transportistaPendiente) return undefined;
-        return changeStatus('DELETE', transportistaPendiente, () => {
+    function deactivateBuyer() {
+        if (!compradorPendiente) return undefined;
+        return changeStatus('DELETE', compradorPendiente, () => {
             dialogs.close(elements.deactivateModal);
-            transportistaPendiente = null;
+            compradorPendiente = null;
         });
     }
 
-    function reactivateCarrier(carrier) { return changeStatus('PATCH', carrier); }
+    function reactivateBuyer(buyer) { return changeStatus('PATCH', buyer); }
 
     function closeForm() { if (!submit.busy) { dialogs.close(elements.modal); errores.clearErrors(); } }
     function closeDeactivation() {
         if (statusChange.busy) return;
         dialogs.close(elements.deactivateModal);
-        transportistaPendiente = null;
+        compradorPendiente = null;
     }
 
     function scheduleSearch() {
         window.clearTimeout(searchTimer);
-        searchTimer = window.setTimeout(() => listCarriers({ page: 1 }), 300);
+        searchTimer = window.setTimeout(() => listBuyers({ page: 1 }), 300);
     }
 
     elements.create.addEventListener('click', openCreateForm);
-    elements.refresh.addEventListener('click', () => listCarriers());
-    elements.retry.addEventListener('click', () => listCarriers());
+    elements.refresh.addEventListener('click', () => listBuyers());
+    elements.retry.addEventListener('click', () => listBuyers());
     elements.previous.addEventListener('click', () => {
-        if (state.page > 1) listCarriers({ page: state.page - 1 });
+        if (state.page > 1) listBuyers({ page: state.page - 1 });
     });
-    elements.next.addEventListener('click', () => listCarriers({ page: state.page + 1 }));
-    elements.status.addEventListener('change', () => listCarriers({ page: 1 }));
+    elements.next.addEventListener('click', () => listBuyers({ page: state.page + 1 }));
+    elements.status.addEventListener('change', () => listBuyers({ page: 1 }));
     elements.search.addEventListener('input', scheduleSearch);
-    elements.form.addEventListener('submit', saveCarrier);
+    elements.form.addEventListener('submit', saveBuyer);
     elements.form.addEventListener('invalid', errores.markNativeError, true);
     elements.form.addEventListener('input', errores.clearControlError);
     elements.form.addEventListener('change', errores.clearControlError);
@@ -521,32 +466,25 @@ function initialize() {
     // El campo solo llega a contener lo que el backend admite; el atributo
     // pattern sigue siendo la validacion, esto evita escribir lo imposible.
     aplicarRestriccionTelefono($('#telefono'));
-    elements.reactivateExisting.addEventListener('click', reactivateExistingCarrier);
+    elements.reactivateExisting.addEventListener('click', reactivateExistingBuyer);
     elements.close.addEventListener('click', closeForm);
     elements.cancel.addEventListener('click', closeForm);
     elements.cancelDeactivate.addEventListener('click', closeDeactivation);
-    elements.confirmDeactivate.addEventListener('click', deactivateCarrier);
+    elements.confirmDeactivate.addEventListener('click', deactivateBuyer);
     elements.body.addEventListener('click', handleTableAction);
     elements.closeDetail.addEventListener('click', closeDetail);
     elements.closeDetailSecondary.addEventListener('click', closeDetail);
     elements.editFromDetail.addEventListener('click', editFromDetail);
-    elements.detailContent.addEventListener('click', handleUnassignClick);
-    elements.openAssign.addEventListener('click', openAssignDialog);
-    elements.closeAssign.addEventListener('click', closeAssignDialog);
-    elements.cancelAssign.addEventListener('click', closeAssignDialog);
-    elements.assignForm.addEventListener('submit', confirmAssignment);
-    [elements.modal, elements.deactivateModal, elements.detailModal, elements.assignModal]
-        .forEach((dialog) => {
-            dialog.addEventListener('click', dialogs.handleBackdropClick);
-            dialog.addEventListener('close', dialogs.restoreFocus);
-        });
-
+    [elements.modal, elements.deactivateModal, elements.detailModal].forEach((dialog) => {
+        dialog.addEventListener('click', dialogs.handleBackdropClick);
+        dialog.addEventListener('close', dialogs.restoreFocus);
+    });
 
     // La busqueda puede venir en la URL desde el enlace "Abrir panel" de otra
     // capacidad, para caer directamente sobre la misma persona.
     const inicial = new URLSearchParams(window.location.search).get('q');
     if (inicial) elements.search.value = inicial;
-    listCarriers();
+    listBuyers();
 }
 
 if (typeof document !== 'undefined') {
