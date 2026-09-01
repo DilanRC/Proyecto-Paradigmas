@@ -4,6 +4,7 @@ Ejecutar sobre una base limpia inicializada con Docker:
 
 ```bash
 docker compose exec -T app php Tests/naming_gate.php
+docker compose exec -T app php Tests/comprador_retiro_gate.php
 docker compose exec -T app php Tests/db_ready_test.php
 docker compose exec -T app php Tests/backend_db_ready_test.php
 docker compose exec -T app php Tests/comprador_clasificacion_test.php
@@ -59,10 +60,17 @@ php services/supabase-database/evals/schema_eval.php
 
 Las pruebas generan identificaciones aleatorias y limpian únicamente sus filas.
 
-`comprador_consulta_test.php` fija el paso (d): `/api/compradores.php` es de
-solo lectura, la fuente es el periodo `COMPRADOR` abierto, una Persona inactiva
-sigue visible como clasificada pero no disponible, `COMPRADOR` y `VENDEDOR`
-pueden coexistir y ninguna lectura depende de `tbcomprador`.
+`comprador_retiro_gate.php` es el gate estático de DEC-DBREADY-008: exige que
+modelo/controlador legacy sigan retirados, que el endpoint y la vista sean de
+solo lectura, que Comprador permanezca marcado como clasificación derivada, que
+Productor no vuelva a ser alias de Vendedor y que `tbcomprador` no se elimine
+antes del paso (e).
+
+`comprador_consulta_test.php` fija el contrato dinámico del paso (d):
+`/api/compradores.php` es de solo lectura, la fuente es el periodo `COMPRADOR`
+abierto, una Persona inactiva sigue visible como clasificada pero no disponible,
+`COMPRADOR` y `VENDEDOR` pueden coexistir y ninguna lectura depende de
+`tbcomprador`.
 
 `deployment_test.php` valida que las imágenes contienen el código, respetan
 `PORT` y conservan la creación idempotente de `tbfinca`. `deployment_eval.php`
