@@ -5,6 +5,8 @@
 // separados por recurso y por contexto crear/editar. No persiste contrasenas,
 // archivos, errores visuales, loading ni estado de botones.
 
+import { DIALOG_OPEN_EVENT } from './dialog.js';
+
 const VERSION = 1;
 const PREFIX = 'tindercows:draft';
 const IDENTITY_FIELDS = ['identificacionNumeroOriginal', 'vehiculoId', 'id'];
@@ -147,7 +149,6 @@ export function createFormDraft({
     let timer = null;
     let restoring = false;
     let dirty = false;
-    let observer = null;
 
     function context() {
         try { return resolveContext?.() ?? null; } catch { return null; }
@@ -230,18 +231,15 @@ export function createFormDraft({
     form.addEventListener?.('change', scheduleSave);
     globalThis.addEventListener?.('pagehide', onPageHide);
 
+    // La restauracion debe ocurrir dentro del mismo turno en que se abre el
+    // <dialog>, antes de que el controlador mueva el foco al primer campo. Usar
+    // MutationObserver dejaba la restauracion pendiente para un microtask; en
+    // navegadores Chromium/Linux ese callback podia reescribir un <select>
+    // justo cuando el usuario desplegaba su menu nativo y hacerlo cerrarse.
     const dialog = form.closest?.('dialog') ?? null;
+    const onDialogOpen = () => restoreNow();
     if (restoreOnOpen && dialog) {
-        const onOpen = () => { if (dialog.open) restoreNow(); };
-        const Observer = globalThis.MutationObserver;
-        if (typeof Observer === 'function') {
-            observer = new Observer((records) => {
-                if (records.some((record) => record.attributeName === 'open')) onOpen();
-            });
-            observer.observe(dialog, { attributes: true, attributeFilter: ['open'] });
-        } else {
-            dialog.addEventListener?.('toggle', onOpen);
-        }
+        dialog.addEventListener?.(DIALOG_OPEN_EVENT, onDialogOpen);
     }
 
     return {
@@ -254,7 +252,9 @@ export function createFormDraft({
             form.removeEventListener?.('input', scheduleSave);
             form.removeEventListener?.('change', scheduleSave);
             globalThis.removeEventListener?.('pagehide', onPageHide);
-            observer?.disconnect();
+            if (restoreOnOpen && dialog) {
+                dialog.removeEventListener?.(DIALOG_OPEN_EVENT, onDialogOpen);
+            }
         },
     };
 }
