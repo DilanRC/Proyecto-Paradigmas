@@ -12,6 +12,8 @@ const checks = [
     ['landing_oficial', home.includes('Gestión centralizada de la red') && home.includes('Cómo usar TinderCows')],
     ['login_navegable', home.includes('href="login.php"') && login.includes('id="formulario-login"')],
     ['logos_oficiales', home.includes('assets/logo_dark.png') && login.includes('assets/logo_light.png')],
+    ['logos_con_dimensiones_html', home.includes('width="44" height="44"') && home.includes('width="84" height="84"')],
+    ['css_versionado', home.includes('css/components.css?v=official-shell-2') && login.includes('css/red-ganadera.css?v=official-shell-2')],
     ['sin_icono_viejo_en_home', !home.includes('<svg viewBox="0 0 48 48">')],
     ['tablas_sin_scroll_horizontal', panelCss.includes('overflow-x:visible') && panelCss.includes('table-layout:fixed')],
     ['acciones_no_ensanchan_tabla', panelCss.includes('flex-wrap:wrap') && panelCss.includes('overflow-wrap:anywhere')],
