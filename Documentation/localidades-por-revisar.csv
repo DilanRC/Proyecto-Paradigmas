@@ -1,0 +1,293 @@
+codigoDistrito,provincia,canton,distrito,nombre_actual,sugerencia,correccion_final,confianza,evidencia,puntaje
+10302,San José,Desamparados,San Miguel,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+10304,San José,Desamparados,San Rafael Arriba,Méez,MENDEZ,,ALTA,el nombre completo existe en INEC,
+10604,San José,Aserrí,San Gabriel,Rancho Grae,RANCHO GRANDE,,ALTA,el nombre completo existe en INEC,
+10704,San José,Mora,Piedras Negras,Quebrada Grae,QUEBRADA GRANDE,,ALTA,el nombre completo existe en INEC,
+10901,San José,Santa Ana,Santa Ana,Area,ANDREA,,ALTA,el nombre completo existe en INEC,
+11001,San José,Alajuelita,Alajuelita,Juan Pablo Seguo,JUAN PABLO SEGUNDO,,ALTA,el nombre completo existe en INEC,
+11004,San José,Alajuelita,Concepción,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+11102,San José,Vázquez de Coronado,San Rafael,Holaa,HOLANDA,,ALTA,el nombre completo existe en INEC,
+11204,San José,Acosta,Cangrejal,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+11301,San José,Tibás,San Juan,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+11401,San José,Moravia,San Vicente,Alora,ALONDRA,,ALTA,el nombre completo existe en INEC,
+11701,San José,Dota,Santa María,Baera,BANDERA,,ALTA,el nombre completo existe en INEC,
+12002,San José,León Cortés Castro,San Andrés,Llano Grae,LLANO GRANDE,,ALTA,el nombre completo existe en INEC,
+20107,Alajuela,Alajuela,Sabanilla,Lia Vista,LINDA VISTA,,ALTA,el nombre completo existe en INEC,
+20211,Alajuela,San Ramón,Concepción,Calle Méez,CALLE MENDEZ,,ALTA,el nombre completo existe en INEC,
+20301,Alajuela,Grecia,Grecia,Lia Vista,LINDA VISTA,,ALTA,el nombre completo existe en INEC,
+20403,Alajuela,San Mateo,Jesús María,Quebrada Grae,QUEBRADA GRANDE,,ALTA,el nombre completo existe en INEC,
+20604,Alajuela,Naranjo,Cirrí Sur,Quebrada Hoa,QUEBRADA HONDA,,ALTA,el nombre completo existe en INEC,
+20606,Alajuela,Naranjo,San Juan,Lia Vista,LINDA VISTA,,ALTA,el nombre completo existe en INEC,
+20606,Alajuela,Naranjo,San Juan,Rincón Elizoo,RINCON ELIZONDO,,ALTA,el nombre completo existe en INEC,
+20606,Alajuela,Naranjo,San Juan,Río Grae,RIO GRANDE,,ALTA,el nombre completo existe en INEC,
+21004,Alajuela,San Carlos,Aguas Zarcas,Calle Méez,CALLE MENDEZ,,ALTA,el nombre completo existe en INEC,
+21006,Alajuela,San Carlos,Pital,Rosalía,ROSALINDA,,ALTA,el nombre completo existe en INEC,
+21007,Alajuela,San Carlos,La Fortuna,Lia Vista,LINDA VISTA,,ALTA,el nombre completo existe en INEC,
+21010,Alajuela,San Carlos,Venado,Lia Vista,LINDA VISTA,,ALTA,el nombre completo existe en INEC,
+21011,Alajuela,San Carlos,Cutris,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+21403,Alajuela,Los Chiles,El Amparo,Quebrada Grae,QUEBRADA GRANDE,,ALTA,el nombre completo existe en INEC,
+30104,Cartago,Cartago,San Nicolás,Roa,RONDA,,ALTA,el nombre completo existe en INEC,
+30105,Cartago,Cartago,Aguacaliente o San Francisco,Loma Lia,LOMA LINDA,,ALTA,el nombre completo existe en INEC,
+30201,Cartago,Paraíso,Paraíso,Paora,PANDORA,,ALTA,el nombre completo existe en INEC,
+30204,Cartago,Paraíso,Cachí,Piedra Grae,PIEDRA GRANDE,,ALTA,el nombre completo existe en INEC,
+30303,Cartago,La Unión,San Juan,Haciea Gregal,HACIENDA GREGAL,,ALTA,el nombre completo existe en INEC,
+30308,Cartago,La Unión,Río Azul,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+30403,Cartago,Jiménez,Pejibaye,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+30502,Cartago,Turrialba,La Suiza,Las Golorinas,LAS GOLONDRINAS,,ALTA,el nombre completo existe en INEC,
+30505,Cartago,Turrialba,Santa Teresita,Saoval,SANDOVAL,,ALTA,el nombre completo existe en INEC,
+30512,Cartago,Turrialba,Chirripó,Valle Escoido,VALLE ESCONDIDO,,ALTA,el nombre completo existe en INEC,
+30701,Cartago,Oreamuno,San Rafael,Cerro Grae,CERRO GRANDE,,ALTA,el nombre completo existe en INEC,
+30801,Cartago,El Guarco,El Tejar,Jacaraas,JACARANDAS,,ALTA,el nombre completo existe en INEC,
+40702,Heredia,Belén,La Ribera,Vista Lia,VISTA LINDA,,ALTA,el nombre completo existe en INEC,
+41002,Heredia,Sarapiquí,La Virgen,Quebrada Grae,QUEBRADA GRANDE,,ALTA,el nombre completo existe en INEC,
+50101,Guanacaste,Liberia,Liberia,Haciea,HACIENDA,,ALTA,el nombre completo existe en INEC,
+50103,Guanacaste,Liberia,Mayorga,Nueva Zelaa,NUEVA ZELANDA,,ALTA,el nombre completo existe en INEC,
+50203,Guanacaste,Nicoya,San Antonio,Tamario,TAMARINDO,,ALTA,el nombre completo existe en INEC,
+50704,Guanacaste,Abangares,Colorado,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+50906,Guanacaste,Nandayure,Bejuco,Caelillo,CANDELILLO,,ALTA,el nombre completo existe en INEC,
+51003,Guanacaste,La Cruz,La Garita,San Fernao,SAN FERNANDO,,ALTA,el nombre completo existe en INEC,
+60104,Puntarenas,Puntarenas,Lepanto,Cerro Iio,CERRO INDIO,,ALTA,el nombre completo existe en INEC,
+60108,Puntarenas,Puntarenas,Barranca,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+60114,Puntarenas,Puntarenas,Acapulco,Rancho Grae,RANCHO GRANDE,,ALTA,el nombre completo existe en INEC,
+60115,Puntarenas,Puntarenas,El Roble,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+60206,Puntarenas,Esparza,Caldera,Quebrada Hoa,QUEBRADA HONDA,,ALTA,el nombre completo existe en INEC,
+60302,Puntarenas,Buenos Aires,Volcán,Río Grae,RIO GRANDE,,ALTA,el nombre completo existe en INEC,
+60303,Puntarenas,Buenos Aires,Potrero Grande,Tamario,TAMARINDO,,ALTA,el nombre completo existe en INEC,
+60306,Puntarenas,Buenos Aires,Colinas,Quebrada Hoa,QUEBRADA HONDA,,ALTA,el nombre completo existe en INEC,
+60309,Puntarenas,Buenos Aires,Brunka,Llano Grae,LLANO GRANDE,,ALTA,el nombre completo existe en INEC,
+60501,Puntarenas,Osa,Puerto Cortés,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+60503,Puntarenas,Osa,Sierpe,Puerto Escoido,PUERTO ESCONDIDO,,ALTA,el nombre completo existe en INEC,
+60504,Puntarenas,Osa,Bahía Ballena,Quebrada Grae,QUEBRADA GRANDE,,ALTA,el nombre completo existe en INEC,
+60701,Puntarenas,Golfito,Golfito,Rotoa,ROTONDA,,ALTA,el nombre completo existe en INEC,
+60704,Puntarenas,Golfito,Pavón,Quebrada Hoa,QUEBRADA HONDA,,ALTA,el nombre completo existe en INEC,
+60801,Puntarenas,Coto Brus,San Vito,Liavista,LINDAVISTA,,ALTA,el nombre completo existe en INEC,
+61004,Puntarenas,Corredores,Laurel,María Fernaa,MARIA FERNANDA,,ALTA,el nombre completo existe en INEC,
+61201,Puntarenas,Monteverde,Monteverde,Liora,LINDORA,,ALTA,el nombre completo existe en INEC,
+70101,Limón,Limón,Limón,Juan Pablo Seguo,JUAN PABLO SEGUNDO,,ALTA,el nombre completo existe en INEC,
+70201,Limón,Pococí,Guápiles,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+70201,Limón,Pococí,Guápiles,Valle Escoido,VALLE ESCONDIDO,,ALTA,el nombre completo existe en INEC,
+70203,Limón,Pococí,Rita,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+70203,Limón,Pococí,Rita,Iio,INDIO,,ALTA,el nombre completo existe en INEC,
+70502,Limón,Matina,Batán,Almeros,ALMENDROS,,ALTA,el nombre completo existe en INEC,
+70605,Limón,Guácimo,Duacarí,San Edmuo,SAN EDMUNDO,,ALTA,el nombre completo existe en INEC,
+10501,San José,Tarrazú,San Marcos,Haciea Tres Marías,HACIENDA TRES MARIAS,,MEDIA,la palabra existe en INEC al reponer nd,
+10502,San José,Tarrazú,San Lorenzo,Bajo Quebrada Hoa,BAJO QUEBRADA HONDA,,MEDIA,la palabra existe en INEC al reponer nd,
+10901,San José,Santa Ana,Santa Ana,Haciea Del Valle,HACIENDA DEL VALLE,,MEDIA,la palabra existe en INEC al reponer nd,
+10903,San José,Santa Ana,Pozos,La Estancia De Liora,LA ESTANCIA DE LINDORA,,MEDIA,la palabra existe en INEC al reponer nd,
+10904,San José,Santa Ana,Uruca,Residencial La Haciea,RESIDENCIAL LA HACIENDA,,MEDIA,la palabra existe en INEC al reponer nd,
+11004,San José,Alajuelita,Concepción,Vista Grae Dos,VISTA GRANDE DOS,,MEDIA,la palabra existe en INEC al reponer nd,
+11102,San José,Vázquez de Coronado,San Rafael,Haciea Abigail,HACIENDA ABIGAIL,,MEDIA,la palabra existe en INEC al reponer nd,
+11102,San José,Vázquez de Coronado,San Rafael,Haciea La  Abigail,HACIENDA LA ABIGAIL,,MEDIA,la palabra existe en INEC al reponer nd,
+11601,San José,Turrubares,San Pablo,Haciea Valle Verde,HACIENDA VALLE VERDE,,MEDIA,la palabra existe en INEC al reponer nd,
+11603,San José,Turrubares,San Juan de Mata,Sitio Caelillal,SITIO CANDELILLAL,,MEDIA,la palabra existe en INEC al reponer nd,
+11701,San José,Dota,Santa María,Las Ares,LAS ANDRES,,MEDIA,la palabra existe en INEC al reponer nd,
+11703,San José,Dota,Copey,Alto Iio,ALTO INDIO,,MEDIA,la palabra existe en INEC al reponer nd,
+11901,San José,Pérez Zeledón,San Isidro de El General,Otro Muo,OTRO MUNDO,,MEDIA,la palabra existe en INEC al reponer nd,
+11904,San José,Pérez Zeledón,Rivas,Sitio Camino de los iios,SITIO CAMINO DE LOS INDIOS,,MEDIA,la palabra existe en INEC al reponer nd,
+20101,Alajuela,Alajuela,Alajuela,Acequia Grae,ACEQUIA GRANDE,,MEDIA,la palabra existe en INEC al reponer nd,
+20103,Alajuela,Alajuela,Carrizal,Calle Saoval,CALLE SANDOVAL,,MEDIA,la palabra existe en INEC al reponer nd,
+20107,Alajuela,Alajuela,Sabanilla,Haciea Alsacia,HACIENDA ALSACIA,,MEDIA,la palabra existe en INEC al reponer nd,
+20112,Alajuela,Alajuela,Tambor,Vueltas Peñaraa,VUELTAS PENARANDA,,MEDIA,la palabra existe en INEC al reponer nd,
+20113,Alajuela,Alajuela,Garita,Maarina,MANDARINA,,MEDIA,la palabra existe en INEC al reponer nd,
+20203,Alajuela,San Ramón,San Juan,Valle Escoido (La Pista),VALLE ESCONDIDO (LA PISTA),,MEDIA,la palabra existe en INEC al reponer nd,
+20605,Alajuela,Naranjo,San Jerónimo,Haciea Miramonte,HACIENDA MIRAMONTE,,MEDIA,la palabra existe en INEC al reponer nd,
+20703,Alajuela,Palmares,Buenos Aires,Calle Fernáez,CALLE FERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+20901,Alajuela,Orotina,Orotina,Alto Vias,ALTO VINDAS,,MEDIA,la palabra existe en INEC al reponer nd,
+20905,Alajuela,Orotina,La Ceiba,Haciea Don Fernao,HACIENDA DON FERNANDO,,MEDIA,la palabra existe en INEC al reponer nd,
+21001,Alajuela,San Carlos,Quesada,Abuancia (Concepción),ABUNDANCIA (CONCEPCION),,MEDIA,la palabra existe en INEC al reponer nd,
+21004,Alajuela,San Carlos,Aguas Zarcas,Calle Hernáez,CALLE HERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+21006,Alajuela,San Carlos,Pital,Piedra Alegre (Quebrada Grae),PIEDRA ALEGRE (QUEBRADA GRANDE),,MEDIA,la palabra existe en INEC al reponer nd,
+21011,Alajuela,San Carlos,Cutris,Tabla Grae (San Pedro),TABLA GRANDE (SAN PEDRO),,MEDIA,la palabra existe en INEC al reponer nd,
+21308,Alajuela,Upala,Canalete,Comaos,COMANDOS,,MEDIA,la palabra existe en INEC al reponer nd,
+21401,Alajuela,Los Chiles,Los Chiles,Hernáez (Los Ángeles),HERNANDEZ (LOS ANGELES),,MEDIA,la palabra existe en INEC al reponer nd,
+21401,Alajuela,Los Chiles,Los Chiles,San Alejaro,SAN ALEJANDRO,,MEDIA,la palabra existe en INEC al reponer nd,
+30203,Cartago,Paraíso,Orosi,Calle Obao,CALLE OBANDO,,MEDIA,la palabra existe en INEC al reponer nd,
+30205,Cartago,Paraíso,Llanos de Santa Lucía,Haciea Jacaraa,HACIENDA JACARANDA,,MEDIA,la palabra existe en INEC al reponer nd,
+30303,Cartago,La Unión,San Juan,Calle Obao,CALLE OBANDO,,MEDIA,la palabra existe en INEC al reponer nd,
+30306,Cartago,La Unión,Dulce Nombre,Tista Hernáez,TISTA HERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+30308,Cartago,La Unión,Río Azul,Liavista (Loma Gobierno),LINDAVISTA (LOMA GOBIERNO),,MEDIA,la palabra existe en INEC al reponer nd,
+30403,Cartago,Jiménez,Pejibaye,Hacieita,HACIENDITA,,MEDIA,la palabra existe en INEC al reponer nd,
+30501,Cartago,Turrialba,Turrialba,Hacieita,HACIENDITA,,MEDIA,la palabra existe en INEC al reponer nd,
+30702,Cartago,Oreamuno,Cot,Dagoberto Méez Carpio,DAGOBERTO MENDEZ CARPIO,,MEDIA,la palabra existe en INEC al reponer nd,
+30801,Cartago,El Guarco,El Tejar,Fuación de El Guarco,FUNDACION DE EL GUARCO,,MEDIA,la palabra existe en INEC al reponer nd,
+30802,Cartago,El Guarco,San Isidro,Seeros del Sol,SENDEROS DEL SOL,,MEDIA,la palabra existe en INEC al reponer nd,
+40105,Heredia,Heredia,Varablanca,Haciea Fátima,HACIENDA FATIMA,,MEDIA,la palabra existe en INEC al reponer nd,
+40305,Heredia,Santo Domingo,Santo Tomás,Calle Roa,CALLE RONDA,,MEDIA,la palabra existe en INEC al reponer nd,
+40502,Heredia,San Rafael,San Josecito,Villa del Seero,VILLA DEL SENDERO,,MEDIA,la palabra existe en INEC al reponer nd,
+40504,Heredia,San Rafael,Ángeles,Calle Hernáez,CALLE HERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+40504,Heredia,San Rafael,Ángeles,Cerro Redoo,CERRO REDONDO,,MEDIA,la palabra existe en INEC al reponer nd,
+40701,Heredia,Belén,San Antonio,Sa Vicente,SAND VICENTE,,MEDIA,la palabra existe en INEC al reponer nd,
+40701,Heredia,Belén,San Antonio,Vistas de Liora,VISTAS DE LINDORA,,MEDIA,la palabra existe en INEC al reponer nd,
+50101,Guanacaste,Liberia,Liberia,Haciea Birmania,HACIENDA BIRMANIA,,MEDIA,la palabra existe en INEC al reponer nd,
+50101,Guanacaste,Liberia,Liberia,Haciea El Real,HACIENDA EL REAL,,MEDIA,la palabra existe en INEC al reponer nd,
+50101,Guanacaste,Liberia,Liberia,Haciea Tempisque,HACIENDA TEMPISQUE,,MEDIA,la palabra existe en INEC al reponer nd,
+50101,Guanacaste,Liberia,Liberia,Pedro Hernáez,PEDRO HERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+50101,Guanacaste,Liberia,Liberia,Sitio Llano Grae,SITIO LLANO GRANDE,,MEDIA,la palabra existe en INEC al reponer nd,
+50102,Guanacaste,Liberia,Cañas Dulces,Haciea Los Ahogados,HACIENDA LOS AHOGADOS,,MEDIA,la palabra existe en INEC al reponer nd,
+50102,Guanacaste,Liberia,Cañas Dulces,Sitio Muo Nuevo,SITIO MUNDO NUEVO,,MEDIA,la palabra existe en INEC al reponer nd,
+50103,Guanacaste,Liberia,Mayorga,Haciea El Querpe,HACIENDA EL QUERPE,,MEDIA,la palabra existe en INEC al reponer nd,
+50104,Guanacaste,Liberia,Nacascolo,Haciea Horizontes,HACIENDA HORIZONTES,,MEDIA,la palabra existe en INEC al reponer nd,
+50104,Guanacaste,Liberia,Nacascolo,Haciea Monte Galán,HACIENDA MONTE GALAN,,MEDIA,la palabra existe en INEC al reponer nd,
+50104,Guanacaste,Liberia,Nacascolo,Haciea Santo Tomas,HACIENDA SANTO TOMAS,,MEDIA,la palabra existe en INEC al reponer nd,
+50201,Guanacaste,Nicoya,Nicoya,Cerro Redoo,CERRO REDONDO,,MEDIA,la palabra existe en INEC al reponer nd,
+50202,Guanacaste,Nicoya,Mansión,Sitio Grae,SITIO GRANDE,,MEDIA,la palabra existe en INEC al reponer nd,
+50205,Guanacaste,Nicoya,Sámara,Bajo Escoido,BAJO ESCONDIDO,,MEDIA,la palabra existe en INEC al reponer nd,
+50309,Guanacaste,Santa Cruz,Tamarindo,Calle Refuores,CALLE REFUNDORES,,MEDIA,la palabra existe en INEC al reponer nd,
+50309,Guanacaste,Santa Cruz,Tamarindo,Cristal Sas,CRISTAL SANDS,,MEDIA,la palabra existe en INEC al reponer nd,
+50309,Guanacaste,Santa Cruz,Tamarindo,Haciea Pinilla,HACIENDA PINILLA,,MEDIA,la palabra existe en INEC al reponer nd,
+50401,Guanacaste,Bagaces,Bagaces,Haciea Mojica,HACIENDA MOJICA,,MEDIA,la palabra existe en INEC al reponer nd,
+50401,Guanacaste,Bagaces,Bagaces,Sitio Chagüite Grae,SITIO CHAGUITE GRANDE,,MEDIA,la palabra existe en INEC al reponer nd,
+50402,Guanacaste,Bagaces,La Fortuna,Haciea Nispero,HACIENDA NISPERO,,MEDIA,la palabra existe en INEC al reponer nd,
+50501,Guanacaste,Carrillo,Filadelfia,Haciea El Viejo,HACIENDA EL VIEJO,,MEDIA,la palabra existe en INEC al reponer nd,
+50602,Guanacaste,Cañas,Palmira,Sitio Quebrada Hoa,SITIO QUEBRADA HONDA,,MEDIA,la palabra existe en INEC al reponer nd,
+51003,Guanacaste,La Cruz,La Garita,Aes,ANDES,,MEDIA,la palabra existe en INEC al reponer nd,
+51004,Guanacaste,La Cruz,Santa Elena,Sitio El Escoido,SITIO EL ESCONDIDO,,MEDIA,la palabra existe en INEC al reponer nd,
+51004,Guanacaste,La Cruz,Santa Elena,Sitio Potrero Grae,SITIO POTRERO GRANDE,,MEDIA,la palabra existe en INEC al reponer nd,
+51104,Guanacaste,Hojancha,Huacas,Preas,PRENDAS,,MEDIA,la palabra existe en INEC al reponer nd,
+60107,Puntarenas,Puntarenas,Guacimal,Alto Méez,ALTO MENDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+60107,Puntarenas,Puntarenas,Guacimal,Altos Fernáez,ALTOS FERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+60108,Puntarenas,Puntarenas,Barranca,Riojalaia 2,RIOJALANDIA 2,,MEDIA,la palabra existe en INEC al reponer nd,
+60111,Puntarenas,Puntarenas,Cóbano,Bajos de Fernáez,BAJOS DE FERNANDEZ,,MEDIA,la palabra existe en INEC al reponer nd,
+60206,Puntarenas,Esparza,Caldera,Haciea La Moncha,HACIENDA LA MONCHA,,MEDIA,la palabra existe en INEC al reponer nd,
+60206,Puntarenas,Esparza,Caldera,Haciea Mata de Guinea,HACIENDA MATA DE GUINEA,,MEDIA,la palabra existe en INEC al reponer nd,
+60206,Puntarenas,Esparza,Caldera,Haciea Playa Lia,HACIENDA PLAYA LIA,,MEDIA,la palabra existe en INEC al reponer nd,
+60206,Puntarenas,Esparza,Caldera,Haciea Salinas,HACIENDA SALINAS,,MEDIA,la palabra existe en INEC al reponer nd,
+60303,Puntarenas,Buenos Aires,Potrero Grande,San Arés (Las Vueltas de San Arés),SAN ANDRES (LAS VUELTAS DE SAN ARES),,MEDIA,la palabra existe en INEC al reponer nd,
+60403,Puntarenas,Montes de Oro,San Isidro,Calle El Tamario,CALLE EL TAMARINDO,,MEDIA,la palabra existe en INEC al reponer nd,
+60802,Puntarenas,Coto Brus,Sabalito,Piedra de Caela,PIEDRA DE CANDELA,,MEDIA,la palabra existe en INEC al reponer nd,
+61001,Puntarenas,Corredores,Corredor,Bajo Iios,BAJO INDIOS,,MEDIA,la palabra existe en INEC al reponer nd,
+61004,Puntarenas,Corredores,Laurel,Río Inceio,RIO INCENDIO,,MEDIA,la palabra existe en INEC al reponer nd,
+70102,Limón,Limón,Valle La Estrella,Paora Oeste,PANDORA OESTE,,MEDIA,la palabra existe en INEC al reponer nd,
+70104,Limón,Limón,Matama,Doonia,DONDONIA,,MEDIA,la palabra existe en INEC al reponer nd,
+70302,Limón,Siquirres,Pacuarito,Haciea Ojo de Agua,HACIENDA OJO DE AGUA,,MEDIA,la palabra existe en INEC al reponer nd,
+70401,Limón,Talamanca,Bratsi,Huberie (Rancho Grae),HUBERIE (RANCHO GRANDE),,MEDIA,la palabra existe en INEC al reponer nd,
+70404,Limón,Talamanca,Telire,Sitio Piedra Grae,SITIO PIEDRA GRANDE,,MEDIA,la palabra existe en INEC al reponer nd,
+70503,Limón,Matina,Carrandí,Carraí,CARRANDI,,MEDIA,la palabra existe en INEC al reponer nd,
+51001,Guanacaste,La Cruz,La Cruz,Sitio Bramadero del Duee,SITIO BRAMADERO DEL DUENDE,,BAJA,"modelo de trigramas, sin respaldo en INEC",3.00
+30403,Cartago,Jiménez,Pejibaye,Yolaa,YOLANDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",2.55
+11105,San José,Vázquez de Coronado,Cascajal,Sitio Coe,SITIO CONDE,,BAJA,"modelo de trigramas, sin respaldo en INEC",2.48
+50205,Guanacaste,Nicoya,Sámara,Roads,RONDADS,,BAJA,"modelo de trigramas, sin respaldo en INEC",2.36
+50307,Guanacaste,Santa Cruz,Diriá,Duees,DUENDES,,BAJA,"modelo de trigramas, sin respaldo en INEC",2.16
+40802,Heredia,Flores,Barrantes,Naos,NANDOS,,BAJA,"modelo de trigramas, sin respaldo en INEC",2.10
+21403,Alajuela,Los Chiles,El Amparo,IER La Trinidad,INDER LA TRINIDAD,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.92
+70102,Limón,Limón,Valle La Estrella,Moi,MONDI,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.90
+70102,Limón,Limón,Valle La Estrella,Moi (San Vicente),MONDI (SAN VICENTE),,BAJA,"modelo de trigramas, sin respaldo en INEC",1.90
+60305,Puntarenas,Buenos Aires,Pilas,UPIAV 1,UPINDAV 1,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.79
+70404,Limón,Talamanca,Telire,Bajo Coén Dos,BAJO CONDEN DOS,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.78
+70403,Limón,Talamanca,Cahuita,Diirí,DINDIRI,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.74
+50401,Guanacaste,Bagaces,Bagaces,Redoel,REDONDEL,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.67
+30304,Cartago,La Unión,San Rafael,Entebee,ENTEBENDE,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.63
+60108,Puntarenas,Puntarenas,Barranca,Hanoi,HANONDI,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.62
+50201,Guanacaste,Nicoya,Nicoya,Sitio Boqueado,SITIO BOQUENDADO,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.57
+70404,Limón,Talamanca,Telire,Tsiuri Dos,TSINDURI DOS,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.47
+50601,Guanacaste,Cañas,Cañas,Saial (Saillal),SANDIAL (SAILLAL),,BAJA,"modelo de trigramas, sin respaldo en INEC",1.43
+70304,Limón,Siquirres,Germania,Mioro,MINDORO,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.36
+10301,San José,Desamparados,Desamparados,Palograe,PALOGRANDE,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.33
+50203,Guanacaste,Nicoya,San Antonio,Piave,PINDAVE,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.32
+21201,Alajuela,Sarchí,Sarchí Norte,Bajo Raimuo,BAJO RAIMUNDO,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.31
+61301,Puntarenas,Puerto Jiménez,Puerto Jiménez,Iepeencia,INDEPEENCIA,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.27
+60201,Puntarenas,Esparza,Espíritu Santo,Tanqueadero,TANQUENDADERO,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.21
+50205,Guanacaste,Nicoya,Sámara,Costa Nicoa,COSTA NICONDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.20
+60303,Puntarenas,Buenos Aires,Potrero Grande,Sitio Abaonos Térraba,SITIO ABANDONOS TERRABA,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.20
+60310,Puntarenas,Buenos Aires,Cabagra,Konyöú,KONYONDU,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.19
+30402,Cartago,Jiménez,Tucurrique,Volcoa,VOLCONDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.17
+30109,Cartago,Cartago,Dulce Nombre,Villa Nuova,VILLA NUNDOVA,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.15
+50704,Guanacaste,Abangares,Colorado,McKenzie,MCKENZINDE,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.15
+10901,San José,Santa Ana,Santa Ana,Valle Soleado,VALLE SOLENDADO,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.13
+50401,Guanacaste,Bagaces,Bagaces,Mariaonal,MARIANDONAL,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.11
+60203,Puntarenas,Esparza,Macacona,Mariaonal,MARIANDONAL,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.11
+60501,Puntarenas,Osa,Puerto Cortés,El Mariaonal,EL MARIANDONAL,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.11
+20105,Alajuela,Alajuela,Guácima,Los Maestros,LOS MANDESTROS,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.08
+70401,Limón,Talamanca,Bratsi,Fields,FINDELDS,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.07
+10305,San José,Desamparados,San Antonio,Rotoas,ROTONDAS,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.05
+50201,Guanacaste,Nicoya,Nicoya,Pilahoa,PILAHONDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",1.01
+30512,Cartago,Turrialba,Chirripó,Jaktain,JAKTANDIN,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.99
+20503,Alajuela,Atenas,Mercedes,Callao,CALLANDO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.97
+21007,Alajuela,San Carlos,La Fortuna,Eco Quintas Gaia,ECO QUINTAS GANDIA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.97
+50301,Guanacaste,Santa Cruz,Santa Cruz,Sitio El Pao,SITIO EL PANDO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.93
+60104,Puntarenas,Puntarenas,Lepanto,Cerro Pao,CERRO PANDO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.93
+20102,Alajuela,Alajuela,San José,Ciiruelas,CINDIRUELAS,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.92
+60301,Puntarenas,Buenos Aires,Buenos Aires,Yuavin,YUNDAVIN,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.92
+60304,Puntarenas,Buenos Aires,Boruca,Kuibín,KUNDIBIN,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.92
+11501,San José,Montes de Oca,San Pedro,Kezia,KEZINDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.90
+60502,Puntarenas,Osa,Palmar,Wong,WNDONG,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.89
+70404,Limón,Talamanca,Telire,Naqeagri,NAQENDAGRI,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.87
+30512,Cartago,Turrialba,Chirripó,Karko,KARKNDO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.86
+60502,Puntarenas,Osa,Palmar,Coobó (Progreso),CONDOBO (PROGRESO),,BAJA,"modelo de trigramas, sin respaldo en INEC",0.85
+50205,Guanacaste,Nicoya,Sámara,Sámara Reefs,SAMARA RENDEFS,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.82
+10603,San José,Aserrí,Vuelta de Jorco,Salveal,SALVENDAL,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.78
+20507,Alajuela,Atenas,Santa Eulalia,Finca La Troica,FINCA LA TRONDICA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.78
+70404,Limón,Talamanca,Telire,Sitio Tsaki,SITIO TSANDKI,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.78
+50504,Guanacaste,Carrillo,Belén,Coopeavate,COOPENDAVATE,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.76
+70301,Limón,Siquirres,Siquirres,Yeka,YEKNDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.76
+70102,Limón,Limón,Valle La Estrella,Cwen de Alto Chirripó,CWNDEN DE ALTO CHIRRIPO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.75
+70404,Limón,Talamanca,Telire,Shewab,SHEWNDAB,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.75
+10203,San José,Escazú,San Rafael,Zafira,ZAFINDRA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.73
+21001,Alajuela,San Carlos,Quesada,La Leila,LA LENDILA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.73
+11801,San José,Curridabat,Curridabat,UACA,UNDACA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.69
+60204,Puntarenas,Esparza,San Rafael,Beinat,BENDINAT,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.66
+40504,Heredia,San Rafael,Ángeles,Tirol,TINDROL,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.65
+20601,Alajuela,Naranjo,Naranjo,Zaida,ZANDIDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.64
+50101,Guanacaste,Liberia,Liberia,Sitio Pasquiel,SITIO PASQUINDEL,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.64
+40401,Heredia,Santa Bárbara,Santa Bárbara,Coominio Colonial,CONDOMINIO COLONIAL,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.63
+70404,Limón,Talamanca,Telire,Ourut,ONDURUT,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.63
+10302,San José,Desamparados,San Miguel,Damas Israelitas,DAMAS ISRANDELITAS,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.61
+60301,Puntarenas,Buenos Aires,Buenos Aires,Los Arauz,LOS ARANDUZ,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.61
+30512,Cartago,Turrialba,Chirripó,Ksariñak,KSANDRINAK,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.60
+10203,San José,Escazú,San Rafael,Eukoloft,ENDUKOLOFT,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.58
+70401,Limón,Talamanca,Bratsi,Mleyuk 1,MLENDYUK 1,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.58
+70401,Limón,Talamanca,Bratsi,Mleyuk 2,MLENDYUK 2,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.58
+11701,San José,Dota,Santa María,Sukia,SUKINDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.57
+40505,Heredia,San Rafael,Concepción,La Tilapia,LA TILAPINDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.57
+70104,Limón,Limón,Matama,Bearesem,BENDARESEM,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.56
+10111,San José,San José,San Sebastián,Zorobarú,ZONDROBARU,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.54
+70304,Limón,Siquirres,Germania,Williamsburg,WILLINDAMSBURG,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.54
+30512,Cartago,Turrialba,Chirripó,Sëlikö,SELINDKO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.53
+70102,Limón,Limón,Valle La Estrella,Järëi,JARENDI,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.53
+60301,Puntarenas,Buenos Aires,Buenos Aires,Sitio Sabana Ditsiri Suk,SITIO SABANA DITSINDRI SUK,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.52
+60301,Puntarenas,Buenos Aires,Buenos Aires,Sitio Sabanas Bekis (Ceibo),SITIO SABANAS BENDKIS (CEIBO),,BAJA,"modelo de trigramas, sin respaldo en INEC",0.51
+60701,Puntarenas,Golfito,Golfito,Manuel Tucker Martínez,MANUEL TUCKNDER MARTINEZ,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.50
+70102,Limón,Limón,Valle La Estrella,Bayei,BAYENDI,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.50
+70404,Limón,Talamanca,Telire,Xorbata,XNDORBATA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.49
+30205,Cartago,Paraíso,Llanos de Santa Lucía,Dieciseis de Abril,DINDECISEIS DE ABRIL,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.48
+70404,Limón,Talamanca,Telire,Kivut,KINDVUT,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.48
+70502,Limón,Matina,Batán,Toloksaku,TOLOKSANDKU,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.48
+60310,Puntarenas,Buenos Aires,Cabagra,Bidyan,BIDYNDAN,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.47
+61301,Puntarenas,Puerto Jiménez,Puerto Jiménez,Coyua,COYUNDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.47
+70101,Limón,Limón,Limón,Bohío,BOHINDO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.47
+70102,Limón,Limón,Valle La Estrella,Ksarabata,KSANDRABATA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.47
+20702,Alajuela,Palmares,Zaragoza,Siglo Ventiuno,SIGLO VENTINDUNO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.46
+30202,Cartago,Paraíso,Santiago,Veintiuno de Noviembre,VEINTINDUNO DE NOVIEMBRE,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.46
+40803,Heredia,Flores,Llorente,Siglo Veintiuno,SIGLO VEINTINDUNO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.46
+70101,Limón,Limón,Limón,Siglo Veintiuno,SIGLO VEINTINDUNO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.46
+70102,Limón,Limón,Valle La Estrella,Tolok Kichá,TOLONDK KICHA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.46
+60403,Puntarenas,Montes de Oro,San Isidro,Tiocinto,TINDOCINTO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.45
+70404,Limón,Talamanca,Telire,Sukut,SUNDKUT,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.45
+70404,Limón,Talamanca,Telire,Dyesqira,DYESQINDRA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.44
+11803,San José,Curridabat,Sánchez,Coutec,CONDUTEC,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.43
+11501,San José,Montes de Oca,San Pedro,Torreón,TORRENDON,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.42
+30502,Cartago,Turrialba,La Suiza,Balalaica,BALALANDICA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.42
+30801,Cartago,El Guarco,El Tejar,Valle Ilios,VALLE ILINDOS,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.42
+50201,Guanacaste,Nicoya,Nicoya,Sitio Guio Llorona,SITIO GUINDO LLORONA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.42
+70101,Limón,Limón,Limón,Japdeva,JANDPDEVA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.42
+50301,Guanacaste,Santa Cruz,Santa Cruz,Garúa,GARUNDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.41
+50303,Guanacaste,Santa Cruz,Veintisiete de Abril,Cacaovano,CACANDOVANO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.41
+20204,Alajuela,San Ramón,Piedades Norte,Piedades Noroeste,PIEDADES NORONDESTE,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.40
+70102,Limón,Limón,Valle La Estrella,Bakche,BANDKCHE,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.40
+10903,San José,Santa Ana,Pozos,Sirivanna,SINDRIVANNA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.39
+60301,Puntarenas,Buenos Aires,Buenos Aires,Sitio Sabana Oka,SITIO SABANA OKNDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.39
+70501,Limón,Matina,Matina,Helvetia,HELVETINDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.39
+60301,Puntarenas,Buenos Aires,Buenos Aires,Sitio Sabana Jakyaka,SITIO SABANA JANDKYAKA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.38
+60701,Puntarenas,Golfito,Golfito,Parroquial,PARROQUINDAL,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.38
+70102,Limón,Limón,Valle La Estrella,Jamari Täwä,JAMARI TAWNDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.38
+70102,Limón,Limón,Valle La Estrella,Koiyaba,KONDIYABA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.38
+70102,Limón,Limón,Valle La Estrella,Shikiari Täwä,SHIKIARI TAWNDA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.38
+11502,San José,Montes de Oca,Sabanilla,Mliaga,MLINDAGA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.37
+30201,Cartago,Paraíso,Paraíso,Veintiocho de Diciemnre,VEINTINDOCHO DE DICIEMNRE,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.37
+40403,Heredia,Santa Bárbara,San Juan,Tiofilia,TINDOFILIA,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.37
+70102,Limón,Limón,Valle La Estrella,Dusiriñak,DUSINDRINAK,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.37
+30512,Cartago,Turrialba,Chirripó,Blijuriñak,BLIJUNDRINAK,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.36
+50104,Guanacaste,Liberia,Nacascolo,Sitio El Guaitilar,SITIO EL GUANDITILAR,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.36
+51003,Guanacaste,La Cruz,La Garita,Sitio El Infierno,SITIO EL INFINDERNO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.36
+70501,Limón,Matina,Matina,Xirinachs,XINDRINACHS,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.36
+30512,Cartago,Turrialba,Chirripó,Juitö,JUNDITO,,BAJA,"modelo de trigramas, sin respaldo en INEC",0.35

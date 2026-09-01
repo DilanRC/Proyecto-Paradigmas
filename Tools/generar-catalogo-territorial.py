@@ -84,6 +84,8 @@ def main():
     p.add_argument('--inec', required=True, help='Localidades 2024.zip del INEC')
     p.add_argument('--salida', default='Public/js/shared/poblados.js')
     p.add_argument('--manifiesto', default='Documentation/correcciones-localidades.csv')
+    p.add_argument('--correcciones', default='Documentation/localidades-por-revisar.csv',
+                   help='CSV revisado a mano; se aplica la columna correccion_final')
     args = p.parse_args()
 
     for ruta in (args.ign, args.inec):
@@ -100,6 +102,19 @@ def main():
     for fila in dbf:
         if fila.get('NOMB_LOC'):
             inec_por_distrito[fila['COD_UGED']].add(fila['NOMB_LOC'])
+
+    # Correcciones revisadas a mano. Se aplican despues de las automaticas y
+    # mandan sobre ellas: una persona que verifico el nombre sabe mas que
+    # cualquier cruce. Solo cuentan las filas con correccion_final escrita.
+    manuales = {}
+    ruta_manual = Path(args.correcciones)
+    if ruta_manual.exists():
+        with ruta_manual.open(encoding='utf-8') as f:
+            for fila in csv.DictReader(f):
+                final = (fila.get('correccion_final') or '').strip()
+                if final:
+                    manuales[(fila['codigoDistrito'], fila['nombre_actual'])] = final
+        print(f'  correcciones manuales aplicables: {len(manuales)}')
 
     catalogo, manifiesto = collections.OrderedDict(), []
     for prov in ign['provincias']:
@@ -145,6 +160,17 @@ def main():
                             manifiesto.append([codigo, nombre, hermanos[0], 'IGN_2026_REGISTRO_HERMANO'])
                             final.append(hermanos[0]); continue
                     final.append(nombre)
+
+                # 3) correcciones revisadas a mano
+                revisado = []
+                for nombre in final:
+                    manual = manuales.get((codigo, nombre))
+                    if manual and manual != nombre:
+                        manifiesto.append([codigo, nombre, manual, 'REVISION_MANUAL'])
+                        revisado.append(manual)
+                    else:
+                        revisado.append(nombre)
+                final = revisado
 
                 vistos, lista = set(), []
                 for nombre in final:
