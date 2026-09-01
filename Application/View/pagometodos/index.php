@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/panel.css">
     <link rel="stylesheet" href="css/red-ganadera.css">
-    <script src="js/pagometodos.js" defer></script>
+    <script type="module" src="js/pagometodos.js"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
@@ -64,7 +64,14 @@
                 <div class="table-container">
                     <table><thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th><span class="screen-reader-only">Acciones</span></th></tr></thead><tbody id="cuerpo-pagometodos"></tbody></table>
                     <div class="empty-state" id="estado-vacio" hidden><span class="empty-state__icon" aria-hidden="true">♧</span><h2>No se encontraron métodos de pago</h2><p>Modifique la búsqueda o cree el primero.</p></div>
-                    <div class="loading-state" id="estado-carga" aria-live="polite"><span class="loader" aria-hidden="true"></span>Cargando información…</div>
+                    <div class="error-state" id="estado-error" hidden><span class="error-state__icon" aria-hidden="true">!</span><h2>No fue posible cargar los métodos de pago</h2><p id="mensaje-error"></p><button class="button button--secondary" id="reintentar" type="button">Reintentar</button></div>
+                    <div class="skeleton" id="estado-carga" aria-hidden="true">
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                        <div class="skeleton__row"></div>
+                    </div>
                 </div>
             </section>
 
@@ -72,7 +79,7 @@
         </div>
     </main>
 
-    <dialog class="modal" id="modal-pagometodo" aria-labelledby="titulo-modal">
+    <dialog class="modal" role="dialog" aria-modal="true" id="modal-pagometodo" aria-labelledby="titulo-modal">
         <form id="formulario-pagometodo" novalidate aria-busy="false">
             <div class="modal__header"><div><span class="label" id="subtitulo-modal">Nuevo registro</span><h2 id="titulo-modal">Crear método de pago</h2></div><button class="close-button" id="cerrar-modal" type="button" aria-label="Cerrar formulario">×</button></div>
             <div class="modal__content">
@@ -87,13 +94,16 @@
         </form>
     </dialog>
 
-    <dialog class="modal modal--confirmation" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar método de pago</h2><p id="mensaje-desactivar">El método de pago dejará de estar disponible para nuevas transacciones.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
+    <dialog class="modal modal--confirmation" role="dialog" aria-modal="true" id="modal-desactivar" aria-labelledby="titulo-desactivar"><div class="confirmation__icon" aria-hidden="true">!</div><h2 id="titulo-desactivar">Desactivar método de pago</h2><p id="mensaje-desactivar">El método de pago dejará de estar disponible para nuevas transacciones.</p><div class="modal__actions"><button class="button button--secondary" id="cancelar-desactivacion" type="button">Cancelar</button><button class="button button--danger" id="confirmar-desactivacion" type="button">Desactivar</button></div></dialog>
 
-    <dialog class="modal" id="modal-detalle" aria-labelledby="titulo-detalle">
+    <dialog class="modal" role="dialog" aria-modal="true" id="modal-detalle" aria-labelledby="titulo-detalle">
         <div class="modal__header"><div><span class="label">Ficha del método de pago</span><h2 id="titulo-detalle">Detalle</h2></div><button class="close-button" id="cerrar-detalle" type="button" aria-label="Cerrar detalle">×</button></div>
         <div class="modal__content"><dl class="detail-grid" id="detalle-contenido"></dl></div>
         <div class="modal__actions"><button class="button button--secondary" id="cerrar-detalle-secundario" type="button">Cerrar</button><button class="button button--primary" id="editar-desde-detalle" type="button">Editar</button></div>
     </dialog>
-    <div class="notification" id="notificacion" role="status" aria-live="polite" hidden></div>
+    <div class="toast-region">
+        <div class="toast" id="toast-status" role="status" aria-live="polite"></div>
+        <div class="toast" id="toast-alert" role="alert" aria-live="assertive"></div>
+    </div>
 </body>
 </html>

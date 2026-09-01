@@ -1,166 +1,278 @@
-(() => {
-    'use strict';
+import { request } from './shared/api.js';
+import { createDialogController } from './shared/dialog.js';
+import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
+import {
+    applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
+} from './shared/list-state.js';
+import { createToast } from './shared/toast.js';
 
-    const API_URL = 'api/productores.php';
-    const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';
+const API_URL = 'api/productores.php';
+const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';
+const ETIQUETAS = { singular: 'productor', plural: 'productores' };
+
+/** Cuerpo enviado a la API. Exportado para la prueba de paridad de contrato. */
+export function buildProductorPayload({
+    tipoCodigo, numero, nombre, telefono, correoElectronico,
+    provincia, canton, distrito, pueblo, senas, fincas, identificacionNumeroOriginal = '',
+}) {
+    const data = {
+        identificacion: { tipoCodigo, numero: numero.trim() },
+        nombre: nombre.trim(),
+        telefono: telefono.trim(),
+        correoElectronico: correoElectronico.trim().toLowerCase(),
+        direccionPrincipal: {
+            provincia: provincia.trim(),
+            canton: canton.trim(),
+            distrito: distrito.trim(),
+            pueblo: nullable(pueblo),
+            senas: nullable(senas),
+        },
+        fincas: fincas.split(/\r?\n/).map((n) => n.trim()).filter(Boolean).map((n) => ({ nombre: n })),
+    };
+    if (identificacionNumeroOriginal !== '') {
+        data.identificacionNumeroOriginal = identificacionNumeroOriginal;
+    }
+    return data;
+}
+
+/** Cuerpo de la direccion de finca. Tambien exportado para la paridad. */
+export function buildFincaDireccionPayload({
+    identificacionNumero, nombreFinca, provincia, canton, distrito, pueblo, senas,
+}) {
+    return {
+        identificacionNumero,
+        nombreFinca,
+        direccionFinca: {
+            provincia: provincia.trim(),
+            canton: canton.trim(),
+            distrito: distrito.trim(),
+            pueblo: nullable(pueblo),
+            senas: nullable(senas),
+        },
+    };
+}
+
+/** Campo opcional: cadena vacia se envia como null, no como "". */
+function nullable(value) {
+    const text = String(value ?? '').trim();
+    return text === '' ? null : text;
+}
+
+function getInitials(name = '') {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase()).join('') || 'P';
+}
+
+function formatAddress(address) {
+    return address
+        ? [address.distrito, address.canton, address.provincia].filter(Boolean).join(', ')
+        : 'No registrada';
+}
+
+function formatFarms(farms) {
+    return Array.isArray(farms) && farms.length
+        ? farms.map((farm) => farm.nombre).join(', ')
+        : 'Sin fincas';
+}
+
+function initialize() {
     const $ = (selector) => document.querySelector(selector);
     const elements = {
-        body: $('#cuerpo-productores'), empty: $('#estado-vacio'), loading: $('#estado-carga'), panel: $('#panel-productores'), total: $('#total-productores'),
-        search: $('#busqueda-productor'), status: $('#filtro-estado'), refresh: $('#actualizar-lista'), previous: $('#pagina-anterior'), next: $('#pagina-siguiente'), page: $('#pagina-actual'), create: $('#crear-productor'), modal: $('#modal-productor'),
-        form: $('#formulario-productor'), modalTitle: $('#titulo-modal'), modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'), save: $('#guardar-productor'),
-        reactivateExisting: $('#reactivar-existente'), types: $('#identificacion-tipo'), farms: $('#fincas-nombres'), deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
-        cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'), notification: $('#notificacion'),
-        detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'), detailContent: $('#detalle-contenido'), closeDetail: $('#cerrar-detalle'), closeDetailSecondary: $('#cerrar-detalle-secundario'), editFromDetail: $('#editar-desde-detalle'),
-        fincaAddressModal: $('#modal-direccion-finca'), fincaAddressForm: $('#formulario-direccion-finca'), fincaAddressTitle: $('#titulo-direccion-finca'),
-        closeFincaAddress: $('#cerrar-direccion-finca'), cancelFincaAddress: $('#cancelar-direccion-finca'), clearFincaAddress: $('#vaciar-direccion-finca'),
+        body: $('#cuerpo-productores'), empty: $('#estado-vacio'), error: $('#estado-error'),
+        errorMessage: $('#mensaje-error'), retry: $('#reintentar'), loading: $('#estado-carga'),
+        panel: $('#panel-productores'), total: $('#total-productores'), search: $('#busqueda-productor'),
+        status: $('#filtro-estado'), refresh: $('#actualizar-lista'), previous: $('#pagina-anterior'),
+        next: $('#pagina-siguiente'), page: $('#pagina-actual'), create: $('#crear-productor'),
+        modal: $('#modal-productor'), form: $('#formulario-productor'), modalTitle: $('#titulo-modal'),
+        modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'),
+        save: $('#guardar-productor'), reactivateExisting: $('#reactivar-existente'),
+        types: $('#identificacion-tipo'), farms: $('#fincas-nombres'),
+        deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
+        cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'),
+        detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'),
+        detailContent: $('#detalle-contenido'), closeDetail: $('#cerrar-detalle'),
+        closeDetailSecondary: $('#cerrar-detalle-secundario'), editFromDetail: $('#editar-desde-detalle'),
+        fincaAddressModal: $('#modal-direccion-finca'), fincaAddressForm: $('#formulario-direccion-finca'),
+        fincaAddressTitle: $('#titulo-direccion-finca'), closeFincaAddress: $('#cerrar-direccion-finca'),
+        cancelFincaAddress: $('#cancelar-direccion-finca'), clearFincaAddress: $('#vaciar-direccion-finca'),
+        toastPolite: $('#toast-status'), toastAssertive: $('#toast-alert'),
     };
+
     const productores = new Map();
+    const toast = createToast({ polite: elements.toastPolite, assertive: elements.toastAssertive });
+
+    // D2 + D3: cada formulario tiene su propio enlace de errores. El principal
+    // colapsa las claves indexadas fincas.N sobre su unico textarea "fincas";
+    // el de direccion de finca no colapsa nada y, sobre todo, no puede pintar
+    // sus errores sobre el formulario principal.
+    const errores = bindFormErrors(elements.form, { collapsePrefixes: ['fincas'] });
+    const erroresFinca = bindFormErrors(elements.fincaAddressForm);
+
+    const submit = createSubmitGuard();
+    const statusChange = createSubmitGuard();
+    const fincaSubmit = createSubmitGuard();
+    // D1: este panel vigila ademas el guardado de la direccion de finca.
+    const dialogs = createDialogController({
+        isBusy: () => submit.busy || statusChange.busy || fincaSubmit.busy,
+    });
+
+    let state = createListState({ pageSize: 25 });
     let tiposIdentificacion = [];
+    let listController = null;
     let productorPendiente = null;
     let productorDetalle = null;
     let fincaDireccionContexto = null;
-    let savingFincaAddress = false;
     let searchTimer = 0;
-    let notificationTimer = 0;
-    let listController = null;
-    let listSequence = 0;
-    let saving = false;
-    let changingStatus = false;
-    let focusReturn = null;
-    let currentPage = 1;
-    const pageSize = 25;
 
-    document.addEventListener('DOMContentLoaded', initialize);
-
-    function initialize() {
-        elements.create.addEventListener('click', openCreateForm);
-        elements.refresh.addEventListener('click', listProducers);
-        elements.previous.addEventListener('click', () => { if (currentPage > 1) { currentPage -= 1; listProducers(); } });
-        elements.next.addEventListener('click', () => { currentPage += 1; listProducers(); });
-        elements.status.addEventListener('change', () => { currentPage = 1; listProducers(); });
-        elements.search.addEventListener('input', scheduleSearch);
-        elements.form.addEventListener('submit', saveProducer);
-        elements.form.addEventListener('invalid', markNativeError, true);
-        elements.form.addEventListener('input', clearControlError);
-        elements.form.addEventListener('change', clearControlError);
-        elements.types.addEventListener('change', updateIdentificationInputMode);
-        elements.reactivateExisting.addEventListener('click', reactivateExistingProducer);
-        elements.close.addEventListener('click', closeForm);
-        elements.cancel.addEventListener('click', closeForm);
-        elements.cancelDeactivate.addEventListener('click', closeDeactivation);
-        elements.confirmDeactivate.addEventListener('click', deactivateProducer);
-        elements.body.addEventListener('click', handleTableAction);
-        elements.modal.addEventListener('click', closeOnBackdropClick);
-        elements.deactivateModal.addEventListener('click', closeOnBackdropClick);
-        elements.detailModal.addEventListener('click', closeOnBackdropClick);
-        elements.modal.addEventListener('close', restoreFocus);
-        elements.deactivateModal.addEventListener('close', restoreFocus);
-        elements.detailModal.addEventListener('close', restoreFocus);
-        elements.closeDetail.addEventListener('click', closeDetail);
-        elements.closeDetailSecondary.addEventListener('click', closeDetail);
-        elements.editFromDetail.addEventListener('click', editFromDetail);
-        elements.detailContent.addEventListener('click', handleDetailFincaAction);
-        elements.fincaAddressModal.addEventListener('click', closeOnBackdropClick);
-        elements.fincaAddressModal.addEventListener('close', restoreFocus);
-        elements.fincaAddressForm.addEventListener('submit', saveFincaAddressSubmit);
-        elements.fincaAddressForm.addEventListener('invalid', markNativeError, true);
-        elements.fincaAddressForm.addEventListener('input', clearControlError);
-        elements.fincaAddressForm.addEventListener('change', clearControlError);
-        elements.closeFincaAddress.addEventListener('click', closeFincaAddressDialog);
-        elements.cancelFincaAddress.addEventListener('click', closeFincaAddressDialog);
-        elements.clearFincaAddress.addEventListener('click', clearFincaAddressSubmit);
-        listProducers();
-    }
-
-    async function listProducers() {
-        const sequence = ++listSequence;
+    async function listProducers({ page = state.page } = {}) {
         listController?.abort();
         listController = new AbortController();
-        setLoading(true);
-        const parameters = new URLSearchParams({ pagina: String(currentPage), tamanoPagina: String(pageSize) });
+        const started = nextRequest(state, { page });
+        state = started.state;
+        render();
+
+        const parameters = new URLSearchParams({
+            pagina: String(state.page), tamanoPagina: String(state.pageSize),
+        });
         if (elements.search.value.trim()) parameters.set('q', elements.search.value.trim());
         if (elements.status.value !== 'TODOS') parameters.set('estado', elements.status.value);
+
         try {
             const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
-            if (sequence !== listSequence) return;
-            tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion) ? response.data.catalogos.tiposIdentificacion : [];
+            tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion)
+                ? response.data.catalogos.tiposIdentificacion : [];
             const list = Array.isArray(response.data?.productores) ? response.data.productores : [];
             productores.clear();
             list.forEach((producer) => productores.set(producer.identificacionNumero, producer));
-            currentPage = Number(response.data?.pagina) || currentPage;
-            renderProducers(list, Number(response.data?.total) || 0, Number(response.data?.tamanoPagina) || pageSize);
+            state = applyResult(state, {
+                sequence: started.sequence,
+                items: list,
+                total: Number(response.data?.total) || 0,
+                page: Number(response.data?.pagina) || state.page,
+                pageSize: Number(response.data?.tamanoPagina) || state.pageSize,
+            });
         } catch (error) {
-            if (error.name === 'AbortError' || sequence !== listSequence) return;
-            renderProducers([], 0, pageSize);
-            showNotification(error.message, 'error');
-        } finally {
-            if (sequence === listSequence) setLoading(false);
+            if (error.name === 'AbortError') { state = applyAbort(state); return; }
+            state = applyFailure(state, { sequence: started.sequence, error });
         }
+        render();
     }
 
-    function renderProducers(list, total, size) {
+    function render() {
+        const view = deriveListView(state, ETIQUETAS);
+        elements.loading.hidden = !view.showSkeleton;
+        elements.empty.hidden = !view.showEmpty;
+        elements.error.hidden = !view.showError;
+        elements.errorMessage.textContent = view.errorMessage;
+        elements.retry.hidden = !view.canRetry;
+        elements.panel.setAttribute('aria-busy', String(view.showSkeleton));
+        elements.total.textContent = view.totalLabel;
+        elements.page.textContent = view.pageLabel;
+        elements.previous.disabled = view.previousDisabled;
+        elements.next.disabled = view.nextDisabled;
+        elements.refresh.disabled = view.refreshDisabled;
+
         elements.body.replaceChildren();
-        elements.empty.hidden = list.length > 0;
-        elements.total.textContent = total === 1 ? '1 productor encontrado' : `${total} productores encontrados`;
-        const totalPages = Math.max(1, Math.ceil(total / size));
-        elements.page.textContent = `Página ${currentPage} de ${totalPages}`;
-        elements.previous.disabled = currentPage <= 1;
-        elements.next.disabled = currentPage >= totalPages;
+        if (!view.showList) return;
         const fragment = document.createDocumentFragment();
-        list.forEach((producer) => fragment.appendChild(createRow(producer)));
+        state.items.forEach((producer) => fragment.appendChild(createRow(producer)));
         elements.body.appendChild(fragment);
+    }
+
+    function createCell(label) {
+        const cell = document.createElement('td');
+        cell.dataset.label = label;
+        return cell;
+    }
+
+    function createActionButton(action, text, id) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = `action action--${action}`;
+        button.dataset.action = action;
+        button.dataset.id = id;
+        button.textContent = text;
+        return button;
     }
 
     function createRow(producer) {
         const row = document.createElement('tr');
         row.dataset.id = producer.identificacionNumero;
+
         const producerCell = createCell('Productor');
         const summary = document.createElement('div'); summary.className = 'producer-summary';
-        const avatar = document.createElement('span'); avatar.className = 'avatar'; avatar.textContent = getInitials(producer.nombre);
+        const avatar = document.createElement('span');
+        avatar.className = 'avatar'; avatar.textContent = getInitials(producer.nombre);
         const details = document.createElement('span');
         const name = document.createElement('strong'); name.textContent = producer.nombre || 'Sin nombre';
-        const email = document.createElement('small'); email.textContent = producer.correoElectronico || 'Sin correo';
+        const email = document.createElement('small');
+        email.textContent = producer.correoElectronico || 'Sin correo';
         details.append(name, email); summary.append(avatar, details); producerCell.appendChild(summary);
+
         const identificationCell = createCell('Identificación');
-        const type = document.createElement('small'); type.className = 'secondary-data'; type.textContent = producer.identificacion?.tipoCodigo || 'Sin tipo';
-        const number = document.createElement('span'); number.textContent = producer.identificacionNumero;
+        const type = document.createElement('small');
+        type.className = 'secondary-data';
+        type.textContent = producer.identificacion?.tipoCodigo || 'Sin tipo';
+        const number = document.createElement('span');
+        number.textContent = producer.identificacionNumero;
         identificationCell.append(type, number);
-        const contactCell = createCell('Contacto'); contactCell.textContent = producer.telefono || 'Sin teléfono';
+
+        const contactCell = createCell('Contacto');
+        contactCell.textContent = producer.telefono || 'Sin teléfono';
+
         const addressCell = createCell('Dirección principal');
         const direccion = producer.direccionPrincipal;
-        if (direccion?.provincia && direccion?.canton && direccion?.distrito) addressCell.textContent = formatAddress(direccion);
-        else addressCell.appendChild(createActionButton('editar', 'Completar dirección', producer.identificacionNumero));
-        const farmCell = createCell('Fincas'); farmCell.textContent = formatFarms(producer.fincas);
+        if (direccion?.provincia && direccion?.canton && direccion?.distrito) {
+            addressCell.textContent = formatAddress(direccion);
+        } else {
+            addressCell.appendChild(
+                createActionButton('editar', 'Completar dirección', producer.identificacionNumero),
+            );
+        }
+
+        const farmCell = createCell('Fincas');
+        farmCell.textContent = formatFarms(producer.fincas);
+
         const statusCell = createCell('Estado');
         const active = producer.estado === 'ACTIVO';
-        const badge = document.createElement('span'); badge.className = `badge badge--${active ? 'active' : 'inactive'}`; badge.textContent = active ? 'Activo' : 'Inactivo'; statusCell.appendChild(badge);
-        const actionsCell = createCell('Acciones'); actionsCell.className = 'row-actions';
+        const badge = document.createElement('span');
+        badge.className = `badge badge--${active ? 'active' : 'inactive'}`;
+        badge.textContent = active ? 'Activo' : 'Inactivo';
+        statusCell.appendChild(badge);
+
+        const actionsCell = createCell('Acciones');
+        actionsCell.className = 'row-actions';
         actionsCell.append(createActionButton('ver', 'Ver', producer.identificacionNumero));
-        if (active) actionsCell.append(createActionButton('editar', 'Editar', producer.identificacionNumero), createActionButton('desactivar', 'Desactivar', producer.identificacionNumero));
-        else actionsCell.append(createActionButton('reactivar', 'Reactivar', producer.identificacionNumero));
+        if (active) {
+            actionsCell.append(
+                createActionButton('editar', 'Editar', producer.identificacionNumero),
+                createActionButton('desactivar', 'Desactivar', producer.identificacionNumero),
+            );
+        } else {
+            actionsCell.append(createActionButton('reactivar', 'Reactivar', producer.identificacionNumero));
+        }
         row.append(producerCell, identificationCell, contactCell, addressCell, farmCell, statusCell, actionsCell);
         return row;
     }
-
-    function createCell(label) { const cell = document.createElement('td'); cell.dataset.label = label; return cell; }
-    function createActionButton(action, text, id) { const button = document.createElement('button'); button.type = 'button'; button.className = `action action--${action}`; button.dataset.action = action; button.dataset.id = id; button.textContent = text; return button; }
 
     function handleTableAction(event) {
         const button = event.target.closest('[data-action]');
         if (!button) return;
         const producer = productores.get(button.dataset.id);
-        if (!producer) return showNotification('No se encontró el productor seleccionado.', 'error');
+        if (!producer) return toast.error('No se encontró el productor seleccionado.');
         if (button.dataset.action === 'ver') openDetail(producer);
         if (button.dataset.action === 'editar') openEditForm(producer);
         if (button.dataset.action === 'desactivar') openDeactivation(producer);
         if (button.dataset.action === 'reactivar') reactivateProducer(producer);
+        return undefined;
     }
 
     function openDetail(producer) {
         productorDetalle = producer;
         elements.detailTitle.textContent = producer.nombre || 'Productor';
         const direccion = producer.direccionPrincipal || {};
-        const campos = [
+        const fragment = document.createDocumentFragment();
+        [
             ['Identificación', `${producer.identificacion?.tipoCodigo ?? 'Sin tipo'} · ${producer.identificacionNumero}`],
             ['Estado', producer.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'],
             ['Teléfono', producer.telefono || '—'],
@@ -170,13 +282,13 @@
             ['Distrito', direccion.distrito || '—'],
             ['Pueblo', direccion.pueblo || '—'],
             ['Señas', direccion.senas || '—', true],
-        ];
-        const fragment = document.createDocumentFragment();
-        campos.forEach(([etiqueta, valor, completa]) => {
+        ].forEach(([etiqueta, valor, completa]) => {
             const dt = document.createElement('dt'); dt.textContent = etiqueta;
-            const dd = document.createElement('dd'); dd.textContent = valor; if (completa) dd.className = 'detail--full';
+            const dd = document.createElement('dd'); dd.textContent = valor;
+            if (completa) dd.className = 'detail--full';
             fragment.append(dt, dd);
         });
+
         const fincas = Array.isArray(producer.fincas) ? producer.fincas : [];
         if (fincas.length === 0) {
             const dt = document.createElement('dt'); dt.textContent = 'Fincas';
@@ -188,22 +300,33 @@
                 const dd = document.createElement('dd');
                 const label = document.createElement('span'); label.textContent = finca.nombre;
                 const addressButton = document.createElement('button');
-                addressButton.type = 'button'; addressButton.className = 'link-button'; addressButton.dataset.action = 'direccion-finca'; addressButton.dataset.finca = finca.nombre; addressButton.textContent = 'Dirección';
+                addressButton.type = 'button';
+                addressButton.className = 'link-button';
+                addressButton.dataset.action = 'direccion-finca';
+                addressButton.dataset.finca = finca.nombre;
+                addressButton.textContent = 'Dirección';
+                addressButton.setAttribute('aria-label', `Dirección de la finca ${finca.nombre}`);
                 dd.append(label, document.createTextNode(' — '), addressButton);
                 fragment.append(dt, dd);
             });
         }
         elements.detailContent.replaceChildren(fragment);
-        openDialog(elements.detailModal); elements.closeDetail.focus();
+        dialogs.open(elements.detailModal, { focus: elements.closeDetail });
     }
 
-    function closeDetail() { if (elements.detailModal.open) elements.detailModal.close(); productorDetalle = null; }
-    function editFromDetail() { if (productorDetalle) { const producer = productorDetalle; closeDetail(); openEditForm(producer); } }
+    function closeDetail() { dialogs.close(elements.detailModal); productorDetalle = null; }
 
+    function editFromDetail() {
+        if (!productorDetalle) return;
+        const producer = productorDetalle;
+        closeDetail();
+        openEditForm(producer);
+    }
+
+    // --- direccion de finca (segundo formulario) ----------------------------------
     function handleDetailFincaAction(event) {
         const button = event.target.closest('[data-action="direccion-finca"]');
-        if (!button) return;
-        openFincaAddressDialog(button.dataset.finca);
+        if (button) openFincaAddressDialog(button.dataset.finca);
     }
 
     async function openFincaAddressDialog(nombreFinca) {
@@ -211,12 +334,15 @@
         const identificacionNumero = productorDetalle.identificacionNumero;
         fincaDireccionContexto = { identificacionNumero, nombreFinca, exists: false };
         elements.fincaAddressForm.reset();
-        clearErrors(elements.fincaAddressForm);
+        erroresFinca.clearErrors();
         elements.clearFincaAddress.hidden = true;
         elements.fincaAddressTitle.textContent = `Dirección de ${nombreFinca}`;
-        openDialog(elements.fincaAddressModal);
+        dialogs.open(elements.fincaAddressModal, { focus: $('#finca-direccion-provincia') });
+
         try {
-            const response = await request(`${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`);
+            const response = await request(
+                `${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`,
+            );
             const direccion = response.data?.direccionFinca ?? {};
             $('#finca-direccion-provincia').value = direccion.provincia ?? '';
             $('#finca-direccion-canton').value = direccion.canton ?? '';
@@ -226,59 +352,116 @@
             fincaDireccionContexto.exists = true;
             elements.clearFincaAddress.hidden = false;
         } catch (error) {
-            if (error.status !== 404) { showNotification(error.message, 'error'); closeFincaAddressDialog(); return; }
+            // 404 es normal: la finca todavia no tiene direccion y se creara.
+            if (error.status !== 404) {
+                toast.error(error.message);
+                closeFincaAddressDialog();
+            }
         }
-        $('#finca-direccion-provincia').focus();
     }
 
-    function closeFincaAddressDialog() { if (!savingFincaAddress) { if (elements.fincaAddressModal.open) elements.fincaAddressModal.close(); fincaDireccionContexto = null; } }
+    function closeFincaAddressDialog() {
+        if (fincaSubmit.busy) return;
+        dialogs.close(elements.fincaAddressModal);
+        fincaDireccionContexto = null;
+    }
 
-    async function saveFincaAddressSubmit(event) {
+    function saveFincaAddressSubmit(event) {
         event.preventDefault();
-        if (savingFincaAddress || !fincaDireccionContexto) return;
-        clearErrors(elements.fincaAddressForm);
-        if (!elements.fincaAddressForm.checkValidity()) { markFirstInvalid(elements.fincaAddressForm); return; }
-        const { identificacionNumero, nombreFinca, exists } = fincaDireccionContexto;
-        const data = {
-            identificacionNumero, nombreFinca,
-            direccionFinca: {
-                provincia: $('#finca-direccion-provincia').value.trim(),
-                canton: $('#finca-direccion-canton').value.trim(),
-                distrito: $('#finca-direccion-distrito').value.trim(),
-                pueblo: nullableValue($('#finca-direccion-pueblo')),
-                senas: nullableValue($('#finca-direccion-senas')),
-            },
-        };
-        savingFincaAddress = true;
-        elements.fincaAddressForm.setAttribute('aria-busy', 'true');
-        try {
-            const response = await request(FINCAS_DIRECCION_URL, { method: exists ? 'PUT' : 'POST', body: JSON.stringify(data) });
-            showNotification(response.message, 'success');
-            elements.fincaAddressModal.close(); fincaDireccionContexto = null;
-        } catch (error) {
-            if (error.errors) showErrors(elements.fincaAddressForm, error.errors);
-            showNotification(error.message, 'error');
-        } finally { savingFincaAddress = false; elements.fincaAddressForm.setAttribute('aria-busy', 'false'); }
+        if (!fincaDireccionContexto) return undefined;
+        return fincaSubmit.run(async () => {
+            erroresFinca.clearErrors();
+            if (!elements.fincaAddressForm.checkValidity()) {
+                erroresFinca.markFirstInvalid();
+                return;
+            }
+            const { identificacionNumero, nombreFinca, exists } = fincaDireccionContexto;
+            const data = buildFincaDireccionPayload({
+                identificacionNumero,
+                nombreFinca,
+                provincia: $('#finca-direccion-provincia').value,
+                canton: $('#finca-direccion-canton').value,
+                distrito: $('#finca-direccion-distrito').value,
+                pueblo: $('#finca-direccion-pueblo').value,
+                senas: $('#finca-direccion-senas').value,
+            });
+            elements.fincaAddressForm.setAttribute('aria-busy', 'true');
+            try {
+                const response = await request(FINCAS_DIRECCION_URL, {
+                    method: exists ? 'PUT' : 'POST',
+                    body: JSON.stringify(data),
+                });
+                toast.success(response.message);
+                dialogs.close(elements.fincaAddressModal);
+                fincaDireccionContexto = null;
+            } catch (error) {
+                if (error.errors) erroresFinca.showErrors(error.errors);
+                toast.error(error.message);
+            } finally {
+                elements.fincaAddressForm.setAttribute('aria-busy', 'false');
+            }
+        });
     }
 
-    async function clearFincaAddressSubmit() {
-        if (savingFincaAddress || !fincaDireccionContexto) return;
+    function clearFincaAddressSubmit() {
+        if (!fincaDireccionContexto) return undefined;
         const { identificacionNumero, nombreFinca } = fincaDireccionContexto;
-        savingFincaAddress = true;
-        elements.fincaAddressForm.setAttribute('aria-busy', 'true');
-        try {
-            const response = await request(FINCAS_DIRECCION_URL, { method: 'DELETE', body: JSON.stringify({ identificacionNumero, nombreFinca }) });
-            showNotification(response.message, 'success');
-            elements.fincaAddressModal.close(); fincaDireccionContexto = null;
-        } catch (error) {
-            showNotification(error.message, 'error');
-        } finally { savingFincaAddress = false; elements.fincaAddressForm.setAttribute('aria-busy', 'false'); }
+        return fincaSubmit.run(async () => {
+            elements.fincaAddressForm.setAttribute('aria-busy', 'true');
+            try {
+                const response = await request(FINCAS_DIRECCION_URL, {
+                    method: 'DELETE',
+                    body: JSON.stringify({ identificacionNumero, nombreFinca }),
+                });
+                toast.success(response.message);
+                dialogs.close(elements.fincaAddressModal);
+                fincaDireccionContexto = null;
+            } catch (error) {
+                toast.error(error.message);
+            } finally {
+                elements.fincaAddressForm.setAttribute('aria-busy', 'false');
+            }
+        });
+    }
+
+    // --- formulario principal ------------------------------------------------------
+    function renderTypeOptions() {
+        const selected = elements.types.value;
+        const fragment = document.createDocumentFragment();
+        const placeholder = document.createElement('option');
+        placeholder.value = ''; placeholder.textContent = 'Seleccione un tipo';
+        fragment.appendChild(placeholder);
+        tiposIdentificacion.forEach((type) => {
+            const option = document.createElement('option');
+            option.value = type.codigo; option.textContent = type.nombre;
+            fragment.appendChild(option);
+        });
+        elements.types.replaceChildren(fragment);
+        elements.types.value = selected;
+        updateIdentificationInputMode();
+    }
+
+    function updateIdentificationInputMode() {
+        $('#identificacion-numero').inputMode =
+            ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'].includes(elements.types.value) ? 'numeric' : 'text';
+    }
+
+    function resetForm() {
+        elements.form.reset();
+        errores.clearErrors();
+        renderTypeOptions();
+        $('#identificacion-original').value = '';
+        $('#identificacion-numero').readOnly = false;
+        elements.reactivateExisting.hidden = true;
+        delete elements.reactivateExisting.dataset.id;
     }
 
     function openCreateForm() {
         resetForm();
-        elements.modalTitle.textContent = 'Crear productor'; elements.modalSubtitle.textContent = 'Nuevo registro'; elements.save.textContent = 'Guardar productor';
-        openDialog(elements.modal); elements.types.focus();
+        elements.modalTitle.textContent = 'Crear productor';
+        elements.modalSubtitle.textContent = 'Nuevo registro';
+        elements.save.textContent = 'Guardar productor';
+        dialogs.open(elements.modal, { focus: elements.types });
     }
 
     function openEditForm(producer) {
@@ -296,56 +479,51 @@
         $('#direccion-pueblo').value = producer.direccionPrincipal?.pueblo ?? '';
         $('#direccion-senas').value = producer.direccionPrincipal?.senas ?? '';
         elements.farms.value = (producer.fincas ?? []).map((farm) => farm.nombre).join('\n');
-        elements.modalTitle.textContent = 'Editar productor'; elements.modalSubtitle.textContent = 'Actualizar registro'; elements.save.textContent = 'Guardar cambios';
-        openDialog(elements.modal); $('#nombre').focus();
+        elements.modalTitle.textContent = 'Editar productor';
+        elements.modalSubtitle.textContent = 'Actualizar registro';
+        elements.save.textContent = 'Guardar cambios';
+        dialogs.open(elements.modal, { focus: $('#nombre') });
     }
 
-    function resetForm() {
-        elements.form.reset(); clearErrors(elements.form); renderTypeOptions();
-        $('#identificacion-original').value = ''; $('#identificacion-numero').readOnly = false;
-        elements.reactivateExisting.hidden = true; delete elements.reactivateExisting.dataset.id;
-    }
-
-    function renderTypeOptions() {
-        const selected = elements.types.value;
-        const fragment = document.createDocumentFragment();
-        const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Seleccione un tipo'; fragment.appendChild(placeholder);
-        tiposIdentificacion.forEach((type) => { const option = document.createElement('option'); option.value = type.codigo; option.textContent = type.nombre; fragment.appendChild(option); });
-        elements.types.replaceChildren(fragment); elements.types.value = selected; updateIdentificationInputMode();
-    }
-
-    async function saveProducer(event) {
+    function saveProducer(event) {
         event.preventDefault();
-        if (saving) return;
-        clearErrors(elements.form);
-        if (!elements.form.checkValidity()) { markFirstInvalid(elements.form); return; }
-        const original = $('#identificacion-original').value;
-        const data = {
-            identificacion: { tipoCodigo: elements.types.value, numero: $('#identificacion-numero').value.trim() },
-            nombre: $('#nombre').value.trim(), telefono: $('#telefono').value.trim(), correoElectronico: $('#correo-electronico').value.trim().toLowerCase(),
-            direccionPrincipal: { provincia: $('#direccion-provincia').value.trim(), canton: $('#direccion-canton').value.trim(), distrito: $('#direccion-distrito').value.trim(), pueblo: nullableValue($('#direccion-pueblo')), senas: nullableValue($('#direccion-senas')) },
-            fincas: elements.farms.value.split(/\r?\n/).map((nombre) => nombre.trim()).filter(Boolean).map((nombre) => ({ nombre })),
-        };
-        const editing = original !== '';
-        if (editing) data.identificacionNumeroOriginal = original;
-        setSaving(true);
-        try {
-            const response = await request(API_URL, { method: editing ? 'PUT' : 'POST', body: JSON.stringify(data) });
-            elements.modal.close(); showNotification(response.message, 'success'); await listProducers();
-        } catch (error) {
-            if (error.errors) showErrors(elements.form, error.errors);
-            if (!editing && error.status === 409) offerReactivation(error);
-            showNotification(error.message, 'error');
-        } finally { setSaving(false); }
+        return submit.run(async () => {
+            errores.clearErrors();
+            if (!elements.form.checkValidity()) { errores.markFirstInvalid(); return; }
+            const original = $('#identificacion-original').value;
+            const editing = original !== '';
+            const data = buildProductorPayload({
+                tipoCodigo: elements.types.value,
+                numero: $('#identificacion-numero').value,
+                nombre: $('#nombre').value,
+                telefono: $('#telefono').value,
+                correoElectronico: $('#correo-electronico').value,
+                provincia: $('#direccion-provincia').value,
+                canton: $('#direccion-canton').value,
+                distrito: $('#direccion-distrito').value,
+                pueblo: $('#direccion-pueblo').value,
+                senas: $('#direccion-senas').value,
+                fincas: elements.farms.value,
+                identificacionNumeroOriginal: original,
+            });
+            setSaving(elements.form, true, { submitButton: elements.save });
+            try {
+                const response = await request(API_URL, {
+                    method: editing ? 'PUT' : 'POST',
+                    body: JSON.stringify(data),
+                });
+                dialogs.close(elements.modal);
+                toast.success(response.message);
+                await listProducers();
+            } catch (error) {
+                if (error.errors) errores.showErrors(error.errors);
+                if (!editing && error.status === 409) offerReactivation(error);
+                toast.error(error.message);
+            } finally {
+                setSaving(elements.form, false, { submitButton: elements.save });
+            }
+        });
     }
-
-    function openDeactivation(producer) {
-        productorPendiente = producer;
-        elements.deactivateMessage.textContent = `${producer.nombre} quedará inactivo. Su dirección, fincas y bitácora se conservarán.`;
-        openDialog(elements.deactivateModal); elements.confirmDeactivate.focus();
-    }
-    async function deactivateProducer() { if (productorPendiente && !changingStatus) await changeStatus('DELETE', productorPendiente, elements.confirmDeactivate, () => { elements.deactivateModal.close(); productorPendiente = null; }); }
-    async function reactivateProducer(producer) { if (!changingStatus) await changeStatus('PATCH', producer, elements.body.querySelector(`[data-action="reactivar"][data-id="${CSS.escape(producer.identificacionNumero)}"]`)); }
 
     function offerReactivation(error) {
         const identificacion = error.data?.reactivacion?.identificacionNumero;
@@ -354,63 +532,104 @@
         elements.reactivateExisting.hidden = false;
         elements.reactivateExisting.focus();
     }
-    async function reactivateExistingProducer() {
+
+    function reactivateExistingProducer() {
         const identificacionNumero = elements.reactivateExisting.dataset.id || '';
-        if (identificacionNumero && !changingStatus) await changeStatus('PATCH', { identificacionNumero }, elements.reactivateExisting, () => elements.modal.close());
+        if (!identificacionNumero) return undefined;
+        return changeStatus('PATCH', { identificacionNumero }, () => dialogs.close(elements.modal));
     }
 
-    async function changeStatus(method, producer, button, afterSuccess = null) {
-        const busyContainer = button?.closest('dialog') || elements.panel;
-        changingStatus = true;
-        document.querySelectorAll('[data-action], #confirmar-desactivacion, #reactivar-existente').forEach((control) => { control.disabled = true; });
-        busyContainer.setAttribute('aria-busy', 'true');
-        try {
-            const response = await request(API_URL, { method, body: JSON.stringify({ identificacionNumero: producer.identificacionNumero }) });
-            afterSuccess?.(); showNotification(response.message, 'success'); await listProducers();
-        } catch (error) { showNotification(error.message, 'error'); }
-        finally {
-            changingStatus = false; busyContainer.setAttribute('aria-busy', 'false');
-            document.querySelectorAll('[data-action], #confirmar-desactivacion, #reactivar-existente').forEach((control) => { control.disabled = false; });
-        }
+    function openDeactivation(producer) {
+        productorPendiente = producer;
+        elements.deactivateMessage.textContent =
+            `${producer.nombre} quedará inactivo. Su dirección, fincas y bitácora se conservarán.`;
+        dialogs.open(elements.deactivateModal, { focus: elements.confirmDeactivate });
     }
 
-    async function request(url, options = {}) {
-        const httpResponse = await fetch(url, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers ?? {}) } });
-        let response;
-        try { response = await httpResponse.json(); } catch { throw new Error('El servidor no devolvió JSON válido.'); }
-        if (!httpResponse.ok || response.success !== true) {
-            const error = new Error(response.message || 'No se pudo completar la operación.'); error.errors = response.errors ?? null; error.data = response.data ?? null; error.status = httpResponse.status; throw error;
-        }
-        return response;
-    }
-
-    function showErrors(form, errors) {
-        let first = null;
-        Object.entries(errors).forEach(([field, message]) => {
-            const normalized = field.startsWith('fincas.') ? 'fincas' : field;
-            const control = form.elements.namedItem(normalized);
-            const container = form.querySelector(`[data-error-for="${CSS.escape(normalized)}"]`);
-            if (control instanceof HTMLElement) { control.setAttribute('aria-invalid', 'true'); first ??= control; }
-            if (container) container.textContent = String(message);
+    function changeStatus(method, producer, afterSuccess = null) {
+        return statusChange.run(async () => {
+            const controls = document.querySelectorAll(
+                '[data-action], #confirmar-desactivacion, #reactivar-existente',
+            );
+            controls.forEach((control) => { control.disabled = true; });
+            try {
+                const response = await request(API_URL, {
+                    method,
+                    body: JSON.stringify({ identificacionNumero: producer.identificacionNumero }),
+                });
+                afterSuccess?.();
+                toast.success(response.message);
+                await listProducers();
+            } catch (error) {
+                toast.error(error.message);
+            } finally {
+                controls.forEach((control) => { control.disabled = false; });
+            }
         });
-        first?.focus();
     }
-    function markNativeError(event) { event.target.setAttribute('aria-invalid', 'true'); }
-    function markFirstInvalid(form) { const first = form.querySelector(':invalid'); if (first) { first.setAttribute('aria-invalid', 'true'); first.focus(); } }
-    function clearControlError(event) { const control = event.target; if (!control.name || !control.form) return; control.removeAttribute('aria-invalid'); const container = control.form.querySelector(`[data-error-for="${CSS.escape(control.name)}"]`); if (container) container.textContent = ''; }
-    function clearErrors(form) { form.querySelectorAll('[aria-invalid]').forEach((control) => control.removeAttribute('aria-invalid')); form.querySelectorAll('[data-error-for]').forEach((container) => { container.textContent = ''; }); }
-    function setSaving(value) { saving = value; elements.form.setAttribute('aria-busy', String(value)); elements.form.querySelectorAll('button, input, select, textarea').forEach((control) => { control.disabled = value; }); if (value) { elements.save.dataset.label = elements.save.textContent; elements.save.textContent = 'Guardando…'; } else { elements.save.textContent = elements.save.dataset.label || elements.save.textContent; delete elements.save.dataset.label; } }
-    function setLoading(value) { elements.loading.hidden = !value; elements.panel.setAttribute('aria-busy', String(value)); elements.refresh.disabled = value; }
-    function scheduleSearch() { currentPage = 1; window.clearTimeout(searchTimer); searchTimer = window.setTimeout(listProducers, 300); }
-    function showNotification(message, type) { window.clearTimeout(notificationTimer); elements.notification.textContent = message; elements.notification.className = `notification notification--${type}`; elements.notification.setAttribute('role', type === 'error' ? 'alert' : 'status'); elements.notification.hidden = false; if (type !== 'error') notificationTimer = window.setTimeout(() => { elements.notification.hidden = true; }, 4500); }
-    function closeForm() { if (!saving) { if (elements.modal.open) elements.modal.close(); clearErrors(elements.form); } }
-    function closeDeactivation() { if (!changingStatus) { if (elements.deactivateModal.open) elements.deactivateModal.close(); productorPendiente = null; } }
-    function closeOnBackdropClick(event) { if (event.target === event.currentTarget && !saving && !changingStatus && !savingFincaAddress) event.currentTarget.close(); }
-    function openDialog(dialog) { focusReturn = document.activeElement; if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', ''); }
-    function restoreFocus() { if (focusReturn instanceof HTMLElement && focusReturn.isConnected) focusReturn.focus(); focusReturn = null; }
-    function nullableValue(control) { const value = control.value.trim(); return value === '' ? null : value; }
-    function updateIdentificationInputMode() { $('#identificacion-numero').inputMode = ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'].includes(elements.types.value) ? 'numeric' : 'text'; }
-    function getInitials(name = '') { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || 'P'; }
-    function formatAddress(address) { return address ? [address.distrito, address.canton, address.provincia].filter(Boolean).join(', ') : 'No registrada'; }
-    function formatFarms(farms) { return Array.isArray(farms) && farms.length ? farms.map((farm) => farm.nombre).join(', ') : 'Sin fincas'; }
-})();
+
+    function deactivateProducer() {
+        if (!productorPendiente) return undefined;
+        return changeStatus('DELETE', productorPendiente, () => {
+            dialogs.close(elements.deactivateModal);
+            productorPendiente = null;
+        });
+    }
+
+    function reactivateProducer(producer) { return changeStatus('PATCH', producer); }
+
+    function closeForm() { if (!submit.busy) { dialogs.close(elements.modal); errores.clearErrors(); } }
+    function closeDeactivation() {
+        if (statusChange.busy) return;
+        dialogs.close(elements.deactivateModal);
+        productorPendiente = null;
+    }
+
+    function scheduleSearch() {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(() => listProducers({ page: 1 }), 300);
+    }
+
+    elements.create.addEventListener('click', openCreateForm);
+    elements.refresh.addEventListener('click', () => listProducers());
+    elements.retry.addEventListener('click', () => listProducers());
+    elements.previous.addEventListener('click', () => {
+        if (state.page > 1) listProducers({ page: state.page - 1 });
+    });
+    elements.next.addEventListener('click', () => listProducers({ page: state.page + 1 }));
+    elements.status.addEventListener('change', () => listProducers({ page: 1 }));
+    elements.search.addEventListener('input', scheduleSearch);
+    elements.form.addEventListener('submit', saveProducer);
+    elements.form.addEventListener('invalid', errores.markNativeError, true);
+    elements.form.addEventListener('input', errores.clearControlError);
+    elements.form.addEventListener('change', errores.clearControlError);
+    elements.types.addEventListener('change', updateIdentificationInputMode);
+    elements.reactivateExisting.addEventListener('click', reactivateExistingProducer);
+    elements.close.addEventListener('click', closeForm);
+    elements.cancel.addEventListener('click', closeForm);
+    elements.cancelDeactivate.addEventListener('click', closeDeactivation);
+    elements.confirmDeactivate.addEventListener('click', deactivateProducer);
+    elements.body.addEventListener('click', handleTableAction);
+    elements.closeDetail.addEventListener('click', closeDetail);
+    elements.closeDetailSecondary.addEventListener('click', closeDetail);
+    elements.editFromDetail.addEventListener('click', editFromDetail);
+    elements.detailContent.addEventListener('click', handleDetailFincaAction);
+    elements.fincaAddressForm.addEventListener('submit', saveFincaAddressSubmit);
+    elements.fincaAddressForm.addEventListener('invalid', erroresFinca.markNativeError, true);
+    elements.fincaAddressForm.addEventListener('input', erroresFinca.clearControlError);
+    elements.fincaAddressForm.addEventListener('change', erroresFinca.clearControlError);
+    elements.closeFincaAddress.addEventListener('click', closeFincaAddressDialog);
+    elements.cancelFincaAddress.addEventListener('click', closeFincaAddressDialog);
+    elements.clearFincaAddress.addEventListener('click', clearFincaAddressSubmit);
+    [elements.modal, elements.deactivateModal, elements.detailModal, elements.fincaAddressModal]
+        .forEach((dialog) => {
+            dialog.addEventListener('click', dialogs.handleBackdropClick);
+            dialog.addEventListener('close', dialogs.restoreFocus);
+        });
+
+    listProducers();
+}
+
+if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', initialize);
+}
