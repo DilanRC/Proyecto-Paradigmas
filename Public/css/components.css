@@ -19,6 +19,32 @@
     stroke-linejoin:round;
 }
 
+.brand__logo {
+    display:grid;
+    width:44px;
+    height:44px;
+    place-items:center;
+    overflow:hidden;
+    border-radius:12px;
+    background:#fff;
+}
+
+.brand__logo img {
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.brand__logo--light {
+    background:rgba(255,255,255,.12);
+}
+
+.brand__logo--dark {
+    background:var(--surface);
+    box-shadow:0 10px 24px rgba(18,40,27,.12);
+}
+
 .label {
     display:inline-flex;
     margin-bottom:7px;

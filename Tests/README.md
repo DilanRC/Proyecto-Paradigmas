@@ -32,6 +32,7 @@ Las pruebas de frontend requieren Node. Si el Node del host funciona:
 node Tests/ui_test.js
 node Tests/frontend_contract_test.js
 node Tests/frontend_capacidades_eval.js
+node Tests/frontend/official_app_shell.eval.mjs
 node Tests/frontend_contrast_test.mjs
 node --test Tests/frontend/*.test.mjs
 ```
@@ -46,6 +47,7 @@ docker run --rm -v "$PWD":/app -w /app node:22-alpine sh -lc '
   node Tests/ui_test.js &&
   node Tests/frontend_contract_test.js &&
   node Tests/frontend_capacidades_eval.js &&
+  node Tests/frontend/official_app_shell.eval.mjs &&
   node Tests/frontend_contrast_test.mjs &&
   node --test Tests/frontend/*.test.mjs
 '

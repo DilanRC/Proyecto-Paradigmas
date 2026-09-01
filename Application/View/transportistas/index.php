@@ -19,7 +19,7 @@
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
         <div class="rural-panel__sidebar-brand">
-            <span class="brand__icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 12 6 7c-1 7 2 10 7 11m22-6 7-5c1 7-2 10-7 11"/><path d="M11 24c0-10 5-16 13-16s13 6 13 16v7c0 7-5 11-13 11S11 38 11 31Z"/><path d="M16 29c0-4 3-6 8-6s8 2 8 6-3 7-8 7-8-3-8-7Z"/><circle cx="18" cy="20" r="2"/><circle cx="30" cy="20" r="2"/><circle cx="21" cy="29" r="1.5"/><circle cx="27" cy="29" r="1.5"/></svg></span>
+            <span class="brand__logo brand__logo--light" aria-hidden="true"><img src="assets/logo_light.png" alt=""></span>
             <span class="rural-panel__sidebar-brand-name">Tinder<strong>Cows</strong></span>
         </div>
         <nav class="rural-panel__nav" aria-label="Administración">
@@ -41,7 +41,7 @@
     <main class="rural-panel__main">
         <div class="rural-panel__glow" aria-hidden="true"></div>
         <div class="rural-panel__content">
-            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Regresar</a></div>
+            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="login.php">Login</a></div>
 
             <section class="page-header" aria-labelledby="page-title">
                 <div><span class="label">Registro de transportistas</span><h1 id="page-title">Transportistas</h1><p>Administre transportistas identificados por su número, contacto y vehículos asignados.</p></div>
