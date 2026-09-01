@@ -140,3 +140,41 @@ test('la busqueda solo mira el distrito pedido', () => {
 test('Duacari, el distrito reconciliado, si trae sus localidades', () => {
     assert.ok(pobladosDe('70605').length >= 18);
 });
+
+// --- proteccion contra reparaciones inventadas --------------------------------
+//
+// Un modelo estadistico propuso en su dia insertar "nd" donde "sonaba probable",
+// y eso convertia nombres legitimos en disparates: Roads en Rondads, Hanoi en
+// Hanondi, McKenzie en McKezinde. La ausencia de un nombre en INEC no prueba que
+// este mutilado; solo prueba que INEC no lo cubre. Estas pruebas fijan que esas
+// propuestas nunca llegaron al catalogo.
+
+test('los nombres legitimos que la heuristica queria cambiar siguen intactos', () => {
+    const todos = new Set(Object.values(POBLADOS).flat());
+    for (const nombre of [
+        'Roads', 'Hanoi', 'Fields', 'McKenzie', 'Kezia', 'Wong', 'Tirol',
+        'Zaida', 'Zafira', 'Williamsburg', 'Bohío', 'Callao', 'Yolaa',
+    ]) {
+        assert.ok(todos.has(nombre), `${nombre}: desaparecio del catalogo`);
+    }
+});
+
+test('ninguna de las reconstrucciones inventadas entro en el catalogo', () => {
+    const todos = new Set(Object.values(POBLADOS).flat().map((n) => normalizar(n)));
+    for (const invento of [
+        'Rondads', 'Hanondi', 'Findelds', 'McKezinde', 'Kezinda', 'Wndong',
+        'Tindrol', 'Zandida', 'Zafindra', 'Willindamsburg', 'Bohindo',
+        'Callando', 'Undaca', 'Ondurut', 'Sukinda', 'Sand Vicente',
+    ]) {
+        assert.ok(!todos.has(normalizar(invento)), `entro una reconstruccion inventada: ${invento}`);
+    }
+});
+
+test('la palabra reconstruida no basta: hace falta el par confirmado', () => {
+    // "Sa Vicente" no es perdida de "nd" sino de "n", y es el unico caso del
+    // catalogo. Convertirlo en "Sand Vicente" porque SAND existe en INEC seria
+    // exactamente el error que estas pruebas impiden.
+    const todos = new Set(Object.values(POBLADOS).flat());
+    assert.ok(todos.has('Sa Vicente'), 'el original debe conservarse hasta que se revise');
+    assert.ok(!todos.has('Sand Vicente'));
+});

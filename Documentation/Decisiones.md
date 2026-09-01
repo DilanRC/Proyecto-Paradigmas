@@ -675,3 +675,59 @@ cero y el gate falla.
 **Limite.** Solo frontend. No se creo tabla ni endpoint, y la correccion vive en
 el catalogo generado, no en las direcciones ya guardadas en la base. Conviene
 reportar el defecto al IGN; esta decision y el CSV son la evidencia.
+
+## DEC-FRONT-15 - Politica de correccion: la evidencia manda sobre el parecido
+
+**Necesidad.** La lista de candidatos de DEC-FRONT-14 clasificaba por confianza
+usando, en su ultimo nivel, un modelo de trigramas. La revision manual encontro
+que ese modelo insertaba `nd` alli donde estadisticamente sonaba probable y
+proponia disparates sobre nombres perfectamente validos: `Roads` a `Rondads`,
+`Hanoi` a `Hanondi`, `McKenzie` a `McKezinde`, `Williamsburg` a `Willindamsburg`.
+
+**El error de razonamiento.** Se uso la ausencia de un nombre en INEC como
+indicio de que estaba mutilado. Es circular: los nombres de ese grupo estan ahi
+precisamente porque INEC no los cubre. Que INEC no conozca `Hanoi` no dice nada
+sobre `Hanoi`; dice algo sobre la cobertura de INEC. Tampoco alcanza la regla
+"la palabra existe en INEC al reponer nd": que `SAND` exista no demuestra que
+`Sa Vicente` fuera `Sand Vicente`, y de hecho era `San Vicente`.
+
+**Politica nueva, en cuatro niveles.**
+
+| Nivel | Criterio | Se aplica |
+|---|---|---|
+| CONFIRMADA | El nombre completo existe en INEC en el mismo distrito | Si, automatico |
+| RECONSTRUCCION_SEGURA | Cada token danado tiene un par confirmado en otro distrito por cruce mismo-distrito, o esta documentado en la tipologia del propio XLSX | Solo con revision |
+| REQUIERE_REVISION | Hay reconstruccion plausible pero sin par confirmado | Solo con revision |
+| NO_CORREGIR | Sin evidencia; la propuesta venia de una heuristica | Nunca |
+
+**Diccionario de pares confirmados.** La pieza que sustituye al modelo. De las
+345 correcciones que si tuvieron respaldo mismo-distrito se extrajeron 115 pares
+de token, del tipo `HACIEA -> HACIENDA` (38 confirmaciones), `GRAE -> GRANDE`
+(37), `LIA -> LINDA` (41). Cada aplicacion posterior de un par se apoya en que
+ese mismo par ya se confirmo contra INEC en algun distrito concreto.
+
+Se descartaron 8 pares de tres letras o menos con una sola confirmacion:
+`SA->SAND`, `SEA->SENDA`, `ARE->ANDRE`, `AES->ANDES`, `ARO->ANDRO`,
+`COO->CONDO`, `NAO->NANDO`, `GRA->GRAND`. Un token corto coincide con demasiadas
+cosas por azar, y `SA->SAND` era justamente el que producia `Sand Vicente`. Los
+pares cortos con apoyo real se conservan: `LIA` con 41, `HOA` con 11, `HOO` con 7.
+
+**Dos hallazgos de la revision.** `Iepeencia` es doble perdida, `I-nd-epe-nd-encia`;
+el detector solo reponia una secuencia y por eso quedaba a medias. Se corrigio y
+ahora resuelve `Independencia`. Y `Sa Vicente` no es perdida de `nd` sino de `n`
+sola: se busco ese patron en todo el catalogo y **es el unico caso**, de modo que
+no hay un segundo defecto sistematico.
+
+**Resultado.** 299 registros clasificados: 153 RECONSTRUCCION_SEGURA, 20
+REQUIERE_REVISION, 126 NO_CORREGIR. Ninguno se aplico. El catalogo embarcado
+sigue siendo el de DEC-FRONT-14, con sus 345 correcciones de respaldo
+mismo-distrito.
+
+**Riesgo cubierto.** Tres pruebas impiden la regresion: que los nombres legitimos
+(`Roads`, `Hanoi`, `Fields`, `McKenzie`, `Williamsburg`, `Bohío`, `Callao`,
+`Yolaa`) sigan en el catalogo; que ninguna de las reconstrucciones inventadas
+haya entrado; y que `Sa Vicente` no se haya convertido en `Sand Vicente`.
+
+**Limite.** El generador aplica unicamente la columna `correccion_final` que
+escriba una persona. La columna `sugerencia` no se aplica nunca sola, ni siquiera
+en RECONSTRUCCION_SEGURA.
