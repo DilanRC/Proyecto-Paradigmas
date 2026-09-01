@@ -50,6 +50,7 @@ fi
 cd -- "$PROJECT_ROOT"
 docker compose config --quiet
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' >/dev/null
+expected_tables_csv="$(php Tools/schema-manifest.php --format=csv)"
 
 (
     cd -- "$backup_dir"
@@ -219,7 +220,7 @@ for database in "$SOURCE_DATABASE" "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
     fi
     tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE';")"
-    if [[ "$tables_csv" != 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbpersona,tbproductor,tbproductoractividad,tbproductordireccion,tbproductorestadoperiodo,tbproductorubicacion,tbtransportista,tbtransportistavehiculo,tbvehiculo' ]]; then
+    if [[ "$tables_csv" != "$expected_tables_csv" ]]; then
         echo "Error: ${database} contiene tablas inesperadas: ${tables_csv}." >&2
         exit 1
     fi

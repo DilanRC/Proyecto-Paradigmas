@@ -83,6 +83,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'compose.yaml no es válido.' }
     & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'El servicio db no está disponible.' }
+    $ExpectedTablesCsv = (& php Tools/schema-manifest.php --format=csv).Trim()
 
     $restoreExists = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$RestoreDatabase';"
     if ($restoreExists -ne '0') { throw "$RestoreDatabase ya existe; no se eliminará una base temporal ajena." }
@@ -118,7 +119,7 @@ try {
         $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$database' AND CONSTRAINT_TYPE='CHECK';"
         if ($checkCount -ne '0') { throw "$database contiene $checkCount CHECK." }
         $tablesCsv = Invoke-MySqlQuery "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE';"
-        if ($tablesCsv -ne 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbpersona,tbproductor,tbproductoractividad,tbproductordireccion,tbproductorestadoperiodo,tbproductorubicacion,tbtransportista,tbtransportistavehiculo,tbvehiculo') { throw "$database contiene tablas inesperadas: $tablesCsv." }
+        if ($tablesCsv -ne $ExpectedTablesCsv) { throw "$database contiene tablas inesperadas: $tablesCsv." }
         $indexCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$database';"
         if ($indexCount -ne '0') { throw "$database contiene $indexCount índices." }
         $productorIdExtra = Invoke-MySqlQuery "SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND TABLE_NAME='tbproductor' AND COLUMN_NAME='tbproductorid';"

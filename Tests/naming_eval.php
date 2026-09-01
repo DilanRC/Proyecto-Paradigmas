@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
+require_once "{$root}/Tools/schema-manifest.php";
 $schemaFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $schema = implode("\n", array_map('file_get_contents', $schemaFiles));
+$manifest = schema_manifest();
 $seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
 $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 $relaciones = file_get_contents("{$root}/Database/Tests/comprobacionrelaciones.sql");
@@ -18,7 +20,7 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('quince_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 15,
+$evaluate('quince_tablas', $manifest['table_count'] === 15,
     'SQL crea exactamente quince tablas, incluida la identidad compartida tbpersona');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
@@ -69,13 +71,10 @@ $evaluate('diagnostico_sin_restriccion', str_contains($diagnostico, 'DETECTAN')
     'Las consultas de diagnóstico detectan inconsistencias sin impedirlas');
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
-$evaluate('tablas_singulares', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductor ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductordireccion ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvehiculo ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistavehiculo '),
+$evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbbitacora', 'tbcomprador',
+    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
+    'tbproductoractividad', 'tbproductordireccion', 'tbproductorestadoperiodo',
+    'tbproductorubicacion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
