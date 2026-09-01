@@ -20,6 +20,19 @@ body {
     line-height:1.5;
 }
 
+/*
+ * Los paneles privados fallan cerrados en presentación: no se pintan hasta que
+ * auth-gate valida el marcador de sesión. Si JS falla, el panel queda oculto
+ * en lugar de mostrar brevemente datos antes de una redirección.
+ */
+body.rural-panel {
+    visibility:hidden;
+}
+
+html[data-tc-auth='ready'] body.rural-panel {
+    visibility:visible;
+}
+
 button, input, select, textarea {
     font:inherit;
 }
