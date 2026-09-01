@@ -9,17 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/panel.css">
-    <link rel="stylesheet" href="css/red-ganadera.css">
+    <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/base.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/components.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
     <script type="module" src="js/compradores.js"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
         <div class="rural-panel__sidebar-brand">
-            <span class="brand__logo brand__logo--light" aria-hidden="true"><img src="assets/logo_light.png" alt=""></span>
+            <span class="brand__logo brand__logo--light" aria-hidden="true"><img src="assets/logo_light.png" alt="" width="44" height="44"></span>
             <span class="rural-panel__sidebar-brand-name">Tinder<strong>Cows</strong></span>
         </div>
         <nav class="rural-panel__nav" aria-label="Administración">

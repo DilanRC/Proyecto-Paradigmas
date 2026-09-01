@@ -12,13 +12,29 @@ test('la marca usa los PNG oficiales en landing, login y paneles', () => {
 
     assert.match(home, /assets\/logo_light\.png/, 'landing debe mostrar logo claro en la barra');
     assert.match(home, /assets\/logo_dark\.png/, 'landing debe mostrar logo oscuro en el hero');
+    assert.match(home, /logo_light\.png" alt="" width="44" height="44"/,
+        'el logo del header no debe depender solo del CSS para no crecer a tamaño natural');
+    assert.match(home, /logo_dark\.png" alt="TinderCows" width="84" height="84"/,
+        'el logo del hero debe tener dimensiones HTML de reserva');
     assert.match(login, /assets\/logo_dark\.png/, 'login debe usar logo oscuro');
     assert.match(login, /assets\/logo_light\.png/, 'login debe usar logo claro en el panel lateral');
 
     for (const view of PANEL_VIEWS) {
         const html = read(`Application/View/${view}/index.php`);
         assert.match(html, /assets\/logo_light\.png/, `${view}: falta logo claro oficial`);
+        assert.match(html, /logo_light\.png" alt="" width="44" height="44"/,
+            `${view}: el logo del sidebar debe tener dimensiones HTML de reserva`);
         assert.doesNotMatch(html, /<svg viewBox="0 0 48 48">/, `${view}: no debe volver el icono SVG viejo`);
+    }
+});
+
+test('las vistas versionan CSS para no mezclar HTML nuevo con hojas cacheadas', () => {
+    for (const view of ['home', 'login', ...PANEL_VIEWS]) {
+        const html = read(`Application/View/${view}/index.php`);
+        for (const sheet of ['tokens', 'base', 'components', 'panel', 'red-ganadera']) {
+            assert.match(html, new RegExp(`css/${sheet}\\.css\\?v=official-shell-2`),
+                `${view}: falta cache busting para ${sheet}.css`);
+        }
     }
 });
 

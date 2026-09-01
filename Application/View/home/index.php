@@ -9,17 +9,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
-    <link rel="stylesheet" href="css/tokens.css">
-    <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/components.css">
-    <link rel="stylesheet" href="css/panel.css">
-    <link rel="stylesheet" href="css/red-ganadera.css">
+    <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/base.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/components.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
     <script type="module" src="js/home.js"></script>
 </head>
 <body class="rural">
     <header class="landing-header">
         <div class="rural__brand">
-            <span class="brand__logo brand__logo--light" aria-hidden="true"><img src="assets/logo_light.png" alt=""></span>
+            <span class="brand__logo brand__logo--light" aria-hidden="true"><img src="assets/logo_light.png" alt="" width="44" height="44"></span>
             <span class="rural__brand-name">Tinder<strong>Cows</strong></span>
         </div>
         <nav class="landing-nav" aria-label="Principal">
@@ -42,7 +42,7 @@
                 </div>
             </div>
             <div class="landing-hero__product" aria-label="Módulos principales">
-                <span class="brand__logo brand__logo--dark"><img src="assets/logo_dark.png" alt="TinderCows"></span>
+                <span class="brand__logo brand__logo--dark"><img src="assets/logo_dark.png" alt="TinderCows" width="84" height="84"></span>
                 <dl class="landing-metrics">
                     <div><dt>Productores</dt><dd>Registro, contacto, dirección y fincas</dd></div>
                     <div><dt>Compradores</dt><dd>Clasificación histórica de solo lectura</dd></div>
