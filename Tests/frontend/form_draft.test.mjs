@@ -4,8 +4,10 @@ import test from 'node:test';
 import {
     applyFormValues,
     captureFormValues,
+    clearFormDraftAfterSuccessfulClose,
     createFormDraft,
     draftStorageKey,
+    enableFormDraft,
     resolveDraftContext,
 } from '../../Public/js/shared/form-draft.js';
 
@@ -26,7 +28,7 @@ function control(name, value = '', type = 'text') {
     };
 }
 
-function fakeForm(id, controls) {
+function fakeForm(id, controls, dialog = null) {
     const listeners = new Map();
     const elements = [...controls];
     elements.namedItem = (name) => elements.find((item) => item.name === name) ?? null;
@@ -36,7 +38,7 @@ function fakeForm(id, controls) {
         listeners,
         addEventListener(type, listener) { listeners.set(type, listener); },
         removeEventListener(type) { listeners.delete(type); },
-        closest() { return null; },
+        closest(selector) { return selector === 'dialog' ? dialog : null; },
     };
 }
 
@@ -139,6 +141,27 @@ test('input/change guarda con debounce sin depender del submit', async () => {
 
     const saved = JSON.parse(storage.getItem('tindercows:draft:pagometodo:create'));
     assert.equal(saved.values.nombre.value, 'Transferencia temporal');
+});
+
+test('un error conserva el borrador y un cierre posterior a 2xx lo elimina', () => {
+    const storage = fakeStorage();
+    const dialog = { open: true };
+    const form = fakeForm(
+        'formulario-vehiculo',
+        [control('vehiculoId', '', 'hidden'), control('placa', 'ABC123')],
+        dialog,
+    );
+    const draft = enableFormDraft(form, { storage, restoreOnOpen: false });
+    draft.saveNow();
+
+    assert.equal(clearFormDraftAfterSuccessfulClose(form), false,
+        'si el diálogo sigue abierto el error debe conservar lo escrito');
+    assert.equal(storage.data.has('tindercows:draft:vehiculo:create'), true);
+
+    dialog.open = false;
+    assert.equal(clearFormDraftAfterSuccessfulClose(form), true,
+        'el borrador se elimina cuando el flujo exitoso ya cerró el diálogo');
+    assert.equal(storage.data.has('tindercows:draft:vehiculo:create'), false);
 });
 
 test('restaurar selects emite change para reconstruir cascadas dependientes', () => {
