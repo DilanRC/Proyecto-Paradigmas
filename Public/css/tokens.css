@@ -1,0 +1,42 @@
+/* tokens.css — Tokens de diseno: color, tipografia, espacio, radio, sombra, z-index. */
+
+:root {
+    color-scheme: light;
+    --background:#f5f7f3;
+    --surface:#fff;
+    --text:#1d2821;
+    --muted:#66716a;
+    --border:#dfe5df;
+    --primary:#226a46;
+    --primary-dark:#174c33;
+    --primary-soft:#e6f2eb;
+    --accent:#ef5b63;
+    --danger:#bd343d;
+    --danger-soft:#fdecee;
+    --shadow:0 18px 50px rgba(32,61,43,.09);
+    --radius:18px;
+    --small-radius:10px;
+    --font-sans:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    --font-serif:'Lora',Georgia,'Times New Roman',serif;
+    font-family:var(--font-sans);
+}
+
+:root {
+    --rural-wheat:#F5DEB3;
+    --rural-rust:#8a2e00;
+    --rural-rust-dark:#6e2500;
+    --rural-denim:#5D89BA;
+}
+
+/* Texto atenuado con contraste AA verificado (>=4.5:1).
+   Antes eran rgba() sobre fondos de color y bajaban hasta 2.05:1.
+   Cada valor esta comprobado por Tests/frontend_contrast_test.mjs. */
+:root {
+    --wheat-text-muted:#dfb98d;   /* 4.64:1 sobre --rural-rust */
+    --wheat-text-soft:#cca57c;    /* 4.67:1 sobre fondos oscurecidos del aside */
+    --rust-text-muted:#a45b34;    /* 4.62:1 sobre fondos claros del panel */
+    --rust-text-soft:#a76240;     /* 4.70:1 sobre blanco */
+    --rust-text-lead:#986344;     /* 4.53:1 sobre el fondo del panel */
+    --rust-text-body:#a15833;     /* 5.30:1 sobre blanco (cita del home) */
+    --badge-inactive-text:#5f6762;/* 5.03:1 sobre #ecefed */
+}

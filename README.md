@@ -317,6 +317,10 @@ docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
+node Tests/frontend_contract_test.js
+node Tests/frontend_capacidades_eval.js
+node Tests/frontend_contrast_test.mjs
+node --test Tests/frontend/*.test.mjs
 python3 Tests/documentation_test.py
 cd services/supabase-server && npm test && npm run eval
 php services/supabase-database/tests/schema_test.php

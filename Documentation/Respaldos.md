@@ -1,5 +1,30 @@
 # Respaldos versionados y restauración
 
+## Respaldo previo al remodelado por tramos (tramo 1, EIF400)
+
+Antes de tocar estado, dirección y ubicación históricos (tramos 2-11) se generó
+un respaldo completo del estado actual, para poder revertir si algo del
+remodelado rompe datos existentes:
+
+```bash
+Tools/backup-database.sh Avance02 Jeremi
+Tools/test-restore.sh Avance02
+```
+
+```text
+Database/Backups/Avance02/
+├── dbmercadoganadero_avance02_completo.sql
+├── dbmercadoganadero_avance02_estructura.sql
+├── dbmercadoganadero_avance02_datos.sql
+├── MANIFEST.md
+└── SHA256SUMS.txt
+```
+
+Resultado: quince tablas, cero PK/FK/CHECK/índices/AUTO_INCREMENT, restauración
+completa y por partes verificadas byte a byte contra el origen (`APROBADO` en
+`MANIFEST.md`). Los ocho respaldos anteriores (`Avance01` hasta `LineaBase`) no
+se tocaron, no se movieron y no se reorganizaron.
+
 ## Entrega vigente
 
 Corrección 04 no modifica los respaldos históricos hasta Corrección 03. El
