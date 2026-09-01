@@ -32,6 +32,23 @@ final class ProductorDireccion
         }
     }
 
+    /**
+     * Envuelve la operación bajo el lock nombrado POR PRODUCTOR de dirección y,
+     * dentro de él, delega al lock global de alta (requisito de
+     * Direccion::crearConBloqueoExistente). El callback debe contener toda la
+     * transacción de cierre+alta: el lock se libera en finally SIEMPRE, incluso
+     * ante excepción, para no dejar un productor bloqueado.
+     */
+    public function ejecutarConBloqueoProducto(int $productorId, callable $operacion): mixed
+    {
+        $this->adquirirBloqueoProducto($productorId);
+        try {
+            return $this->ejecutarConBloqueoAlta($operacion);
+        } finally {
+            $this->liberarBloqueoProducto($productorId);
+        }
+    }
+
     public function crearVacia(int $productorId): void
     {
         $this->abrirPeriodo($productorId, [
@@ -55,10 +72,20 @@ final class ProductorDireccion
         $this->abrirPeriodo($productorId, $direccion);
     }
 
+    /**
+     * Fin del UPDATE destructivo de dirección (DEC-21): un cambio de residencia
+     * cierra el periodo abierto (fechafin = ahora) e inserta un periodo nuevo
+     * con la dirección recibida. La dirección anterior queda intocable en el
+     * histórico. Debe ejecutarse bajo ejecutarConBloqueoProducto() para que la
+     * transacción posea el lock por productor y el lock global de alta.
+     */
     public function actualizar(int $productorId, array $direccion): void
     {
-        $direccionId = $this->obtenerDireccionAbiertaId($productorId);
-        $this->direccion->actualizar($direccionId, $direccion);
+        if ($this->consultarPeriodoAbierto($productorId) === null) {
+            throw new \RuntimeException('El productor no conserva una dirección abierta para actualizar.');
+        }
+        $this->cerrarPeriodo($productorId);
+        $this->abrirPeriodo($productorId, $direccion);
     }
 
     /** La dirección del periodo abierto, con la misma forma que siempre. */
@@ -217,16 +244,6 @@ final class ProductorDireccion
         ]);
     }
 
-    private function obtenerDireccionAbiertaId(int $productorId): int
-    {
-        $periodo = $this->consultarPeriodoAbierto($productorId);
-        if ($periodo === null) {
-            throw new \RuntimeException('El productor no conserva una dirección abierta.');
-        }
-
-        return $periodo['tbdireccionid'];
-    }
-
     private function siguienteEnlaceId(): int
     {
         $sentencia = $this->conexion->prepare(
@@ -245,5 +262,15 @@ final class ProductorDireccion
     private function liberarBloqueoAlta(): void
     {
         NamedLock::release($this->conexion, 'tindercows_productor_direccion_alta');
+    }
+
+    private function adquirirBloqueoProducto(int $productorId): void
+    {
+        NamedLock::acquire($this->conexion, 'tindercows_productor_direccion_' . $productorId);
+    }
+
+    private function liberarBloqueoProducto(int $productorId): void
+    {
+        NamedLock::release($this->conexion, 'tindercows_productor_direccion_' . $productorId);
     }
 }

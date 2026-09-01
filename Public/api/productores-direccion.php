@@ -10,8 +10,12 @@ use function Configuration\sendJsonResponse;
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
+require_once $raiz . '/Application/HttpException.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'Bitacora', 'Productor', 'ProductorEstadoPeriodo'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
+}
+foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService'] as $servicio) {
+    require_once $raiz . "/Application/Service/{$servicio}.php";
 }
 require_once $raiz . '/Application/Controller/ProductorController.php';
 

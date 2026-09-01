@@ -20,7 +20,14 @@ try {
         WHERE tbbitacoraregistroidentificacionnumero = :id ORDER BY tbbitacoraid');
     $sentencia->execute(['id' => $productor['identificacionNumero']]);
     $eventos = $sentencia->fetchAll();
-    test_same(['CREAR', 'ACTUALIZAR', 'DESACTIVAR', 'REACTIVAR'], array_column($eventos, 'tbbitacoraaccion'), 'Ciclo auditado');
+    // El PUT registra CAMBIO_DIRECCION (dentro del cierre+alta) y ACTUALIZAR (al
+    // terminar la transacción), en ese orden de inserción.
+    test_same(['CREAR', 'CAMBIO_DIRECCION', 'ACTUALIZAR', 'DESACTIVAR', 'REACTIVAR'],
+        array_column($eventos, 'tbbitacoraaccion'), 'Ciclo auditado');
+    $cambioDireccion = current(array_filter($eventos, static fn (array $e): bool => $e['tbbitacoraaccion'] === 'CAMBIO_DIRECCION'));
+    test_assert(is_array($cambioDireccion) && json_decode($cambioDireccion['tbbitacoradatosanteriores'], true) !== null
+        && json_decode($cambioDireccion['tbbitacoradatosnuevos'], true) !== null,
+        'CAMBIO_DIRECCION guarda dirección anterior y nueva como JSON');
     foreach ($eventos as $evento) {
         test_same('PRODUCTOR', $evento['tbbitacoraentidad'], 'Entidad simplificada');
         test_same('NO_AUTENTICADO', $evento['tbbitacoraactortipo'], 'Actor real disponible');

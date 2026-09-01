@@ -60,6 +60,7 @@ final class Productor
                 INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
                 INNER JOIN tbproductordireccion pd
                     ON pd.tbproductorid = p.tbproductorid
+                   AND pd.tbproductordireccionfechafin IS NULL
                 INNER JOIN tbdireccion d
                     ON d.tbdireccionid = pd.tbdireccionid
                 {$where}
@@ -102,6 +103,7 @@ final class Productor
              INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
              LEFT JOIN tbproductordireccion pd
                 ON pd.tbproductorid = p.tbproductorid
+               AND pd.tbproductordireccionfechafin IS NULL
              LEFT JOIN tbdireccion d
                 ON d.tbdireccionid = pd.tbdireccionid
              WHERE pe.tbpersonaidentificacionnumero = :identificacionNumero"
