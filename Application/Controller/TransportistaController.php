@@ -4,36 +4,22 @@ declare(strict_types=1);
 
 namespace Application\Controller;
 
+use Application\HttpException;
 use Application\Model\Bitacora;
 use Application\Model\Transportista;
 use Application\Model\TransportistaVehiculo;
+use Application\Service\EstadoService;
+use Application\Service\ValidacionException;
+use Application\Service\ValidacionService;
 use PDO;
 use Throwable;
 
-final class TransportistaHttpException extends \RuntimeException
-{
-    public function __construct(
-        string $message,
-        public readonly int $estadoHttp,
-        public readonly ?array $datos = null,
-        public readonly array $errores = [],
-    ) {
-        parent::__construct($message);
-    }
-}
-
 final class TransportistaController
 {
-    private const TIPOS_IDENTIFICACION = [
-        'CEDULA_FISICA' => 'Cédula física',
-        'CEDULA_JURIDICA' => 'Cédula jurídica',
-        'DIMEX' => 'DIMEX',
-        'NITE' => 'NITE',
-        'PASAPORTE' => 'Pasaporte',
-    ];
-
     private Transportista $transportista;
     private Bitacora $bitacora;
+    private ValidacionService $validacion;
+    private EstadoService $estadoService;
     private string $solicitudId;
 
     public function __construct(private readonly PDO $conexion, ?string $solicitudId = null)
@@ -42,6 +28,8 @@ final class TransportistaController
         $this->transportista = new Transportista($conexion, $vehiculos);
         $this->bitacora = new Bitacora($conexion);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
+        $this->validacion = new ValidacionService();
+        $this->estadoService = new EstadoService($this->bitacora, $this->solicitudId);
     }
 
     public function procesar(string $metodo, array $consulta, array $cuerpo): array
@@ -57,7 +45,7 @@ final class TransportistaController
             };
         } catch (\Application\Model\PersonaConflictException $excepcion) {
             return $this->respuesta(false, $excepcion->getMessage(), null, 409, ['identificacion.numero' => $excepcion->getMessage()]);
-        } catch (TransportistaHttpException $excepcion) {
+        } catch (HttpException $excepcion) {
             return $this->respuesta(
                 false,
                 $excepcion->getMessage(),
@@ -75,11 +63,11 @@ final class TransportistaController
                 $this->textoConsulta($consulta['identificacionNumero'], 250)
             );
             if ($identificacion === '') {
-                throw new TransportistaHttpException('La identificación no es válida.', 422);
+                throw new HttpException('La identificación no es válida.', 422);
             }
             $transportista = $this->transportista->buscar($identificacion);
             if ($transportista === null) {
-                throw new TransportistaHttpException('Transportista no encontrado.', 404);
+                throw new HttpException('Transportista no encontrado.', 404);
             }
             return $this->respuesta(true, 'Transportista consultado correctamente.', $transportista);
         }
@@ -87,7 +75,7 @@ final class TransportistaController
         $busqueda = $this->textoConsulta($consulta['q'] ?? '', 150);
         $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? 'TODOS', 10), 'UTF-8');
         if (!in_array($estado, ['TODOS', 'ACTIVO', 'INACTIVO'], true)) {
-            throw new TransportistaHttpException('El filtro de estado no es válido.', 422, null, [
+            throw new HttpException('El filtro de estado no es válido.', 422, null, [
                 'estado' => 'Use TODOS, ACTIVO o INACTIVO.',
             ]);
         }
@@ -95,27 +83,27 @@ final class TransportistaController
         $tamano = array_key_exists('tamanoPagina', $consulta)
             ? $this->enteroConsulta($consulta['tamanoPagina'], 'tamanoPagina') : 25;
         if ($tamano > 100) {
-            throw new TransportistaHttpException('El tamaño de página no es válido.', 422, null, [
+            throw new HttpException('El tamaño de página no es válido.', 422, null, [
                 'tamanoPagina' => 'Debe estar entre 1 y 100.',
             ]);
         }
         $resultado = $this->transportista->listar($busqueda, $estado, $pagina, $tamano);
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;
-        $resultado['catalogos'] = ['tiposIdentificacion' => $this->tiposIdentificacion()];
+        $resultado['catalogos'] = ['tiposIdentificacion' => $this->validacion->tiposIdentificacion()];
 
         return $this->respuesta(true, 'Transportistas consultados correctamente.', $resultado);
     }
 
     private function crear(array $cuerpo): array
     {
-        $datos = $this->validarTransportista($cuerpo, false);
+        $datos = $this->validarCuerpoPersona($cuerpo, false);
         $nuevo = $this->transportista->ejecutarConBloqueoAlta(
             fn (): array => $this->transaccion(function () use ($datos): array {
                 $existente = $this->transportista->buscar($datos['identificacionNumero']);
                 if ($existente !== null) {
                     $inactivo = $existente['estado'] === 'INACTIVO';
-                    throw new TransportistaHttpException(
+                    throw new HttpException(
                         $inactivo
                             ? 'La identificación pertenece a un transportista inactivo.'
                             : 'La identificación ya está registrada.',
@@ -151,10 +139,10 @@ final class TransportistaController
 
     private function actualizar(array $cuerpo): array
     {
-        $datos = $this->validarTransportista($cuerpo, true);
+        $datos = $this->validarCuerpoPersona($cuerpo, true);
         $identificacion = $datos['identificacionNumeroOriginal'];
         if ($datos['identificacionNumero'] !== $identificacion) {
-            throw new TransportistaHttpException('La identificación es inmutable y no puede modificarse.', 422, null, [
+            throw new HttpException('La identificación es inmutable y no puede modificarse.', 422, null, [
                 'identificacion.numero' => 'Cree otro registro si la identificación fue digitada incorrectamente.',
             ]);
         }
@@ -162,10 +150,10 @@ final class TransportistaController
         $nuevo = $this->transaccion(function () use ($datos, $identificacion): array {
             $bloqueado = $this->transportista->bloquear($identificacion);
             if ($bloqueado === null) {
-                throw new TransportistaHttpException('Transportista no encontrado.', 404);
+                throw new HttpException('Transportista no encontrado.', 404);
             }
             if ((int) $bloqueado['tbtransportistaestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
-                throw new TransportistaHttpException(
+                throw new HttpException(
                     'El transportista está inactivo. Debe reactivarlo antes de actualizarlo.',
                     409,
                 );
@@ -189,26 +177,18 @@ final class TransportistaController
     private function desactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
-        $nuevo = $this->transaccion(function () use ($identificacion): array {
-            $bloqueado = $this->transportista->bloquear($identificacion);
-            $anterior = $this->transportista->buscar($identificacion);
-            if ($bloqueado === null || $anterior === null) {
-                throw new TransportistaHttpException('Transportista no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
-                throw new TransportistaHttpException('La persona está inactiva y no puede operar capacidades.', 409);
-            }
-            if ((int) $bloqueado['tbtransportistaestado'] === 0) {
-                return $anterior;
-            }
-            $this->transportista->cambiarEstado($identificacion, false);
-            $nuevo = $this->transportista->buscar($identificacion);
-            $this->bitacora->registrar(
-                'DESACTIVAR', $identificacion, $anterior, $nuevo, $this->solicitudId,
-                entidad: 'TRANSPORTISTA', origen: 'API_TRANSPORTISTAS',
-            );
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el transportista desactivado.');
-        });
+        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
+            fn ($clave) => $this->transportista->bloquear($clave),
+            fn ($clave) => $this->transportista->buscar($clave),
+            fn ($clave, $activo) => $this->transportista->cambiarEstado($clave, $activo),
+            'tbtransportistaestado',
+            0,
+            'Transportista no encontrado.',
+            $identificacion,
+            'TRANSPORTISTA',
+            'API_TRANSPORTISTAS',
+            $identificacion,
+        ));
 
         return $this->respuesta(true, 'Transportista desactivado correctamente.', $nuevo);
     }
@@ -216,158 +196,52 @@ final class TransportistaController
     private function reactivar(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
-        $nuevo = $this->transaccion(function () use ($identificacion): array {
-            $bloqueado = $this->transportista->bloquear($identificacion);
-            $anterior = $this->transportista->buscar($identificacion);
-            if ($bloqueado === null || $anterior === null) {
-                throw new TransportistaHttpException('Transportista no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbpersonaestado'] !== 1) {
-                throw new TransportistaHttpException('La persona está inactiva y no puede reactivar capacidades.', 409);
-            }
-            if ((int) $bloqueado['tbtransportistaestado'] === 1) {
-                return $anterior;
-            }
-            $this->transportista->cambiarEstado($identificacion, true);
-            $nuevo = $this->transportista->buscar($identificacion);
-            $this->bitacora->registrar(
-                'REACTIVAR', $identificacion, $anterior, $nuevo, $this->solicitudId,
-                entidad: 'TRANSPORTISTA', origen: 'API_TRANSPORTISTAS',
-            );
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el transportista reactivado.');
-        });
+        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
+            fn ($clave) => $this->transportista->bloquear($clave),
+            fn ($clave) => $this->transportista->buscar($clave),
+            fn ($clave, $activo) => $this->transportista->cambiarEstado($clave, $activo),
+            'tbtransportistaestado',
+            1,
+            'Transportista no encontrado.',
+            $identificacion,
+            'TRANSPORTISTA',
+            'API_TRANSPORTISTAS',
+            $identificacion,
+        ));
 
         return $this->respuesta(true, 'Transportista reactivado correctamente.', $nuevo);
     }
 
-    private function validarTransportista(array $cuerpo, bool $actualizacion): array
+    private function validarCuerpoPersona(array $cuerpo, bool $actualizacion): array
     {
+        // Contrato de campos del transportista (alineado con la UI): el POST y
+        // el PUT aceptan el mismo perfil que el resto de personas.
         $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico'];
-        if ($actualizacion) {
-            $permitidos[] = 'identificacionNumeroOriginal';
-        }
-        $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
-        $errores = [];
-        $identificacion = $this->validarIdentificacion($cuerpo['identificacion'] ?? null, $errores);
-        $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
-        $telefono = $this->validarTelefono($cuerpo['telefono'] ?? null, $errores);
-        $correo = $this->validarCorreo($cuerpo['correoElectronico'] ?? null, $errores);
-        $original = null;
-        if ($actualizacion) {
-            $originalTexto = is_string($cuerpo['identificacionNumeroOriginal'] ?? null)
-                ? $cuerpo['identificacionNumeroOriginal'] : '';
-            $original = $this->normalizarIdentificacion($originalTexto);
-            if ($original === '') {
-                $errores['identificacionNumeroOriginal'] = 'La identificación original es obligatoria.';
-            }
-        }
-        if ($errores !== []) {
-            throw new TransportistaHttpException('Revise los campos indicados.', 422, null, $errores);
-        }
-
-        return [
-            'identificacionNumero' => $identificacion['numero'],
-            'identificacionNumeroOriginal' => $original,
-            'identificacionTipo' => $identificacion['tipoCodigo'],
-            'nombre' => $nombre,
-            'telefono' => $telefono,
-            'correoElectronico' => $correo,
-        ];
-    }
-
-    private function validarIdentificacion(mixed $valor, array &$errores): array
-    {
-        if (!is_array($valor) || array_is_list($valor)) {
-            $errores['identificacion'] = 'La identificación debe ser un objeto.';
-            return ['tipoCodigo' => '', 'numero' => ''];
-        }
         try {
-            $this->rechazarCamposDesconocidos($valor, ['tipoCodigo', 'numero'], 'identificacion.');
-        } catch (TransportistaHttpException $excepcion) {
-            $errores += $excepcion->errores;
+            return $this->validacion->validarPersona($cuerpo, $actualizacion)['datos'];
+        } catch (ValidacionException $excepcion) {
+            throw new HttpException($excepcion->getMessage(), 422, null, $excepcion->errores);
         }
-        $tipo = is_string($valor['tipoCodigo'] ?? null)
-            ? mb_strtoupper(trim($valor['tipoCodigo']), 'UTF-8') : '';
-        if (!array_key_exists($tipo, self::TIPOS_IDENTIFICACION)) {
-            $errores['identificacion.tipoCodigo'] = 'Seleccione un tipo de identificación válido.';
-        }
-        $visible = $this->textoCampo($valor['numero'] ?? null, 'identificacion.numero', 250, $errores, 1, false);
-        $patron = in_array($tipo, ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'], true)
-            ? '/^[0-9][0-9 -]*$/' : '/^[A-Za-z0-9][A-Za-z0-9 -]*$/';
-        if ($visible !== '' && !preg_match($patron, $visible)) {
-            $errores['identificacion.numero'] = 'Use únicamente letras, dígitos, espacios o guiones según el tipo.';
-        }
-        $numero = $this->normalizarIdentificacion($visible);
-        return ['tipoCodigo' => $tipo, 'numero' => $numero];
-    }
-
-    private function validarTelefono(mixed $valor, array &$errores): string
-    {
-        $telefono = $this->textoCampo($valor, 'telefono', 20, $errores, 1, false);
-        $digitos = preg_replace('/\D+/', '', $telefono) ?? '';
-        if ($telefono !== '' && (!preg_match('/^\+?[0-9 ()-]+$/', $telefono) || strlen($digitos) < 8 || strlen($digitos) > 15)) {
-            $errores['telefono'] = 'Use un prefijo opcional y entre 8 y 15 dígitos.';
-        }
-        return preg_replace('/[ ()-]+/', '', $telefono) ?? $telefono;
-    }
-
-    private function validarCorreo(mixed $valor, array &$errores): string
-    {
-        $correo = mb_strtolower($this->textoCampo($valor, 'correoElectronico', 150, $errores, 1, false), 'UTF-8');
-        if ($correo !== '' && filter_var($correo, FILTER_VALIDATE_EMAIL) === false) {
-            $errores['correoElectronico'] = 'Ingrese un correo electrónico válido.';
-        }
-        return $correo;
     }
 
     private function validarIdentificacionUnica(array $cuerpo): string
     {
-        $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero']);
-        $identificacion = is_string($cuerpo['identificacionNumero'] ?? null)
-            ? $this->normalizarIdentificacion($cuerpo['identificacionNumero']) : '';
-        if ($identificacion === '') {
-            throw new TransportistaHttpException('Revise los campos indicados.', 422, null, [
-                'identificacionNumero' => 'La identificación es obligatoria.',
-            ]);
+        try {
+            return $this->validacion->validarIdentificacionUnica($cuerpo);
+        } catch (ValidacionException $excepcion) {
+            throw new HttpException($excepcion->getMessage(), 422, null, $excepcion->errores);
         }
-        return $identificacion;
     }
 
     private function normalizarIdentificacion(string $valor): string
     {
-        return mb_strtoupper(preg_replace('/[ -]+/u', '', trim($valor)) ?? '', 'UTF-8');
-    }
-
-    private function tiposIdentificacion(): array
-    {
-        $resultado = [];
-        foreach (self::TIPOS_IDENTIFICACION as $codigo => $nombre) {
-            $resultado[] = ['codigo' => $codigo, 'nombre' => $nombre];
-        }
-        return $resultado;
-    }
-
-    private function textoCampo(mixed $valor, string $campo, int $maximo, array &$errores, int $minimo = 0, bool $compactar = true): string
-    {
-        if (!is_string($valor)) {
-            $errores[$campo] = 'El campo es obligatorio.';
-            return '';
-        }
-        $texto = trim($valor);
-        if ($compactar) {
-            $texto = preg_replace('/\s+/u', ' ', $texto) ?? $texto;
-        }
-        $longitud = mb_strlen($texto);
-        if ($longitud < $minimo || $longitud > $maximo) {
-            $errores[$campo] = "Debe contener entre {$minimo} y {$maximo} caracteres.";
-        }
-        return $texto;
+        return $this->validacion->normalizarIdentificacion($valor);
     }
 
     private function textoConsulta(mixed $valor, int $maximo): string
     {
         if (!is_string($valor) || mb_strlen($valor) > $maximo) {
-            throw new TransportistaHttpException('La consulta no es válida.', 422);
+            throw new HttpException('La consulta no es válida.', 422);
         }
         return trim($valor);
     }
@@ -376,22 +250,9 @@ final class TransportistaController
     {
         $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($entero === false) {
-            throw new TransportistaHttpException("{$campo} debe ser un entero positivo.", 422);
+            throw new HttpException("{$campo} debe ser un entero positivo.", 422);
         }
         return $entero;
-    }
-
-    private function rechazarCamposDesconocidos(array $datos, array $permitidos, string $prefijo = ''): void
-    {
-        $desconocidos = array_diff(array_keys($datos), $permitidos);
-        if ($desconocidos === []) {
-            return;
-        }
-        $errores = [];
-        foreach ($desconocidos as $campo) {
-            $errores[$prefijo . $campo] = 'Campo no permitido.';
-        }
-        throw new TransportistaHttpException('Revise los campos indicados.', 422, null, $errores);
     }
 
     private function transaccion(callable $operacion): mixed
