@@ -1,4 +1,18 @@
 const SESSION_KEY = 'tindercows:login';
+const PRIVATE_ROUTES = new Set([
+    'productores.php',
+    'compradores.php',
+    'transportistas.php',
+    'vehiculos.php',
+    'pagometodos.php',
+]);
+
+export function resolveNext(search = '') {
+    const requested = new URLSearchParams(search).get('next');
+    return requested && PRIVATE_ROUTES.has(requested)
+        ? requested
+        : 'productores.php';
+}
 
 function setError(control, message) {
     const error = document.querySelector(`[data-error-for="${control.name}"]`);
@@ -36,12 +50,14 @@ function initialize() {
 
         const email = String(new FormData(form).get('email') ?? '').trim();
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+            authenticated: true,
+            version: 1,
             email,
             startedAt: new Date().toISOString(),
             mode: 'local-browser-session',
         }));
-        status.textContent = 'Sesión local iniciada. Abriendo el panel...';
-        window.location.assign('productores.php');
+        status.textContent = 'Acceso confirmado. Abriendo TinderCows…';
+        window.location.assign(resolveNext(window.location.search));
     });
 }
 
