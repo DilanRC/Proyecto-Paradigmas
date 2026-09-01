@@ -1,3 +1,5 @@
+import './auth-gate.js';
+
 // Acceso HTTP y taxonomia de fallos.
 //
 // Separa estructuralmente dos familias que antes se confundian:
