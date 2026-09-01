@@ -188,6 +188,83 @@ try {
         'Ejecutar el backfill dos veces no abre dos periodos.');
 
     // ------------------------------------------------------------------
+    // 3bis. Carreras: la auditoría es una foto y la base es compartida.
+    // ------------------------------------------------------------------
+    // Carrera 1: la auditoría la ve activa y alguien la desactiva antes de
+    // aplicar. El backfill no debe abrir clasificación con datos viejos.
+    $documentoCarreraA = test_document();
+    $carreraA = test_create([], $documentoCarreraA);
+    $identificaciones[] = $carreraA['identificacionNumero'];
+    $productorCarreraA = (int) $carreraA['productorId'];
+    $compradorCarreraA = backfill_test_insertar_legacy(
+        $db, backfill_test_persona_id($db, $carreraA['identificacionNumero']), 1);
+
+    $fotoA = backfill_auditar($db);
+    test_assert(in_array($carreraA['identificacionNumero'],
+        array_column($fotoA['migrables'], 'tbpersonaidentificacionnumero'), true),
+        'La auditoría ve la fila de la carrera 1 como migrable.');
+
+    // Otra conexión, como haría el CRUD desde otra petición.
+    $otra = test_new_db();
+    $otra->prepare('UPDATE tbcomprador SET tbcompradorestado = 0 WHERE tbcompradorid = :id')
+        ->execute(['id' => $compradorCarreraA]);
+
+    $resultadoA = backfill_aplicar($db, $fotoA);
+    test_same(0, count(backfill_test_periodos($db, $productorCarreraA)),
+        'El backfill no abre clasificación de una fila desactivada después de la auditoría.');
+    test_same(1, count($resultadoA['omitidos']), 'La fila se reporta como omitida por cambio concurrente.');
+    test_same($compradorCarreraA, (int) $resultadoA['omitidos'][0]['tbcompradorid'],
+        'El reporte identifica exactamente qué fila se omitió.');
+    test_assert(str_contains($resultadoA['omitidos'][0]['motivo_backfill'], 'desactivado'),
+        'El reporte dice por qué se omitió.');
+
+    // Carrera 2: otra conexión abre COMPRADOR entre la auditoría y el apply.
+    $documentoCarreraB = test_document();
+    $carreraB = test_create([], $documentoCarreraB);
+    $identificaciones[] = $carreraB['identificacionNumero'];
+    $productorCarreraB = (int) $carreraB['productorId'];
+    backfill_test_insertar_legacy($db, backfill_test_persona_id($db, $carreraB['identificacionNumero']), 1);
+
+    $fotoB = backfill_auditar($db);
+    test_assert(in_array($carreraB['identificacionNumero'],
+        array_column($fotoB['migrables'], 'tbpersonaidentificacionnumero'), true),
+        'La auditoría ve la fila de la carrera 2 como migrable.');
+
+    $clasificacionOtra = new ProductorClasificacionPeriodo($otra);
+    $clasificacionOtra->ejecutarConBloqueo($productorCarreraB, 'COMPRADOR',
+        function () use ($otra, $clasificacionOtra, $productorCarreraB): int {
+            $otra->beginTransaction();
+            try {
+                $id = $clasificacionOtra->abrir($productorCarreraB, 'COMPRADOR', 'Alta concurrente');
+                $otra->commit();
+
+                return $id;
+            } catch (Throwable $error) {
+                if ($otra->inTransaction()) {
+                    $otra->rollBack();
+                }
+                throw $error;
+            }
+        });
+
+    $resultadoB = backfill_aplicar($db, $fotoB);
+    test_same(1, count(backfill_test_periodos($db, $productorCarreraB)),
+        'El backfill no duplica un periodo que otra conexión ya abrió.');
+    test_same(0, $resultadoB['migrados'], 'Nada que migrar: la clasificación ya existía.');
+    test_same(1, $resultadoB['ya_migrados'], 'La fila se cuenta como ya migrada, no como error.');
+
+    // Limpieza de las dos filas de carrera antes de seguir.
+    foreach ([$productorCarreraA, $productorCarreraB] as $productorCarrera) {
+        $db->prepare('DELETE FROM tbproductorclasificacionperiodo WHERE tbproductorid = :id')
+            ->execute(['id' => $productorCarrera]);
+    }
+    foreach ([$carreraA['identificacionNumero'], $carreraB['identificacionNumero']] as $documentoCarrera) {
+        $db->prepare('DELETE c FROM tbcomprador c
+            INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+            WHERE pe.tbpersonaidentificacionnumero = :id')->execute(['id' => $documentoCarrera]);
+    }
+
+    // ------------------------------------------------------------------
     // 3. CRUD después del backfill.
     // ------------------------------------------------------------------
     $controlador = new CompradorController($db, test_token('request'));
@@ -362,7 +439,11 @@ try {
     test_same($bitacoraAntes, backfill_test_bitacora($db, $identificacionCrud),
         'Un fallo no deja rastro de transición en la bitácora.');
 } finally {
-    foreach ([$documentoActivo, $documentoInactivo, $documentoCrud] as $documento) {
+    foreach ([$documentoActivo, $documentoInactivo, $documentoCrud,
+        $documentoCarreraA ?? null, $documentoCarreraB ?? null] as $documento) {
+        if ($documento === null) {
+            continue;
+        }
         $canonico = str_replace('-', '', $documento);
         $db->prepare('DELETE cp FROM tbproductorclasificacionperiodo cp
             INNER JOIN tbproductor p ON p.tbproductorid = cp.tbproductorid
@@ -379,7 +460,8 @@ try {
         $db->prepare('DELETE FROM tbpersona WHERE tbpersonaid = :id')->execute(['id' => $personaHuerfanaId]);
     }
     test_cleanup_productores(array_map(static fn (string $d): string => str_replace('-', '', $d),
-        [$documentoActivo, $documentoInactivo, $documentoCrud]));
+        array_filter([$documentoActivo, $documentoInactivo, $documentoCrud,
+            $documentoCarreraA ?? null, $documentoCarreraB ?? null])));
 }
 
 echo "OK comprador_backfill_test: precheck reporta legacy sin productor, backfill idempotente solo para activos, "

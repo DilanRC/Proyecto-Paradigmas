@@ -611,6 +611,29 @@ abierto, así que correrla dos veces deja un solo periodo.
 Cada corrida deja snapshot CSV antes y después, y bitácora de progreso, en
 `/tmp/backfill-clasificacion-comprador/` (`tail -f .../progress.log`).
 
+### 2b. La auditoría es una foto: revalidación por fila
+
+La lista de migrables se calcula una vez y se procesa después. En una base
+compartida ese intervalo alcanza para que alguien desactive al comprador, a la
+persona o mueva su vínculo con el productor, y el backfill abriría una
+clasificación con información vieja.
+
+Por eso `--apply` revalida **cada fila justo antes de migrarla**, ya dentro del
+lock de clasificación y de la transacción, releyendo la fila legacy con
+`FOR UPDATE`: eso la serializa contra `Comprador::bloquear()`, que es por donde
+pasa el CRUD para desactivar. Comprueba que la fila siga existiendo, que el bit
+y `tbpersonaestado` sigan en 1, que el productor sea el mismo y que no haya
+aparecido ya un periodo abierto.
+
+Si una fila dejó de ser migrable no se abre nada, se marca
+`OMITIDA_POR_CAMBIO_CONCURRENTE` (o `SIN_PRODUCTOR` si perdió o cambió el
+vínculo, que sigue sin inventarse) y el backfill continúa con las demás. Todas
+quedan listadas en el reporte final, que diferencia `MIGRADOS`, `YA_MIGRADOS`,
+`INACTIVOS`, `SIN_PRODUCTOR` y `OMITIDOS_POR_CAMBIO_CONCURRENTE`.
+
+El lock es por productor+tipo, no sobre la tabla: el backfill no congela el CRUD
+de los demás compradores mientras corre.
+
 ### 3. Verificación
 
 Antes de tocar endpoints: todo comprador legacy activo migrable con exactamente
@@ -677,6 +700,12 @@ controlador, endpoints y contrato de frontend, y recién después borrar la tabl
 con respaldo previo.
 
 ### 7. Pruebas
+
+`Tests/comprador_backfill_test.php` cubre además las dos carreras, con una
+segunda conexión real: una fila que la auditoría vio activa y que se desactiva
+antes de aplicar no recibe clasificación y se reporta omitida; una fila cuya
+clasificación abre otra conexión en el intervalo termina idempotente, sin
+periodo duplicado y contada como ya migrada.
 
 `Tests/comprador_backfill_test.php` cubre los nueve casos exigidos: legacy
 activo migrado, legacy inactivo sin periodo, backfill dos veces con un solo
