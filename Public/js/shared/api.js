@@ -1,4 +1,5 @@
 import './auth-gate.js';
+import './admin-ui.js';
 
 // Acceso HTTP y taxonomia de fallos.
 //
