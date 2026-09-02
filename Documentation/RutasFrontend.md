@@ -1,0 +1,74 @@
+# Rutas de TinderCows
+
+Estado documentado: 2026-09-01, rama `dev`.
+
+## Ejecución local
+
+La aplicación expone Apache en `http://localhost:8080` mediante `compose.yaml` (`8080:80`).
+
+```bash
+docker compose up --build
+```
+
+La base MySQL usa el puerto interno `3306` y, por defecto, se publica en el host por `3309`. phpMyAdmin se publica en `http://127.0.0.1:8081`.
+
+## Sitio público
+
+| Ruta | Propósito |
+|---|---|
+| `/` | Inicio público de TinderCows. |
+| `/sobre-nosotros.php` | Explicación del proyecto y enfoque. |
+| `/como-usar.php` | Guía de navegación y mapa de rutas. |
+| `/privacidad.php` | Estado actual de privacidad y datos. |
+| `/terminos.php` | Términos de uso académico. |
+| `/legal.php` | Información legal y pendientes de producción. |
+| `/login.php` | Acceso local de demostración. |
+
+## Administración
+
+Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate comprueba un marcador local de `sessionStorage`; **no es autenticación de servidor**.
+
+| Ruta | Módulo |
+|---|---|
+| `/productores.php` | Productores. |
+| `/compradores.php` | Compradores derivados. |
+| `/transportistas.php` | Transportistas. |
+| `/vehiculos.php` | Vehículos. |
+| `/pagometodos.php` | Métodos de pago. |
+
+El login acepta `?next=<ruta-permitida>` para volver al módulo solicitado. La allowlist está limitada a las cinco rutas administrativas anteriores.
+
+## APIs públicas del proyecto
+
+| Ruta |
+|---|
+| `/api/productores.php` |
+| `/api/productores-direccion.php` |
+| `/api/productores-ubicacion.php` |
+| `/api/fincas-direccion.php` |
+| `/api/compradores.php` |
+| `/api/transportistas.php` |
+| `/api/transportistas-vehiculos.php` |
+| `/api/vehiculos.php` |
+| `/api/pagometodos.php` |
+| `/api/metodo-no-permitido.php` |
+
+`/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
+
+## Estado de autenticación
+
+### Implementado
+
+- Formulario de acceso con validación de navegador.
+- Marcador de sesión local en `sessionStorage`.
+- Redirección a `login.php?next=...` cuando una ruta administrativa no tiene marcador local válido.
+- Cierre de la sesión local desde el shell administrativo.
+- La interfaz privada se mantiene oculta hasta que el gate del frontend valida el marcador.
+
+### No implementado todavía
+
+- Validación real de credenciales contra backend.
+- Autorización de servidor basada en la sesión visual del frontend.
+- Política productiva definitiva de privacidad, retención y ejercicio de derechos.
+
+La autorización real de API continúa siendo un mecanismo separado del login visual y debe comprobarse mediante la capa Bearer/Supabase correspondiente.
