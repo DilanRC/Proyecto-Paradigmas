@@ -3,88 +3,71 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
-
 const PANEL_VIEWS = ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos'];
 
-test('la marca usa los PNG oficiales en landing, login y paneles', () => {
+test('la marca usa los PNG oficiales en sitio público, login y paneles', () => {
     const home = read('Application/View/home/index.php');
     const login = read('Application/View/login/index.php');
+    const explore = read('Application/View/explorar/index.php');
 
-    assert.match(home, /assets\/logo_light\.png/, 'landing debe mostrar logo claro en la barra');
-    assert.match(home, /assets\/logo_dark\.png/, 'landing debe mostrar logo oscuro en el hero');
-    assert.match(home, /logo_light\.png" alt="" width="44" height="44"/,
-        'el logo del header no debe depender solo del CSS para no crecer a tamaño natural');
-    assert.match(home, /logo_dark\.png" alt="TinderCows" width="84" height="84"/,
-        'el logo del hero debe tener dimensiones HTML de reserva');
-    assert.match(login, /assets\/logo_dark\.png/, 'login debe usar logo oscuro');
-    assert.match(login, /assets\/logo_light\.png/, 'login debe usar logo claro en el panel lateral');
+    for (const html of [home, login, explore]) {
+        assert.match(html, /assets\/logo_light\.png/);
+        assert.match(html, /assets\/logo_dark\.png/);
+        assert.match(html, /favicon\.svg/);
+    }
 
     for (const view of PANEL_VIEWS) {
         const html = read(`Application/View/${view}/index.php`);
-        assert.match(html, /assets\/logo_light\.png/, `${view}: falta logo claro oficial`);
-        assert.match(html, /logo_light\.png" alt="" width="44" height="44"/,
-            `${view}: el logo del sidebar debe tener dimensiones HTML de reserva`);
+        assert.match(html, /assets\/logo_light\.png/, `${view}: falta logo oficial`);
         assert.doesNotMatch(html, /<svg viewBox="0 0 48 48">/, `${view}: no debe volver el icono SVG viejo`);
     }
 });
 
-test('las vistas versionan CSS para no mezclar HTML nuevo con hojas cacheadas', () => {
-    for (const view of ['home', 'login', ...PANEL_VIEWS]) {
-        const html = read(`Application/View/${view}/index.php`);
-        for (const sheet of ['tokens', 'base', 'components', 'panel', 'red-ganadera']) {
-            assert.match(html, new RegExp(`css/${sheet}\\.css\\?v=official-shell-2`),
-                `${view}: falta cache busting para ${sheet}.css`);
-        }
-    }
+test('la landing se comporta como producto y deriva la exploración a una ruta propia', () => {
+    const home = read('Application/View/home/index.php');
+    const explore = read('Application/View/explorar/index.php');
+
+    assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('href="explorar.php"'));
+    assert.equal(home.includes('id="modulos"'), false);
+    assert.equal(/EIF400|acad[eé]mic/i.test(home), false);
+    assert.ok(explore.includes('data-explore-deck'));
+    assert.ok(explore.includes('data-explore-action="Pujar"'));
 });
 
-test('la landing oficial explica el proyecto y conserva la baraja conectada al JS', () => {
-    const html = read('Application/View/home/index.php');
+test('navbar y búsqueda pública conservan icono más texto sin meter legal en navegación primaria', () => {
+    const home = read('Application/View/home/index.php');
+    const productCss = read('Public/css/public-product.css');
+    const nav = home.match(/<nav class="public-nav public-nav--primary"[\s\S]*?<\/nav>/)?.[0] ?? '';
 
-    for (const copy of [
-        'Qué resuelve',
-        'Cómo usar TinderCows',
-        'Productores',
-        'Compradores',
-        'Transportistas',
-        'Métodos de pago',
-    ]) {
-        assert.ok(html.includes(copy), `landing incompleta: falta "${copy}"`);
-    }
-
-    for (const id of [
-        'contador-guardados',
-        'contador-revisados',
-        'tarjeta-productor',
-        'accion-pasar',
-        'accion-guardar',
-        'accion-contactar',
-    ]) {
-        assert.match(html, new RegExp(`id="${id}"`), `home.js necesita #${id}`);
-    }
+    for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona']) assert.ok(nav.includes(label));
+    assert.equal(nav.includes('Privacidad'), false);
+    assert.ok(home.includes('data-public-search-toggle'));
+    assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
 });
 
-test('login existe como entrada navegable y no guarda contraseñas', () => {
+test('login existe como entrada navegable, no guarda contraseña y vuelve a Explorar', () => {
     const home = read('Application/View/home/index.php');
     const login = read('Application/View/login/index.php');
     const js = read('Public/js/login.js');
 
-    assert.match(home, /href="login\.php"/, 'la landing debe enlazar al login');
-    assert.match(login, /id="formulario-login"/, 'login debe declarar formulario');
-    assert.match(login, /type="password"/, 'login debe tener campo de contraseña');
-    assert.match(js, /sessionStorage\.setItem\(SESSION_KEY/, 'login debe marcar sesión de navegador');
-    assert.doesNotMatch(js, /password[^;]*sessionStorage\.setItem/s, 'login no debe persistir la contraseña');
+    assert.match(home, /href="login\.php"/);
+    assert.match(login, /id="formulario-login"/);
+    assert.match(login, /type="password"/);
+    assert.match(js, /sessionStorage\.setItem\(SESSION_KEY/);
+    assert.match(js, /: 'explorar\.php';/);
+    assert.doesNotMatch(js, /password[^;]*sessionStorage\.setItem/s);
 });
 
-test('las tablas usan todo el ancho sin scroll horizontal por defecto', () => {
-    const css = read('Public/css/panel.css');
+test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () => {
+    const adminCss = read('Public/css/admin-v3.css');
+    const collapseCss = read('Public/css/admin-sidebar-collapse.css');
+    const refinementsCss = read('Public/css/admin-refinements.css');
+    const adminJs = read('Public/js/shared/admin-ui.js');
 
-    assert.match(css, /\.table-container\s*{[^}]*overflow-x:visible;/s,
-        'el contenedor de tabla no debe forzar scroll horizontal');
-    assert.match(css, /table\s*{[^}]*table-layout:fixed;/s,
-        'la tabla debe distribuir columnas dentro del ancho disponible');
-    assert.match(css, /th, td\s*{[^}]*overflow-wrap:anywhere;/s,
-        'el contenido largo debe quebrarse dentro de su celda');
-    assert.match(css, /\.row-actions\s*{[^}]*flex-wrap:wrap;/s,
-        'las acciones no deben ensanchar la tabla');
+    assert.ok(adminCss.includes('width:min(100%,1500px)'));
+    assert.ok(collapseCss.includes('--admin-sidebar-collapsed-width:82px'));
+    assert.ok(adminJs.includes("footer.className = 'admin-table-footer'"));
+    assert.ok(refinementsCss.includes('.admin-table-footer .pagination'));
+    assert.ok(adminJs.includes("trigger.className = 'admin-account-menu__trigger'"));
 });
