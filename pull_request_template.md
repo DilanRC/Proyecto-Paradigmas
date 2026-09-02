@@ -35,3 +35,30 @@ Indica qué verificaste realmente.
 ```bash
 # Ejemplo
 npm test
+```
+
+## Resultado
+
+Describe brevemente el resultado final.
+
+- 
+- 
+
+## Riesgos o pendientes
+
+- Ninguno.
+- 
+
+> Si queda algo fuera de este PR, indicarlo aquí.
+
+## Evidencia
+
+Capturas, video, preview o enlaces si ayudan a revisar el cambio.
+
+- 
+
+## Responsable
+
+**Responsable:** @usuario
+
+**Trabajo:** TV-XX
