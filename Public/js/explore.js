@@ -21,8 +21,12 @@ function updatePosition() {
 }
 
 function scrollToCurrent() {
+    const deck = document.querySelector('[data-explore-deck]');
     const current = state.visible[state.index];
-    current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    if (deck && current) {
+        const left = current.offsetLeft - Math.max(0, (deck.clientWidth - current.clientWidth) / 2);
+        deck.scrollTo({ left, behavior: 'smooth' });
+    }
     updatePosition();
 }
 
