@@ -16,15 +16,18 @@ La base MySQL usa el puerto interno `3306` y, por defecto, se publica en el host
 
 | Ruta | Propósito |
 |---|---|
-| `/` | Inicio público de TinderCows. |
-| `/sobre-nosotros.php` | Explicación del proyecto y enfoque. |
-| `/como-usar.php` | Guía de navegación y mapa de rutas. |
+| `/` | Inicio público y presentación del producto. |
+| `/explorar.php` | Explorar publicaciones de muestra mediante tarjetas deslizables, búsqueda y filtros rápidos. |
+| `/sobre-nosotros.php` | Descripción de TinderCows como producto. |
+| `/como-usar.php` | Guía de exploración, búsqueda, cuenta y acciones. |
 | `/privacidad.php` | Estado actual de privacidad y datos. |
-| `/terminos.php` | Términos de uso académico. |
-| `/legal.php` | Información legal y pendientes de producción. |
-| `/login.php` | Acceso local de demostración. |
+| `/terminos.php` | Términos de uso. |
+| `/legal.php` | Información legal y pendientes antes de operación real. |
+| `/login.php` | Acceso local de demostración; por defecto vuelve a `/explorar.php`. |
 
-## Administración
+La navegación primaria pública expone Inicio, Explorar, Nosotros y Cómo funciona. Privacidad, Términos e Información legal viven en el footer, no en el navbar.
+
+## Administración interna
 
 Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate comprueba un marcador local de `sessionStorage`; **no es autenticación de servidor**.
 
@@ -36,9 +39,9 @@ Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate comprueba un marc
 | `/vehiculos.php` | Vehículos. |
 | `/pagometodos.php` | Métodos de pago. |
 
-El login acepta `?next=<ruta-permitida>` para volver al módulo solicitado. La allowlist está limitada a las cinco rutas administrativas anteriores.
+El login acepta `?next=<ruta-permitida>` para volver a un destino local permitido. La lista contempla `/explorar.php` y las cinco rutas administrativas anteriores. Un acceso público sin `next` nunca abre administración: vuelve a `/explorar.php`.
 
-## APIs públicas del proyecto
+## APIs del proyecto
 
 | Ruta |
 |---|
@@ -61,6 +64,7 @@ El login acepta `?next=<ruta-permitida>` para volver al módulo solicitado. La a
 
 - Formulario de acceso con validación de navegador.
 - Marcador de sesión local en `sessionStorage`.
+- Redirección pública por defecto hacia `explorar.php`.
 - Redirección a `login.php?next=...` cuando una ruta administrativa no tiene marcador local válido.
 - Cierre de la sesión local desde el shell administrativo.
 - La interfaz privada se mantiene oculta hasta que el gate del frontend valida el marcador.
@@ -69,6 +73,8 @@ El login acepta `?next=<ruta-permitida>` para volver al módulo solicitado. La a
 
 - Validación real de credenciales contra backend.
 - Autorización de servidor basada en la sesión visual del frontend.
-- Política productiva definitiva de privacidad, retención y ejercicio de derechos.
+- Catálogo real de ganado/subastas conectado a la vista Explorar.
+- Persistencia real de favoritos, contacto y pujas.
+- Política definitiva de privacidad, retención y ejercicio de derechos.
 
 La autorización real de API continúa siendo un mecanismo separado del login visual y debe comprobarse mediante la capa Bearer/Supabase correspondiente.
