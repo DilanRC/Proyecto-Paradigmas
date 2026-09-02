@@ -18,6 +18,14 @@ $checks = [
         && str_contains($vercelDockerfile, 'a2enconf servername'),
     'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'servicio_vercel_explicito' => str_contains($vercelConfiguration, '"entrypoint": "Dockerfile.vercel"'),
+    'preview_solo_dev' => str_contains($vercelConfiguration, '"ignoreCommand": "bash Tools/vercel-ignore-build.sh"')
+        && !str_contains($vercelConfiguration, '"*": false')
+        && str_contains(file_get_contents("{$root}/Tools/vercel-ignore-build.sh"), 'VERCEL_GIT_COMMIT_REF:-}" == "dev"'),
+    'registro_con_poda' => is_file("{$root}/Tools/vercel-prune-registry.sh")
+        && is_file("{$root}/Tools/vercel-prune-registry.php")
+        && str_contains(file_get_contents("{$root}/Tools/vercel-prune-registry.sh"), 'vcr image rm')
+        && str_contains(file_get_contents("{$root}/Tools/vercel-prune-registry.php"), 'function vercel_registry_borrables')
+        && str_contains($readme, 'Tools/vercel-prune-registry.sh'),
     'procedimiento_tbfinca' => str_contains($readme, 'Aplicar `tbfinca` a una base existente'),
     'procedimiento_tbcomprador' => str_contains($readme, 'Aplicar `tbcomprador` a una base existente'),
     'verificacion_dominio' => str_contains($readme, 'curl -fsS https://tindervacas.dpdns.org/'),
