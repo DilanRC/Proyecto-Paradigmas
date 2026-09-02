@@ -14,9 +14,12 @@ import {
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const home = read('../../Application/View/home/index.php');
 const login = read('../../Application/View/login/index.php');
+const info = read('../../Application/View/public/info.php');
 const publicCss = read('../../Public/css/public-auth.css');
+const themeJs = read('../../Public/js/public-theme.js');
 const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
+const authGate = read('../../Public/js/shared/auth-gate.js');
 
 const PRIVATE_MODULES = [
     '../../Public/js/productores.js',
@@ -26,39 +29,63 @@ const PRIVATE_MODULES = [
     '../../Public/js/pagometodos.js',
 ];
 
-test('la portada pública presenta solo el producto y no consulta datos privados', () => {
-    const forbidden = /productor|comprador|transportista|veh[ií]cul|ganader|finca|vaca/i;
-    assert.equal(forbidden.test(home), false, 'la identidad pública no debe adelantar módulos o dominio interno');
-    assert.ok(home.includes('<h1 id="public-title">TinderCows</h1>'));
-    assert.ok(home.includes('href="login.php"'));
-    assert.ok(home.includes('public-auth.css'));
-    assert.equal(home.includes('js/home.js'), false, 'la portada no debe volver a solicitar la red privada');
+const PUBLIC_ROUTES = [
+    '../../Public/sobre-nosotros.php',
+    '../../Public/como-usar.php',
+    '../../Public/privacidad.php',
+    '../../Public/terminos.php',
+    '../../Public/legal.php',
+];
+
+test('la portada usa identidad oficial TinderCows y conserva el dominio del proyecto', () => {
+    assert.ok(home.includes('assets/logo_dark.png'));
+    assert.ok(home.includes('assets/logo_light.png'));
+    assert.ok(home.includes('rel="icon" href="favicon.svg"'));
+    assert.ok(home.includes('La red ganadera, en un solo lugar.'));
+    assert.ok(home.includes('Productores'));
+    assert.ok(home.includes('Transportistas'));
+    assert.equal(home.includes('js/home.js'), false, 'la portada pública no debe consultar la red privada');
     assert.equal(home.includes('api/productores.php'), false);
 });
 
-test('portada y login usan placeholders visuales reemplazables sin imágenes del dominio', () => {
-    assert.ok(home.includes('Imagen principal · placeholder'));
-    assert.ok(home.includes('Imagen 02'));
-    assert.ok(login.includes('Imagen principal · placeholder'));
-    assert.ok(login.includes('Imagen secundaria · placeholder'));
-    assert.equal(home.includes('assets/logo_'), false, 'la portada no debe mostrar el logo bovino previo');
-    assert.equal(login.includes('assets/logo_'), false, 'el acceso no debe mostrar el logo bovino previo');
+test('la paleta pública sale del logo y elimina la referencia cromática de Tinder', () => {
+    for (const token of ['#151a18', '#2f3c2d', '#d24f28', '#eedbca', '#fef7ec', '#394332']) {
+        assert.ok(publicCss.includes(token), `falta color de identidad ${token}`);
+    }
+    for (const tinderColor of ['#fd267a', '#ff315f', '#ff6746', '#7c3aed']) {
+        assert.equal(publicCss.includes(tinderColor), false, `no debe sobrevivir el color Tinder ${tinderColor}`);
+    }
 });
 
-test('el acceso conserva el formulario real en vez de inventar proveedores OAuth', () => {
+test('modo claro y oscuro comparten preferencia persistente y logos correspondientes', () => {
+    assert.ok(publicCss.includes("html[data-theme='light']"));
+    assert.ok(publicCss.includes("html[data-theme='dark'] .brand-logo--light"));
+    assert.ok(themeJs.includes("const THEME_KEY = 'tindercows:theme'"));
+    assert.ok(themeJs.includes("localStorage.setItem(THEME_KEY, next)"));
+    assert.ok(themeJs.includes("prefers-color-scheme: light"));
+});
+
+test('el acceso declara de forma explícita que es una demostración local', () => {
+    assert.ok(login.includes('Acceso de demostración'));
+    assert.ok(login.includes('No valida credenciales contra un backend'));
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));
     assert.ok(login.includes('id="formulario-login"'));
+    assert.ok(login.includes('assets/logo_dark.png'));
+    assert.ok(login.includes('rel="icon" href="favicon.svg"'));
     assert.equal(/Google|Facebook|Apple/.test(login), false);
-    assert.equal(/productor|comprador|transportista|ganader|finca|vaca/i.test(login), false);
 });
 
-test('la identidad visual pública tiene paleta propia inspirada, no copia literal de Tinder', () => {
-    assert.ok(publicCss.includes('--public-hot:#ff315f'));
-    assert.ok(publicCss.includes('--public-coral:#ff6746'));
-    assert.ok(publicCss.includes('--public-violet:#7c3aed'));
-    assert.ok(publicCss.includes('--public-gradient:'));
-    assert.equal(publicCss.includes('#fd267a'), true, 'la referencia observada debe quedar documentada, no usada como token principal');
+test('existen las rutas públicas informativas y usan una plantilla común', () => {
+    for (const route of PUBLIC_ROUTES) {
+        const wrapper = read(route);
+        assert.ok(wrapper.includes("Application/View/public/info.php"), `${route} debe usar la plantilla pública común`);
+    }
+    for (const key of ['about', 'guide', 'privacy', 'terms', 'legal']) {
+        assert.ok(info.includes(`'${key}' => [`), `falta página ${key}`);
+    }
+    assert.ok(info.includes('/productores.php'));
+    assert.ok(info.includes('/pagometodos.php'));
 });
 
 test('next solo acepta rutas privadas locales y rechaza redirecciones abiertas', () => {
@@ -96,6 +123,12 @@ test('una ruta privada sin sesión vuelve al login conservando destino local', (
     assert.equal(loginTarget(location.pathname), 'login.php?next=productores.php');
     assert.equal(enforceBrowserSession({ location, storage }), false);
     assert.equal(redirected, 'login.php?next=productores.php');
+});
+
+test('el shell privado distingue volver al sitio público de cerrar sesión', () => {
+    assert.ok(authGate.includes("publicLink.textContent = 'Sitio público'"));
+    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión'"));
+    assert.ok(authGate.includes("storage?.removeItem(SESSION_KEY)"));
 });
 
 test('los paneles privados fallan cerrados hasta que auth-gate valida sesión', () => {
