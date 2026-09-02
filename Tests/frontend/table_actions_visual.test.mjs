@@ -80,12 +80,14 @@ test('crear y accesos privados usan iconos sin eliminar el texto', () => {
     assert.ok(iconsCss.includes(".rural-panel__admin-link[href$='login.php']::before"));
 });
 
-test('la nueva identidad publica usa Font Awesome desde su capa aislada', () => {
-    assert.ok(publicCss.includes("font-family:'Font Awesome 7 Free'"));
-    assert.ok(publicCss.includes('.public-cta::after'));
-    assert.ok(publicCss.includes('.auth-submit::after'));
-    assert.equal(iconsCss.includes('.landing-actions'), false, 'no debe sobrevivir CSS de la landing anterior');
-    assert.equal(iconsCss.includes('.login-form'), false, 'no debe sobrevivir CSS del login anterior');
+test('la identidad publica usa los colores de los logos y no replica Tinder', () => {
+    for (const token of ['#151a18', '#2f3c2d', '#d24f28', '#eedbca', '#fef7ec', '#394332']) {
+        assert.ok(publicCss.includes(token), `falta token de marca ${token}`);
+    }
+    for (const tinderColor of ['#fd267a', '#ff315f', '#ff6746', '#7c3aed']) {
+        assert.equal(publicCss.includes(tinderColor), false, `no debe sobrevivir el color Tinder ${tinderColor}`);
+    }
+    assert.ok(publicCss.includes("html[data-theme='light']"));
 });
 
 test('las acciones conservan ayuda visual y foco de teclado', () => {
