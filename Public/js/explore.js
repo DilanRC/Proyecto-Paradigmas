@@ -271,10 +271,39 @@ function render() {
 }
 
 async function load() {
+    const sequence = (load.sequence ?? 0) + 1;
+    load.sequence = sequence;
+
+    load.controller?.abort();
+    load.controller = new AbortController();
+
     state.cargando = true;
     state.error = null;
     render();
 
+    const parametros = new URLSearchParams({
+        estado: 'ACTIVO', pagina: '1', tamanoPagina: String(TAMANO_PAGINA),
+    });
+    if (state.query !== '') parametros.set('q', state.query);
+
+    try {
+        const respuesta = await request(`${API_URL}?${parametros}`, { signal: load.controller.signal });
+        if (sequence !== load.sequence) return;
+        const lista = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
+        state.items = lista;
+        state.index = 0;
+    } catch (error) {
+        if (error?.name === 'AbortError') return;
+        if (sequence !== load.sequence) return;
+        state.items = [];
+        state.error = error?.message ?? 'No fue posible cargar las publicaciones.';
+    } finally {
+        if (sequence !== load.sequence) return;
+        state.cargando = false;
+        renderPurposeFilters();
+        render();
+    }
+}
     const parametros = new URLSearchParams({
         estado: 'ACTIVO', pagina: '1', tamanoPagina: String(TAMANO_PAGINA),
     });
