@@ -60,12 +60,19 @@ export function enforceBrowserSession({ location, storage } = {}) {
     return false;
 }
 
-function wireLogout(storage) {
-    const link = document.querySelector('.rural-panel__admin-link[href="login.php"]');
-    if (!link) return;
-    link.textContent = 'Cerrar sesión';
-    link.setAttribute('aria-label', 'Cerrar sesión');
-    link.addEventListener('click', (event) => {
+function wirePrivateShell(storage) {
+    const publicLink = document.querySelector('.rural-panel__admin-link[href="./"]');
+    if (publicLink) {
+        publicLink.textContent = 'Sitio público';
+        publicLink.setAttribute('aria-label', 'Volver al sitio público de TinderCows');
+        publicLink.title = 'Inicio público de TinderCows';
+    }
+
+    const logoutLink = document.querySelector('.rural-panel__admin-link[href="login.php"]');
+    if (!logoutLink) return;
+    logoutLink.textContent = 'Cerrar sesión';
+    logoutLink.setAttribute('aria-label', 'Cerrar sesión de demostración');
+    logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
         try {
             storage?.removeItem(SESSION_KEY);
@@ -89,9 +96,9 @@ if (typeof window !== 'undefined') {
     if (allowed && typeof document !== 'undefined') {
         revealPrivateUi();
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => wireLogout(window.sessionStorage), { once: true });
+            document.addEventListener('DOMContentLoaded', () => wirePrivateShell(window.sessionStorage), { once: true });
         } else {
-            wireLogout(window.sessionStorage);
+            wirePrivateShell(window.sessionStorage);
         }
     }
 }
