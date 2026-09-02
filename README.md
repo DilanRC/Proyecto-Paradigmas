@@ -142,10 +142,24 @@ local `NO_AUTENTICADO`.
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
 declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
-`git.deploymentEnabled` bloquea la creación de deployments para cualquier rama
-salvo `main` y `dev`. `Tools/vercel-ignore-build.sh` mantiene una segunda guarda:
-conserva `main` para producción y permite previews automáticos únicamente desde
-`dev`.
+
+`ignoreCommand` es una propiedad de nivel raíz y ejecuta
+`Tools/vercel-ignore-build.sh`: conserva `main` para producción, permite
+previews automáticos únicamente desde `dev` y omite la construcción en
+cualquier otra rama. Declararlo dentro de `services` no sirve, Vercel no lo lee
+ahí y toda rama termina construyendo. `git.deploymentEnabled` solo acepta
+nombres de rama; no admite comodines, así que un `"*": false` no bloquea nada.
+
+Cada commit a `main` o `dev` empuja una imagen al Container Registry, que tiene
+un tope por repositorio. Al llenarse, el push se rechaza con `repository has
+reached the maximum allowed number of images` y todo despliegue queda en ERROR
+aunque la build haya salido bien. `Tools/vercel-prune-registry.sh` poda el
+registro: conserva las más recientes y las que sirven producción.
+
+```bash
+bash Tools/vercel-prune-registry.sh --simular
+bash Tools/vercel-prune-registry.sh --conservar 15
+```
 
 ```bash
 docker build -t tindercows:local .
