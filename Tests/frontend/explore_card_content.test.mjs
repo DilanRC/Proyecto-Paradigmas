@@ -15,7 +15,7 @@ const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), '
 
 const {
     formatPrice, formatLocation, formatAge, formatWeight, formatText, formatSeller,
-    formatPurpose, availablePurposes, filterByPurpose,
+    formatPurpose, availablePurposes, filterByPurpose, normalizePurpose,
 } = await import('../../Public/js/explore.js');
 
 test('el proposito se escribe bien en pantalla aunque la base lo guarde gritado', () => {
@@ -111,4 +111,13 @@ test('la vista ya no trae tarjetas de muestra escritas a mano', () => {
     assert.match(vista, /data-explore-deck/);
     assert.match(vista, /data-explore-error/, 'la vista debe poder mostrar un fallo de carga');
     assert.match(vista, /data-explore-loading/, 'la vista debe poder mostrar la carga');
+});
+
+test('normalizePurpose vuelve a todos cuando el filtro ya no existe', () => {
+    assert.equal(normalizePurpose('ENGORDE', ['CRIA', 'ENGORDE']), 'ENGORDE');
+    assert.equal(normalizePurpose('engorde', ['ENGORDE']), 'ENGORDE');
+    assert.equal(normalizePurpose('ENGORDE', ['CRIA']), 'todos');
+    assert.equal(normalizePurpose('ENGORDE', []), 'todos');
+    assert.equal(normalizePurpose('todos', ['CRIA']), 'todos');
+    assert.equal(normalizePurpose('', ['CRIA']), 'todos');
 });
