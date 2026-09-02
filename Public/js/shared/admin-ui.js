@@ -2,6 +2,8 @@ import { SESSION_KEY } from './auth-gate.js';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-3';
+const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
+export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
     'productores.php': {
@@ -36,12 +38,12 @@ function routeName(pathname = globalThis.location?.pathname ?? '') {
     return parts.at(-1) || 'index.php';
 }
 
-function injectStylesheet() {
-    if (typeof document === 'undefined' || document.querySelector('link[data-tc-admin-v3]')) return;
+function injectStylesheet(href, marker) {
+    if (typeof document === 'undefined' || document.querySelector(`link[${marker}]`)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = ADMIN_CSS;
-    link.dataset.tcAdminV3 = 'true';
+    link.href = href;
+    link.setAttribute(marker, 'true');
     document.head.appendChild(link);
 }
 
@@ -63,6 +65,115 @@ function createIcon(className) {
     icon.className = `fa-solid ${className}`;
     icon.setAttribute('aria-hidden', 'true');
     return icon;
+}
+
+export function readSidebarCollapsed(storage = globalThis.localStorage) {
+    try {
+        return storage?.getItem(ADMIN_SIDEBAR_KEY) === 'true';
+    } catch {
+        return false;
+    }
+}
+
+function storeSidebarCollapsed(collapsed, storage = globalThis.localStorage) {
+    try {
+        storage?.setItem(ADMIN_SIDEBAR_KEY, String(collapsed));
+    } catch {
+        // La preferencia del shell no debe impedir usar el panel si storage falla.
+    }
+}
+
+function setSidebarRootState(collapsed) {
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.tcSidebar = collapsed ? 'collapsed' : 'expanded';
+}
+
+function wrapDirectText(element, className) {
+    if (!element || element.querySelector(`:scope > .${className}`)) {
+        return element?.querySelector(`:scope > .${className}`) ?? null;
+    }
+    const textNodes = Array.from(element.childNodes).filter(
+        (node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '',
+    );
+    if (textNodes.length === 0) return null;
+
+    const label = document.createElement('span');
+    label.className = className;
+    label.textContent = textNodes.map((node) => node.textContent.trim()).join(' ');
+    element.insertBefore(label, textNodes[0]);
+    textNodes.forEach((node) => node.remove());
+    return label;
+}
+
+function registerCollapsedLabel(element, label) {
+    if (!element || !label) return;
+    element.dataset.sidebarLabel = label;
+}
+
+function updateCollapsedTitles(collapsed) {
+    for (const element of document.querySelectorAll('[data-sidebar-label]')) {
+        if (collapsed) element.title = element.dataset.sidebarLabel;
+        else element.removeAttribute('title');
+    }
+}
+
+export function applySidebarState(collapsed, { persist = false, storage = globalThis.localStorage } = {}) {
+    if (typeof document === 'undefined') return;
+    const safeCollapsed = collapsed === true;
+    setSidebarRootState(safeCollapsed);
+
+    const toggle = document.querySelector('.admin-sidebar-toggle');
+    if (toggle) {
+        const expanded = !safeCollapsed;
+        toggle.setAttribute('aria-expanded', String(expanded));
+        toggle.setAttribute('aria-label', safeCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral');
+        toggle.title = safeCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral';
+        const icon = toggle.querySelector('i');
+        const label = toggle.querySelector('.admin-sidebar-toggle__label');
+        if (icon) icon.className = `fa-solid ${safeCollapsed ? 'fa-angles-right' : 'fa-angles-left'}`;
+        if (label) label.textContent = safeCollapsed ? 'Expandir menú' : 'Contraer menú';
+    }
+
+    updateCollapsedTitles(safeCollapsed);
+    if (persist) storeSidebarCollapsed(safeCollapsed, storage);
+}
+
+function enhanceSidebarCollapse() {
+    const sidebar = document.querySelector('.rural-panel__sidebar');
+    if (!sidebar || sidebar.querySelector('.admin-sidebar-toggle')) return;
+    if (!sidebar.id) sidebar.id = 'tc-admin-sidebar';
+
+    for (const item of sidebar.querySelectorAll('.rural-panel__nav-item')) {
+        const text = item.textContent.trim();
+        const label = wrapDirectText(item, 'admin-sidebar-nav-label');
+        registerCollapsedLabel(item, label?.textContent.trim() || text);
+    }
+
+    const accountActions = sidebar.querySelector('.admin-account-card__actions');
+    if (accountActions) {
+        for (const link of accountActions.querySelectorAll('.rural-panel__admin-link')) {
+            const text = link.textContent.trim();
+            const label = wrapDirectText(link, 'admin-sidebar-action-label');
+            registerCollapsedLabel(link, label?.textContent.trim() || text);
+        }
+        const theme = accountActions.querySelector('[data-theme-toggle]');
+        registerCollapsedLabel(theme, 'Cambiar tema');
+    }
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'admin-sidebar-toggle';
+    toggle.setAttribute('aria-controls', sidebar.id);
+    toggle.innerHTML = '<i class="fa-solid fa-angles-left" aria-hidden="true"></i><span class="admin-sidebar-toggle__label">Contraer menú</span>';
+    const nav = sidebar.querySelector('.rural-panel__nav');
+    sidebar.insertBefore(toggle, nav ?? sidebar.querySelector('.rural-panel__sidebar-footer'));
+
+    toggle.addEventListener('click', () => {
+        const collapsed = document.documentElement.dataset.tcSidebar === 'collapsed';
+        applySidebarState(!collapsed, { persist: true });
+    });
+
+    applySidebarState(readSidebarCollapsed());
 }
 
 function enhancePageHeader() {
@@ -97,6 +208,7 @@ function enhanceSidebarAccount() {
     avatar.textContent = 'TC';
     avatar.setAttribute('aria-hidden', 'true');
     const copy = document.createElement('span');
+    copy.className = 'admin-account-card__copy';
     const title = document.createElement('strong');
     title.textContent = 'Acceso de demostración';
     const email = document.createElement('small');
@@ -240,6 +352,7 @@ export function initializeAdminUi() {
     if (typeof document === 'undefined' || !document.body?.classList.contains('rural-panel')) return;
     document.documentElement.dataset.tcAdminUx = '3';
     enhanceSidebarAccount();
+    enhanceSidebarCollapse();
     enhancePageHeader();
     enhanceFilters();
     enhanceTable();
@@ -248,7 +361,9 @@ export function initializeAdminUi() {
     enhancePagination();
 }
 
-injectStylesheet();
+setSidebarRootState(readSidebarCollapsed());
+injectStylesheet(ADMIN_CSS, 'data-tc-admin-v3');
+injectStylesheet(ADMIN_SIDEBAR_CSS, 'data-tc-admin-sidebar');
 
 if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
