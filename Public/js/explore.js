@@ -99,6 +99,13 @@ export function filterByPurpose(items, proposito) {
     );
 }
 
+/** Devuelve el filtro vigente solo si sigue existiendo en los datos; si no, 'todos'. */
+export function normalizePurpose(proposito, disponibles) {
+    if (!proposito || proposito === 'todos') return 'todos';
+    const clave = String(proposito).toUpperCase();
+    return disponibles.some((p) => String(p).toUpperCase() === clave) ? clave : 'todos';
+}
+
 function element(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -220,6 +227,7 @@ function renderPurposeFilters() {
     const contenedor = document.querySelector('[data-explore-filters]');
     if (!contenedor) return;
     const propositos = availablePurposes(state.items);
+    state.proposito = normalizePurpose(state.proposito, propositos);
     contenedor.replaceChildren();
     for (const [valor, etiqueta] of [['todos', 'Todo'], ...propositos.map((p) => [p, formatPurpose(p)])]) {
         const boton = element('button', 'explore-chip');
