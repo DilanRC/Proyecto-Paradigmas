@@ -13,6 +13,7 @@ docker compose exec -T app php Tests/comprador_consulta_test.php
 docker compose exec -T app php Tests/backend_db_ready_eval.php
 docker compose exec -T app php Tests/diagnostico_test.php
 docker compose exec -T app php Tests/deployment_test.php
+docker compose exec -T app php Tests/vercel_prune_registry_test.php
 docker compose exec -T app php Tests/postgres_compatibility_test.php
 docker compose exec -T app php Tests/schema_test.php
 docker compose exec -T app php Tests/api_productores_test.php
