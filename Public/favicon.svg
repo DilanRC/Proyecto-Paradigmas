@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="TinderCows">
+  <rect width="48" height="48" rx="11" fill="#151a18"/>
+  <path d="M24 40C15.2 34.1 7 28.2 7 18.7 7 12.4 11 8 16.8 8c3.4 0 5.9 1.6 7.2 4.1V40Z" fill="#394332"/>
+  <path d="M24 40V12.1C25.4 9.6 27.8 8 31.2 8 37 8 41 12.4 41 18.7 41 28.2 32.8 34.1 24 40Z" fill="#d24f28"/>
+  <path d="M13.8 16.4c2.2-2.1 4.8-2.4 7.2-1.1M34.2 16.4c-2.2-2.1-4.8-2.4-7.2-1.1" fill="none" stroke="#eedbca" stroke-width="2" stroke-linecap="round"/>
+  <path d="M17.2 24.7c0-3.2 2.6-5.1 6.8-5.1s6.8 1.9 6.8 5.1-2.6 5.8-6.8 5.8-6.8-2.6-6.8-5.8Z" fill="#eedbca"/>
+  <circle cx="21.6" cy="24.7" r="1.1" fill="#394332"/>
+  <circle cx="26.4" cy="24.7" r="1.1" fill="#d24f28"/>
+</svg>

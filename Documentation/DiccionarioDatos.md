@@ -12,17 +12,29 @@ Columnas de cada ficha:
 - **Relación conceptual**: tabla a la que apunta el valor. Ninguna de estas
   relaciones existe como llave foránea; el motor no las verifica.
 
+## tbpersona
+
+Fuente única de identidad y contacto compartida por todas las capacidades.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbpersonaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbpersonaidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica; PHP impide duplicados. | Usuario | - |
+| `tbpersonaidentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación validado por PHP. | Usuario | - |
+| `tbpersonanombre` | `VARCHAR(150) NOT NULL` | No | Nombre compartido por todos los perfiles. | Usuario | - |
+| `tbpersonatelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono compartido por todos los perfiles. | Usuario | - |
+| `tbpersonacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo compartido por todos los perfiles. | Usuario | - |
+| `tbpersonaestado` | `TINYINT(1) NOT NULL` | No | Disponibilidad global de la identidad. | Aplicación | - |
+
 ## tbproductor
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbproductorid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
-| `tbproductoridentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica e inmutable por aplicación. | Usuario | - |
-| `tbproductoridentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo validado por aplicación. | Usuario | - |
-| `tbproductornombre` | `VARCHAR(150) NOT NULL` | No | Nombre del productor. | Usuario | - |
-| `tbproductortelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono. | Usuario | - |
-| `tbproductorcorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo, no único en MySQL. | Usuario | - |
-| `tbproductorestado` | `TINYINT(1) NOT NULL` | No | Desactivación lógica. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
+
+El productor no guarda estado propio: su estado vigente es el del periodo
+abierto en `tbproductorestadoperiodo`.
 
 ## tbproductordireccion
 
@@ -34,6 +46,8 @@ ubicación: la política del modelo espera una sola fila por `tbproductorid`.
 | `tbproductordireccionid` | `INT NOT NULL` | No | Identificador de la asociación, distinto del productor y de la dirección. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Identificador lógico del productor asociado. | Aplicación | `tbproductor` |
 | `tbdireccionid` | `INT NOT NULL` | No | Identificador lógico de la ubicación física. | Aplicación | `tbdireccion` |
+| `tbproductordireccionfechainicio` | `DATETIME NULL` | Sí | Inicio del periodo de residencia. | Aplicación | - |
+| `tbproductordireccionfechafin` | `DATETIME NULL` | Sí | Fin del periodo; nulo mientras sea vigente. | Aplicación | - |
 
 Observación: provincia, cantón, distrito, pueblo y señas vivían antes en esta
 tabla y ahora existen una sola vez en `tbdireccion`. La migración
@@ -87,30 +101,13 @@ Catálogo de métodos de pago. No se relaciona todavía con ninguna operación.
 
 ## tbtransportista
 
-Persona independiente responsable del transporte. No es productor, comprador,
-usuario ni empresa: tiene identificador propio.
+Capacidad logística de una persona. Conserva su identificador histórico.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbtransportistaid` | `INT NOT NULL` | No | Identificador lógico propio del transportista. | Aplicación | - |
-| `tbtransportistaidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica. | Usuario | - |
-| `tbtransportistaidentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación. | Usuario | - |
-| `tbtransportistanombre` | `VARCHAR(150) NOT NULL` | No | Nombre del transportista. | Usuario | - |
-| `tbtransportistatelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono. | Usuario | - |
-| `tbtransportistacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo electrónico. | Usuario | - |
-| `tbtransportistaestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. | Aplicación | - |
-
-Hecho confirmado: el transportista es una persona independiente con
-identificador propio y puede tener varios vehículos.
-
-Propuesta de modelado: identificación, tipo, nombre, teléfono, correo y estado
-se agregaron para poder identificar y contactar a la persona, siguiendo el
-patrón de personas ya registrado en el proyecto. No fueron solicitados y pueden
-retirarse si el dominio no los necesita.
-
-PENDIENTE DE CONFIRMACIÓN: cuáles de esos atributos son obligatorios, y si
-hacen falta licencia, permisos, pólizas, tarifas, capacidad, horarios o vínculo
-con empresa. Ninguno de estos últimos se agregó.
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad logística. | Aplicación | `tbpersona` |
+| `tbtransportistaestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como transportista. | Aplicación | - |
 
 ## tbvehiculo
 
@@ -154,17 +151,351 @@ Asocia transportista y vehículo.
 | `tbbitacoraorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico. | Aplicación | - |
 | `tbbitacorasolicitudid` | `VARCHAR(100) NOT NULL` | No | Correlación de solicitud. | Aplicación | - |
 
-## tbcomprador
+## tbproductorubicacion
+
+Histórico append-only de ubicaciones GPS observadas del productor (plan §9,
+§14-16). Cada lectura inserta una fila nueva; ninguna se actualiza ni se
+elimina. La fecha la asigna siempre PHP con el reloj del servidor.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcompradorid` | `INT NOT NULL` | No | Identificador asignado por la aplicación. | Aplicación | - |
-| `tbcompradoridentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica. | Usuario | - |
-| `tbcompradoridentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación. | Usuario | - |
-| `tbcompradornombre` | `VARCHAR(150) NOT NULL` | No | Nombre del comprador. | Usuario | - |
-| `tbcompradortelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono. | Usuario | - |
-| `tbcompradorcorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo electrónico. | Usuario | - |
-| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. | Aplicación | - |
+| `tbproductorubicacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el bloqueo `tindercows_productor_ubicacion_alta`. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor al que pertenece la lectura. | Aplicación | `tbproductor` |
+| `tbproductorubicacionlatitud` | `DECIMAL(10,7) NOT NULL` | No | Latitud validada por aplicación en el rango -90 a 90. | Usuario | - |
+| `tbproductorubicacionlongitud` | `DECIMAL(10,7) NOT NULL` | No | Longitud validada por aplicación en el rango -180 a 180. | Usuario | - |
+| `tbproductorubicacionprecision` | `DECIMAL(10,2) NULL` | Sí | Precisión de la lectura, sin unidades en la columna. | Usuario | - |
+| `tbproductorubicacionfecha` | `DATETIME NOT NULL` | No | Fecha y hora del servidor; el cliente no puede falsearla. | Aplicación | - |
+| `tbproductorubicacionorigen` | `VARCHAR(40) NOT NULL` | No | Origen de la lectura: conjunto controlado `NAVEGADOR` o `MANUAL`. | Usuario | - |
+
+## tbproductorestadoperiodo
+
+Histórico de participación del productor. PHP mantiene como máximo un periodo
+abierto por productor.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductorestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor observado. | Aplicación | `tbproductor` |
+| `tbproductorestadoperiodoestado` | `TINYINT(1) NOT NULL` | No | Estado durante el periodo. | Aplicación | - |
+| `tbproductorestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo. | Aplicación | - |
+| `tbproductorestadoperiodofechafin` | `DATETIME NULL` | Sí | Fin; nulo para el periodo abierto. | Aplicación | - |
+| `tbproductorestadoperiodomotivo` | `VARCHAR(250) NULL` | Sí | Motivo opcional del cambio. | Aplicación | - |
+
+## tbproductoractividad
+
+Eventos de actividad usados para trazabilidad y políticas del productor.
+`tbproductoractividadtipo` usa el catálogo cerrado del Tramo 12
+(Decisiones.md del arquitecto, decisión #2): `login`,
+`actualizacion_ubicacion`, `actualizacion_perfil`,
+`registro_actividad_productiva`, `contacto_comprador`. Un GET o una vista de
+pantalla no genera fila aquí. La base no declara `CHECK` (regla del
+profesor); el dominio lo valida PHP al escribir (Tramo 15) y
+`Database/Tests/diagnostico.sql` (D-12) lo audita después.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductoractividadid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor relacionado. | Aplicación | `tbproductor` |
+| `tbproductoractividadtipo` | `VARCHAR(60) NOT NULL` | No | Tipo de actividad, catálogo cerrado (ver arriba), validado por PHP. | Aplicación | - |
+| `tbproductoractividadfecha` | `DATETIME NOT NULL` | No | Fecha asignada por PHP. | Aplicación | - |
+| `tbproductoractividadorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico de la actividad. | Aplicación | - |
+
+## tbcomprador
+
+Estructura legacy de compatibilidad temporal. Comprador **no** es una entidad
+ni una capacidad permanente de la persona: es una clasificación del Productor y
+su única fuente de verdad es `tbproductorclasificacionperiodo` con
+`tipo = COMPRADOR`. Esta tabla sobrevive solo mientras el CRUD actual de Backend
+dependa de ella y debe retirarse (plan de retiro en DEC-DBREADY-005). Mientras
+exista: no se amplía, no recibe históricos y no se crea
+`tbcompradorestadoperiodo`.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcompradorid` | `INT NOT NULL` | No | Consecutivo legacy asignado por la aplicación. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona vinculada por el CRUD heredado. | Aplicación | `tbpersona` |
+| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Bit legacy de alta/baja del CRUD actual. No es la clasificación Comprador: esa se lee en `tbproductorclasificacionperiodo`. | Aplicación | - |
+
+## tbproductorclasificacionperiodo
+
+Periodos independientes de clasificación comercial del Productor. El tipo
+`COMPRADOR` o `VENDEDOR` se valida en PHP; la base no usa `CHECK`. Un mismo
+productor puede tener ambas clasificaciones abiertas a la vez porque son tipos
+distintos.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductorclasificacionperiodoid` | `INT NOT NULL` | No | Consecutivo que Backend debe calcular con `MAX(id)+1` bajo lock global. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor clasificado. | Aplicación | `tbproductor` |
+| `tbproductorclasificacionperiodotipo` | `VARCHAR(30) NOT NULL` | No | Clasificación lógica: `COMPRADOR` o `VENDEDOR`. | Aplicación | - |
+| `tbproductorclasificacionperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio confiable del periodo. | Aplicación | - |
+| `tbproductorclasificacionperiodofechafin` | `DATETIME NULL` | Sí | Fin del periodo; nulo si está abierto. | Aplicación | - |
+| `tbproductorclasificacionperiodomotivo` | `VARCHAR(250) NULL` | Sí | Motivo técnico o de negocio del cambio. | Aplicación | - |
+
+## tbanimal
+
+Identidad estable del animal según la evidencia de Calidad: identificación,
+raza, sexo y características. No guarda peso ni edad actual, porque cambian y
+viven en `tbanimalproduccionsalud`, y no inventa fecha de nacimiento.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalidentificacion` | `VARCHAR(100) NULL` | Sí | Código, arete u otro identificador declarado. | Usuario | - |
+| `tbanimalsexo` | `VARCHAR(20) NULL` | Sí | Sexo declarado; dominio pendiente de Backend. | Usuario | - |
+| `tbanimalraza` | `VARCHAR(100) NULL` | Sí | Raza declarada estable o inicial. | Usuario | - |
+| `tbanimalcaracteristicas` | `VARCHAR(500) NULL` | Sí | Características declaradas del animal como parte de su identidad; no incluye peso ni edad. | Usuario | - |
+| `tbanimalfecharegistroensistema` | `DATETIME NOT NULL` | No | Fecha en que el sistema registró el animal; no es fecha de nacimiento. | Aplicación | - |
+| `tbanimalorigenregistro` | `VARCHAR(100) NOT NULL` | No | Origen técnico del alta. | Aplicación | - |
+
+## tbanimalproduccionsalud
+
+Serie histórica de producción y salud del animal, el nombre que usa la
+evidencia de Calidad. Cada fila describe qué se registró, cuándo, desde dónde y
+en qué contexto; nada se sobrescribe.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalproduccionsaludid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | Animal observado. | Aplicación | `tbanimal` |
+| `tbanimalproduccionsaludfecha` | `DATETIME NOT NULL` | No | Fecha de la observación o registro confiable. | Aplicación | - |
+| `tbanimalproduccionsaludorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico o funcional de la observación. | Aplicación | - |
+| `tbanimalproduccionsaludcontexto` | `VARCHAR(250) NULL` | Sí | Contexto opcional: publicación, revisión, compra, venta u otro. | Aplicación | - |
+| `tbanimalproduccionsaludedadmeses` | `INT NULL` | Sí | Edad en meses observada. No deriva fecha de nacimiento. | Usuario | - |
+| `tbanimalproduccionsaludpeso` | `DECIMAL(10,2) NULL` | Sí | Peso observado. | Usuario | - |
+| `tbanimalproduccionsaludproposito` | `VARCHAR(80) NULL` | Sí | Propósito productivo declarado. | Usuario | - |
+| `tbanimalproduccionsaludestadoreproductivo` | `VARCHAR(80) NULL` | Sí | Estado reproductivo observado. | Usuario | - |
+| `tbanimalproduccionsaludpartos` | `INT NULL` | Sí | Partos observados/declarados. | Usuario | - |
+| `tbanimalproduccionsaludlitrosleche` | `DECIMAL(10,2) NULL` | Sí | Litros de leche observados/declarados. | Usuario | - |
+| `tbanimalproduccionsaludproduccion` | `JSON NULL` | Sí | Otros datos aprobados de producción. | Aplicación | - |
+| `tbanimalproduccionsaludsalud` | `JSON NULL` | Sí | Otros datos aprobados de salud. | Aplicación | - |
+
+## tbanimalpublicacion
+
+Publicación comercial del animal. Congela vendedor y finca del momento. Su
+estado no es columna: vive en `tbanimalpublicacionestadoperiodo`.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalpublicacionid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | Animal publicado. | Aplicación | `tbanimal` |
+| `tbproductorvendedorid` | `INT NOT NULL` | No | Productor vendedor congelado al publicar. | Aplicación | `tbproductor` |
+| `tbfincaid` | `INT NOT NULL` | No | Finca congelada al publicar. | Aplicación | `tbfinca` |
+| `tbanimalpublicacionfecha` | `DATETIME NOT NULL` | No | Fecha de publicación. | Aplicación | - |
+| `tbanimalpublicacionprecio` | `DECIMAL(12,2) NULL` | Sí | Precio publicado, si aplica. | Usuario | - |
+| `tbanimalpublicaciontitulo` | `VARCHAR(150) NULL` | Sí | Título declarado. | Usuario | - |
+| `tbanimalpublicaciondescripcion` | `VARCHAR(500) NULL` | Sí | Descripción declarada. | Usuario | - |
+| `tbanimalpublicacionorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del alta. | Aplicación | - |
+
+## tbanimalpublicacionestadoperiodo
+
+Transiciones de estado de la publicación. Reemplaza la columna mutable
+`tbanimalpublicacionestado`: el estado vigente es el periodo abierto
+(`fechafin` nula) y el pasado nunca se sobrescribe. Un solo periodo abierto por
+publicación, regla que aplica PHP bajo lock nombrado.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalpublicacionestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación afectada. | Aplicación | `tbanimalpublicacion` |
+| `tbanimalpublicacionestadoperiodoestado` | `VARCHAR(30) NOT NULL` | No | Estado funcional validado por Backend; el catálogo lo define Backend. | Aplicación | - |
+| `tbanimalpublicacionestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo, calculado por PHP. | Aplicación | - |
+| `tbanimalpublicacionestadoperiodofechafin` | `DATETIME NULL` | Sí | Fin del periodo; nulo si es el estado vigente. | Aplicación | - |
+| `tbanimalpublicacionestadoperiodomotivo` | `VARCHAR(250) NULL` | Sí | Motivo declarado de la transición. | Aplicación | - |
+| `tbanimalpublicacionestadoperiodoorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbcompra
+
+Hecho económico de compra. No incluye `tbcompraestado` porque Calidad no aprobó
+un ciclo de estados suficiente.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcompraid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | Animal comprado. | Aplicación | `tbanimal` |
+| `tbproductorcompradorid` | `INT NOT NULL` | No | Productor comprador del momento. | Aplicación | `tbproductor` |
+| `tbfincaorigenid` | `INT NULL` | Sí | Finca de origen conocida al comprar. | Aplicación | `tbfinca` |
+| `tbcomprafecha` | `DATE NOT NULL` | No | Fecha del hecho. | Aplicación | - |
+| `tbcomprahora` | `TIME NULL` | Sí | Hora del hecho, si existe. | Aplicación | - |
+| `tbcompralugar` | `VARCHAR(250) NULL` | Sí | Lugar declarado del hecho. | Usuario | - |
+| `tbcompraprecio` | `DECIMAL(12,2) NOT NULL` | No | Precio de compra. | Usuario | - |
+| `tbpagometodoid` | `INT NOT NULL` | No | Método de pago usado. | Aplicación | `tbpagometodo` |
+| `tbcompraorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbventa
+
+Hecho económico de venta. `tbcompraid` es opcional: el animal puede haber nacido
+en finca o existir antes del sistema. Edad, peso y raza son snapshots del hecho.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbventaid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | Animal vendido. | Aplicación | `tbanimal` |
+| `tbproductorvendedorid` | `INT NOT NULL` | No | Productor vendedor del momento. | Aplicación | `tbproductor` |
+| `tbproductorcompradorid` | `INT NOT NULL` | No | Productor comprador del momento. | Aplicación | `tbproductor` |
+| `tbfincaid` | `INT NULL` | Sí | Finca asociada al hecho, si aplica. | Aplicación | `tbfinca` |
+| `tbcompraid` | `INT NULL` | Sí | Compra relacionada, opcional. | Aplicación | `tbcompra` |
+| `tbventafecha` | `DATE NOT NULL` | No | Fecha del hecho. | Aplicación | - |
+| `tbventahora` | `TIME NULL` | Sí | Hora del hecho, si existe. | Aplicación | - |
+| `tbventalugar` | `VARCHAR(250) NULL` | Sí | Lugar declarado del hecho. | Usuario | - |
+| `tbventadireccionid` | `INT NULL` | Sí | Dirección de la venta cuando se conoce; nula si solo hay lugar declarado. | Aplicación | `tbdireccion` |
+| `tbventaproposito` | `VARCHAR(80) NULL` | Sí | Propósito declarado de la venta; dominio validado por Backend. | Usuario | - |
+| `tbventaprecio` | `DECIMAL(12,2) NOT NULL` | No | Precio de venta. | Usuario | - |
+| `tbpagometodoid` | `INT NOT NULL` | No | Método de pago usado. | Aplicación | `tbpagometodo` |
+| `tbventaedadmeses` | `INT NULL` | Sí | Edad en meses declarada al vender. | Usuario | - |
+| `tbventapeso` | `DECIMAL(10,2) NULL` | Sí | Peso declarado al vender. | Usuario | - |
+| `tbventarazasnapshot` | `VARCHAR(100) NULL` | Sí | Raza declarada como snapshot del hecho, no duplicado técnico para evitar JOIN. | Usuario | - |
+| `tbventaorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbanimalinteraccion
+
+Funnel especializado sobre animales: `ME_GUSTA`, `SEGUIR`, `CARRITO` y
+`COMPRA`, con acciones `AGREGAR` o `RETIRAR` donde aplique. La captura de cada
+visualización queda fuera hasta que Calidad la confirme.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalinteraccionid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor que interactúa. | Aplicación | `tbproductor` |
+| `tbanimalid` | `INT NOT NULL` | No | Animal relacionado. | Aplicación | `tbanimal` |
+| `tbanimalinteracciontipo` | `VARCHAR(30) NOT NULL` | No | Tipo lógico del funnel, validado por PHP. | Aplicación | - |
+| `tbanimalinteraccionaccion` | `VARCHAR(30) NOT NULL` | No | Acción lógica, validada por PHP. | Aplicación | - |
+| `tbanimalinteraccionfecha` | `DATETIME NOT NULL` | No | Fecha del evento. | Aplicación | - |
+| `tbanimalinteraccionorigen` | `VARCHAR(100) NULL` | Sí | Origen técnico opcional. | Aplicación | - |
+
+## tbcarrito
+
+Colección comercial de un productor. Su estado no es columna: vive en
+`tbcarritoestadoperiodo`.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcarritoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Productor dueño del carrito. | Aplicación | `tbproductor` |
+| `tbcarritofechacreacion` | `DATETIME NOT NULL` | No | Fecha de creación. | Aplicación | - |
+
+## tbcarritoestadoperiodo
+
+Transiciones de estado del carrito, con la misma regla de periodo abierto único
+que `tbproductorestadoperiodo`. Reemplaza la columna mutable `tbcarritoestado`.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcarritoestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbcarritoid` | `INT NOT NULL` | No | Carrito afectado. | Aplicación | `tbcarrito` |
+| `tbcarritoestadoperiodoestado` | `VARCHAR(30) NOT NULL` | No | Estado funcional validado por Backend. | Aplicación | - |
+| `tbcarritoestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo, calculado por PHP. | Aplicación | - |
+| `tbcarritoestadoperiodofechafin` | `DATETIME NULL` | Sí | Fin del periodo; nulo si es el estado vigente. | Aplicación | - |
+| `tbcarritoestadoperiodomotivo` | `VARCHAR(250) NULL` | Sí | Motivo declarado de la transición. | Aplicación | - |
+| `tbcarritoestadoperiodoorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbcarritoanimal
+
+Historial de agregar o retirar animales del carrito. No se borra pasado; el
+estado actual se deriva del último evento válido por animal.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcarritoanimalid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbcarritoid` | `INT NOT NULL` | No | Carrito afectado. | Aplicación | `tbcarrito` |
+| `tbanimalid` | `INT NOT NULL` | No | Animal agregado o retirado. | Aplicación | `tbanimal` |
+| `tbcarritoanimalaccion` | `VARCHAR(30) NOT NULL` | No | `AGREGAR` o `RETIRAR`, validado por PHP. | Aplicación | - |
+| `tbcarritoanimalfecha` | `DATETIME NOT NULL` | No | Fecha del evento. | Aplicación | - |
+| `tbcarritoanimalorigen` | `VARCHAR(100) NULL` | Sí | Origen técnico opcional. | Aplicación | - |
+
+## tbtransportistaestadoperiodo
+
+Histórico confirmado del estado de transportista. `fechainicio` puede ser NULL
+si no existe evidencia de cuándo comenzó realmente; no se reemplaza por la
+fecha de migración.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbtransportistaestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistaid` | `INT NOT NULL` | No | Transportista observado. | Aplicación | `tbtransportista` |
+| `tbtransportistaestadoperiodoestado` | `TINYINT(1) NOT NULL` | No | Estado lógico del periodo. | Aplicación | - |
+| `tbtransportistaestadoperiodofechainicio` | `DATETIME NULL` | Sí | Fecha real de inicio si existe evidencia. | Aplicación | - |
+| `tbtransportistaestadoperiodofechafin` | `DATETIME NULL` | Sí | Fin del periodo; nulo si está abierto. | Aplicación | - |
+| `tbtransportistaestadoperiodomotivo` | `VARCHAR(250) NULL` | Sí | Motivo opcional del cambio. | Aplicación | - |
+| `tbtransportistaestadoperiodofecharegistroensistema` | `DATETIME NOT NULL` | No | Fecha en que el sistema registró el periodo. | Aplicación | - |
+
+## tbtransportistaflete
+
+Hecho de flete: vehículo usado, cabezas transportadas, distancia recorrida,
+origen, destino, fecha, hora, precio y método de pago. No guarda cantidad
+semanal ni método frecuente porque se derivan con `COUNT`, `GROUP BY` y
+agregaciones.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbtransportistafleteid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistaid` | `INT NOT NULL` | No | Transportista que realiza el flete. | Aplicación | `tbtransportista` |
+| `tbproductororigenid` | `INT NULL` | Sí | Productor origen, si aplica. | Aplicación | `tbproductor` |
+| `tbfincaorigenid` | `INT NULL` | Sí | Finca origen, si aplica. | Aplicación | `tbfinca` |
+| `tbdireccionorigenid` | `INT NULL` | Sí | Dirección origen, si aplica. | Aplicación | `tbdireccion` |
+| `tbdirecciondestinoid` | `INT NULL` | Sí | Dirección destino, si aplica. | Aplicación | `tbdireccion` |
+| `tbvehiculoid` | `INT NULL` | Sí | Vehículo usado en el flete, congelado como hecho. Nulo si no se registró. | Aplicación | `tbvehiculo` |
+| `tbtransportistafletefecha` | `DATE NOT NULL` | No | Fecha del flete. | Aplicación | - |
+| `tbtransportistafletehora` | `TIME NULL` | Sí | Hora del flete, si existe. | Aplicación | - |
+| `tbtransportistafletedescripcion` | `VARCHAR(500) NULL` | Sí | Descripción del flete. | Usuario | - |
+| `tbtransportistafletecantidadcabezas` | `INT NULL` | Sí | Cantidad de cabezas transportadas. | Usuario | - |
+| `tbtransportistafletedistanciakm` | `DECIMAL(10,2) NULL` | Sí | Distancia recorrida en kilómetros. | Usuario | - |
+| `tbtransportistafleteprecio` | `DECIMAL(12,2) NULL` | Sí | Precio cobrado, si aplica. | Usuario | - |
+| `tbpagometodoid` | `INT NOT NULL` | No | Método de pago usado. | Aplicación | `tbpagometodo` |
+| `tbtransportistafleteorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbtransportistahorario
+
+Horario declarado del transportista. Cada fila es un periodo de vigencia por día
+de la semana: cambiar el horario cierra el periodo abierto y abre otro, nunca
+sobrescribe. La cobertura geográfica sigue pendiente de Calidad.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbtransportistahorarioid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistaid` | `INT NOT NULL` | No | Transportista dueño del horario. | Aplicación | `tbtransportista` |
+| `tbtransportistahorariodiasemana` | `VARCHAR(15) NOT NULL` | No | Día de la semana declarado; dominio validado por PHP. | Usuario | - |
+| `tbtransportistahorariohorainicio` | `TIME NOT NULL` | No | Hora de inicio de disponibilidad. | Usuario | - |
+| `tbtransportistahorariohorafin` | `TIME NOT NULL` | No | Hora de fin de disponibilidad. | Usuario | - |
+| `tbtransportistahorariofechainicio` | `DATETIME NOT NULL` | No | Inicio de vigencia del horario. | Aplicación | - |
+| `tbtransportistahorariofechafin` | `DATETIME NULL` | Sí | Fin de vigencia; nulo si es el horario vigente. | Aplicación | - |
+| `tbtransportistahorarioorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbtransportistaresena
+
+Reseña histórica de transportista. No almacena promedio; se deriva con `AVG`.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbtransportistaresenaid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistaid` | `INT NOT NULL` | No | Transportista reseñado. | Aplicación | `tbtransportista` |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que reseña: quien contrató el flete, sea o no productor. | Aplicación | `tbpersona` |
+| `tbtransportistafleteid` | `INT NULL` | Sí | Flete reseñado, si aplica. | Aplicación | `tbtransportistaflete` |
+| `tbtransportistaresenafecha` | `DATETIME NOT NULL` | No | Fecha de la reseña. | Aplicación | - |
+| `tbtransportistaresenacalificacion` | `INT NOT NULL` | No | Calificación validada por PHP. | Usuario | - |
+| `tbtransportistaresenacomentario` | `VARCHAR(500) NULL` | Sí | Comentario opcional. | Usuario | - |
+| `tbtransportistaresenaorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## Histórico transversal (Tramo 12/13)
+
+La matriz P0-C (`Documentation/MatrizArquitectonicaP0C.md`) supera la
+conclusión del Tramo 13 anterior. Productor mantiene sus históricos actuales:
+`tbproductorestadoperiodo`, `tbproductorubicacion` y
+`tbproductoractividad`. Comprador y Vendedor se modelan como clasificaciones
+históricas del Productor en `tbproductorclasificacionperiodo`.
+
+`tbbitacora` se mantiene exclusivamente como auditoría técnica y no sustituye
+históricos de negocio. Compra y Venta son hechos históricos propios, no estados
+de `tbcomprador` ni de un `tbvendedor`.
+
+## Estado efectivo y coherencia
+
+Una capacidad está activa solo si `tbpersonaestado` y el estado del perfil
+están activos. `DELETE` y `PATCH` modifican el perfil, nunca eliminan filas ni
+reactivan una persona globalmente inactiva. Al actualizar identidad o contacto
+desde cualquier capacidad, PHP actualiza `tbpersona` y el cambio se observa en
+las demás. La unicidad por identificación y la coincidencia de datos se
+garantizan con transacciones, sentencias preparadas y bloqueos nombrados.
 
 ## Estructura, relación y política
 
@@ -177,3 +508,15 @@ Asocia transportista y vehículo.
 Ninguna política de este documento se implementa con llaves, restricciones,
 triggers, procedimientos, funciones ni eventos. `Database/Tests/diagnostico.sql`
 solamente permite detectar los incumplimientos.
+
+## Auditoría de bits de estado actuales
+
+| Campo | Significado | Quién lo cambia | Reconstrucción temporal | Riesgo bit/histórico | Decisión |
+|---|---|---|---|---|---|
+| `tbpersonaestado` | Disponibilidad global de la identidad. | Backend actual de capacidades. | No confirmada para esta fase. | Puede divergir de perfiles si Backend no aplica estado efectivo. | No se crea histórico. |
+| `tbfincaestado` | Disponibilidad lógica de finca. | Backend de finca. | No confirmada. | Bajo: no existe histórico defendible aprobado. | No se crea histórico. |
+| `tbpagometodoactivo` | Disponibilidad del método de pago. | Backend/admin futuro. | No confirmada. | Bajo: los hechos guardan `tbpagometodoid`; el método frecuente se deriva. | No se crea histórico. |
+| `tbtransportistaestado` | Estado operativo legacy/actual del transportista. | Backend de transporte. | Confirmada por Calidad. | Alto si convive con periodos sin sincronizar. | Se crea `tbtransportistaestadoperiodo`; Backend debe mantenerlo. |
+| `tbvehiculoestado` | Disponibilidad lógica del vehículo. | Backend de vehículo. | No confirmada. | Medio: temporalidad vehículo-transportista sigue pendiente. | No se crea histórico todavía. |
+| `tbcarritoestado` | Estado del carrito. | Backend comercial. | Requerida: el carrito cambia de estado. | Alto: una columna sobrescribible borraba las transiciones. | Eliminada. Se crea `tbcarritoestadoperiodo`. |
+| `tbanimalpublicacionestado` | Estado de la publicación. | Backend comercial. | Requerida: la publicación cambia de estado. | Alto: idéntico al carrito. | Eliminada. Se crea `tbanimalpublicacionestadoperiodo`. |

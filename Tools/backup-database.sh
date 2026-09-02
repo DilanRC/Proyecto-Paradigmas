@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-readonly DATABASE_NAME='dbtindervacas'
+readonly DATABASE_NAME='bdmercadoganadero'
 readonly SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 readonly PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
@@ -91,13 +91,13 @@ docker compose exec -T db sh -c \
 writes_frozen=1
 
 docker compose exec -T db sh -c \
-    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 dbtindervacas' \
+    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 bdmercadoganadero' \
     > "$temp_dir/complete.sql"
 docker compose exec -T db sh -c \
-    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-data --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 dbtindervacas' \
+    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-data --routines --triggers --events --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 bdmercadoganadero' \
     > "$temp_dir/schema.sql"
 docker compose exec -T db sh -c \
-    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-create-info --single-transaction --skip-triggers --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 dbtindervacas' \
+    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --no-create-info --single-transaction --skip-triggers --no-tablespaces --set-gtid-purged=OFF --default-character-set=utf8mb4 bdmercadoganadero' \
     > "$temp_dir/data.sql"
 
 for dump in "$temp_dir/complete.sql" "$temp_dir/schema.sql" "$temp_dir/data.sql"; do
@@ -131,7 +131,7 @@ cat > "$manifest_file" <<EOF
 - Intercalación comprobada: Pendiente
 - Restauración completa comprobada: Pendiente
 - Restauración estructura + datos comprobada: Pendiente
-- Bases temporales utilizadas: dbtindervacas_restore_test, dbtindervacas_restore_parts_test
+- Bases temporales utilizadas: bdmercadoganadero_restore_test, bdmercadoganadero_restore_parts_test
 - Cantidad de tablas: Pendiente
 - Cantidad de restricciones: Pendiente
 - Cantidad de índices: Pendiente

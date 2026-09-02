@@ -1,0 +1,202 @@
+/*
+ * TinderCows — estado colapsado del sidebar administrativo.
+ *
+ * Estructura: el shell conserva una sola columna lateral y una principal.
+ * Mecanismo: shared/admin-ui.js cambia data-tc-sidebar y persiste la preferencia.
+ * Política: en escritorio el modo compacto reduce el rail a iconos; en móvil se
+ * conserva la navegación horizontal existente y el control se oculta.
+ */
+
+:root {
+    --admin-sidebar-collapsed-width:82px;
+    --admin-sidebar-current-width:var(--admin-sidebar-width);
+}
+
+html[data-tc-sidebar='collapsed'] {
+    --admin-sidebar-current-width:var(--admin-sidebar-collapsed-width);
+}
+
+.admin-sidebar-toggle {
+    display:inline-flex;
+    width:100%;
+    min-height:36px;
+    align-items:center;
+    justify-content:flex-start;
+    gap:9px;
+    margin:10px 0 0;
+    padding:0 12px;
+    border:1px solid rgba(238,219,202,.11);
+    border-radius:10px;
+    color:rgba(247,238,229,.68);
+    background:rgba(69,99,79,.12);
+    font:inherit;
+    font-size:11px;
+    font-weight:700;
+    cursor:pointer;
+    transition:
+        width .2s ease,
+        color .15s ease,
+        background .15s ease,
+        border-color .15s ease;
+}
+
+.admin-sidebar-toggle:hover {
+    color:#fff;
+    border-color:rgba(238,219,202,.18);
+    background:rgba(69,99,79,.32);
+}
+
+.admin-sidebar-toggle:focus-visible {
+    outline:3px solid color-mix(in srgb,var(--admin-primary) 42%,transparent);
+    outline-offset:2px;
+}
+
+.admin-sidebar-toggle i {
+    width:16px;
+    flex:0 0 16px;
+    text-align:center;
+}
+
+@media (min-width:901px) {
+    body.rural-panel {
+        grid-template-columns:var(--admin-sidebar-current-width) minmax(0,1fr) !important;
+        transition:grid-template-columns .22s cubic-bezier(.2,.7,.2,1);
+    }
+
+    .rural-panel__sidebar {
+        width:var(--admin-sidebar-current-width) !important;
+        overflow-x:hidden;
+        transition:
+            width .22s cubic-bezier(.2,.7,.2,1),
+            padding .22s cubic-bezier(.2,.7,.2,1);
+    }
+
+    .rural-panel__main {
+        min-width:0;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__sidebar {
+        padding-inline:10px !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__sidebar-brand {
+        justify-content:center !important;
+        gap:0 !important;
+        padding-inline:0 !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__sidebar-brand-name,
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav-label,
+    html[data-tc-sidebar='collapsed'] .admin-sidebar-nav-label,
+    html[data-tc-sidebar='collapsed'] .admin-sidebar-toggle__label,
+    html[data-tc-sidebar='collapsed'] .admin-account-card__copy,
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions .admin-sidebar-action-label,
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions .theme-toggle__label {
+        display:none !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-sidebar-toggle {
+        width:46px;
+        min-height:40px;
+        justify-content:center;
+        margin:10px auto 0;
+        padding:0;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-sidebar-toggle i {
+        width:auto;
+        flex:0 0 auto;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav {
+        margin-top:14px !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav-list {
+        align-items:center;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav-item {
+        width:48px;
+        min-height:44px;
+        flex:0 0 48px;
+        justify-content:center !important;
+        gap:0 !important;
+        margin-inline:auto;
+        padding:0 !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav-item::before {
+        width:auto !important;
+        flex:0 0 auto !important;
+        font-size:16px !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav-item--active,
+    html[data-tc-sidebar='collapsed'] .rural-panel__nav-item--active:hover {
+        box-shadow:inset 3px 0 0 var(--admin-primary) !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .rural-panel__sidebar-footer {
+        padding-inline:0 !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card {
+        gap:8px;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card__identity {
+        display:flex;
+        justify-content:center;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card__avatar {
+        width:38px;
+        height:38px;
+        flex:0 0 38px;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions {
+        justify-items:center;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions .rural-panel__admin-link,
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions .theme-toggle {
+        width:42px !important;
+        min-height:40px;
+        justify-content:center !important;
+        gap:0 !important;
+        margin:0 auto;
+        padding:0 !important;
+        font-size:0 !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions .rural-panel__admin-link::before {
+        margin:0 !important;
+        font-size:14px !important;
+    }
+
+    html[data-tc-sidebar='collapsed'] .admin-account-card__actions .theme-toggle__icon {
+        margin:0 !important;
+        font-size:14px !important;
+    }
+}
+
+@media (max-width:900px) {
+    :root,
+    html[data-tc-sidebar='collapsed'] {
+        --admin-sidebar-current-width:100%;
+    }
+
+    .admin-sidebar-toggle {
+        display:none !important;
+    }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    body.rural-panel,
+    .rural-panel__sidebar,
+    .admin-sidebar-toggle {
+        transition:none !important;
+    }
+}

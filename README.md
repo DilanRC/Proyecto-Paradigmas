@@ -5,32 +5,64 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `dbtindervacas` contiene exactamente:
+La base `bdmercadoganadero` contiene exactamente 30 tablas:
 
-1. `tbproductor`
-2. `tbproductordireccion`
-3. `tbfinca`
-4. `tbbitacora`
-5. `tbcomprador`
+1. `tbpersona`
+2. `tbproductor`
+3. `tbcomprador`
+4. `tbtransportista`
+5. `tbproductordireccion`
 6. `tbdireccion`
-7. `tbfincadireccion`
-8. `tbpagometodo`
-9. `tbtransportista`
+7. `tbfinca`
+8. `tbfincadireccion`
+9. `tbpagometodo`
 10. `tbvehiculo`
 11. `tbtransportistavehiculo`
+12. `tbbitacora`
+13. `tbproductorestadoperiodo`
+14. `tbproductorubicacion`
+15. `tbproductoractividad`
+16. `tbproductorclasificacionperiodo`
+17. `tbanimal`
+18. `tbanimalproduccionsalud`
+19. `tbanimalpublicacion`
+20. `tbanimalpublicacionestadoperiodo`
+21. `tbcompra`
+22. `tbventa`
+23. `tbanimalinteraccion`
+24. `tbcarrito`
+25. `tbcarritoanimal`
+26. `tbcarritoestadoperiodo`
+27. `tbtransportistaestadoperiodo`
+28. `tbtransportistahorario`
+29. `tbtransportistaflete`
+30. `tbtransportistaresena`
 
-Las seis últimas pertenecen al avance de direcciones, pagos y transporte. La
-ubicación física vive **únicamente** en `tbdireccion`: `tbproductordireccion` y
+`tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
+de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
+`tbcomprador` es legacy de compatibilidad temporal: sobrevive mientras el CRUD
+actual dependa de ella y debe retirarse. Su migración se audita y ejecuta con
+`php Tools/backfill-clasificacion-comprador.php --check` (audita) y `--apply`
+(migra); el estado que muestran API y panel ya sale de la clasificación. Comprador y Vendedor son
+clasificaciones del Productor y su única fuente de verdad es
+`tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`). Animal, publicación, compra,
+venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
+Backend implemente comportamiento después. La ubicación física vive **únicamente** en
+`tbdireccion`: `tbproductordireccion` y
 `tbfincadireccion` solo guardan el enlace `tbdireccionid`, de modo que productor
 y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
-`Documentation/DER.md`, `Documentation/DiccionarioDatos.md` y
-`Database/Tests/README.md`.
+`Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
+`Documentation/DiccionarioDatos.md` y `Database/Tests/README.md`.
 
 El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
 columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
 consecutivos y `tbproductordireccion`/`tbfinca` usan `tbproductorid` como
-asociación lógica. No existen tablas de participante, roles ni tipos de
-identificación.
+asociación lógica. No existen tablas de participante, roles ni catálogos de
+roles. No existe `tbvendedor`.
+
+El listado de tablas se deriva del SQL canónico con
+`Tools/schema-manifest.php`; gates, tests y restore no deben mantener otro
+manifest editado a mano.
 
 Todos los valores, incluida la fecha de bitácora y los estados iniciales, se
 envían desde PHP mediante `PDO::prepare()` y parámetros enlazados. MySQL solo
@@ -48,11 +80,11 @@ docker compose ps
 ```
 
 - Aplicación: <http://localhost:8080>
-- Adminer: <http://localhost:8081>, servidor `db`
+- phpMyAdmin: <http://localhost:8081>, servidor preconfigurado `db`; ingrese con `DB_USER` y `DB_PASS`
 - Verificación JWT Supabase: <http://127.0.0.1:3001>
-- MySQL desde host: `localhost:${DB_HOST_PORT:-3307}`
+- MySQL desde host: `localhost:${DB_HOST_PORT:-3309}`
 - MySQL entre contenedores: `db:3306`
-- Base: `dbtindervacas`
+- Base MySQL: `bdmercadoganadero`
 
 Reinicio limpio, únicamente después de verificar un respaldo:
 
@@ -98,6 +130,12 @@ El contrato está en `contracts/supabase-auth-v1.openapi.json`. La clave secreta
 no se versiona y solo debe agregarse a `.env` cuando exista una operación
 administrativa que la necesite.
 
+Las APIs PHP usan ese contrato cuando reciben `Authorization: Bearer <jwt>`.
+El `email` verificado debe coincidir de forma única con
+`tbpersona.tbpersonacorreoelectronico`; si no existe vínculo, la escritura falla
+con 409 y no inventa usuario. Sin encabezado `Authorization` se conserva el modo
+local `NO_AUTENTICADO`.
+
 ## Despliegue
 
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve
@@ -140,11 +178,10 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-La migración `v3` crea las once tablas, normaliza `tbproductordireccion`
-trasladando la ubicación a `tbdireccion`, registra `Efectivo` en
-`tbpagometodo`, habilita RLS sin políticas públicas y valida las columnas. El
-log `supabase_schema_status=ready tables=11 migration=v3` confirma el
-resultado.
+El migrador crea y valida las 30 tablas, incluida la identidad compartida en
+`tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
+migración remota de persona no se ejecuta ni se activa mediante push hasta
+confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
 
 ### Aplicar el esquema a una base existente
 
@@ -245,6 +282,14 @@ La identificación se almacena sin espacios ni guiones y con letras mayúsculas.
 PUT no puede cambiarla por contrato de aplicación, no por una clave MySQL. El
 correo no es único. DELETE cambia el estado y PATCH reutiliza la misma fila.
 
+La identificación, tipo, nombre, teléfono y correo se leen mediante JOIN con
+`tbpersona`. Crear una capacidad reutiliza la persona por identificación o la
+crea si no existe. La API responde 409 si esa capacidad ya existe o si los
+datos personales no coinciden. Actualizar contacto desde cualquier capacidad
+actualiza `tbpersona` y se refleja en los otros perfiles. `DELETE` desactiva
+solo el perfil, `PATCH` reactiva solo el perfil y ninguno puede operar si
+`tbpersonaestado` está inactivo. Ningún endpoint ejecuta `DELETE FROM`.
+
 Si una identificación fue digitada incorrectamente, se desactiva el registro
 incorrecto, se conserva su bitácora y se crea el registro correcto. La
 identificación existente no se modifica directamente.
@@ -254,6 +299,13 @@ flujos evitan fincas duplicadas como políticas de aplicación. Sin PK, FK,
 UNIQUE ni CHECK, SQL directo puede insertar duplicados, huérfanos o valores
 fuera del dominio.
 
+La migración a persona compartida respalda primero, detecta identificaciones
+duplicadas y datos incompatibles, y aborta antes de retirar columnas ante
+cualquier conflicto. Después de enlazar y verificar conteos, IDs y ausencia de
+huérfanos, elimina las columnas personales de los perfiles. Los IDs de perfil
+y sus relaciones no cambian. Consulte `Documentation/Respaldos.md` antes de
+aplicarla. Para Supabase se exige snapshot confirmado y autorización explícita.
+
 Los modelos usan `PDO::prepare()` con parámetros enlazados y preparadas nativas.
 Ningún valor recibido por HTTP se concatena al SQL. Para crear un productor,
 PHP adquiere en orden los bloqueos nombrados de productor, dirección y finca,
@@ -262,7 +314,27 @@ bloqueos en orden inverso después del commit o rollback. Las actualizaciones
 que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
-La base y las cinco tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+### Ubicaciones GPS del productor
+
+Endpoint: `/api/productores-ubicacion.php`
+
+| Método | Operación |
+|---|---|
+| GET | Histórico por `productorId`, paginado (`pagina`, `tamano`) o por rango (`desde`, `hasta`) |
+| POST | Registrar una nueva lectura GPS (append-only) |
+
+```json
+{"productorId": 12, "latitud": 10.1234567, "longitud": -84.1234567,
+ "precisionMetros": 25.4, "origen": "NAVEGADOR"}
+```
+
+La tabla es append-only (DEC-16): PUT, PATCH y DELETE responden 405. La fecha
+la asigna siempre PHP; el campo `fecha` del cliente se descarta. El origen solo
+acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
+rango con errores por campo. Cada inserción queda en la bitácora dentro de la
+misma transacción.
+
+La base y las 30 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
@@ -284,10 +356,16 @@ docker compose exec -T app php Tests/transaction_test.php
 docker compose exec -T app php Tests/address_policy_test.php
 docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
+docker compose exec -T app php Tests/productor_ubicacion_test.php
+docker compose exec -T app php Tests/api_productores_ubicacion_http_test.php
 docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
 node Tests/ui_test.js
+node Tests/frontend_contract_test.js
+node Tests/frontend_capacidades_eval.js
+node Tests/frontend_contrast_test.mjs
+node --test Tests/frontend/*.test.mjs
 python3 Tests/documentation_test.py
 cd services/supabase-server && npm test && npm run eval
 php services/supabase-database/tests/schema_test.php

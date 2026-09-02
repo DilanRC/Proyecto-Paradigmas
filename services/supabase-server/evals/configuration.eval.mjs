@@ -16,6 +16,8 @@ const checks = [
   ['auth_usuario', source.includes("verify(request, { auth: 'user' })")],
   ['sin_admin', !source.includes('supabaseAdmin') && !source.includes("auth: 'secret'")],
   ['contrato_bearer', contract.paths['/v1/auth/verify'].get.security?.[0]?.bearerAuth?.length === 0],
+  ['contrato_401_403_503', [401, 403, 503].every((status) =>
+    contract.paths['/v1/auth/verify'].get.responses?.[String(status)] !== undefined)],
   ['compose_aislado', compose.includes('supabase-server:') && compose.includes('127.0.0.1:${SUPABASE_SERVER_PORT:-3001}:3000')],
   ['variables_documentadas', ['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SECRET_KEY', 'SUPABASE_JWKS_URL']
     .every((name) => exampleEnv.includes(`${name}=`))],

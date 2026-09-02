@@ -4,34 +4,27 @@ declare(strict_types=1);
 
 namespace Application\Controller;
 
+use Application\Auth\ActorContext;
+use Application\HttpException;
 use Application\Model\Bitacora;
 use Application\Model\Vehiculo;
+use Application\Service\EstadoService;
 use PDO;
 use Throwable;
-
-final class VehiculoHttpException extends \RuntimeException
-{
-    public function __construct(
-        string $message,
-        public readonly int $estadoHttp,
-        public readonly ?array $datos = null,
-        public readonly array $errores = [],
-    ) {
-        parent::__construct($message);
-    }
-}
 
 final class VehiculoController
 {
     private Vehiculo $vehiculo;
     private Bitacora $bitacora;
+    private EstadoService $estadoService;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null)
+    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->vehiculo = new Vehiculo($conexion);
-        $this->bitacora = new Bitacora($conexion);
+        $this->bitacora = new Bitacora($conexion, $actor);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
+        $this->estadoService = new EstadoService($this->bitacora, $this->solicitudId);
     }
 
     public function procesar(string $metodo, array $consulta, array $cuerpo): array
@@ -45,7 +38,7 @@ final class VehiculoController
                 'PATCH' => $this->reactivar($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
-        } catch (VehiculoHttpException $excepcion) {
+        } catch (HttpException $excepcion) {
             return $this->respuesta(
                 false, $excepcion->getMessage(), $excepcion->datos, $excepcion->estadoHttp, $excepcion->errores
             );
@@ -58,7 +51,7 @@ final class VehiculoController
             $id = $this->enteroConsulta($consulta['vehiculoId'], 'vehiculoId');
             $vehiculo = $this->vehiculo->buscarPorId($id);
             if ($vehiculo === null) {
-                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
+                throw new HttpException('Vehículo no encontrado.', 404);
             }
             return $this->respuesta(true, 'Vehículo consultado correctamente.', $vehiculo);
         }
@@ -66,7 +59,7 @@ final class VehiculoController
         $busqueda = $this->textoConsulta($consulta['q'] ?? '', 150);
         $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? 'TODOS', 10), 'UTF-8');
         if (!in_array($estado, ['TODOS', 'ACTIVO', 'INACTIVO'], true)) {
-            throw new VehiculoHttpException('El filtro de estado no es válido.', 422, null, [
+            throw new HttpException('El filtro de estado no es válido.', 422, null, [
                 'estado' => 'Use TODOS, ACTIVO o INACTIVO.',
             ]);
         }
@@ -74,7 +67,7 @@ final class VehiculoController
         $tamano = array_key_exists('tamanoPagina', $consulta)
             ? $this->enteroConsulta($consulta['tamanoPagina'], 'tamanoPagina') : 25;
         if ($tamano > 100) {
-            throw new VehiculoHttpException('El tamaño de página no es válido.', 422, null, [
+            throw new HttpException('El tamaño de página no es válido.', 422, null, [
                 'tamanoPagina' => 'Debe estar entre 1 y 100.',
             ]);
         }
@@ -114,10 +107,10 @@ final class VehiculoController
         $nuevo = $this->transaccion(function () use ($datos, $id): array {
             $bloqueado = $this->vehiculo->bloquearPorId($id);
             if ($bloqueado === null) {
-                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
+                throw new HttpException('Vehículo no encontrado.', 404);
             }
             if ((int) $bloqueado['tbvehiculoestado'] !== 1) {
-                throw new VehiculoHttpException(
+                throw new HttpException(
                     'El vehículo está inactivo. Debe reactivarlo antes de actualizarlo.', 409,
                 );
             }
@@ -140,23 +133,19 @@ final class VehiculoController
     private function desactivar(array $cuerpo): array
     {
         $id = $this->validarIdUnico($cuerpo);
-        $nuevo = $this->transaccion(function () use ($id): array {
-            $bloqueado = $this->vehiculo->bloquearPorId($id);
-            $anterior = $this->vehiculo->buscarPorId($id);
-            if ($bloqueado === null || $anterior === null) {
-                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbvehiculoestado'] === 0) {
-                return $anterior;
-            }
-            $this->vehiculo->cambiarEstado($id, false);
-            $nuevo = $this->vehiculo->buscarPorId($id);
-            $this->bitacora->registrar(
-                'DESACTIVAR', (string) $id, $anterior, $nuevo, $this->solicitudId,
-                entidad: 'VEHICULO', origen: 'API_VEHICULOS',
-            );
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el vehículo desactivado.');
-        });
+        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
+            fn ($clave) => $this->vehiculo->bloquearPorId($clave),
+            fn ($clave) => $this->vehiculo->buscarPorId($clave),
+            fn ($clave, $activo) => $this->vehiculo->cambiarEstado($clave, $activo),
+            'tbvehiculoestado',
+            0,
+            'Vehículo no encontrado.',
+            (string) $id,
+            'VEHICULO',
+            'API_VEHICULOS',
+            $id,
+            null,
+        ));
 
         return $this->respuesta(true, 'Vehículo desactivado correctamente.', $nuevo);
     }
@@ -164,23 +153,19 @@ final class VehiculoController
     private function reactivar(array $cuerpo): array
     {
         $id = $this->validarIdUnico($cuerpo);
-        $nuevo = $this->transaccion(function () use ($id): array {
-            $bloqueado = $this->vehiculo->bloquearPorId($id);
-            $anterior = $this->vehiculo->buscarPorId($id);
-            if ($bloqueado === null || $anterior === null) {
-                throw new VehiculoHttpException('Vehículo no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbvehiculoestado'] === 1) {
-                return $anterior;
-            }
-            $this->vehiculo->cambiarEstado($id, true);
-            $nuevo = $this->vehiculo->buscarPorId($id);
-            $this->bitacora->registrar(
-                'REACTIVAR', (string) $id, $anterior, $nuevo, $this->solicitudId,
-                entidad: 'VEHICULO', origen: 'API_VEHICULOS',
-            );
-            return $nuevo ?? throw new \RuntimeException('No fue posible leer el vehículo reactivado.');
-        });
+        $nuevo = $this->transaccion(fn (): array => $this->estadoService->transicionar(
+            fn ($clave) => $this->vehiculo->bloquearPorId($clave),
+            fn ($clave) => $this->vehiculo->buscarPorId($clave),
+            fn ($clave, $activo) => $this->vehiculo->cambiarEstado($clave, $activo),
+            'tbvehiculoestado',
+            1,
+            'Vehículo no encontrado.',
+            (string) $id,
+            'VEHICULO',
+            'API_VEHICULOS',
+            $id,
+            null,
+        ));
 
         return $this->respuesta(true, 'Vehículo reactivado correctamente.', $nuevo);
     }
@@ -204,7 +189,7 @@ final class VehiculoController
         $modelo = $this->textoCampo($cuerpo['modelo'] ?? null, 'modelo', 100, $errores, 1);
 
         if ($errores !== []) {
-            throw new VehiculoHttpException('Revise los campos indicados.', 422, null, $errores);
+            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         }
 
         $resultado = ['placa' => $placa, 'vin' => $vin, 'modelo' => $modelo];
@@ -221,7 +206,7 @@ final class VehiculoController
         $errores = [];
         $id = $this->enteroCampo($cuerpo['vehiculoId'] ?? null, 'vehiculoId', $errores);
         if ($errores !== []) {
-            throw new VehiculoHttpException('Revise los campos indicados.', 422, null, $errores);
+            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         }
         return $id;
     }
@@ -258,7 +243,7 @@ final class VehiculoController
     private function textoConsulta(mixed $valor, int $maximo): string
     {
         if (!is_string($valor) || mb_strlen($valor) > $maximo) {
-            throw new VehiculoHttpException('La consulta no es válida.', 422);
+            throw new HttpException('La consulta no es válida.', 422);
         }
         return trim($valor);
     }
@@ -267,7 +252,7 @@ final class VehiculoController
     {
         $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($entero === false) {
-            throw new VehiculoHttpException("{$campo} debe ser un entero positivo.", 422);
+            throw new HttpException("{$campo} debe ser un entero positivo.", 422);
         }
         return $entero;
     }
@@ -282,7 +267,7 @@ final class VehiculoController
         foreach ($desconocidos as $campo) {
             $errores[$prefijo . $campo] = 'Campo no permitido.';
         }
-        throw new VehiculoHttpException('Revise los campos indicados.', 422, null, $errores);
+        throw new HttpException('Revise los campos indicados.', 422, null, $errores);
     }
 
     private function transaccion(callable $operacion): mixed

@@ -1,0 +1,569 @@
+/* components.css — Componentes reutilizables: boton, campo, badge, modal, toast, estados. */
+
+.brand__icon {
+    display:grid;
+    width:42px;
+    height:42px;
+    place-items:center;
+    border-radius:14px;
+    color:#fff;
+    background:linear-gradient(140deg,var(--primary),#329064);
+}
+
+.brand__icon svg {
+    width:31px;
+    fill:currentColor;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+}
+
+.brand__logo {
+    display:grid;
+    width:44px;
+    height:44px;
+    place-items:center;
+    overflow:hidden;
+    border-radius:12px;
+    background:#fff;
+}
+
+.brand__logo img {
+    display:block;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.brand__logo--light {
+    background:rgba(255,255,255,.12);
+}
+
+.brand__logo--dark {
+    background:var(--surface);
+    box-shadow:0 10px 24px rgba(18,40,27,.12);
+}
+
+.label {
+    display:inline-flex;
+    margin-bottom:7px;
+    color:var(--primary);
+    font-size:12px;
+    font-weight:750;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.button {
+    display:inline-flex;
+    min-height:44px;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:10px 18px;
+    border:1px solid transparent;
+    border-radius:var(--small-radius);
+    font-weight:700;
+}
+
+.button--primary {
+    color:#fff;
+    background:var(--primary);
+    box-shadow:0 8px 20px rgba(34,106,70,.18);
+}
+
+.button--primary:hover:not(:disabled) {
+    background:var(--primary-dark);
+}
+
+.button--secondary {
+    color:var(--text);
+    border-color:var(--border);
+    background:#fff;
+}
+
+.button--danger {
+    color:#fff;
+    background:var(--danger);
+}
+
+.link-button {
+    padding:4px;
+    border:0;
+    color:var(--primary);
+    background:transparent;
+    font-size:13px;
+    font-weight:700;
+}
+
+.avatar {
+    display:grid;
+    width:40px;
+    height:40px;
+    place-items:center;
+    border-radius:13px;
+    color:var(--primary);
+    background:var(--primary-soft);
+    font-size:12px;
+    font-weight:800;
+}
+
+.badge {
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:5px 9px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:750;
+}
+
+.badge::before {
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:currentColor;
+    content:"";
+}
+
+.badge--active {
+    color:#147544;
+    background:#e4f6eb;
+}
+
+.badge--inactive {
+    color:var(--badge-inactive-text);
+    background:#ecefed;
+}
+
+.action {
+    padding:6px 8px;
+    border:0;
+    border-radius:7px;
+    color:var(--primary);
+    background:transparent;
+    font-size:12px;
+}
+
+.action:hover {
+    background:var(--primary-soft);
+}
+
+.empty-state {
+    min-height:230px;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+}
+
+.empty-state:not([hidden]) {
+    display:flex;
+}
+
+.empty-state {
+    flex-direction:column;
+}
+
+.empty-state__icon {
+    display:grid;
+    width:54px;
+    height:54px;
+    place-items:center;
+    border-radius:18px;
+    color:var(--primary);
+    background:var(--primary-soft);
+    font-size:28px;
+}
+
+.empty-state h2 {
+    margin:12px 0 0;
+}
+
+.empty-state p {
+    color:var(--muted);
+}
+
+.modal {
+    width:min(720px,calc(100% - 28px));
+    max-height:calc(100vh - 32px);
+    padding:0;
+    overflow:auto;
+    border:0;
+    border-radius:20px;
+    color:var(--text);
+    background:var(--surface);
+    box-shadow:0 30px 90px rgba(18,40,27,.27);
+}
+
+.modal::backdrop {
+    background:rgba(18,31,23,.58);
+}
+
+.modal__header {
+    position:sticky;
+    top:0;
+    display:flex;
+    justify-content:space-between;
+    padding:24px 28px 18px;
+    border-bottom:1px solid var(--border);
+    background:#fff;
+}
+
+.modal__header h2 {
+    margin:0;
+}
+
+.close-button {
+    display:grid;
+    width:36px;
+    height:36px;
+    place-items:center;
+    border:0;
+    border-radius:10px;
+    color:var(--muted);
+    font-size:26px;
+}
+
+.modal__content {
+    padding:24px 28px 8px;
+}
+
+.form-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:17px 18px;
+}
+
+.field {
+    display:flex;
+    min-width:0;
+    flex-direction:column;
+    gap:7px;
+}
+
+.field--full {
+    grid-column:1/-1;
+}
+
+.field input, .field select, .field textarea {
+    min-height:44px;
+    padding:10px 12px;
+}
+
+.field textarea {
+    min-height:82px;
+    resize:vertical;
+}
+
+.field__hint {
+    min-height:15px;
+    color:var(--muted);
+    font-size:11px;
+}
+
+.field__error {
+    min-height:15px;
+    color:var(--danger);
+    font-size:11px;
+}
+
+.form-note {
+    color:var(--muted);
+    font-size:11px;
+}
+
+.modal__actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    padding:18px 28px;
+    border-top:1px solid var(--border);
+}
+
+.modal--confirmation {
+    width:min(440px,calc(100% - 28px));
+    padding-top:28px;
+    text-align:center;
+}
+
+.confirmation__icon {
+    display:grid;
+    width:52px;
+    height:52px;
+    margin:auto;
+    place-items:center;
+    border-radius:17px;
+    color:var(--danger);
+    background:var(--danger-soft);
+    font-size:22px;
+    font-weight:800;
+}
+
+.detail-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:16px 24px;
+    margin:0;
+}
+
+.detail-grid dt {
+    margin:0 0 4px;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:750;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
+.detail-grid dd {
+    margin:0;
+    font-size:14px;
+}
+
+.detail-grid .detail--full {
+    grid-column:1/-1;
+}
+
+.fieldset-help {
+    margin:0 0 12px;
+    color:var(--muted);
+    font-size:12px;
+}
+
+.field [aria-invalid="true"] {
+    border-color:var(--danger);
+    box-shadow:0 0 0 3px rgba(189,52,61,.1);
+}
+
+.field input:focus, .field select:focus, .field textarea:focus, .search input:focus, .filter select:focus, .button:focus-visible, .action:focus-visible, .close-button:focus-visible, .link-button:focus-visible {
+    border-color:var(--primary);
+    outline:3px solid rgba(34,106,70,.17);
+    outline-offset:1px;
+}
+
+.action--desactivar {
+    color:var(--danger);
+}
+
+.button--reactivate {
+    color:#125b36;
+    border-color:#98c5aa;
+    background:#e5f6ec;
+}
+
+.button--reactivate:hover:not(:disabled) {
+    background:#d4efdf;
+}
+
+.modal__content {
+    scroll-padding-top:100px;
+}
+
+@media (max-width:540px) {
+    .modal__header, .modal__content, .modal__actions {
+        padding-inline:18px;
+    }
+    .modal__actions {
+        flex-direction:column-reverse;
+    }
+    .modal__actions .button {
+        width:100%;
+    }
+}
+
+.top-bar__link:hover {
+    text-decoration:underline;
+}
+
+/* --- Esqueleto de carga -----------------------------------------------------
+   Sustituye al velo con spinner: ocupa el sitio que ocupara el contenido, de
+   modo que la tabla no salta cuando llegan los datos. */
+.skeleton {
+    display:grid;
+    gap:10px;
+    padding:18px;
+}
+
+.skeleton__row {
+    height:44px;
+    border-radius:var(--small-radius);
+    background:linear-gradient(90deg,#eceee9 25%,#f6f7f4 50%,#eceee9 75%);
+    background-size:200% 100%;
+    animation:skeleton-sweep 1.2s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+    to { background-position:-200% 0; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .skeleton__row { animation:none; }
+}
+
+/* --- Estado de error, distinto del estado vacio -----------------------------
+   Un fallo de red o de servidor no es "no hay resultados": tiene icono propio,
+   mensaje real del fallo y una accion para reintentar. */
+.error-state {
+    min-height:230px;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    text-align:center;
+}
+
+.error-state:not([hidden]) { display:flex; }
+
+.error-state__icon {
+    display:grid;
+    width:54px;
+    height:54px;
+    place-items:center;
+    border-radius:18px;
+    color:var(--danger);
+    background:var(--danger-soft);
+    font-size:26px;
+    font-weight:800;
+}
+
+.error-state h2 { margin:12px 0 0; font-size:18px; }
+.error-state p { max-width:46ch; margin:0; color:var(--muted); }
+
+/* --- Notificaciones ---------------------------------------------------------
+   Dos regiones permanentes: una cortes y otra asertiva. Nunca se ocultan con
+   [hidden] porque un nodo oculto sale del arbol de accesibilidad y el lector
+   deja de observar sus cambios; se ocultan por :empty. */
+.toast-region {
+    position:fixed;
+    z-index:100;
+    right:24px;
+    bottom:24px;
+    display:grid;
+    gap:10px;
+    width:min(390px,calc(100% - 48px));
+    pointer-events:none;
+}
+
+.toast:empty { display:none; }
+
+.toast {
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 18px;
+    border:1px solid transparent;
+    border-radius:12px;
+    background:var(--surface);
+    box-shadow:0 15px 45px rgba(16,34,22,.18);
+    font-weight:650;
+    pointer-events:auto;
+}
+
+.toast__text { flex:1; }
+
+.toast__action {
+    flex:0 0 auto;
+    padding:6px 12px;
+    border:1px solid currentColor;
+    border-radius:999px;
+    color:inherit;
+    background:transparent;
+    font-size:12px;
+    font-weight:750;
+}
+
+.toast__dismiss {
+    flex:0 0 auto;
+    width:26px;
+    height:26px;
+    padding:0;
+    border:0;
+    border-radius:50%;
+    color:inherit;
+    background:transparent;
+    font-size:18px;
+    line-height:1;
+}
+
+.toast__dismiss:hover { background:rgba(0,0,0,.08); }
+
+.toast--success { color:#125b36; background:#e5f6ec; }
+.toast--error   { color:#8f2229; background:#fdebed; }
+.toast--warning { color:#7a4b00; background:#fdf1dd; }
+.toast--info    { color:#1f4b6e; background:#e7f1f9; }
+
+@media (max-width:600px) {
+    .toast-region { right:16px; left:16px; bottom:16px; width:auto; }
+}
+
+/* Capacidades de una persona dentro de la ficha de detalle. */
+.capacidades {
+    margin:24px 0 0;
+    padding:16px 0 0;
+    border-top:1px solid var(--border);
+}
+
+.capacidades__titulo {
+    margin:0;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:750;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+
+.capacidades__nota {
+    margin:4px 0 12px;
+    color:var(--muted);
+    font-size:12px;
+}
+
+.capacidades__lista {
+    display:grid;
+    gap:8px;
+    margin:0;
+    padding:0;
+    list-style:none;
+}
+
+.capacidad {
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px 12px;
+    align-items:baseline;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-left-width:3px;
+    border-radius:8px;
+    background:var(--surface);
+}
+
+.capacidad__nombre {
+    flex:1 1 auto;
+    font-size:14px;
+    font-weight:650;
+}
+
+.capacidad__estado {
+    font-size:12px;
+    color:var(--muted);
+}
+
+/* Registrado, no registrado y "no se pudo comprobar" son tres situaciones
+   distintas: un 404 afirma que la persona no tiene esa capacidad, mientras que
+   un fallo de red no afirma nada. El color lo distingue sin depender solo del
+   texto, y ninguna de las tres se apoya unicamente en el color. */
+.capacidad--registrado { border-left-color:var(--primary); }
+.capacidad--no-registrado { border-left-color:var(--border); }
+.capacidad--desconocido { border-left-color:var(--accent); }
+.capacidad--cargando { border-left-color:var(--border); }
+
+.capacidad--registrado .capacidad__estado { color:var(--primary-dark); }
+.capacidad--desconocido .capacidad__estado { color:var(--danger); }
+
+.capacidad__enlace {
+    font-size:12px;
+    font-weight:650;
+    color:var(--primary-dark);
+}

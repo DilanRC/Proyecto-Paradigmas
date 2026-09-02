@@ -1,287 +1,281 @@
-(() => {
-    'use strict';
+// Panel de compradores: solo lectura.
+//
+// El CRUD legacy se retiró en el paso (d). Comprador no es un registro que
+// alguien dé de alta: es una clasificación del Productor cuya única fuente de
+// verdad es `tbproductorclasificacionperiodo` con un periodo COMPRADOR abierto.
+//
+// Este módulo no tiene formulario ni acciones de crear, editar, desactivar o
+// reactivar. Mientras T10 no exista, muestra únicamente clasificaciones ya
+// registradas o migradas; no genera nuevas.
 
-    const API_URL = 'api/compradores.php';
+import { request } from './shared/api.js';
+import { consultarCapacidades, describirCapacidad } from './shared/capacidades.js';
+import { createDialogController } from './shared/dialog.js';
+import {
+    applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
+} from './shared/list-state.js';
+import { createToast } from './shared/toast.js';
+
+const API_URL = 'api/compradores.php';
+const ETIQUETAS = { singular: 'productor clasificado', plural: 'productores clasificados' };
+
+/** Iniciales del productor clasificado; la letra de reserva es de este panel. */
+function getInitials(name = '') {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2)
+        .map((part) => part.charAt(0).toUpperCase()).join('') || 'C';
+}
+
+/** Fecha legible del inicio de la clasificación. Pura, para poder probarla. */
+export function formatearClasificadoDesde(valor) {
+    if (typeof valor !== 'string' || valor.trim() === '') return 'Sin fecha registrada';
+    const fecha = new Date(valor.replace(' ', 'T'));
+    if (Number.isNaN(fecha.getTime())) return valor;
+    return fecha.toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/** Traduce motivos técnicos/legacy a texto defendible para la vista. */
+export function describirOrigen(motivo) {
+    const etiquetas = {
+        MIGRACION_TBCOMPRADOR_LEGACY: 'Migración del registro anterior',
+        ALTA_CRUD_COMPRADOR: 'Alta registrada antes del retiro del CRUD',
+        REACTIVACION_CRUD_COMPRADOR: 'Reactivación registrada antes del retiro del CRUD',
+    };
+    if (typeof motivo !== 'string' || motivo.trim() === '') return 'Sin origen declarado';
+    return etiquetas[motivo] ?? motivo;
+}
+
+function initialize() {
     const $ = (selector) => document.querySelector(selector);
     const elements = {
-        body: $('#cuerpo-compradores'), empty: $('#estado-vacio'), loading: $('#estado-carga'), panel: $('#panel-compradores'), total: $('#total-compradores'),
-        search: $('#busqueda-comprador'), status: $('#filtro-estado'), refresh: $('#actualizar-lista'), previous: $('#pagina-anterior'), next: $('#pagina-siguiente'), page: $('#pagina-actual'), create: $('#crear-comprador'), modal: $('#modal-comprador'),
-        form: $('#formulario-comprador'), modalTitle: $('#titulo-modal'), modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'), save: $('#guardar-comprador'),
-        reactivateExisting: $('#reactivar-existente'), types: $('#identificacion-tipo'), deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
-        cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'), notification: $('#notificacion'),
-        detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'), detailContent: $('#detalle-contenido'), closeDetail: $('#cerrar-detalle'), closeDetailSecondary: $('#cerrar-detalle-secundario'), editFromDetail: $('#editar-desde-detalle'),
+        body: $('#cuerpo-compradores'), empty: $('#estado-vacio'), error: $('#estado-error'),
+        errorMessage: $('#mensaje-error'), retry: $('#reintentar'), loading: $('#estado-carga'),
+        panel: $('#panel-compradores'), total: $('#total-compradores'),
+        search: $('#busqueda-comprador'), refresh: $('#actualizar-lista'),
+        previous: $('#pagina-anterior'), next: $('#pagina-siguiente'), page: $('#pagina-actual'),
+        detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'),
+        detailContent: $('#detalle-contenido'), capacities: $('#lista-capacidades'),
+        closeDetail: $('#cerrar-detalle'), closeDetailSecondary: $('#cerrar-detalle-secundario'),
+        toastPolite: $('#toast-status'), toastAssertive: $('#toast-alert'),
     };
-    const compradores = new Map();
-    let tiposIdentificacion = [];
-    let compradorPendiente = null;
-    let compradorDetalle = null;
-    let searchTimer = 0;
-    let notificationTimer = 0;
+
+    const clasificados = new Map();
+    const toast = createToast({ polite: elements.toastPolite, assertive: elements.toastAssertive });
+    const dialogs = createDialogController();
+    let state = createListState({ pageSize: 25 });
     let listController = null;
-    let listSequence = 0;
-    let saving = false;
-    let changingStatus = false;
-    let focusReturn = null;
-    let currentPage = 1;
-    const pageSize = 25;
+    let capacityController = null;
 
-    document.addEventListener('DOMContentLoaded', initialize);
-
-    function initialize() {
-        elements.create.addEventListener('click', openCreateForm);
-        elements.refresh.addEventListener('click', listBuyers);
-        elements.previous.addEventListener('click', () => { if (currentPage > 1) { currentPage -= 1; listBuyers(); } });
-        elements.next.addEventListener('click', () => { currentPage += 1; listBuyers(); });
-        elements.status.addEventListener('change', () => { currentPage = 1; listBuyers(); });
-        elements.search.addEventListener('input', scheduleSearch);
-        elements.form.addEventListener('submit', saveBuyer);
-        elements.form.addEventListener('invalid', markNativeError, true);
-        elements.form.addEventListener('input', clearControlError);
-        elements.form.addEventListener('change', clearControlError);
-        elements.types.addEventListener('change', updateIdentificationInputMode);
-        elements.reactivateExisting.addEventListener('click', reactivateExistingBuyer);
-        elements.close.addEventListener('click', closeForm);
-        elements.cancel.addEventListener('click', closeForm);
-        elements.cancelDeactivate.addEventListener('click', closeDeactivation);
-        elements.confirmDeactivate.addEventListener('click', deactivateBuyer);
-        elements.body.addEventListener('click', handleTableAction);
-        elements.modal.addEventListener('click', closeOnBackdropClick);
-        elements.deactivateModal.addEventListener('click', closeOnBackdropClick);
-        elements.detailModal.addEventListener('click', closeOnBackdropClick);
-        elements.modal.addEventListener('close', restoreFocus);
-        elements.deactivateModal.addEventListener('close', restoreFocus);
-        elements.detailModal.addEventListener('close', restoreFocus);
-        elements.closeDetail.addEventListener('click', closeDetail);
-        elements.closeDetailSecondary.addEventListener('click', closeDetail);
-        elements.editFromDetail.addEventListener('click', editFromDetail);
-        listBuyers();
+    function render() {
+        const view = deriveListView(state, ETIQUETAS);
+        elements.loading.hidden = !view.showSkeleton;
+        elements.panel.setAttribute('aria-busy', view.showSkeleton ? 'true' : 'false');
+        elements.empty.hidden = !view.showEmpty;
+        elements.error.hidden = !view.showError;
+        elements.errorMessage.textContent = view.errorMessage;
+        elements.retry.hidden = !view.canRetry;
+        elements.total.textContent = view.showError ? '' : view.totalLabel;
+        elements.page.textContent = view.pageLabel;
+        elements.previous.disabled = view.previousDisabled;
+        elements.next.disabled = view.nextDisabled;
+        elements.refresh.disabled = view.refreshDisabled;
+        elements.body.replaceChildren(view.showList ? createRows(state.items) : document.createDocumentFragment());
     }
 
-    async function listBuyers() {
-        const sequence = ++listSequence;
-        listController?.abort();
-        listController = new AbortController();
-        setLoading(true);
-        const parameters = new URLSearchParams({ pagina: String(currentPage), tamanoPagina: String(pageSize) });
-        if (elements.search.value.trim()) parameters.set('q', elements.search.value.trim());
-        if (elements.status.value !== 'TODOS') parameters.set('estado', elements.status.value);
-        try {
-            const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
-            if (sequence !== listSequence) return;
-            tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion) ? response.data.catalogos.tiposIdentificacion : [];
-            const list = Array.isArray(response.data?.compradores) ? response.data.compradores : [];
-            compradores.clear();
-            list.forEach((buyer) => compradores.set(buyer.identificacionNumero, buyer));
-            currentPage = Number(response.data?.pagina) || currentPage;
-            renderBuyers(list, Number(response.data?.total) || 0, Number(response.data?.tamanoPagina) || pageSize);
-        } catch (error) {
-            if (error.name === 'AbortError' || sequence !== listSequence) return;
-            renderBuyers([], 0, pageSize);
-            showNotification(error.message, 'error');
-        } finally {
-            if (sequence === listSequence) setLoading(false);
-        }
-    }
-
-    function renderBuyers(list, total, size) {
-        elements.body.replaceChildren();
-        elements.empty.hidden = list.length > 0;
-        elements.total.textContent = total === 1 ? '1 comprador encontrado' : `${total} compradores encontrados`;
-        const totalPages = Math.max(1, Math.ceil(total / size));
-        elements.page.textContent = `Página ${currentPage} de ${totalPages}`;
-        elements.previous.disabled = currentPage <= 1;
-        elements.next.disabled = currentPage >= totalPages;
+    function createRows(items) {
         const fragment = document.createDocumentFragment();
-        list.forEach((buyer) => fragment.appendChild(createRow(buyer)));
-        elements.body.appendChild(fragment);
+        items.forEach((item) => fragment.appendChild(createRow(item)));
+        return fragment;
     }
 
-    function createRow(buyer) {
+    function createRow(item) {
         const row = document.createElement('tr');
-        row.dataset.id = buyer.identificacionNumero;
-        const buyerCell = createCell('Comprador');
-        const summary = document.createElement('div'); summary.className = 'producer-summary';
-        const avatar = document.createElement('span'); avatar.className = 'avatar'; avatar.textContent = getInitials(buyer.nombre);
-        const details = document.createElement('span');
-        const name = document.createElement('strong'); name.textContent = buyer.nombre || 'Sin nombre';
-        const email = document.createElement('small'); email.textContent = buyer.correoElectronico || 'Sin correo';
-        details.append(name, email); summary.append(avatar, details); buyerCell.appendChild(summary);
-        const identificationCell = createCell('Identificación');
-        const type = document.createElement('small'); type.className = 'secondary-data'; type.textContent = buyer.identificacion?.tipoCodigo || 'Sin tipo';
-        const number = document.createElement('span'); number.textContent = buyer.identificacionNumero;
-        identificationCell.append(type, number);
-        const contactCell = createCell('Contacto'); contactCell.textContent = buyer.telefono || 'Sin teléfono';
-        const statusCell = createCell('Estado');
-        const active = buyer.estado === 'ACTIVO';
-        const badge = document.createElement('span'); badge.className = `badge badge--${active ? 'active' : 'inactive'}`; badge.textContent = active ? 'Activo' : 'Inactivo'; statusCell.appendChild(badge);
-        const actionsCell = createCell('Acciones'); actionsCell.className = 'row-actions';
-        actionsCell.append(createActionButton('ver', 'Ver', buyer.identificacionNumero));
-        if (active) actionsCell.append(createActionButton('editar', 'Editar', buyer.identificacionNumero), createActionButton('desactivar', 'Desactivar', buyer.identificacionNumero));
-        else actionsCell.append(createActionButton('reactivar', 'Reactivar', buyer.identificacionNumero));
-        row.append(buyerCell, identificationCell, contactCell, statusCell, actionsCell);
+
+        const persona = document.createElement('td');
+        const identidad = document.createElement('button');
+        identidad.type = 'button';
+        identidad.className = 'link-button identity';
+        identidad.dataset.identificacion = item.identificacionNumero;
+        const avatar = document.createElement('span');
+        avatar.className = 'avatar';
+        avatar.setAttribute('aria-hidden', 'true');
+        avatar.textContent = getInitials(item.nombre);
+        const nombre = document.createElement('span');
+        nombre.textContent = item.nombre;
+        identidad.append(avatar, nombre);
+        identidad.setAttribute('aria-label', `Ver la clasificación de ${item.nombre}`);
+        persona.appendChild(identidad);
+
+        const identificacion = document.createElement('td');
+        identificacion.textContent = item.identificacionNumero;
+
+        const contacto = document.createElement('td');
+        const correo = document.createElement('span');
+        correo.textContent = item.correoElectronico;
+        const telefono = document.createElement('small');
+        telefono.textContent = item.telefono;
+        contacto.append(correo, document.createElement('br'), telefono);
+
+        const desde = document.createElement('td');
+        desde.textContent = formatearClasificadoDesde(item.clasificadoDesde);
+
+        const origen = document.createElement('td');
+        origen.textContent = describirOrigen(item.motivo);
+
+        const disponibilidad = document.createElement('td');
+        const personaActiva = item.personaEstado === 'ACTIVA';
+        const badge = document.createElement('span');
+        badge.className = `badge badge--${personaActiva ? 'active' : 'inactive'}`;
+        badge.textContent = personaActiva ? 'Persona activa' : 'Persona inactiva';
+        disponibilidad.appendChild(badge);
+
+        row.append(persona, identificacion, contacto, desde, origen, disponibilidad);
         return row;
     }
 
-    function createCell(label) { const cell = document.createElement('td'); cell.dataset.label = label; return cell; }
-    function createActionButton(action, text, id) { const button = document.createElement('button'); button.type = 'button'; button.className = `action action--${action}`; button.dataset.action = action; button.dataset.id = id; button.textContent = text; return button; }
+    async function load({ page = state.page } = {}) {
+        listController?.abort();
+        listController = new AbortController();
+        const { signal } = listController;
+        const opened = nextRequest(state, { page });
+        state = opened.state;
+        render();
 
-    function handleTableAction(event) {
-        const button = event.target.closest('[data-action]');
-        if (!button) return;
-        const buyer = compradores.get(button.dataset.id);
-        if (!buyer) return showNotification('No se encontró el comprador seleccionado.', 'error');
-        if (button.dataset.action === 'ver') openDetail(buyer);
-        if (button.dataset.action === 'editar') openEditForm(buyer);
-        if (button.dataset.action === 'desactivar') openDeactivation(buyer);
-        if (button.dataset.action === 'reactivar') reactivateBuyer(buyer);
+        const parametros = new URLSearchParams({
+            q: elements.search.value.trim(),
+            pagina: String(state.page),
+            tamanoPagina: String(state.pageSize),
+        });
+        try {
+            const respuesta = await request(`${API_URL}?${parametros}`, { signal });
+            const datos = respuesta.data ?? {};
+            const items = datos.clasificados ?? [];
+            clasificados.clear();
+            items.forEach((item) => clasificados.set(item.identificacionNumero, item));
+            state = applyResult(state, {
+                sequence: opened.sequence,
+                items,
+                total: datos.total ?? items.length,
+                page: datos.pagina ?? state.page,
+                pageSize: datos.tamanoPagina ?? state.pageSize,
+            });
+        } catch (error) {
+            if (error?.name === 'AbortError') {
+                state = applyAbort(state);
+                return;
+            }
+            state = applyFailure(state, { sequence: opened.sequence, error });
+        }
+        render();
     }
 
-    function openDetail(buyer) {
-        compradorDetalle = buyer;
-        elements.detailTitle.textContent = buyer.nombre || 'Comprador';
-        const campos = [
-            ['Identificación', `${buyer.identificacion?.tipoCodigo ?? 'Sin tipo'} · ${buyer.identificacionNumero}`],
-            ['Estado', buyer.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'],
-            ['Teléfono', buyer.telefono || '—'],
-            ['Correo electrónico', buyer.correoElectronico || '—'],
-        ];
+    async function openDetail(identificacionNumero) {
+        const item = clasificados.get(identificacionNumero);
+        if (!item) return;
+        elements.detailTitle.textContent = item.nombre;
+        elements.detailContent.replaceChildren(createDetail(item));
+        dialogs.open(elements.detailModal);
+
+        capacityController?.abort();
+        capacityController = new AbortController();
+        const { signal } = capacityController;
+        elements.capacities.setAttribute('aria-busy', 'true');
+        elements.capacities.replaceChildren();
+        try {
+            const capacidades = await consultarCapacidades(identificacionNumero, {
+                requestImpl: (url) => request(url, { signal }),
+            });
+            if (signal.aborted) return;
+            elements.capacities.setAttribute('aria-busy', 'false');
+            const fragment = document.createDocumentFragment();
+            capacidades.forEach((capacidad) => fragment.appendChild(createCapacityItem(capacidad)));
+            elements.capacities.replaceChildren(fragment);
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+            elements.capacities.setAttribute('aria-busy', 'false');
+            toast.alert(error?.message ?? 'No fue posible consultar las relaciones de la persona.');
+        }
+    }
+
+    function createDetail(item) {
         const fragment = document.createDocumentFragment();
-        campos.forEach(([etiqueta, valor]) => {
-            const dt = document.createElement('dt'); dt.textContent = etiqueta;
-            const dd = document.createElement('dd'); dd.textContent = valor;
+        const filas = [
+            ['Identificación', `${item.identificacion?.tipoCodigo ?? ''} ${item.identificacionNumero}`.trim()],
+            ['Teléfono', item.telefono],
+            ['Correo electrónico', item.correoElectronico],
+            ['Clasificado desde', formatearClasificadoDesde(item.clasificadoDesde)],
+            ['Origen de la clasificación', describirOrigen(item.motivo)],
+            ['Disponibilidad de la persona', item.personaEstado === 'ACTIVA' ? 'Activa' : 'Inactiva'],
+        ];
+        filas.forEach(([etiqueta, valor]) => {
+            const dt = document.createElement('dt');
+            dt.textContent = etiqueta;
+            const dd = document.createElement('dd');
+            dd.textContent = valor ?? '';
             fragment.append(dt, dd);
         });
-        elements.detailContent.replaceChildren(fragment);
-        openDialog(elements.detailModal); elements.closeDetail.focus();
+        return fragment;
     }
 
-    function closeDetail() { if (elements.detailModal.open) elements.detailModal.close(); compradorDetalle = null; }
-    function editFromDetail() { if (compradorDetalle) { const buyer = compradorDetalle; closeDetail(); openEditForm(buyer); } }
+    function createCapacityItem(capacidad) {
+        const item = document.createElement('li');
+        item.className = `capacidad capacidad--${capacidad.situacion}`;
+        const nombre = document.createElement('span');
+        nombre.className = 'capacidad__nombre';
+        nombre.textContent = capacidad.alias
+            ? `${capacidad.etiqueta} (${capacidad.alias})`
+            : capacidad.etiqueta;
+        item.appendChild(nombre);
+        if (capacidad.situacion === 'cargando') return item;
 
-    function openCreateForm() {
-        resetForm();
-        elements.modalTitle.textContent = 'Crear comprador'; elements.modalSubtitle.textContent = 'Nuevo registro'; elements.save.textContent = 'Guardar comprador';
-        openDialog(elements.modal); elements.types.focus();
+        const estado = document.createElement('span');
+        estado.className = 'capacidad__estado';
+        estado.textContent = describirCapacidad(capacidad);
+        item.appendChild(estado);
+        if (capacidad.situacion === 'registrado' && capacidad.clave !== 'comprador') {
+            const enlace = document.createElement('a');
+            enlace.className = 'capacidad__enlace';
+            enlace.href = `${capacidad.panel}?q=${encodeURIComponent(capacidad.identificacionNumero ?? '')}`;
+            enlace.textContent = 'Abrir panel';
+            enlace.setAttribute('aria-label', `Abrir el panel de ${capacidad.etiqueta}`);
+            item.appendChild(enlace);
+        }
+        return item;
     }
 
-    function openEditForm(buyer) {
-        resetForm();
-        $('#identificacion-original').value = buyer.identificacionNumero;
-        elements.types.value = buyer.identificacion?.tipoCodigo ?? '';
-        $('#identificacion-numero').value = buyer.identificacionNumero;
-        $('#identificacion-numero').readOnly = true;
-        $('#nombre').value = buyer.nombre ?? '';
-        $('#telefono').value = buyer.telefono ?? '';
-        $('#correo-electronico').value = buyer.correoElectronico ?? '';
-        elements.modalTitle.textContent = 'Editar comprador'; elements.modalSubtitle.textContent = 'Actualizar registro'; elements.save.textContent = 'Guardar cambios';
-        openDialog(elements.modal); $('#nombre').focus();
+    function closeDetail() {
+        capacityController?.abort();
+        dialogs.close(elements.detailModal);
     }
 
-    function resetForm() {
-        elements.form.reset(); clearErrors(); renderTypeOptions();
-        $('#identificacion-original').value = ''; $('#identificacion-numero').readOnly = false;
-        elements.reactivateExisting.hidden = true; delete elements.reactivateExisting.dataset.id;
-    }
-
-    function renderTypeOptions() {
-        const selected = elements.types.value;
-        const fragment = document.createDocumentFragment();
-        const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Seleccione un tipo'; fragment.appendChild(placeholder);
-        tiposIdentificacion.forEach((type) => { const option = document.createElement('option'); option.value = type.codigo; option.textContent = type.nombre; fragment.appendChild(option); });
-        elements.types.replaceChildren(fragment); elements.types.value = selected; updateIdentificationInputMode();
-    }
-
-    async function saveBuyer(event) {
+    let debounce = null;
+    elements.search.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => load({ page: 1 }), 250);
+    });
+    elements.refresh.addEventListener('click', () => load());
+    elements.retry.addEventListener('click', () => load());
+    elements.previous.addEventListener('click', () => load({ page: Math.max(1, state.page - 1) }));
+    elements.next.addEventListener('click', () => load({ page: state.page + 1 }));
+    elements.body.addEventListener('click', (event) => {
+        const boton = event.target.closest('[data-identificacion]');
+        if (boton) openDetail(boton.dataset.identificacion);
+    });
+    elements.closeDetail.addEventListener('click', closeDetail);
+    elements.closeDetailSecondary.addEventListener('click', closeDetail);
+    elements.detailModal.addEventListener('cancel', (event) => {
         event.preventDefault();
-        if (saving) return;
-        clearErrors();
-        if (!elements.form.checkValidity()) { markFirstInvalid(); return; }
-        const original = $('#identificacion-original').value;
-        const data = {
-            identificacion: { tipoCodigo: elements.types.value, numero: $('#identificacion-numero').value.trim() },
-            nombre: $('#nombre').value.trim(), telefono: $('#telefono').value.trim(), correoElectronico: $('#correo-electronico').value.trim().toLowerCase(),
-        };
-        const editing = original !== '';
-        if (editing) data.identificacionNumeroOriginal = original;
-        setSaving(true);
-        try {
-            const response = await request(API_URL, { method: editing ? 'PUT' : 'POST', body: JSON.stringify(data) });
-            elements.modal.close(); showNotification(response.message, 'success'); await listBuyers();
-        } catch (error) {
-            if (error.errors) showErrors(error.errors);
-            if (!editing && error.status === 409) offerReactivation(error);
-            showNotification(error.message, 'error');
-        } finally { setSaving(false); }
-    }
+        closeDetail();
+    });
 
-    function openDeactivation(buyer) {
-        compradorPendiente = buyer;
-        elements.deactivateMessage.textContent = `${buyer.nombre} quedará inactivo. Su bitácora se conservará.`;
-        openDialog(elements.deactivateModal); elements.confirmDeactivate.focus();
-    }
-    async function deactivateBuyer() { if (compradorPendiente && !changingStatus) await changeStatus('DELETE', compradorPendiente, elements.confirmDeactivate, () => { elements.deactivateModal.close(); compradorPendiente = null; }); }
-    async function reactivateBuyer(buyer) { if (!changingStatus) await changeStatus('PATCH', buyer, elements.body.querySelector(`[data-action="reactivar"][data-id="${CSS.escape(buyer.identificacionNumero)}"]`)); }
+    const consulta = new URLSearchParams(window.location.search).get('q');
+    if (consulta) elements.search.value = consulta;
+    load({ page: 1 });
+}
 
-    function offerReactivation(error) {
-        const identificacion = error.data?.reactivacion?.identificacionNumero;
-        if (!identificacion) return;
-        elements.reactivateExisting.dataset.id = identificacion;
-        elements.reactivateExisting.hidden = false;
-        elements.reactivateExisting.focus();
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initialize);
+    } else {
+        initialize();
     }
-    async function reactivateExistingBuyer() {
-        const identificacionNumero = elements.reactivateExisting.dataset.id || '';
-        if (identificacionNumero && !changingStatus) await changeStatus('PATCH', { identificacionNumero }, elements.reactivateExisting, () => elements.modal.close());
-    }
-
-    async function changeStatus(method, buyer, button, afterSuccess = null) {
-        const busyContainer = button?.closest('dialog') || elements.panel;
-        changingStatus = true;
-        document.querySelectorAll('[data-action], #confirmar-desactivacion, #reactivar-existente').forEach((control) => { control.disabled = true; });
-        busyContainer.setAttribute('aria-busy', 'true');
-        try {
-            const response = await request(API_URL, { method, body: JSON.stringify({ identificacionNumero: buyer.identificacionNumero }) });
-            afterSuccess?.(); showNotification(response.message, 'success'); await listBuyers();
-        } catch (error) { showNotification(error.message, 'error'); }
-        finally {
-            changingStatus = false; busyContainer.setAttribute('aria-busy', 'false');
-            document.querySelectorAll('[data-action], #confirmar-desactivacion, #reactivar-existente').forEach((control) => { control.disabled = false; });
-        }
-    }
-
-    async function request(url, options = {}) {
-        const httpResponse = await fetch(url, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(options.headers ?? {}) } });
-        let response;
-        try { response = await httpResponse.json(); } catch { throw new Error('El servidor no devolvió JSON válido.'); }
-        if (!httpResponse.ok || response.success !== true) {
-            const error = new Error(response.message || 'No se pudo completar la operación.'); error.errors = response.errors ?? null; error.data = response.data ?? null; error.status = httpResponse.status; throw error;
-        }
-        return response;
-    }
-
-    function showErrors(errors) {
-        let first = null;
-        Object.entries(errors).forEach(([field, message]) => {
-            const control = elements.form.elements.namedItem(field);
-            const container = elements.form.querySelector(`[data-error-for="${CSS.escape(field)}"]`);
-            if (control instanceof HTMLElement) { control.setAttribute('aria-invalid', 'true'); first ??= control; }
-            if (container) container.textContent = String(message);
-        });
-        first?.focus();
-    }
-    function markNativeError(event) { event.target.setAttribute('aria-invalid', 'true'); }
-    function markFirstInvalid() { const first = elements.form.querySelector(':invalid'); if (first) { first.setAttribute('aria-invalid', 'true'); first.focus(); } }
-    function clearControlError(event) { const control = event.target; if (!control.name) return; control.removeAttribute('aria-invalid'); const container = elements.form.querySelector(`[data-error-for="${CSS.escape(control.name)}"]`); if (container) container.textContent = ''; }
-    function clearErrors() { elements.form.querySelectorAll('[aria-invalid]').forEach((control) => control.removeAttribute('aria-invalid')); elements.form.querySelectorAll('[data-error-for]').forEach((container) => { container.textContent = ''; }); }
-    function setSaving(value) { saving = value; elements.form.setAttribute('aria-busy', String(value)); elements.form.querySelectorAll('button, input, select, textarea').forEach((control) => { control.disabled = value; }); if (value) { elements.save.dataset.label = elements.save.textContent; elements.save.textContent = 'Guardando…'; } else { elements.save.textContent = elements.save.dataset.label || elements.save.textContent; delete elements.save.dataset.label; } }
-    function setLoading(value) { elements.loading.hidden = !value; elements.panel.setAttribute('aria-busy', String(value)); elements.refresh.disabled = value; }
-    function scheduleSearch() { currentPage = 1; window.clearTimeout(searchTimer); searchTimer = window.setTimeout(listBuyers, 300); }
-    function showNotification(message, type) { window.clearTimeout(notificationTimer); elements.notification.textContent = message; elements.notification.className = `notification notification--${type}`; elements.notification.setAttribute('role', type === 'error' ? 'alert' : 'status'); elements.notification.hidden = false; if (type !== 'error') notificationTimer = window.setTimeout(() => { elements.notification.hidden = true; }, 4500); }
-    function closeForm() { if (!saving) { if (elements.modal.open) elements.modal.close(); clearErrors(); } }
-    function closeDeactivation() { if (!changingStatus) { if (elements.deactivateModal.open) elements.deactivateModal.close(); compradorPendiente = null; } }
-    function closeOnBackdropClick(event) { if (event.target === event.currentTarget && !saving && !changingStatus) event.currentTarget.close(); }
-    function openDialog(dialog) { focusReturn = document.activeElement; if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', ''); }
-    function restoreFocus() { if (focusReturn instanceof HTMLElement && focusReturn.isConnected) focusReturn.focus(); focusReturn = null; }
-    function updateIdentificationInputMode() { $('#identificacion-numero').inputMode = ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'].includes(elements.types.value) ? 'numeric' : 'text'; }
-    function getInitials(name = '') { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join('') || 'C'; }
-})();
+}

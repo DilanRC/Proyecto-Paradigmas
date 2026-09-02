@@ -1,4 +1,4 @@
-USE dbtindervacas;
+USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Comprobación 1: estructura declarada de las tablas del avance.
@@ -8,6 +8,14 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 SELECT '--- tbdireccion' AS comprobacion;
 DESCRIBE tbdireccion;
+
+SELECT '--- tbpersona' AS comprobacion;
+DESCRIBE tbpersona;
+
+SELECT '--- perfiles de capacidad' AS comprobacion;
+DESCRIBE tbproductor;
+DESCRIBE tbcomprador;
+DESCRIBE tbtransportista;
 
 SELECT '--- tbproductordireccion' AS comprobacion;
 DESCRIBE tbproductordireccion;
@@ -26,6 +34,40 @@ DESCRIBE tbvehiculo;
 
 SELECT '--- tbtransportistavehiculo' AS comprobacion;
 DESCRIBE tbtransportistavehiculo;
+
+SELECT '--- tbproductorestadoperiodo' AS comprobacion;
+DESCRIBE tbproductorestadoperiodo;
+
+SELECT '--- tbproductorubicacion' AS comprobacion;
+DESCRIBE tbproductorubicacion;
+
+SELECT '--- tbproductoractividad' AS comprobacion;
+DESCRIBE tbproductoractividad;
+
+SELECT '--- tbproductorclasificacionperiodo' AS comprobacion;
+DESCRIBE tbproductorclasificacionperiodo;
+
+SELECT '--- animales y publicaciones' AS comprobacion;
+DESCRIBE tbanimal;
+DESCRIBE tbanimalproduccionsalud;
+DESCRIBE tbanimalpublicacion;
+DESCRIBE tbanimalpublicacionestadoperiodo;
+
+SELECT '--- compra y venta' AS comprobacion;
+DESCRIBE tbcompra;
+DESCRIBE tbventa;
+
+SELECT '--- funnel y carrito' AS comprobacion;
+DESCRIBE tbanimalinteraccion;
+DESCRIBE tbcarrito;
+DESCRIBE tbcarritoanimal;
+DESCRIBE tbcarritoestadoperiodo;
+
+SELECT '--- transporte historico' AS comprobacion;
+DESCRIBE tbtransportistaestadoperiodo;
+DESCRIBE tbtransportistahorario;
+DESCRIBE tbtransportistaflete;
+DESCRIBE tbtransportistaresena;
 
 -- Comprobación 2: el avance no introdujo llaves, restricciones ni índices.
 -- Resultado esperado: cero filas en las tres consultas.
@@ -53,3 +95,8 @@ UNION ALL
 SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATABASE()
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
+
+-- Comprobación 4: exactamente 30 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_30
+FROM information_schema.tables
+WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

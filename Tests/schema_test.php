@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
+require_once dirname(__DIR__) . '/Tools/schema-manifest.php';
 
 $db = test_db();
+$manifest = schema_manifest();
 $schemaStatement = $db->prepare("SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME
     FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = DATABASE() LIMIT 1");
 $schemaStatement->execute();
@@ -15,9 +17,8 @@ $tablesStatement = $db->prepare("SELECT TABLE_NAME, TABLE_COLLATION FROM informa
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME");
 $tablesStatement->execute();
 $tableRows = $tablesStatement->fetchAll();
-test_same(['tbbitacora', 'tbcomprador', 'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo',
-    'tbproductor', 'tbproductordireccion', 'tbtransportista', 'tbtransportistavehiculo', 'tbvehiculo'],
-    array_column($tableRows, 'TABLE_NAME'), 'El modelo debe tener exactamente once tablas singulares');
+test_same($manifest['tables_sorted'], array_column($tableRows, 'TABLE_NAME'),
+    'El modelo debe tener exactamente las tablas derivadas del SQL canónico');
 foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
@@ -31,7 +32,7 @@ foreach (['KEY_COLUMN_USAGE', 'REFERENTIAL_CONSTRAINTS', 'CHECK_CONSTRAINTS'] as
     $metadata = $db->prepare("SELECT COUNT(*) FROM information_schema.{$metadataTable}
         WHERE CONSTRAINT_SCHEMA = DATABASE()");
     $metadata->execute();
-    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para dbtindervacas");
+    test_same(0, (int) $metadata->fetchColumn(), "{$metadataTable} debe estar vacío para bdmercadoganadero");
 }
 
 $productorIdColumn = $db->prepare("SELECT DATA_TYPE, IS_NULLABLE, COLUMN_KEY, EXTRA
@@ -68,24 +69,84 @@ foreach (['TRIGGERS' => 'TRIGGER_SCHEMA', 'ROUTINES' => 'ROUTINE_SCHEMA', 'EVENT
 }
 
 $expectedColumns = [
-    'tbproductor' => ['tbproductorid', 'tbproductoridentificacionnumero', 'tbproductoridentificaciontipo',
-        'tbproductornombre', 'tbproductortelefono', 'tbproductorcorreoelectronico', 'tbproductorestado'],
-    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid'],
+    'tbpersona' => ['tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
+        'tbpersonanombre', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado'],
+    'tbproductor' => ['tbproductorid', 'tbpersonaid'],
+    'tbproductordireccion' => ['tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
+        'tbproductordireccionfechainicio', 'tbproductordireccionfechafin'],
     'tbdireccion' => ['tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
         'tbdireccionpueblo', 'tbdireccionsenas'],
+    'tbproductorestadoperiodo' => ['tbproductorestadoperiodoid', 'tbproductorid',
+        'tbproductorestadoperiodoestado', 'tbproductorestadoperiodofechainicio',
+        'tbproductorestadoperiodofechafin', 'tbproductorestadoperiodomotivo'],
+    'tbproductorubicacion' => ['tbproductorubicacionid', 'tbproductorid', 'tbproductorubicacionlatitud',
+        'tbproductorubicacionlongitud', 'tbproductorubicacionprecision', 'tbproductorubicacionfecha',
+        'tbproductorubicacionorigen'],
+    'tbproductoractividad' => ['tbproductoractividadid', 'tbproductorid', 'tbproductoractividadtipo',
+        'tbproductoractividadfecha', 'tbproductoractividadorigen'],
     'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
     'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
     'tbpagometodo' => ['tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo'],
-    'tbtransportista' => ['tbtransportistaid', 'tbtransportistaidentificacionnumero',
-        'tbtransportistaidentificaciontipo', 'tbtransportistanombre', 'tbtransportistatelefono',
-        'tbtransportistacorreoelectronico', 'tbtransportistaestado'],
+    'tbtransportista' => ['tbtransportistaid', 'tbpersonaid', 'tbtransportistaestado'],
     'tbvehiculo' => ['tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado'],
     'tbtransportistavehiculo' => ['tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid'],
     'tbbitacora' => ['tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
         'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
         'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid'],
-    'tbcomprador' => ['tbcompradorid', 'tbcompradoridentificacionnumero', 'tbcompradoridentificaciontipo',
-        'tbcompradornombre', 'tbcompradortelefono', 'tbcompradorcorreoelectronico', 'tbcompradorestado'],
+    'tbcomprador' => ['tbcompradorid', 'tbpersonaid', 'tbcompradorestado'],
+    'tbproductorclasificacionperiodo' => ['tbproductorclasificacionperiodoid', 'tbproductorid',
+        'tbproductorclasificacionperiodotipo', 'tbproductorclasificacionperiodofechainicio',
+        'tbproductorclasificacionperiodofechafin', 'tbproductorclasificacionperiodomotivo'],
+    'tbanimal' => ['tbanimalid', 'tbanimalidentificacion', 'tbanimalsexo', 'tbanimalraza',
+        'tbanimalcaracteristicas', 'tbanimalfecharegistroensistema', 'tbanimalorigenregistro'],
+    'tbanimalproduccionsalud' => ['tbanimalproduccionsaludid', 'tbanimalid', 'tbanimalproduccionsaludfecha',
+        'tbanimalproduccionsaludorigen', 'tbanimalproduccionsaludcontexto', 'tbanimalproduccionsaludedadmeses',
+        'tbanimalproduccionsaludpeso', 'tbanimalproduccionsaludproposito',
+        'tbanimalproduccionsaludestadoreproductivo', 'tbanimalproduccionsaludpartos',
+        'tbanimalproduccionsaludlitrosleche', 'tbanimalproduccionsaludproduccion', 'tbanimalproduccionsaludsalud'],
+    'tbanimalpublicacion' => ['tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid',
+        'tbfincaid', 'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio',
+        'tbanimalpublicaciontitulo', 'tbanimalpublicaciondescripcion',
+        'tbanimalpublicacionorigen'],
+    'tbanimalpublicacionestadoperiodo' => ['tbanimalpublicacionestadoperiodoid',
+        'tbanimalpublicacionid', 'tbanimalpublicacionestadoperiodoestado',
+        'tbanimalpublicacionestadoperiodofechainicio', 'tbanimalpublicacionestadoperiodofechafin',
+        'tbanimalpublicacionestadoperiodomotivo', 'tbanimalpublicacionestadoperiodoorigen'],
+    'tbcompra' => ['tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbfincaorigenid',
+        'tbcomprafecha', 'tbcomprahora', 'tbcompralugar', 'tbcompraprecio', 'tbpagometodoid',
+        'tbcompraorigen'],
+    'tbventa' => ['tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid',
+        'tbfincaid', 'tbcompraid', 'tbventafecha', 'tbventahora', 'tbventalugar',
+        'tbventadireccionid', 'tbventaproposito', 'tbventaprecio', 'tbpagometodoid',
+        'tbventaedadmeses', 'tbventapeso', 'tbventarazasnapshot', 'tbventaorigen'],
+    'tbanimalinteraccion' => ['tbanimalinteraccionid', 'tbproductorid', 'tbanimalid',
+        'tbanimalinteracciontipo', 'tbanimalinteraccionaccion', 'tbanimalinteraccionfecha',
+        'tbanimalinteraccionorigen'],
+    'tbcarrito' => ['tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion'],
+    'tbcarritoestadoperiodo' => ['tbcarritoestadoperiodoid', 'tbcarritoid',
+        'tbcarritoestadoperiodoestado', 'tbcarritoestadoperiodofechainicio',
+        'tbcarritoestadoperiodofechafin', 'tbcarritoestadoperiodomotivo',
+        'tbcarritoestadoperiodoorigen'],
+    'tbcarritoanimal' => ['tbcarritoanimalid', 'tbcarritoid', 'tbanimalid',
+        'tbcarritoanimalaccion', 'tbcarritoanimalfecha', 'tbcarritoanimalorigen'],
+    'tbtransportistaestadoperiodo' => ['tbtransportistaestadoperiodoid', 'tbtransportistaid',
+        'tbtransportistaestadoperiodoestado', 'tbtransportistaestadoperiodofechainicio',
+        'tbtransportistaestadoperiodofechafin', 'tbtransportistaestadoperiodomotivo',
+        'tbtransportistaestadoperiodofecharegistroensistema'],
+    'tbtransportistahorario' => ['tbtransportistahorarioid', 'tbtransportistaid',
+        'tbtransportistahorariodiasemana', 'tbtransportistahorariohorainicio',
+        'tbtransportistahorariohorafin', 'tbtransportistahorariofechainicio',
+        'tbtransportistahorariofechafin', 'tbtransportistahorarioorigen'],
+    'tbtransportistaflete' => ['tbtransportistafleteid', 'tbtransportistaid',
+        'tbproductororigenid', 'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid',
+        'tbvehiculoid', 'tbtransportistafletefecha', 'tbtransportistafletehora',
+        'tbtransportistafletedescripcion', 'tbtransportistafletecantidadcabezas',
+        'tbtransportistafletedistanciakm', 'tbtransportistafleteprecio', 'tbpagometodoid',
+        'tbtransportistafleteorigen'],
+    'tbtransportistaresena' => ['tbtransportistaresenaid', 'tbtransportistaid',
+        'tbpersonaid', 'tbtransportistafleteid', 'tbtransportistaresenafecha',
+        'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
+        'tbtransportistaresenaorigen'],
 ];
 foreach ($expectedColumns as $table => $expected) {
     $statement = $db->prepare('SELECT COLUMN_NAME FROM information_schema.COLUMNS
@@ -105,7 +166,7 @@ test_same([['tbpagometodoid' => 1, 'tbpagometodonombre' => 'Efectivo',
 // depende de la aplicación. Lo que sigue ejercita el CRUD de productores, ahora
 // contra el contrato normalizado (tbproductordireccion como enlace + tbdireccion
 // como contenido real).
-echo "OK schema_test (estructura): once tablas, columnas exactas, cero claves, índices, "
+echo "OK schema_test (estructura): treinta tablas, columnas exactas, cero claves, índices, "
     . "defaults, generación automática u objetos programables, y Efectivo como dato inicial.\n";
 
 $apiIds = [test_document(), test_document(), test_document()];
@@ -143,14 +204,17 @@ try {
     test_same(2, count($idsFincas), 'Deben crearse dos fincas con su propio identificador');
     test_same($idsFincas[0] + 1, $idsFincas[1], 'Las fincas deben generar tbfincaid consecutivos');
 
-    $directInsert = $db->prepare("INSERT INTO tbproductor
-        (tbproductorid,tbproductoridentificacionnumero,tbproductoridentificaciontipo,tbproductornombre,
-         tbproductortelefono,tbproductorcorreoelectronico,tbproductorestado)
-        VALUES (:productorId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
+    $directInsertPersona = $db->prepare("INSERT INTO tbpersona
+        (tbpersonaid,tbpersonaidentificacionnumero,tbpersonaidentificaciontipo,tbpersonanombre,
+         tbpersonatelefono,tbpersonacorreoelectronico,tbpersonaestado)
+        VALUES (:personaId,:identificacion,'SIN_CATALOGO','', '', 'directo@example.test',9)");
+    $directInsert = $db->prepare('INSERT INTO tbproductor (tbproductorid,tbpersonaid)
+        VALUES (:productorId,:personaId)');
     foreach ($directProductorIds as $directId) {
-        $directInsert->execute(['productorId' => $directId, 'identificacion' => $directIdentification]);
+        $directInsertPersona->execute(['personaId' => $directId, 'identificacion' => $directIdentification]);
+        $directInsert->execute(['productorId' => $directId, 'personaId' => $directId]);
     }
-    $directCount = $db->prepare('SELECT COUNT(*) FROM tbproductor WHERE tbproductoridentificacionnumero = :identificacion');
+    $directCount = $db->prepare('SELECT COUNT(*) FROM tbpersona WHERE tbpersonaidentificacionnumero = :identificacion');
     $directCount->execute(['identificacion' => $directIdentification]);
     test_same(2, (int) $directCount->fetchColumn(), 'Sin PK, UNIQUE ni CHECK, SQL directo acepta duplicados y dominio inválido');
 
@@ -180,7 +244,9 @@ try {
     $db->prepare('DELETE FROM tbdireccion WHERE tbdireccionid = :id')->execute(['id' => $orphanId]);
     $deleteDirect = $db->prepare('DELETE FROM tbproductor WHERE tbproductorid IN (?, ?)');
     $deleteDirect->execute($directProductorIds);
+    $deleteDirectPersona = $db->prepare('DELETE FROM tbpersona WHERE tbpersonaid IN (?, ?)');
+    $deleteDirectPersona->execute($directProductorIds);
     test_cleanup_productores($apiIds);
 }
 
-echo "OK schema_test: once tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
+echo "OK schema_test: treinta tablas y cero claves, índices, defaults, generación automática u objetos programables.\n";
