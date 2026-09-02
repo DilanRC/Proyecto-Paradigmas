@@ -220,6 +220,14 @@ function renderPurposeFilters() {
     const contenedor = document.querySelector('[data-explore-filters]');
     if (!contenedor) return;
     const propositos = availablePurposes(state.items);
+    const propositoActual = String(state.proposito ?? '').trim().toUpperCase();
+    if (propositoActual === '' || propositoActual === 'TODOS') {
+        state.proposito = 'todos';
+    } else if (propositos.includes(propositoActual)) {
+        state.proposito = propositoActual;
+    } else {
+        state.proposito = 'todos';
+    }
     contenedor.replaceChildren();
     for (const [valor, etiqueta] of [['todos', 'Todo'], ...propositos.map((p) => [p, formatPurpose(p)])]) {
         const boton = element('button', 'explore-chip');
