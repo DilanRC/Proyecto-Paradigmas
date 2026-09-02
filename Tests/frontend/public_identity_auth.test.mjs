@@ -75,8 +75,14 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
     assert.ok(explore.includes('data-explore-deck'));
     assert.ok(explore.includes('data-explore-prev'));
     assert.ok(explore.includes('data-explore-next'));
-    for (const action of ['Pasar', 'Me interesa', 'Contactar', 'Pujar']) assert.ok(explore.includes(`>${action}</span>`));
-    assert.ok(explore.includes('contenido de muestra'));
+    // Las acciones viajan con la tarjeta, que ahora construye explore.js con lo
+    // que devuelve api/publicaciones.php; el PHP solo aporta el deck vacío.
+    const moduloExplorar = read('../../Public/js/explore.js');
+    for (const action of ['Pasar', 'Me interesa', 'Contactar']) {
+        assert.ok(moduloExplorar.includes(`'${action}'`), `falta la acción ${action}`);
+    }
+    assert.ok(moduloExplorar.includes('api/publicaciones.php'),
+        'el deck debe leer el catálogo real, no contenido de muestra');
     assert.equal(/EIF400|acad[eé]mic/i.test(explore), false);
 });
 

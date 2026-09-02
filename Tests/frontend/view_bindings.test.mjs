@@ -8,13 +8,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
+// Solo paneles administrativos. La home dejó de ser uno: es la landing
+// pública, no carga un módulo de panel y no tiene tabla, diálogos ni estados de
+// carga. El recorrido de publicaciones vive en Explorar (Public/js/explore.js)
+// y lo cubre Tests/frontend/explore_card_content.test.mjs.
 const PANELES = [
     ['productores', 'productores'],
     ['compradores', 'compradores'],
     ['transportistas', 'transportistas'],
     ['vehiculos', 'vehiculos'],
     ['pagometodos', 'pagometodos'],
-    ['home', 'home'],
 ];
 
 const leer = (ruta) => readFileSync(new URL(`../../${ruta}`, import.meta.url), 'utf8');
@@ -60,7 +63,7 @@ test('todas las vistas tienen las dos regiones vivas de notificacion', () => {
 });
 
 test('los cinco paneles distinguen vacio de error y ofrecen reintento', () => {
-    for (const [, vista] of PANELES.filter(([p]) => p !== 'home')) {
+    for (const [, vista] of PANELES) {
         const html = leer(`Application/View/${vista}/index.php`);
         assert.ok(html.includes('id="estado-vacio"'), `${vista}: falta el estado vacio`);
         assert.ok(html.includes('id="estado-error"'), `${vista}: falta el estado de error`);
@@ -70,7 +73,7 @@ test('los cinco paneles distinguen vacio de error y ofrecen reintento', () => {
 });
 
 test('los dialogos declaran su semantica de forma explicita', () => {
-    for (const [, vista] of PANELES.filter(([p]) => p !== 'home')) {
+    for (const [, vista] of PANELES) {
         const html = leer(`Application/View/${vista}/index.php`);
         const dialogos = [...html.matchAll(/<dialog[^>]*>/g)].map((m) => m[0]);
         assert.ok(dialogos.length > 0, `${vista}: no hay dialogos`);

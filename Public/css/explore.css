@@ -86,6 +86,25 @@
     position:relative;
 }
 
+.explore-state {
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin:28px 0 14px;
+    color:var(--tc-text-soft);
+    font-size:13px;
+    font-weight:750;
+}
+
+.explore-state[hidden],
+.explore-deck__viewport[hidden] {
+    display:none !important;
+}
+
+.explore-state i {
+    color:var(--tc-primary-strong);
+}
+
 .explore-deck__viewport {
     display:flex;
     gap:18px;
