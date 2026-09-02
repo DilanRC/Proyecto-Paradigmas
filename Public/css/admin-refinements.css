@@ -12,8 +12,8 @@
 .admin-account-menu__trigger {
     display:grid;
     width:100%;
-    min-height:50px;
-    grid-template-columns:36px minmax(0,1fr) 18px;
+    min-height:46px;
+    grid-template-columns:minmax(0,1fr) 18px;
     align-items:center;
     gap:10px;
     padding:6px 8px;
@@ -22,6 +22,10 @@
     color:rgba(247,238,229,.82);
     background:transparent;
     text-align:left;
+}
+
+.admin-account-menu__trigger .admin-account-card__avatar {
+    display:none !important;
 }
 
 .admin-account-menu__trigger:hover,
@@ -140,6 +144,10 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__trigger {
     justify-items:center;
     margin-inline:auto;
     padding:4px;
+}
+
+html[data-tc-sidebar='collapsed'] .admin-account-menu__trigger .admin-account-card__avatar {
+    display:grid !important;
 }
 
 html[data-tc-sidebar='collapsed'] .admin-account-menu__trigger .admin-account-card__copy,
