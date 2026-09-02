@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-3">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
+    <link rel="stylesheet" href="css/public-v3.css?v=public-3">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
 </head>
 <body class="public-home">
