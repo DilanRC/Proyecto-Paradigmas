@@ -3,6 +3,7 @@ import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-3';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-4';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -47,17 +48,30 @@ function injectStylesheet(href, marker) {
     document.head.appendChild(link);
 }
 
-function sessionEmail() {
+function readSession() {
     try {
         const raw = globalThis.sessionStorage?.getItem(SESSION_KEY);
-        if (!raw) return 'Sesión local';
-        const session = JSON.parse(raw);
-        return typeof session?.email === 'string' && session.email.trim()
-            ? session.email.trim()
-            : 'Sesión local';
+        if (!raw) return null;
+        return JSON.parse(raw);
     } catch {
-        return 'Sesión local';
+        return null;
     }
+}
+
+function sessionEmail() {
+    const session = readSession();
+    return typeof session?.email === 'string' && session.email.trim()
+        ? session.email.trim()
+        : 'Sesión local';
+}
+
+function sessionDisplayName() {
+    const email = sessionEmail();
+    if (!email.includes('@')) return 'Mi cuenta';
+    const local = email.split('@')[0];
+    const words = local.split(/[._-]+/).filter(Boolean).slice(0, 2);
+    if (words.length === 0) return 'Mi cuenta';
+    return words.map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
 function createIcon(className) {
@@ -149,16 +163,8 @@ function enhanceSidebarCollapse() {
         registerCollapsedLabel(item, label?.textContent.trim() || text);
     }
 
-    const accountActions = sidebar.querySelector('.admin-account-card__actions');
-    if (accountActions) {
-        for (const link of accountActions.querySelectorAll('.rural-panel__admin-link')) {
-            const text = link.textContent.trim();
-            const label = wrapDirectText(link, 'admin-sidebar-action-label');
-            registerCollapsedLabel(link, label?.textContent.trim() || text);
-        }
-        const theme = accountActions.querySelector('[data-theme-toggle]');
-        registerCollapsedLabel(theme, 'Cambiar tema');
-    }
+    const accountTrigger = sidebar.querySelector('.admin-account-menu__trigger');
+    registerCollapsedLabel(accountTrigger, 'Cuenta');
 
     const toggle = document.createElement('button');
     toggle.type = 'button';
@@ -187,6 +193,16 @@ function enhancePageHeader() {
     header.prepend(badge);
 }
 
+function setAccountMenuOpen(card, open) {
+    const trigger = card?.querySelector('.admin-account-menu__trigger');
+    const panel = card?.querySelector('.admin-account-menu__panel');
+    const chevron = card?.querySelector('.admin-account-menu__chevron');
+    if (!trigger || !panel) return;
+    trigger.setAttribute('aria-expanded', String(open));
+    panel.hidden = !open;
+    if (chevron) chevron.className = `admin-account-menu__chevron fa-solid ${open ? 'fa-chevron-down' : 'fa-chevron-up'}`;
+}
+
 function enhanceSidebarAccount() {
     const footer = document.querySelector('.rural-panel__sidebar-footer');
     if (!footer || footer.querySelector('.admin-account-card')) return;
@@ -198,37 +214,60 @@ function enhanceSidebarAccount() {
     if (logoutLink && !/cerrar/i.test(logoutLink.textContent)) logoutLink.textContent = 'Cerrar sesión';
 
     const card = document.createElement('section');
-    card.className = 'admin-account-card';
+    card.className = 'admin-account-card admin-account-menu';
     card.setAttribute('aria-label', 'Cuenta y preferencias');
 
-    const identity = document.createElement('div');
-    identity.className = 'admin-account-card__identity';
-    const avatar = document.createElement('span');
-    avatar.className = 'admin-account-card__avatar';
-    avatar.textContent = 'TC';
-    avatar.setAttribute('aria-hidden', 'true');
-    const copy = document.createElement('span');
-    copy.className = 'admin-account-card__copy';
-    const title = document.createElement('strong');
-    title.textContent = 'Acceso de demostración';
-    const email = document.createElement('small');
-    email.textContent = sessionEmail();
-    copy.append(title, email);
-    identity.append(avatar, copy);
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'admin-account-menu__trigger';
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.setAttribute('aria-haspopup', 'menu');
+    trigger.innerHTML = `
+        <span class="admin-account-card__avatar" aria-hidden="true">TC</span>
+        <span class="admin-account-card__copy"><strong>${sessionDisplayName()}</strong></span>
+        <i class="admin-account-menu__chevron fa-solid fa-chevron-up" aria-hidden="true"></i>
+    `;
 
-    const actions = document.createElement('div');
-    actions.className = 'admin-account-card__actions';
-    if (siteLink) actions.appendChild(siteLink);
+    const panel = document.createElement('div');
+    panel.className = 'admin-account-menu__panel';
+    panel.setAttribute('role', 'menu');
+    panel.hidden = true;
+
+    if (siteLink) {
+        siteLink.setAttribute('role', 'menuitem');
+        panel.appendChild(siteLink);
+    }
 
     const theme = document.createElement('button');
     theme.type = 'button';
     theme.className = 'theme-toggle';
     theme.dataset.themeToggle = '';
+    theme.setAttribute('role', 'menuitem');
     theme.innerHTML = '<i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span>';
-    actions.appendChild(theme);
+    panel.appendChild(theme);
 
-    if (logoutLink) actions.appendChild(logoutLink);
-    card.append(identity, actions);
+    if (logoutLink) {
+        logoutLink.setAttribute('role', 'menuitem');
+        panel.appendChild(logoutLink);
+    }
+
+    trigger.addEventListener('click', () => {
+        const open = trigger.getAttribute('aria-expanded') !== 'true';
+        setAccountMenuOpen(card, open);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!card.contains(event.target)) setAccountMenuOpen(card, false);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && trigger.getAttribute('aria-expanded') === 'true') {
+            setAccountMenuOpen(card, false);
+            trigger.focus();
+        }
+    });
+
+    card.append(trigger, panel);
     footer.replaceChildren(card);
     applyTheme(preferredTheme());
 }
@@ -335,8 +374,19 @@ function observeActions() {
 }
 
 function enhancePagination() {
-    const pagination = document.querySelector('.rural-panel .pagination');
-    if (!pagination) return;
+    const panel = document.querySelector('.rural-panel .panel');
+    const pagination = panel?.querySelector('.pagination');
+    const tableContainer = panel?.querySelector('.table-container');
+    if (!panel || !pagination || !tableContainer) return;
+
+    let footer = panel.querySelector('.admin-table-footer');
+    if (!footer) {
+        footer = document.createElement('div');
+        footer.className = 'admin-table-footer';
+        tableContainer.insertAdjacentElement('afterend', footer);
+    }
+    footer.appendChild(pagination);
+
     const labels = new Map([
         ['#pagina-anterior', 'Página anterior'],
         ['#pagina-siguiente', 'Página siguiente'],
@@ -350,7 +400,7 @@ function enhancePagination() {
 
 export function initializeAdminUi() {
     if (typeof document === 'undefined' || !document.body?.classList.contains('rural-panel')) return;
-    document.documentElement.dataset.tcAdminUx = '3';
+    document.documentElement.dataset.tcAdminUx = '4';
     enhanceSidebarAccount();
     enhanceSidebarCollapse();
     enhancePageHeader();
@@ -364,6 +414,7 @@ export function initializeAdminUi() {
 setSidebarRootState(readSidebarCollapsed());
 injectStylesheet(ADMIN_CSS, 'data-tc-admin-v3');
 injectStylesheet(ADMIN_SIDEBAR_CSS, 'data-tc-admin-sidebar');
+injectStylesheet(ADMIN_REFINEMENTS_CSS, 'data-tc-admin-refinements');
 
 if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') {
