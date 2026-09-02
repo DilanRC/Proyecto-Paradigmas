@@ -7,11 +7,13 @@ const PRIVATE_ROUTES = new Set([
     'pagometodos.php',
 ]);
 
+const PUBLIC_DESTINATIONS = new Set(['explorar.php']);
+
 export function resolveNext(search = '') {
     const requested = new URLSearchParams(search).get('next');
-    return requested && PRIVATE_ROUTES.has(requested)
+    return requested && (PRIVATE_ROUTES.has(requested) || PUBLIC_DESTINATIONS.has(requested))
         ? requested
-        : 'productores.php';
+        : 'explorar.php';
 }
 
 function setError(control, message) {
