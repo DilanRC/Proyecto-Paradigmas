@@ -13,11 +13,13 @@ import {
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const home = read('../../Application/View/home/index.php');
+const explore = read('../../Application/View/explorar/index.php');
 const login = read('../../Application/View/login/index.php');
 const info = read('../../Application/View/public/info.php');
 const publicCss = read('../../Public/css/public-auth.css');
-const publicV3Css = read('../../Public/css/public-v3.css');
+const productCss = read('../../Public/css/public-product.css');
 const themeJs = read('../../Public/js/public-theme.js');
+const publicUi = read('../../Public/js/public-ui.js');
 const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
 const authGate = read('../../Public/js/shared/auth-gate.js');
@@ -31,6 +33,7 @@ const PRIVATE_MODULES = [
 ];
 
 const PUBLIC_ROUTES = [
+    '../../Public/explorar.php',
     '../../Public/sobre-nosotros.php',
     '../../Public/como-usar.php',
     '../../Public/privacidad.php',
@@ -38,39 +41,43 @@ const PUBLIC_ROUTES = [
     '../../Public/legal.php',
 ];
 
-test('la portada usa identidad oficial TinderCows y no vuelve a exponer un catalogo de modulos', () => {
+test('la portada usa identidad TinderCows y habla como producto', () => {
     assert.ok(home.includes('assets/logo_dark.png'));
     assert.ok(home.includes('assets/logo_light.png'));
     assert.ok(home.includes('rel="icon" href="favicon.svg"'));
-    assert.ok(home.includes('Encuentra. Conecta. Gestiona.'));
-    assert.equal(home.includes('id="modulos"'), false, 'la landing no debe convertirse en un indice del admin');
-    assert.equal(home.includes('login.php?next='), false, 'la landing no debe explicar rutas privadas');
-    assert.equal(home.includes('js/home.js'), false, 'la portada pública no debe consultar la red privada');
+    assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('explorar.php'));
+    assert.equal(/EIF400|acad[eé]mic/i.test(home), false, 'la experiencia pública no debe hablar del curso ni de evaluación');
+    assert.equal(home.includes('Productores</h3>'), false, 'la landing no debe explicar módulos administrativos');
     assert.equal(home.includes('api/productores.php'), false);
 });
 
-test('el navbar reserva la navegacion primaria para tareas publicas y deja lo legal en footer', () => {
+test('navbar público prioriza Inicio, Explorar, Nosotros y Cómo funciona; legal queda en footer', () => {
     const nav = home.match(/<nav class="public-nav public-nav--primary"[\s\S]*?<\/nav>/)?.[0] ?? '';
-    for (const destination of ['#inicio', '#buscar-ganado', '#nosotros', '#como-funciona']) {
-        assert.ok(nav.includes(`href="${destination}"`), `falta ${destination} en navegación primaria`);
-    }
-    for (const legal of ['privacidad.php', 'terminos.php', 'legal.php']) {
-        assert.equal(nav.includes(legal), false, `${legal} debe vivir solo en el footer`);
-        assert.ok(home.includes(`href="${legal}"`), `${legal} debe seguir accesible desde el footer`);
-    }
-    assert.ok(nav.includes('fa-house'));
-    assert.ok(nav.includes('fa-magnifying-glass'));
-    assert.ok(nav.includes('<span>Inicio</span>'));
-    assert.ok(nav.includes('<span>Buscar ganado</span>'));
+    for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona']) assert.ok(nav.includes(label));
+    for (const label of ['Privacidad', 'Términos', 'Legal']) assert.equal(nav.includes(label), false);
+    assert.ok(home.includes('public-footer__legal'));
+    assert.ok(home.includes('privacidad.php'));
+    assert.ok(home.includes('terminos.php'));
+    assert.ok(home.includes('legal.php'));
 });
 
-test('la búsqueda de ganado es un preview honesto y no inventa resultados sin contrato', () => {
-    assert.ok(home.includes('id="buscar-ganado"'));
-    assert.ok(home.includes('cattle-search-preview'));
-    assert.ok(home.includes('readonly'));
-    assert.ok(home.includes('no expone aún una entidad ni un endpoint de ganado'));
-    assert.ok(home.includes('no inventa animales, razas ni resultados'));
-    assert.ok(publicV3Css.includes('.cattle-search-preview'));
+test('la búsqueda pública permanece compacta y se expande bajo demanda', () => {
+    assert.ok(home.includes('data-public-search'));
+    assert.ok(home.includes('data-public-search-toggle'));
+    assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
+    assert.ok(publicUi.includes('root.dataset.open = String(safeOpen)'));
+    assert.ok(publicUi.includes("event.key === 'Escape'"));
+});
+
+test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
+    assert.ok(read('../../Public/explorar.php').includes("Application/View/explorar/index.php"));
+    assert.ok(explore.includes('data-explore-deck'));
+    assert.ok(explore.includes('data-explore-prev'));
+    assert.ok(explore.includes('data-explore-next'));
+    for (const action of ['Pasar', 'Me interesa', 'Contactar', 'Pujar']) assert.ok(explore.includes(`>${action}</span>`));
+    assert.ok(explore.includes('contenido de muestra'));
+    assert.equal(/EIF400|acad[eé]mic/i.test(explore), false);
 });
 
 test('la paleta pública sale del logo y elimina la referencia cromática de Tinder', () => {
@@ -92,33 +99,29 @@ test('modo claro y oscuro comparten preferencia persistente e iconos reconocible
     assert.ok(themeJs.includes("'fa-moon'"));
 });
 
-test('el acceso declara de forma explícita que es una demostración local', () => {
-    assert.ok(login.includes('Acceso de demostración'));
-    assert.ok(login.includes('No valida credenciales contra un backend'));
+test('el acceso público vuelve a Explorar por defecto y no se presenta como administración', () => {
+    assert.ok(login.includes('Entrar a TinderCows'));
+    assert.ok(login.includes('todavía no valida credenciales contra un servidor'));
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));
-    assert.ok(login.includes('id="formulario-login"'));
-    assert.ok(login.includes('assets/logo_dark.png'));
-    assert.ok(login.includes('rel="icon" href="favicon.svg"'));
-    assert.equal(/Google|Facebook|Apple/.test(login), false);
-});
-
-test('existen las rutas públicas informativas y usan una plantilla común', () => {
-    for (const route of PUBLIC_ROUTES) {
-        const wrapper = read(route);
-        assert.ok(wrapper.includes("Application/View/public/info.php"), `${route} debe usar la plantilla pública común`);
-    }
-    for (const key of ['about', 'guide', 'privacy', 'terms', 'legal']) {
-        assert.ok(info.includes(`'${key}' => [`), `falta página ${key}`);
-    }
-});
-
-test('next solo acepta rutas privadas locales y rechaza redirecciones abiertas', () => {
+    assert.equal(/EIF400|acad[eé]mic/i.test(login), false);
+    assert.equal(resolveNext(''), 'explorar.php');
+    assert.equal(resolveNext('?next=explorar.php'), 'explorar.php');
     assert.equal(resolveNext('?next=vehiculos.php'), 'vehiculos.php');
-    assert.equal(resolveNext('?next=pagometodos.php'), 'pagometodos.php');
-    assert.equal(resolveNext('?next=https://example.com'), 'productores.php');
-    assert.equal(resolveNext('?next=//example.com'), 'productores.php');
-    assert.equal(resolveNext('?next=../login.php'), 'productores.php');
+    assert.equal(resolveNext('?next=https://example.com'), 'explorar.php');
+    assert.equal(resolveNext('?next=//example.com'), 'explorar.php');
+    assert.equal(resolveNext('?next=../login.php'), 'explorar.php');
+});
+
+test('las páginas públicas informativas no exponen rutas administrativas ni lenguaje académico', () => {
+    for (const route of PUBLIC_ROUTES.slice(1)) {
+        const wrapper = read(route);
+        assert.ok(wrapper.includes('Application/View/public/info.php'));
+    }
+    for (const key of ['about', 'guide', 'privacy', 'terms', 'legal']) assert.ok(info.includes(`'${key}' => [`));
+    assert.equal(info.includes('/productores.php'), false);
+    assert.equal(info.includes('/pagometodos.php'), false);
+    assert.equal(/EIF400|acad[eé]mic/i.test(info), false);
 });
 
 test('la puerta requiere un marcador de sesión estructurado', () => {
@@ -139,10 +142,7 @@ test('la puerta requiere un marcador de sesión estructurado', () => {
 
 test('una ruta privada sin sesión vuelve al login conservando destino local', () => {
     let redirected = '';
-    const location = {
-        pathname: '/productores.php',
-        replace: (target) => { redirected = target; },
-    };
+    const location = { pathname: '/productores.php', replace: (target) => { redirected = target; } };
     const storage = { getItem: () => null };
     assert.equal(isPrivateRoute(location.pathname), true);
     assert.equal(loginTarget(location.pathname), 'login.php?next=productores.php');
@@ -156,15 +156,12 @@ test('el shell privado distingue volver al sitio público de cerrar sesión', ()
     assert.ok(authGate.includes('storage?.removeItem(SESSION_KEY)'));
 });
 
-test('los paneles privados fallan cerrados hasta que auth-gate valida sesión', () => {
+test('los paneles privados fallan cerrados y comparten bootstrap de API', () => {
     assert.ok(baseCss.includes('body.rural-panel {\n    visibility:hidden;'));
     assert.ok(baseCss.includes("html[data-tc-auth='ready'] body.rural-panel"));
-});
-
-test('todos los módulos privados pasan por api.js y activan auth + shell UX', () => {
     assert.ok(api.startsWith("import './auth-gate.js';\nimport './admin-ui.js';"));
     for (const path of PRIVATE_MODULES) {
         const module = read(path);
-        assert.ok(module.includes("from './shared/api.js'"), `${path} debe pasar por el bootstrap protegido de API`);
+        assert.ok(module.includes("from './shared/api.js'"));
     }
 });
