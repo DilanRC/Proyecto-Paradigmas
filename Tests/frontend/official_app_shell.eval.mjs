@@ -13,10 +13,13 @@ const collapseCss = read('Public/css/admin-sidebar-collapse.css');
 const checks = [
     ['landing_producto', home.includes('El ganado que buscas, más cerca de ti.') && home.includes('explorar.php')],
     ['sin_lenguaje_academico', !/EIF400|acad[eé]mic/i.test(home + explore + login)],
-    ['explorar_independiente', explore.includes('data-explore-deck') && explore.includes('data-explore-action="Pujar"')],
+    ['explorar_independiente', explore.includes('data-explore-deck') && explore.includes('js/explore.js')],
     ['cabecera_ancho_completo', home.includes('public-header--product') && home.includes('css/public-product.css')],
     ['cta_encuadrada', /\.public-section--cta \{[^}]*justify-content:center/.test(read('Public/css/public-v3.css'))],
-    ['tarjeta_explorar_con_datos', ['explore-card__price', 'explore-card__specs', 'explore-card__seller'].every((clase) => explore.includes(clase))],
+    ['tarjeta_explorar_con_datos', ['explore-card__price', 'explore-card__specs', 'explore-card__seller']
+        .every((clase) => read('Public/js/explore.js').includes(clase))],
+    ['explorar_lee_catalogo_real', read('Public/js/explore.js').includes('api/publicaciones.php')
+        && !explore.includes('contenido de muestra')],
     ['login_navegable', home.includes('href="login.php"') && login.includes('id="formulario-login"')],
     ['logos_oficiales', home.includes('assets/logo_dark.png') && explore.includes('assets/logo_light.png')],
     ['busqueda_expandible', home.includes('data-public-search-toggle') && productCss.includes("data-open='true'" )],
