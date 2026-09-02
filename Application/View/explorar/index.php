@@ -78,13 +78,21 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 
             <section class="explore-deck" aria-label="Publicaciones para explorar">
                 <div class="explore-deck__viewport" data-explore-deck tabindex="0">
-                    <article class="explore-card" data-type="ganado cerca" data-searchable="novillas engorde san carlos alajuela ganado cerca">
+                    <article class="explore-card" data-type="ganado cerca" data-searchable="novillas engorde san carlos alajuela ganado cerca brahman engorde finca la esperanza mariela solano aguas zarcas 950000 colones">
                         <div class="explore-card__visual explore-card__visual--green" aria-hidden="true"><i class="fa-solid fa-cow"></i></div>
                         <div class="explore-card__body">
-                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> San Carlos, Alajuela</span><span>8 km</span></div>
+                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Aguas Zarcas, San Carlos, Alajuela</span><span>8 km</span></div>
                             <span class="explore-card__type">Ganado · Muestra</span>
                             <h2>Novillas de engorde</h2>
+                            <p class="explore-card__price"><strong>₡950 000</strong><span>por animal · 6 disponibles</span></p>
                             <p>Una publicación pensada para revisar rápidamente ubicación, categoría y acciones antes de abrir el detalle.</p>
+                            <dl class="explore-card__specs">
+                                <div><dt><i class="fa-solid fa-dna" aria-hidden="true"></i> Raza</dt><dd>Brahman</dd></div>
+                                <div><dt><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Edad</dt><dd>18 meses</dd></div>
+                                <div><dt><i class="fa-solid fa-weight-scale" aria-hidden="true"></i> Peso</dt><dd>320 kg</dd></div>
+                                <div><dt><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Propósito</dt><dd>Engorde</dd></div>
+                            </dl>
+                            <p class="explore-card__seller"><i class="fa-solid fa-user-tie" aria-hidden="true"></i><span>Finca La Esperanza · Mariela Solano</span></p>
                             <div class="explore-card__tags"><span>Disponibles</span><span>Cercano</span><span>Contacto directo</span></div>
                             <div class="explore-card__actions">
                                 <button type="button" data-explore-action="Pasar"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Pasar</span></button>
@@ -94,13 +102,21 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                         </div>
                     </article>
 
-                    <article class="explore-card" data-type="subasta cerca" data-searchable="subasta ganado grecia alajuela puja cerca">
+                    <article class="explore-card" data-type="subasta cerca" data-searchable="subasta ganado grecia alajuela puja cerca jersey doble proposito finca el alto carlos venegas san roque 1200000 colones">
                         <div class="explore-card__visual explore-card__visual--orange" aria-hidden="true"><i class="fa-solid fa-gavel"></i></div>
                         <div class="explore-card__body">
-                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Grecia, Alajuela</span><span>12 km</span></div>
+                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> San Roque, Grecia, Alajuela</span><span>12 km</span></div>
                             <span class="explore-card__type">Subasta · Muestra</span>
                             <h2>Subasta de ganado</h2>
+                            <p class="explore-card__price"><strong>₡1 200 000</strong><span>puja actual · cierra hoy 6:00 p. m.</span></p>
                             <p>La tarjeta destaca que existe una puja activa y mantiene contacto, interés y descarte dentro del mismo flujo.</p>
+                            <dl class="explore-card__specs">
+                                <div><dt><i class="fa-solid fa-dna" aria-hidden="true"></i> Raza</dt><dd>Jersey</dd></div>
+                                <div><dt><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Edad</dt><dd>36 meses</dd></div>
+                                <div><dt><i class="fa-solid fa-weight-scale" aria-hidden="true"></i> Peso</dt><dd>410 kg</dd></div>
+                                <div><dt><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Propósito</dt><dd>Doble propósito</dd></div>
+                            </dl>
+                            <p class="explore-card__seller"><i class="fa-solid fa-user-tie" aria-hidden="true"></i><span>Finca El Alto · Carlos Venegas</span></p>
                             <div class="explore-card__tags"><span>Puja activa</span><span>Cercano</span><span>Hoy</span></div>
                             <div class="explore-card__actions">
                                 <button type="button" data-explore-action="Pasar"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Pasar</span></button>
@@ -111,13 +127,21 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                         </div>
                     </article>
 
-                    <article class="explore-card" data-type="ganado" data-searchable="toro reproductor tilaran guanacaste ganado">
+                    <article class="explore-card" data-type="ganado" data-searchable="toro reproductor tilaran guanacaste ganado gyr cria finca los robles jose quiros quebrada grande 2450000 colones">
                         <div class="explore-card__visual explore-card__visual--cream" aria-hidden="true"><i class="fa-solid fa-cow"></i></div>
                         <div class="explore-card__body">
-                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Tilarán, Guanacaste</span><span>16 km</span></div>
+                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Quebrada Grande, Tilarán, Guanacaste</span><span>16 km</span></div>
                             <span class="explore-card__type">Ganado · Muestra</span>
                             <h2>Toro reproductor</h2>
+                            <p class="explore-card__price"><strong>₡2 450 000</strong><span>precio único · 1 disponible</span></p>
                             <p>El formato permite decidir si seguir explorando, guardar la publicación o iniciar una conversación con el publicador.</p>
+                            <dl class="explore-card__specs">
+                                <div><dt><i class="fa-solid fa-dna" aria-hidden="true"></i> Raza</dt><dd>Gyr</dd></div>
+                                <div><dt><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> Edad</dt><dd>48 meses</dd></div>
+                                <div><dt><i class="fa-solid fa-weight-scale" aria-hidden="true"></i> Peso</dt><dd>780 kg</dd></div>
+                                <div><dt><i class="fa-solid fa-bullseye" aria-hidden="true"></i> Propósito</dt><dd>Cría</dd></div>
+                            </dl>
+                            <p class="explore-card__seller"><i class="fa-solid fa-user-tie" aria-hidden="true"></i><span>Finca Los Robles · José Quirós</span></p>
                             <div class="explore-card__tags"><span>Disponible</span><span>Reproductor</span><span>Contacto</span></div>
                             <div class="explore-card__actions">
                                 <button type="button" data-explore-action="Pasar"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Pasar</span></button>
