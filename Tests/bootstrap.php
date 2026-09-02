@@ -4,16 +4,27 @@ declare(strict_types=1);
 
 use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
+use Application\Controller\ProductorUbicacionController;
+use Application\Model\Bitacora;
+use Application\Model\ProductorFinca;
+use Application\Model\ProductorUbicacion;
 use Configuration\Database;
 
 $testRoot = dirname(__DIR__);
 require_once $testRoot . '/Configuration/Configuration.php';
 require_once $testRoot . '/Configuration/Database.php';
-foreach (['NamedLock', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor'] as $testModel) {
+require_once $testRoot . '/Application/HttpException.php';
+require_once $testRoot . '/Application/Auth/ActorContext.php';
+require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
+foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
+}
+foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService', 'CompradorClasificacionService'] as $testServicio) {
+    require_once $testRoot . "/Application/Service/{$testServicio}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
+require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
 
 function test_assert(bool $condition, string $message): void
 {
@@ -39,7 +50,7 @@ function test_new_db(): PDO
 {
     $host = getenv('DB_HOST') ?: 'db';
     $port = getenv('DB_PORT') ?: '3306';
-    $name = getenv('DB_NAME') ?: 'dbtindervacas';
+    $name = getenv('DB_NAME') ?: 'bdmercadoganadero';
     $user = getenv('DB_USER') ?: 'root';
     $password = getenv('DB_PASS') ?: '';
     return new PDO("mysql:host={$host};port={$port};dbname={$name};charset=utf8mb4", $user, $password, [
@@ -57,6 +68,46 @@ function test_controller(?string $requestId = null): ProductorController
 function test_finca_controller(?string $requestId = null): FincaController
 {
     return new FincaController(test_db(), $requestId ?? test_token('request'));
+}
+
+function test_ubicacion_controller(?string $requestId = null): ProductorUbicacionController
+{
+    $db = test_db();
+
+    return new ProductorUbicacionController(
+        $db,
+        new Productor($db, new ProductorFinca($db)),
+        new ProductorUbicacion($db),
+        new Bitacora($db),
+        $requestId ?? test_token('request'),
+    );
+}
+
+/**
+ * Limpia las filas de ubicación append-only de los productores indicados.
+ * El borrado directo es válido en pruebas: la política append-only aplica a
+ * la API y al modelo, no al mantenimiento del banco de pruebas. Los eventos
+ * de bitácora asociados se retiran con test_cleanup_productores().
+ */
+function test_cleanup_ubicaciones(array $productorIds): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $productorIds))));
+    if ($ids === []) return;
+    $marcadores = implode(',', array_fill(0, count($ids), '?'));
+    test_db()->prepare("DELETE FROM tbproductorubicacion WHERE tbproductorid IN ({$marcadores})")->execute($ids);
+}
+
+/**
+ * Retira los periodos de estado y actividad del productor de prueba; el
+ * productor, su dirección y su bitácora se retiran con test_cleanup_productores().
+ */
+function test_cleanup_estado_periodos(array $productorIds): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('intval', $productorIds))));
+    if ($ids === []) return;
+    $marcadores = implode(',', array_fill(0, count($ids), '?'));
+    test_db()->prepare("DELETE FROM tbproductorestadoperiodo WHERE tbproductorid IN ({$marcadores})")->execute($ids);
+    test_db()->prepare("DELETE FROM tbproductoractividad WHERE tbproductorid IN ({$marcadores})")->execute($ids);
 }
 
 function test_token(string $label): string
@@ -119,6 +170,15 @@ function test_http_json(
     string $contentType = 'application/json',
     string $url = 'http://127.0.0.1/api/productores.php',
 ): array {
+    $baseUrl = getenv('TEST_BASE_URL');
+    if (is_string($baseUrl) && $baseUrl !== '') {
+        $url = preg_replace(
+            '/^http:\/\/127\.0\.0\.1(?=\/)/',
+            rtrim($baseUrl, '/'),
+            $url,
+            1
+        ) ?? $url;
+    }
     $headers = ['Accept: application/json'];
     if ($body !== null) {
         $headers[] = "Content-Type: {$contentType}";
@@ -158,14 +218,16 @@ function test_cleanup_productores(array $identificaciones): void
     $marcadores = implode(',', array_fill(0, count($ids), '?'));
     $db->beginTransaction();
     try {
-        $buscarProductorIds = $db->prepare("SELECT tbproductorid FROM tbproductor
-            WHERE tbproductoridentificacionnumero IN ({$marcadores})");
+        $buscarProductorIds = $db->prepare("SELECT p.tbproductorid FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
+            WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})");
         $buscarProductorIds->execute($ids);
         $productorIds = array_map('intval', $buscarProductorIds->fetchAll(PDO::FETCH_COLUMN));
         $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
 
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));
+            $db->prepare("DELETE FROM tbproductorestadoperiodo WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
+            $db->prepare("DELETE FROM tbproductoractividad WHERE tbproductorid IN ({$marcadoresProductor})")->execute($productorIds);
 
             $buscarFincaIds = $db->prepare("SELECT tbfincaid FROM tbfinca WHERE tbproductorid IN ({$marcadoresProductor})");
             $buscarFincaIds->execute($productorIds);
@@ -194,7 +256,8 @@ function test_cleanup_productores(array $identificaciones): void
                 $db->prepare("DELETE FROM tbdireccion WHERE tbdireccionid IN ({$marcadoresDireccion})")->execute($direccionIds);
             }
         }
-        $db->prepare("DELETE FROM tbproductor WHERE tbproductoridentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE p FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();
     } catch (Throwable $exception) {
         if ($db->inTransaction()) $db->rollBack();

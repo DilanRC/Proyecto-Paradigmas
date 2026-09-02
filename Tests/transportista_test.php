@@ -41,7 +41,8 @@ function test_cleanup_transportistas(array $identificaciones): void
     $db->beginTransaction();
     try {
         $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
-        $db->prepare("DELETE FROM tbtransportista WHERE tbtransportistaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE t FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid=t.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();
     } catch (Throwable $exception) {
         if ($db->inTransaction()) $db->rollBack();
@@ -117,7 +118,7 @@ try {
     test_same(200, $desactivado['status'], 'Desactivación debe responder 200');
     test_same('INACTIVO', $desactivado['body']['data']['estado'], 'Desactivación lógica');
 
-    $conteoFisico = test_db()->prepare('SELECT COUNT(*) FROM tbtransportista WHERE tbtransportistaidentificacionnumero = :id');
+    $conteoFisico = test_db()->prepare('SELECT COUNT(*) FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid=t.tbpersonaid WHERE p.tbpersonaidentificacionnumero = :id');
     $conteoFisico->execute(['id' => $creado['identificacionNumero']]);
     test_same(1, (int) $conteoFisico->fetchColumn(), 'Desactivar no debe borrar físicamente la fila');
 

@@ -1,109 +1,134 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TinderCows: encuentra la pareja perfecta para tu ganado">
-    <title>TinderCows — Match ganadero</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="js/home.js" defer></script>
+    <meta name="description" content="TinderCows te ayuda a descubrir ganado, subastas y oportunidades cerca de ti.">
+    <meta name="theme-color" content="#151a18">
+    <title>TinderCows — Ganado y oportunidades cerca de ti</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/base.css?v=admin-public-4">
+    <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
+    <link rel="stylesheet" href="css/public-v3.css?v=public-4">
+    <script type="module" src="js/public-theme.js?v=brand-3"></script>
+    <script type="module" src="js/public-ui.js?v=public-1"></script>
 </head>
-<body class="rural">
-    <div class="rural__admin">
-        <a class="rural__admin-toggle" href="productores.php">Admin</a>
-    </div>
+<body class="public-home">
+    <div class="public-shell" id="inicio">
+        <header class="public-header public-header--product">
+            <a class="public-brand" href="#inicio" aria-label="TinderCows, inicio">
+                <span class="public-brand__logo" aria-hidden="true">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
+                </span>
+                <span>Tinder<strong>Cows</strong></span>
+            </a>
 
-    <aside class="rural__aside">
-        <div class="rural__brand">
-            <span class="brand__icon" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M13 12 6 7c-1 7 2 10 7 11m22-6 7-5c1 7-2 10-7 11"/><path d="M11 24c0-10 5-16 13-16s13 6 13 16v7c0 7-5 11-13 11S11 38 11 31Z"/><path d="M16 29c0-4 3-6 8-6s8 2 8 6-3 7-8 7-8-3-8-7Z"/><circle cx="18" cy="20" r="2"/><circle cx="30" cy="20" r="2"/><circle cx="21" cy="29" r="1.5"/><circle cx="27" cy="29" r="1.5"/></svg></span>
-            <span class="rural__brand-name">Tinder<strong>Cows</strong></span>
-        </div>
-
-        <div class="rural__tabs" role="tablist" aria-label="Secciones">
-            <button class="rural__tab rural__tab--active" type="button" role="tab" aria-selected="true">Matches</button>
-            <button class="rural__tab" type="button" role="tab" aria-selected="false">Mensajes</button>
-        </div>
-
-        <h3 class="rural__label">Mi manada</h3>
-        <div class="rural__herd">
-            <div class="rural__avatar" title="Trueno"><img src="https://images.pexels.com/photos/11556841/pexels-photo-11556841.jpeg?auto=compress&cs=tinysrgb&w=150&q=70" alt="Trueno" loading="lazy" decoding="async"><i class="rural__avatar-dot" aria-hidden="true"></i></div>
-            <div class="rural__avatar rural__avatar--muted" title="Bella"><img src="https://images.pexels.com/photos/27207635/pexels-photo-27207635.jpeg?auto=compress&cs=tinysrgb&w=150&q=70" alt="Bella" loading="lazy" decoding="async"></div>
-            <div class="rural__avatar rural__avatar--muted" title="Luna"><img src="https://images.unsplash.com/photo-1624210681638-9ecd10500b05?auto=format&w=150&q=70&fit=crop" alt="Luna" loading="lazy" decoding="async"></div>
-            <button class="rural__avatar rural__avatar--add" type="button" aria-label="Agregar a la manada">+</button>
-        </div>
-
-        <div class="rural__messages">
-            <h3 class="rural__label">Mensajes directos</h3>
-            <div class="rural__thread">
-                <div class="rural__avatar rural__avatar--sm" aria-hidden="true"><img src="https://i.pravatar.cc/100?u=mateo-rivera-tindercows" alt="" loading="lazy" decoding="async"></div>
-                <div class="rural__thread-body">
-                    <div class="rural__thread-head"><b>Mateo Rivera</b><time>Ahora</time></div>
-                    <p>"Trueno es un ejemplar excepcional, ¿coordinamos una visita al rancho?"</p>
-                </div>
-            </div>
-            <div class="rural__thread rural__thread--muted">
-                <div class="rural__avatar rural__avatar--sm" aria-hidden="true"><img src="https://i.pravatar.cc/100?u=rancho-la-gloria-tindercows" alt="" loading="lazy" decoding="async"></div>
-                <div class="rural__thread-body">
-                    <div class="rural__thread-head"><b>Rancho La Gloria</b><time>Ayer</time></div>
-                    <p>"El lote de novillas ya está verificado."</p>
-                </div>
-            </div>
-        </div>
-
-    </aside>
-
-    <main class="rural__main">
-        <article class="rural__card">
-            <nav class="rural__card-nav">
-                <button class="rural__card-tab rural__card-tab--active" type="button">Galería</button>
-                <button class="rural__card-tab" type="button">Ficha técnica</button>
-                <button class="rural__card-tab" type="button">Producción</button>
+            <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
+                <a class="is-active" href="#inicio"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
+                <a href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+                <a href="#nosotros"><i class="fa-solid fa-people-group" aria-hidden="true"></i><span>Nosotros</span></a>
+                <a href="#como-funciona"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Cómo funciona</span></a>
             </nav>
 
-            <div class="rural__media">
-                <img src="https://images.unsplash.com/photo-1598974357035-0d439e28ccaf?auto=format&w=1200&q=75&fit=crop" alt="Lucero, toro Brahman de Finca El Roble" loading="lazy" decoding="async">
-                <div class="rural__media-badges">
-                    <span class="rural__badge">Brahman Puro</span>
-                    <span class="rural__badge rural__badge--accent">Semental A+</span>
-                </div>
+            <div class="public-header__actions">
+                <form class="public-search" action="explorar.php" method="get" role="search" data-public-search data-open="false">
+                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Abrir búsqueda">
+                        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span>
+                    </button>
+                    <div class="public-search__field">
+                        <label class="screen-reader-only" for="busqueda-publica-home">Buscar publicaciones</label>
+                        <input id="busqueda-publica-home" name="q" type="search" autocomplete="off" placeholder="Ganado, subastas, zona…">
+                        <button type="submit" aria-label="Buscar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+                    </div>
+                </form>
+                <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true">
+                    <i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i>
+                    <span class="theme-toggle__label">Claro</span>
+                </button>
+                <a class="public-header__login" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
             </div>
+        </header>
 
-            <div class="rural__body">
-                <div class="rural__heading">
-                    <div>
-                        <h1>Lucero</h1>
-                        <p class="rural__sub-identity"><span data-finca>Finca El Roble</span> <span aria-hidden="true">•</span> 480 kg</p>
+        <main>
+            <section class="public-hero public-hero--clean" aria-labelledby="public-title">
+                <div class="public-hero__copy">
+                    <p class="public-eyebrow">Ganado · Subastas · Cercanía</p>
+                    <h1 id="public-title">El ganado que buscas, más cerca de ti.</h1>
+                    <p class="public-hero__lead">Explora publicaciones, descubre subastas cercanas, guarda lo que te interesa y conecta directamente con quienes están detrás de cada oportunidad.</p>
+                    <div class="public-hero__actions">
+                        <a class="public-cta" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar publicaciones</span></a>
+                        <a class="public-secondary" href="#como-funciona"><i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Cómo funciona</span></a>
                     </div>
-                    <div class="rural__rating" aria-label="5 de 5 estrellas">
-                        <span aria-hidden="true">★★★★★</span>
-                        <p>Rating del productor</p>
+                    <div class="public-hero__signals" aria-label="Funciones principales">
+                        <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Cerca de ti</span>
+                        <span><i class="fa-solid fa-gavel" aria-hidden="true"></i> Subastas</span>
+                        <span><i class="fa-solid fa-message" aria-hidden="true"></i> Contacto directo</span>
                     </div>
                 </div>
 
-                <p class="rural__quote">"Ejemplar Brahman de alta pureza genética, criado en libertad en las colinas de Heredia. Estructura ósea imponente y temperamento noble, ideal para mejora de hato."</p>
-
-                <div class="rural__producer">
-                    <div class="rural__producer-profile">
-                        <div class="rural__avatar rural__avatar--lg"><img src="https://images.unsplash.com/photo-1622834613016-eb976dc462bd?auto=format&w=200&q=75&fit=crop" alt="María Fernández Solano" loading="lazy" decoding="async"><i class="rural__avatar-check" aria-hidden="true">✓</i></div>
-                        <div>
-                            <p class="rural__producer-title">Ganadero principal</p>
-                            <p class="rural__producer-name">María Fernández Solano</p>
-                            <p class="rural__producer-meta"><span class="rural__cert">Certificado TinderCows</span> <span aria-hidden="true">•</span> 12 lotes vendidos</p>
-                        </div>
+                <div class="public-visual public-visual--brand" aria-label="Identidad visual de TinderCows">
+                    <div class="public-logo-stage" aria-hidden="true">
+                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="430" height="430">
+                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="430" height="430">
                     </div>
-                    <a class="button button--primary" href="productores.php">Ver catálogo</a>
+                    <div class="brand-orbit brand-orbit--one" aria-hidden="true"></div>
+                    <div class="brand-orbit brand-orbit--two" aria-hidden="true"></div>
                 </div>
+            </section>
+
+            <section class="public-section public-section--about" id="nosotros" aria-labelledby="about-title">
+                <div class="section-heading">
+                    <p class="section-kicker">Nosotros</p>
+                    <h2 id="about-title">TinderCows convierte descubrir ganado en una experiencia simple y cercana.</h2>
+                </div>
+                <p class="section-lead">Reunimos publicaciones, ubicación, subastas y contacto en un solo recorrido para que comparar opciones y tomar una decisión requiera menos pasos.</p>
+                <div class="about-grid about-grid--product">
+                    <article><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i><h3>Descubre por cercanía</h3><p>Prioriza oportunidades relevantes por zona y encuentra ganado o subastas que realmente puedas considerar.</p></article>
+                    <article><i class="fa-solid fa-layer-group" aria-hidden="true"></i><h3>Decide con contexto</h3><p>Compara publicaciones desde tarjetas claras, guarda favoritas y pasa de largo cuando una opción no encaja contigo.</p></article>
+                    <article><i class="fa-solid fa-handshake" aria-hidden="true"></i><h3>Conecta y negocia</h3><p>Contacta a la persona responsable de una publicación o participa en una puja cuando la oportunidad lo permita.</p></article>
+                </div>
+            </section>
+
+            <section class="public-section how-section" id="como-funciona" aria-labelledby="how-title">
+                <div class="section-heading">
+                    <p class="section-kicker">Cómo funciona</p>
+                    <h2 id="how-title">Explora, decide y conecta sin perder el contexto.</h2>
+                </div>
+                <ol class="use-steps use-steps--compact">
+                    <li><span>01</span><div><strong>Explora</strong><p>Desliza publicaciones de ganado y subastas, usa búsqueda cuando la necesites y filtra por lo que te interesa.</p></div></li>
+                    <li><span>02</span><div><strong>Decide</strong><p>Marca una publicación, descártala o abre sus detalles sin salir del flujo de exploración.</p></div></li>
+                    <li><span>03</span><div><strong>Conecta</strong><p>Contacta al publicador o participa en una puja cuando la publicación tenga una subasta activa.</p></div></li>
+                </ol>
+            </section>
+
+            <section class="public-section public-section--cta" aria-labelledby="cta-title">
+                <div>
+                    <p class="section-kicker">Empieza a explorar</p>
+                    <h2 id="cta-title">Tu próxima oportunidad puede estar a pocos kilómetros.</h2>
+                </div>
+                <a class="public-cta" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Ir a Explorar</span></a>
+            </section>
+        </main>
+
+        <footer class="public-footer public-footer--complete">
+            <div class="public-footer__brand">
+                <a class="public-brand public-brand--footer" href="#inicio">
+                    <span class="public-brand__logo" aria-hidden="true">
+                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40">
+                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40">
+                    </span>
+                    <span>Tinder<strong>Cows</strong></span>
+                </a>
+                <p>Descubre ganado y oportunidades cerca de ti.</p>
             </div>
-        </article>
-
-        <div class="rural__dock">
-            <button class="rural__dock-btn" type="button" aria-label="Pasar">✕</button>
-            <button class="rural__dock-btn" type="button" aria-label="Guardar">♥</button>
-            <button class="rural__dock-btn rural__dock-btn--primary" type="button">Contactar</button>
-        </div>
-    </main>
+            <div class="public-footer__links">
+                <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar.php">Explorar</a><a href="#nosotros">Nosotros</a><a href="#como-funciona">Cómo funciona</a></div>
+                <div><strong>Cuenta</strong><a href="login.php">Entrar</a><a href="como-usar.php">Ayuda de uso</a><a href="sobre-nosotros.php">Sobre TinderCows</a></div>
+                <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad.php">Privacidad</a><a href="terminos.php">Términos</a><a href="legal.php">Información legal</a></div>
+            </div>
+        </footer>
+    </div>
 </body>
 </html>

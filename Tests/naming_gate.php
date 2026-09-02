@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
+require_once "{$root}/Tools/schema-manifest.php";
 $required = [
     'Database/SqlScripts/000instalacioncompleta.sql',
     'Database/SeedData/101initialpagometodo.sql',
@@ -12,10 +13,16 @@ $required = [
     'Database/Tests/comprobacionrelaciones.sql',
     'Database/Tests/diagnostico.sql',
     'Database/Migrations/001normalizadireccionproductor.sql',
+    'Database/Migrations/006estructuracomercialhistorica.sql',
+    'Application/Auth/ActorContext.php',
+    'Application/Auth/SupabaseActorResolver.php',
     'Application/Model/Productor.php',
     'Application/Model/ProductorDireccion.php',
+    'Application/Model/ProductorEstadoPeriodo.php',
     'Application/Model/ProductorFinca.php',
+    'Application/Model/ProductorUbicacion.php',
     'Public/api/productores.php',
+    'Public/api/productores-ubicacion.php',
 ];
 foreach ($required as $file) {
     if (!is_file("{$root}/{$file}")) throw new RuntimeException("Falta {$file}");
@@ -43,13 +50,21 @@ foreach ($forbiddenFiles as $file) {
 }
 $sqlFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $sql = implode("\n", array_map('file_get_contents', $sqlFiles));
-foreach (['tbproductor', 'tbproductordireccion', 'tbfinca', 'tbbitacora', 'tbcomprador',
-    'tbdireccion', 'tbfincadireccion', 'tbpagometodo', 'tbtransportista', 'tbvehiculo',
-    'tbtransportistavehiculo'] as $table) {
-    if (!str_contains($sql, "CREATE TABLE IF NOT EXISTS {$table}")) throw new RuntimeException("Falta tabla {$table}");
+$manifest = schema_manifest();
+$expectedTables = ['tbanimal', 'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
+    'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito', 'tbcarritoanimal',
+    'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador', 'tbdireccion',
+    'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
+    'tbproductoractividad', 'tbproductorclasificacionperiodo', 'tbproductordireccion',
+    'tbproductorestadoperiodo', 'tbproductorubicacion', 'tbtransportista',
+    'tbtransportistaestadoperiodo', 'tbtransportistaflete', 'tbtransportistahorario',
+    'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvehiculo', 'tbventa'];
+if ($manifest['tables_sorted'] !== $expectedTables) {
+    throw new RuntimeException('El listado de tablas no coincide con el SQL canónico.');
 }
 foreach (['tbparticipante ', 'tbrol ', 'tbparticipanterol ', 'tbidentificaciontipo ',
-    'tbparticipanteidentificacion ', 'tbproductorfinca'] as $obsolete) {
+    'tbparticipanteidentificacion ', 'tbproductorfinca', 'tbvendedor',
+    'tbcompradorestadoperiodo', 'tbvendedorestadoperiodo', 'tbvendedoractividad'] as $obsolete) {
     if (str_contains($sql, $obsolete)) throw new RuntimeException("Referencia obsoleta en SQL: {$obsolete}");
 }
 foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ', 'ON UPDATE', 'ON DELETE',
@@ -72,10 +87,66 @@ if (preg_match('/\btb[a-z0-9]*[A-Z][A-Za-z0-9]*/', $sql, $coincidencia)) {
 foreach (['tbproductores ', 'tbproductoresdireccion', 'tbproductoresfinca'] as $plural) {
     if (str_contains($sql, $plural)) throw new RuntimeException("Nombre plural prohibido: {$plural}");
 }
+$commercialFragments = [
+    'tbproductorclasificacionperiodo' => 'clasificación histórica Comprador/Vendedor del Productor',
+    'tbanimalproduccionsaludedadmeses INT NULL' => 'animal guarda edad observada, no fecha de nacimiento inventada',
+    'tbanimalpublicacion' => 'publicación congela vendedor y finca',
+    'tbcompra' => 'compra como hecho económico',
+    'tbventa' => 'venta como hecho económico',
+    'tbcompraid INT NULL' => 'venta no obliga compra previa',
+    'tbanimalinteraccion' => 'funnel especializado por animal',
+    'tbcarritoanimalaccion VARCHAR(30) NOT NULL' => 'carrito conserva agregar/retirar',
+    'tbtransportistaestadoperiodo' => 'estado histórico de transportista confirmado',
+    'tbtransportistaflete' => 'flete confirmado',
+    'tbtransportistaresena' => 'reseña histórica confirmada',
+    'tbanimalcaracteristicas VARCHAR(500) NULL' => 'la identidad del animal incluye características',
+    'tbanimalidentificacion VARCHAR(100) NULL' => 'el animal se identifica, no se codifica',
+    'tbventadireccionid INT NULL' => 'la venta recupera dirección',
+    'tbventaproposito VARCHAR(80) NULL' => 'la venta recupera propósito',
+    'tbtransportistafletecantidadcabezas INT NULL' => 'el flete recupera cantidad de cabezas',
+    'tbtransportistafletedistanciakm DECIMAL(10,2) NULL' => 'el flete recupera distancia',
+    'tbtransportistahorariohorainicio TIME NOT NULL' => 'horario de transportista confirmado',
+    'tbcarritoestadoperiodofechafin DATETIME NULL' => 'el estado del carrito es histórico',
+    'tbanimalpublicacionestadoperiodofechafin DATETIME NULL' => 'el estado de la publicación es histórico',
+    'tbpagometodoid INT NOT NULL' => 'método de pago se guarda en hechos',
+];
+foreach ($commercialFragments as $fragment => $reason) {
+    if (!str_contains($sql, $fragment)) {
+        throw new RuntimeException("Falta {$fragment}: {$reason}");
+    }
+}
+foreach (['cantidadfletessemanales', 'metodopagofrecuente', 'calificacionpromedio',
+    'tbanimalfechanacimiento', 'tbcompraestado', 'tbanimalobservacion',
+    'tbcarritoestado VARCHAR', 'tbanimalpublicacionestado VARCHAR',
+    'tbanimaledad', 'tbanimalpeso'] as $derivedOrUnapproved) {
+    if (str_contains($sql, $derivedOrUnapproved)) {
+        throw new RuntimeException("Dato derivado o no aprobado en SQL: {$derivedOrUnapproved}");
+    }
+}
 $modulosEsperados = 12; // 001createdatabase .. 012createtransportistavehiculo, unificados en 000instalacioncompleta.sql
 if (substr_count($sql, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') !== $modulosEsperados
-    || !str_contains($sql, 'ALTER DATABASE dbtindervacas')) {
+    || !str_contains($sql, 'ALTER DATABASE bdmercadoganadero')) {
     throw new RuntimeException('SQL no fija utf8mb4_unicode_ci de forma consistente.');
+}
+// El script debe nombrar una sola base. Comprobar solo ALTER DATABASE dejaba pasar
+// un CREATE DATABASE con otro nombre: un cambio previo creó un nombre distinto
+// mientras ALTER y USE seguian en bdmercadoganadero, y una instalacion sin
+// compose fallaba porque la base del ALTER no existia. Compose lo ocultaba
+// porque MYSQL_DATABASE ya creaba la base antes de correr el script.
+preg_match_all('/(?:CREATE DATABASE(?: IF NOT EXISTS)?|ALTER DATABASE|USE)\s+`?([A-Za-z0-9_]+)`?/i', $sql, $bases);
+$nombresBase = array_unique($bases[1]);
+if (count($nombresBase) !== 1) {
+    throw new RuntimeException(
+        'El script de instalacion nombra varias bases de datos ('
+        . implode(', ', $nombresBase)
+        . '); CREATE, ALTER y USE deben referirse a la misma.'
+    );
+}
+if ($nombresBase[0] !== 'bdmercadoganadero') {
+    throw new RuntimeException(
+        "La base canonica es bdmercadoganadero y el script usa {$nombresBase[0]}; "
+        . 'Configuration/Database.php y .env.example fijan ese contrato.'
+    );
 }
 $avance = [
     'tbdireccionid INT NOT NULL' => 'tbdireccion y tbproductordireccion usan el identificador de ubicación',
@@ -107,7 +178,14 @@ foreach (['transferencia', 'SINPE', 'cheque', 'tarjeta', 'PayPal'] as $fueraDeAl
 }
 $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 foreach (['FROM tbproductordireccion', 'FROM tbfincadireccion', 'FROM tbvehiculo',
-    'FROM tbtransportistavehiculo', 'HAVING COUNT(*) > 1'] as $consulta) {
+    'FROM tbtransportistavehiculo', 'HAVING COUNT(*) > 1',
+    'tbproductoractividad.tbproductorid', 'D-12 actividad fuera del catalogo cerrado',
+    'D-13 tbcompradorestado fuera de dominio', 'D-14 identificadores comerciales repetidos',
+    'D-15 enlaces comerciales huerfanos', 'D-18 periodos abiertos duplicados',
+    'D-19 periodos solapados', 'D-20 valores comerciales fuera de dominio numerico',
+    'D-22 comprador legacy sin productor',
+    'D-23 comprador legacy activo sin clasificacion abierta',
+    'D-24 comprador legacy inactivo con clasificacion abierta'] as $consulta) {
     if (!str_contains($diagnostico, $consulta)) {
         throw new RuntimeException("El diagnóstico debe incluir {$consulta}");
     }
@@ -125,11 +203,106 @@ if (str_contains($models, '->query(') || str_contains($models, '->exec(')
     || !str_contains($models, "'fecha' => gmdate('Y-m-d H:i:s')")) {
     throw new RuntimeException('Los modelos deben usar sentencias preparadas y calcular los ID en PHP.');
 }
+// Pasos (a) y (d) del retiro de tbcomprador (DEC-DBREADY-005/006/008): la
+// clasificación es la única fuente de "es comprador" y ya no queda CRUD legacy.
+$clasificacionModelo = file_get_contents("{$root}/Application/Model/ProductorClasificacionPeriodo.php");
+if (!str_contains($clasificacionModelo, 'public function esComprador(int $productorId): bool')) {
+    throw new RuntimeException('ProductorClasificacionPeriodo debe responder "es comprador" desde los periodos.');
+}
+if (preg_match('/(FROM|JOIN|UPDATE|INTO)\s+tbcomprador\b/i', $clasificacionModelo)) {
+    throw new RuntimeException('La clasificación no puede consultar la tabla legacy tbcomprador.');
+}
+foreach (['Application/Model/Comprador.php', 'Application/Controller/CompradorController.php'] as $retirado) {
+    if (file_exists("{$root}/{$retirado}")) {
+        throw new RuntimeException("El CRUD legacy de comprador volvió a aparecer: {$retirado}");
+    }
+}
+// Ningún modelo, servicio ni controlador puede volver a decidir negocio con el
+// bit legacy. La única lectura permitida de tbcomprador es la del backfill.
+foreach (array_merge(
+    glob("{$root}/Application/Model/*.php"),
+    glob("{$root}/Application/Service/*.php"),
+    glob("{$root}/Application/Controller/*.php"),
+) as $archivo) {
+    if (str_contains((string) file_get_contents($archivo), 'tbcompradorestado')) {
+        throw new RuntimeException('Nadie debe leer tbcompradorestado: ' . basename($archivo));
+    }
+}
+
+// Paso (b) del retiro (DEC-DBREADY-007): las escrituras del CRUD legacy
+// espejan la clasificación y el estado mostrado ya no sale del bit.
+$servicioClasificacion = file_get_contents("{$root}/Application/Service/CompradorClasificacionService.php");
+$consultaComprador = file_get_contents("{$root}/Application/Controller/CompradorConsultaController.php");
+$apiComprador = file_get_contents("{$root}/Public/api/compradores.php");
+$vistaComprador = file_get_contents("{$root}/Application/View/compradores/index.php");
+$jsComprador = file_get_contents("{$root}/Public/js/compradores.js");
+$backfill = file_get_contents("{$root}/Tools/backfill-clasificacion-comprador.php");
+if (!str_contains($servicioClasificacion, 'MIGRACION_TBCOMPRADOR_LEGACY')) {
+    throw new RuntimeException('CompradorClasificacionService debe declarar el motivo de migración.');
+}
+if (preg_match('/INSERT\s+INTO\s+tbproductor\b/i', $servicioClasificacion . $backfill)) {
+    throw new RuntimeException('Ni el backfill ni la clasificación pueden crear productores.');
+}
+// Paso (d): la consulta es de solo lectura y la clasificación no se administra.
+foreach (["'POST', 'PUT', 'DELETE', 'PATCH' => \$this->respuesta(",
+    'listarClasificados'] as $soloLectura) {
+    if (!str_contains($consultaComprador, $soloLectura)) {
+        throw new RuntimeException("CompradorConsultaController debe conservar {$soloLectura}.");
+    }
+}
+if (!str_contains($apiComprador, "header('Allow: GET, OPTIONS');")) {
+    throw new RuntimeException('El endpoint de compradores debe declararse de solo lectura.');
+}
+foreach (['id="crear-comprador"', 'id="formulario-comprador"', 'id="modal-desactivar"'] as $administrativo) {
+    if (str_contains($vistaComprador, $administrativo)) {
+        throw new RuntimeException("La vista de compradores no debe administrar: {$administrativo}");
+    }
+}
+foreach (["'POST'", "'PUT'", "'DELETE'", "'PATCH'", 'buildCompradorPayload'] as $escritura) {
+    if (str_contains($jsComprador, $escritura)) {
+        throw new RuntimeException("El panel de compradores no debe escribir: {$escritura}");
+    }
+}
+if (!str_contains($clasificacionModelo, 'public function listarClasificados')) {
+    throw new RuntimeException('La lista de compradores debe salir de la clasificación.');
+}
+
 $databaseConfig = file_get_contents("{$root}/Configuration/Database.php");
 if (!str_contains($databaseConfig, 'PDO::ATTR_EMULATE_PREPARES => false')) {
     throw new RuntimeException('PDO debe usar sentencias preparadas nativas.');
 }
-$js = file_get_contents("{$root}/Public/js/productores.js");
+$actorResolver = file_get_contents("{$root}/Application/Auth/SupabaseActorResolver.php");
+$actorContext = file_get_contents("{$root}/Application/Auth/ActorContext.php");
+$bitacora = file_get_contents("{$root}/Application/Model/Bitacora.php");
+$authActorTest = file_get_contents("{$root}/Tests/auth_actor_test.php");
+foreach (['/v1/auth/verify', 'tbpersonacorreoelectronico', 'PERSONA_AUTENTICADA',
+    'new HttpException(\'La sesión verificada no tiene vínculo con una persona.\', 409)',
+    'new HttpException(\'No fue posible validar la sesión.\', 503)'] as $authContract) {
+    if (!str_contains($actorResolver . $actorContext . $bitacora, $authContract)) {
+        throw new RuntimeException("T3 auth no documenta en código: {$authContract}");
+    }
+}
+if (preg_match('/MAX\s*\(\s*tbpersonaid\s*\)\s*\+\s*1/i', $authActorTest)) {
+    throw new RuntimeException('Tests/auth_actor_test.php no debe usar MAX(tbpersonaid)+1.');
+}
+$matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md");
+foreach ([
+    'Productor es la entidad de negocio núcleo',
+    '`tbvendedor` no debe existir',
+    '`tbcomprador` es LEGACY de compatibilidad',
+    'se lee **únicamente** en `tbproductorclasificacionperiodo` con `tipo = COMPRADOR`',
+    '`tbproductorclasificacionperiodo`',
+    'Visualización por fila sigue como propuesta',
+] as $decisionP0C) {
+    if (!str_contains($matrizP0C, $decisionP0C)) {
+        throw new RuntimeException("P0-C no documenta: {$decisionP0C}");
+    }
+}
+// El panel se reparte entre su archivo de entrada y los modulos compartidos que
+// importa, asi que el control se busca sobre el grafo completo y no solo sobre
+// el archivo de entrada.
+$js = file_get_contents("{$root}/Public/js/productores.js")
+    . implode('', array_map('file_get_contents', glob("{$root}/Public/js/shared/*.js")));
 foreach (['fetch(', 'textContent', 'identificacionNumero', 'AbortController'] as $needle) {
     if (!str_contains($js, $needle)) throw new RuntimeException("Falta control UI {$needle}");
 }
@@ -142,6 +315,17 @@ if (str_contains($compose, 'create_catalogs') || str_contains($compose, 'identif
 }
 foreach (['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci'] as $setting) {
     if (!str_contains($compose, $setting)) throw new RuntimeException("Falta configuración Docker {$setting}");
+}
+$restoreTool = file_get_contents("{$root}/Tools/test-restore.sh");
+foreach (['dbmercadoganadero', 'Respaldo validado sin modificar MANIFEST ni SHA256'] as $restoreContract) {
+    if (!str_contains($restoreTool, $restoreContract)) {
+        throw new RuntimeException("Restore debe conservar respaldos legados: falta {$restoreContract}");
+    }
+}
+foreach (['mv -- "$manifest_temp" "$manifest_file"', 'mv -- "$manifest_pending" "$manifest_file"'] as $manifestMutation) {
+    if (str_contains($restoreTool, $manifestMutation)) {
+        throw new RuntimeException('Restore no debe modificar MANIFEST.md ni SHA256SUMS.txt.');
+    }
 }
 
 foreach (['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'] as $pdf) {

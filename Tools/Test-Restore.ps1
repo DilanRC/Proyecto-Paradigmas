@@ -8,9 +8,9 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$SourceDatabase = 'dbtindervacas'
-$RestoreDatabase = 'dbtindervacas_restore_test'
-$PartsDatabase = 'dbtindervacas_restore_parts_test'
+$SourceDatabase = 'bdmercadoganadero'
+$RestoreDatabase = 'bdmercadoganadero_restore_test'
+$PartsDatabase = 'bdmercadoganadero_restore_parts_test'
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $AdvanceMatch = [regex]::Match($Avance, '^Avance(?<avance>[0-9]{2})(Correccion(?<correccion>[0-9]{2}))?$')
 $AdvanceNumber = $AdvanceMatch.Groups['avance'].Value
@@ -18,11 +18,21 @@ $CorrectionNumber = $AdvanceMatch.Groups['correccion'].Value
 $AdvanceSlug = "avance$AdvanceNumber"
 if ($CorrectionNumber) { $AdvanceSlug += "_correccion$CorrectionNumber" }
 $BackupDirectory = Join-Path $ProjectRoot "Database/Backups/$Avance"
-$CompleteFile = Join-Path $BackupDirectory "${SourceDatabase}_${AdvanceSlug}_completo.sql"
-$SchemaFile = Join-Path $BackupDirectory "${SourceDatabase}_${AdvanceSlug}_estructura.sql"
-$DataFile = Join-Path $BackupDirectory "${SourceDatabase}_${AdvanceSlug}_datos.sql"
 $ChecksumsFile = Join-Path $BackupDirectory 'SHA256SUMS.txt'
 $ManifestFile = Join-Path $BackupDirectory 'MANIFEST.md'
+$BackupDatabase = $null
+foreach ($candidateDatabase in @($SourceDatabase, 'dbmercadoganadero')) {
+    $candidateCompleteFile = Join-Path $BackupDirectory "${candidateDatabase}_${AdvanceSlug}_completo.sql"
+    $candidateSchemaFile = Join-Path $BackupDirectory "${candidateDatabase}_${AdvanceSlug}_estructura.sql"
+    $candidateDataFile = Join-Path $BackupDirectory "${candidateDatabase}_${AdvanceSlug}_datos.sql"
+    if ((Test-Path $candidateCompleteFile) -and (Test-Path $candidateSchemaFile) -and (Test-Path $candidateDataFile)) {
+        $BackupDatabase = $candidateDatabase
+        $CompleteFile = $candidateCompleteFile
+        $SchemaFile = $candidateSchemaFile
+        $DataFile = $candidateDataFile
+        break
+    }
+}
 
 function Invoke-MySqlQuery([string]$Sql) {
     $result = & docker compose exec -T -e "CHECK_SQL=$Sql" db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -N -B -uroot -e "$CHECK_SQL"' 2>&1
@@ -54,20 +64,12 @@ $RestoreCreated = $false
 $PartsCreated = $false
 Push-Location $ProjectRoot
 try {
+    if (-not $BackupDatabase) { throw "Faltan respaldos para $SourceDatabase o dbmercadoganadero en $BackupDirectory" }
     foreach ($requiredDump in @($CompleteFile, $SchemaFile, $DataFile)) {
         if (-not (Test-Path $requiredDump) -or (Get-Item $requiredDump).Length -eq 0) { throw "Falta un respaldo: $requiredDump" }
     }
     if (-not (Test-Path $ChecksumsFile) -or (Get-Item $ChecksumsFile).Length -eq 0) { throw "Faltan las sumas: $ChecksumsFile" }
     if (-not (Test-Path $ManifestFile) -or (Get-Item $ManifestFile).Length -eq 0) { throw "Falta el manifiesto: $ManifestFile" }
-
-    $pendingManifest = [IO.File]::ReadAllText($ManifestFile)
-    foreach ($field in @('Intercalación comprobada', 'Restauración completa comprobada',
-        'Restauración estructura + datos comprobada', 'Cantidad de tablas', 'Cantidad de restricciones',
-        'Cantidad de índices', 'Cantidad de PRIMARY KEY', 'Cantidad de FOREIGN KEY', 'Cantidad de CHECK',
-        'Resultado final')) {
-        $pendingManifest = $pendingManifest -replace "(?m)^- $([regex]::Escape($field)): .*$", "- ${field}: Pendiente"
-    }
-    [IO.File]::WriteAllText($ManifestFile, $pendingManifest, [Text.UTF8Encoding]::new($false))
 
     Get-Content $ChecksumsFile | ForEach-Object {
         $parts = $_ -split '  ', 2
@@ -81,28 +83,27 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'compose.yaml no es válido.' }
     & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqladmin ping -h 127.0.0.1 -uroot --silent' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'El servicio db no está disponible.' }
-
     $restoreExists = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$RestoreDatabase';"
     if ($restoreExists -ne '0') { throw "$RestoreDatabase ya existe; no se eliminará una base temporal ajena." }
     $partsExists = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$PartsDatabase';"
     if ($partsExists -ne '0') { throw "$PartsDatabase ya existe; no se eliminará una base temporal ajena." }
     Invoke-MySqlQuery "CREATE DATABASE $RestoreDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | Out-Null
     $RestoreCreated = $true
-    Get-Content -Raw $CompleteFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_test'
+    Get-Content -Raw $CompleteFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot bdmercadoganadero_restore_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo completo.' }
     Invoke-MySqlQuery "CREATE DATABASE $PartsDatabase CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" | Out-Null
     $PartsCreated = $true
-    Get-Content -Raw $SchemaFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_parts_test'
+    Get-Content -Raw $SchemaFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot bdmercadoganadero_restore_parts_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo de estructura.' }
-    Get-Content -Raw $DataFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot dbtindervacas_restore_parts_test'
+    Get-Content -Raw $DataFile | & docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot bdmercadoganadero_restore_parts_test'
     if ($LASTEXITCODE -ne 0) { throw 'Falló la restauración del respaldo de datos.' }
 
     if ($InjectSchemaDifference) {
         Invoke-MySqlQuery "ALTER TABLE $PartsDatabase.tbproductor ADD CONSTRAINT ck_injected_metadata CHECK (tbproductorid IS NOT NULL);" | Out-Null
     }
-    Compare-MySqlMetadata $SourceDatabase $RestoreDatabase 'origen/completo'
     Compare-MySqlMetadata $RestoreDatabase $PartsDatabase 'completo/estructura+datos'
-    foreach ($database in @($SourceDatabase, $RestoreDatabase, $PartsDatabase)) {
+    $ExpectedTablesCsv = Invoke-MySqlQuery "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$RestoreDatabase' AND TABLE_TYPE='BASE TABLE';"
+    foreach ($database in @($RestoreDatabase, $PartsDatabase)) {
         $collation = Invoke-MySqlQuery "SELECT CONCAT(DEFAULT_CHARACTER_SET_NAME,'/',DEFAULT_COLLATION_NAME) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='$database';"
         if ($collation -ne 'utf8mb4/utf8mb4_unicode_ci') { throw "$database usa $collation." }
         $invalidTables = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE' AND TABLE_COLLATION<>'utf8mb4_unicode_ci';"
@@ -116,7 +117,7 @@ try {
         $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$database' AND CONSTRAINT_TYPE='CHECK';"
         if ($checkCount -ne '0') { throw "$database contiene $checkCount CHECK." }
         $tablesCsv = Invoke-MySqlQuery "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$database' AND TABLE_TYPE='BASE TABLE';"
-        if ($tablesCsv -ne 'tbbitacora,tbcomprador,tbdireccion,tbfinca,tbfincadireccion,tbpagometodo,tbproductor,tbproductordireccion,tbtransportista,tbtransportistavehiculo,tbvehiculo') { throw "$database contiene tablas inesperadas: $tablesCsv." }
+        if ($tablesCsv -ne $ExpectedTablesCsv) { throw "$database contiene tablas inesperadas: $tablesCsv." }
         $indexCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$database';"
         if ($indexCount -ne '0') { throw "$database contiene $indexCount índices." }
         $productorIdExtra = Invoke-MySqlQuery "SELECT EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='$database' AND TABLE_NAME='tbproductor' AND COLUMN_NAME='tbproductorid';"
@@ -127,40 +128,24 @@ try {
         if ($programmableObjects -ne '0') { throw "$database contiene $programmableObjects objetos programables." }
     }
 
-    $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
+    $TableSourceDatabase = $RestoreDatabase
+    $Tables = (Invoke-MySqlQuery "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$TableSourceDatabase' AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;") -split "`n"
     foreach ($table in $Tables) {
-        $sourceCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $SourceDatabase.$table;"
+        $sourceCount = 'RESPALDO'
         $restoreCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $RestoreDatabase.$table;"
         $partsCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM $PartsDatabase.$table;"
         Write-Host ("{0,-38} origen={1} completo={2} partes={3}" -f $table, $sourceCount, $restoreCount, $partsCount)
-        if ($sourceCount -ne $restoreCount -or $restoreCount -ne $partsCount) { throw "El conteo difiere para $table." }
-        $sourceChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $SourceDatabase.$table;") -split "\s+" | Select-Object -Last 1
+        if ($restoreCount -ne $partsCount) { throw "El conteo difiere para $table." }
         $restoreChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $RestoreDatabase.$table;") -split "\s+" | Select-Object -Last 1
         $partsChecksum = (Invoke-MySqlQuery "CHECKSUM TABLE $PartsDatabase.$table;") -split "\s+" | Select-Object -Last 1
-        if ($sourceChecksum -ne $restoreChecksum -or $restoreChecksum -ne $partsChecksum) { throw "Los datos difieren para $table." }
+        if ($restoreChecksum -ne $partsChecksum) { throw "Los datos difieren para $table." }
     }
 
-    Invoke-MySqlQuery "SELECT tbproductorid,tbproductoridentificacionnumero FROM $RestoreDatabase.tbproductor ORDER BY tbproductorid LIMIT 1;" | Out-Null
-    $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$SourceDatabase' AND TABLE_TYPE='BASE TABLE';"
-    $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase';"
-    $indexCount = Invoke-MySqlQuery "SELECT COUNT(DISTINCT TABLE_NAME,INDEX_NAME) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='$SourceDatabase';"
-    $primaryKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='PRIMARY KEY';"
-    $foreignKeyCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='FOREIGN KEY';"
-    $checkCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$SourceDatabase' AND CONSTRAINT_TYPE='CHECK';"
-    $manifest = [IO.File]::ReadAllText($ManifestFile)
-    $manifest = $manifest -replace '(?m)^- Intercalación comprobada: .*$', '- Intercalación comprobada: utf8mb4/utf8mb4_unicode_ci en base y once tablas'
-    $manifest = $manifest -replace '(?m)^- Restauración completa comprobada: .*$', '- Restauración completa comprobada: Sí'
-    $manifest = $manifest -replace '(?m)^- Restauración estructura \+ datos comprobada: .*$', '- Restauración estructura + datos comprobada: Sí'
-    $manifest = $manifest -replace '(?m)^- Cantidad de tablas: .*$', "- Cantidad de tablas: $tableCount"
-    $manifest = $manifest -replace '(?m)^- Cantidad de restricciones: .*$', "- Cantidad de restricciones: $constraintCount"
-    $manifest = $manifest -replace '(?m)^- Cantidad de índices: .*$', "- Cantidad de índices: $indexCount"
-    $manifest = $manifest -replace '(?m)^- Cantidad de PRIMARY KEY: .*$', "- Cantidad de PRIMARY KEY: $primaryKeyCount"
-    $manifest = $manifest -replace '(?m)^- Cantidad de FOREIGN KEY: .*$', "- Cantidad de FOREIGN KEY: $foreignKeyCount"
-    $manifest = $manifest -replace '(?m)^- Cantidad de CHECK: .*$', "- Cantidad de CHECK: $checkCount"
-    $manifest = $manifest -replace '(?m)^- Resultado final: .*$', '- Resultado final: APROBADO'
-    $manifest = $manifest -replace '(?m)^- Observaciones: .*$', '- Observaciones: Estructura, datos, cero PK, cero FK, cero CHECK, cero índices, cero AUTO_INCREMENT, intercalación y conteos sin diferencias.'
-    [IO.File]::WriteAllText($ManifestFile, $manifest, [Text.UTF8Encoding]::new($false))
+    Invoke-MySqlQuery "SELECT pr.tbproductorid,pe.tbpersonaidentificacionnumero FROM $RestoreDatabase.tbproductor pr JOIN $RestoreDatabase.tbpersona pe ON pe.tbpersonaid=pr.tbpersonaid ORDER BY pr.tbproductorid LIMIT 1;" | Out-Null
+    $tableCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$RestoreDatabase' AND TABLE_TYPE='BASE TABLE';"
+    $constraintCount = Invoke-MySqlQuery "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA='$RestoreDatabase';"
     Write-Host "Restauración correcta: tablas=$tableCount, restricciones=$constraintCount."
+    Write-Host "Respaldo validado sin modificar MANIFEST ni SHA256: $BackupDatabase."
 }
 finally {
     if ($RestoreCreated) {

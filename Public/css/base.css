@@ -1,0 +1,80 @@
+@import url('./icons.css?v=fa-7.3.1');
+@import url('./public-product.css?v=product-1');
+
+/* base.css — Reset y estilos de elementos HTML base. */
+
+* {
+    box-sizing:border-box;
+}
+
+html {
+    min-width:320px;
+    background:var(--background);
+}
+
+body {
+    min-height:100vh;
+    margin:0;
+    color:var(--text);
+    background:radial-gradient(circle at 90% 0%,rgba(226,242,232,.85),transparent 30rem),var(--background);
+    font-size:15px;
+    line-height:1.5;
+}
+
+/*
+ * Los paneles privados fallan cerrados en presentación: no se pintan hasta que
+ * auth-gate valida el marcador de sesión. Si JS falla, el panel queda oculto
+ * en lugar de mostrar brevemente datos antes de una redirección.
+ */
+body.rural-panel {
+    visibility:hidden;
+}
+
+html[data-tc-auth='ready'] body.rural-panel {
+    visibility:visible;
+}
+
+button, input, select, textarea {
+    font:inherit;
+}
+
+button, select {
+    cursor:pointer;
+}
+
+button:disabled {
+    cursor:wait;
+    opacity:.65;
+}
+
+.screen-reader-only {
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+}
+
+[hidden] {
+    display:none !important;
+}
+
+fieldset {
+    min-width:0;
+    margin:0 0 22px;
+    padding:18px;
+    border:1px solid var(--border);
+    border-radius:14px;
+}
+
+fieldset:last-of-type {
+    margin-bottom:8px;
+}
+
+legend {
+    padding:0 8px;
+    color:var(--primary-dark);
+    font-size:13px;
+    font-weight:800;
+}

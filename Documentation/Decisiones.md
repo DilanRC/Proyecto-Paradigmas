@@ -1,10 +1,71 @@
 # Decisiones - Corrección 04
 
+## DEC-PER-001 - Persona única y capacidades independientes
+
+Estado: SUPERADA parcialmente por P0-C para Comprador/Vendedor. Sigue vigente
+para `tbpersona` como identidad compartida y para Transportista como capacidad
+operativa actual.
+
+`tbpersona` concentra identificación, tipo, nombre, teléfono, correo y estado
+global. La existencia de una fila en `tbproductor` o `tbtransportista`
+representa una capacidad concreta. `tbcomprador` queda como estructura legacy
+de compatibilidad hasta migración explícita; no se amplía ni se toma como
+entidad normativa. No se crean roles, catálogos, ENUM ni columnas de tipo de
+rol.
+
+Los IDs históricos de los tres perfiles y sus relaciones se conservan. Cada
+perfil contiene `tbpersonaid` y su propio estado de participación. El estado
+efectivo requiere persona y perfil activos.
+
+## DEC-PER-002 - Conflictos y escritura compartida
+
+Al crear una capacidad, PHP crea la persona o la reutiliza por identificación.
+Devuelve 409 si la capacidad ya existe o si los datos personales recibidos no
+coinciden, sin sobrescribir ni escoger datos automáticamente. Actualizar los
+datos personales desde cualquier capacidad modifica `tbpersona` y se refleja
+en las demás. PHP aplica unicidad, IDs manuales y coherencia mediante
+transacciones, sentencias preparadas y bloqueos nombrados.
+
+## DEC-PER-003 - Desactivación lógica
+
+`DELETE` desactiva exclusivamente el perfil y nunca ejecuta `DELETE FROM`.
+`PATCH` reactiva exclusivamente el perfil. Una persona globalmente inactiva no
+puede operar ni reactivar capacidades por esos endpoints.
+
+## DEC-PER-004 - Migración atómica y espejo PostgreSQL
+
+La migración detecta primero identificaciones duplicadas y datos personales
+incompatibles. Ante un conflicto aborta antes de retirar columnas. Si no hay
+conflictos, crea y enlaza `tbpersona`, verifica conteos, IDs, relaciones y
+huérfanos, y solo después elimina las columnas duplicadas. La misma
+transformación existe para MySQL y Supabase/PostgreSQL. La migración remota no
+se ejecuta ni se activa por push sin snapshot confirmado y autorización
+expresa.
+
+## DEC-PER-005 - Tablas sin objetos de integridad
+
+El modelo final de base preparada tiene exactamente 30 tablas y mantiene cero PK, FK, UNIQUE,
+CHECK, índices, ENUM, defaults, triggers y objetos programables.
+
 ## DEC-C04-001 - Instrucción docente vigente
 
 La instrucción docente sustituye el modelo anterior. `dbtindervacas` conserva
 cinco tablas: `tbproductor`, `tbproductordireccion`, `tbfinca`, `tbbitacora` y
 `tbcomprador`.
+
+## DEC-P0A-001 - Nombre canónico de la base
+
+Calidad indicó directamente que el nombre vigente debe ser
+`bdmercadoganadero`, con `bd` de base de datos. Desde P0-A,
+`bdmercadoganadero` es el contrato operativo para SQL, configuración, seeds,
+migraciones activas, pruebas, herramientas y documentación vigente.
+
+`dbmercadoganadero` queda como nombre legado de respaldos históricos. Los
+commits `323044e` y `7ad7453` interpretaron el estado anterior del repositorio
+como fuente normativa y por eso restauraron `dbmercadoganadero`; esa política
+queda SUPERADA por la aprobación directa de Calidad. No se reescribe historia:
+la corrección se aplica hacia adelante y los respaldos legados se verifican sin
+modificar sus dumps, `MANIFEST.md` ni `SHA256SUMS.txt`.
 
 ## DEC-C04-002 - Cero restricciones de integridad
 
@@ -22,7 +83,8 @@ Dirección y finca guardan ese mismo valor como enlace lógico, sin FK.
 
 ## DEC-C04-004 - Identificación inmutable por contrato
 
-`tbproductoridentificacionnumero` no es PK. La aplicación no permite cambiarla.
+La identificación vive ahora en `tbpersonaidentificacionnumero`; no es PK y la
+aplicación no permite cambiarla.
 Si fue digitada incorrectamente se debe:
 
 1. desactivar el registro incorrecto;
@@ -45,6 +107,15 @@ misma transacción. Antes de autenticación usa `NO_AUTENTICADO` y
 PHP también envía la fecha, el actor y el origen como parámetros de la
 sentencia preparada; el motor no completa columnas automáticamente.
 
+Estado T3: cuando la API recibe `Authorization: Bearer <jwt>`, PHP valida el
+JWT con `GET /v1/auth/verify` del sidecar Supabase y resuelve el actor contra
+`tbpersona.tbpersonacorreoelectronico`. Un token inválido conserva 401/403, el
+sidecar caído o una respuesta no verificable responde 503, y un token válido
+sin vínculo único con Persona responde 409. Si no hay `Authorization`, se
+mantiene el modo local `NO_AUTENTICADO` para compatibilidad de desarrollo y
+pruebas. El `role` de Supabase queda como dato técnico de sesión; no crea roles
+de negocio ni capacidades.
+
 ## DEC-C04-007 - Entregas históricas
 
 Avance01 y Correcciones 01, 02 y 03 permanecen intactas. La nueva evidencia,
@@ -52,12 +123,22 @@ respaldo y etiqueta corresponden a Corrección 04.
 
 ## DEC-C04-008 - Compradores
 
-`tbcomprador` conserva identificación, nombre, teléfono, correo y estado con
-el mismo perfil de tipos de `tbproductor`. Es una tabla independiente: no se
-agregan relaciones, claves, índices, defaults ni valores automáticos. La
-migración v2 crea y valida la misma estructura en Supabase PostgreSQL.
+Estado: SUPERADA parcialmente por P0-C. `tbcomprador` se conserva por
+compatibilidad con el esquema y datos existentes, pero ya no es la entidad
+normativa para modelar el comportamiento comprador. La clasificación Comprador
+del negocio debe vivir como histórico del Productor, no como histórico propio
+de `tbcomprador`.
+
+No se agregan relaciones, claves, índices, defaults ni valores automáticos.
+No se crea `tbcompradorestadoperiodo`.
 
 # Decisiones - Avance de direcciones, pagos y transporte
+
+## DEC-TRAMO-7 - Retiro frontend de Comprador
+
+En el tramo 7 se retira Comprador del frontend; Productor, Transportista,
+Vehículo y Métodos de pago se mantienen como paneles activos, no se toca el
+contrato `estado` y el retiro respeta el alcance secuencial del remodelado.
 
 Este bloque solamente toca base de datos y documentación. Ninguna decisión se
 implementa con código de aplicación.
@@ -165,6 +246,593 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-en la migración `v3`: once tablas, `tbproductordireccion` normalizada y el mismo
-criterio de cero llaves, restricciones, índices y valores automáticos. El espejo
-sigue a MySQL; nunca al revés.
+mediante migraciones versionadas: 30 tablas, `tbpersona` como identidad única,
+`tbproductordireccion` normalizada, estructura comercial histórica y el mismo
+criterio de cero llaves, restricciones, índices y valores automáticos. El
+espejo sigue a MySQL; nunca al revés. Aplicar el cambio remoto requiere
+snapshot y autorización expresa.
+
+## DEC-16 - Ubicaciones GPS append-only
+
+`tbproductorubicacion` es una serie temporal: cada lectura GPS del productor
+inserta una fila nueva y ninguna fila se actualiza ni se elimina. Las
+consecuencias vigentes son:
+
+1. **Solo INSERT**: `Application/Model/ProductorUbicacion.php` no expone
+   `actualizar()` ni `eliminar()`, y el endpoint
+   `/api/productores-ubicacion.php` rechaza PUT, PATCH y DELETE con 405.
+2. **Fecha del servidor**: PHP asigna `tbproductorubicacionfecha` con su reloj;
+   el campo `fecha` que pudiera enviar el cliente se descarta.
+3. **Origen conjunto controlado**: `tbproductorubicacionorigen` solo acepta
+   `NAVEGADOR` o `MANUAL`; cualquier otro valor se rechaza con error por campo.
+4. **Lock dedicado**: el consecutivo usa `MAX(tbproductorubicacionid) + 1`
+   bajo el bloqueo nombrado `tindercows_productor_ubicacion_alta`, retenido
+   hasta después del COMMIT para garantizar IDs únicos bajo ráfagas
+   simultáneas.
+5. **Bitácora en la misma transacción**: cada inserción registra
+   `REGISTRAR_UBICACION` en `tbbitacora` antes del commit.
+6. **Coordenadas exactas**: latitud y longitud se validan por rango (-90..90,
+   -180..180) y se guardan como texto hacia `DECIMAL(10,7)`, sin redondeos de
+   punto flotante.
+
+# Decisiones - Modelos de históricos
+
+## DEC-18 - Periodos con fechafin NULL como vigente; cierre inmutable
+
+El estado y la residencia del productor se modelan como hechos históricos
+(plan §7-8). `ProductorEstadoPeriodo` escribe en `tbproductorestadoperiodo` y
+`ProductorDireccion` trabaja sobre `tbproductordireccion` con sus columnas de
+vigencia: **el periodo vigente es la fila con fechafin NULL**. Un cambio cierra
+el periodo abierto (UPDATE solo de fechafin, asignada por el reloj de PHP) e
+inserta una fila nueva; ningún periodo cerrado se edita ni elimina. El motor no
+puede garantizar "máximo un abierto por productor" (cero restricciones): PHP lo
+garantiza ejecutando abrir/cerrar bajo el bloqueo nombrado por productor
+(`tindercows_productor_estado_{id}`) dentro de la transacción completa, y los
+métodos de escritura rechazan llamadas sin ese lock (`LogicException`). La
+consulta `consultarVigenteEn(fecha)` resuelve el periodo cuya vigencia contiene
+la fecha. La política anterior de "exactamente una dirección por productor"
+se reescribe sobre el periodo abierto: tener varias direcciones históricas es
+lo normal, y dos periodos abiertos simultáneos se detectan como integridad
+rota.
+
+# Decisiones - Códigos HTTP de ubicación
+
+## DEC-17 - Consistencia de códigos con el resto de la API
+
+Las validaciones de `/api/productores-ubicacion.php` responden **422**
+(contenido no procesable) en lugar de 400: coordenadas fuera de rango o no
+numéricas, precisión negativa o no numérica, origen fuera de
+`{NAVEGADOR, MANUAL}`, campos desconocidos y rango de fechas inválido. Es el
+mismo criterio que ya aplicaban `ProductorController` (422 en sus trece
+validaciones) y `CompradorController` (422 en nueve). Se mantienen: **404**
+productor inexistente, **409** productor inactivo, **405** métodos
+destructivos sobre la tabla append-only y 400/415 del contrato de transporte
+(JSON malformado / Content-Type incorrecto). El alta válida responde **201**
+porque crea una fila nueva, igual que POST de productor.
+
+# Decisiones - Estado como periodos
+
+## DEC-19 - El estado es un hecho histórico; la columna muerta se retira en el mismo PR
+
+`tbproductorestado` se retira de `tbproductor` (MySQL y espejo Supabase) en el
+mismo PR que cambia `ProductorController` para derivar el estado del periodo
+abierto, de modo que nadie pueda volver a usar la columna eliminada. El
+esquema MySQL (`000instalacioncompleta.sql`), la migración
+`004eliminaestadoproductor.sql` (con backfill y comprobación previa) y el
+espejo PostgreSQL (`schema.sql` + `migrate.php` v5) quedan sincronizados. La
+semilla `103exampleproductores.sql` crea periodos iniciales ACTIVO para los
+productores ficticios en lugar de escribir la columna muerta. Un productor sin
+periodos (solo puede ocurrir con datos heredados pre-migración) se considera
+**INACTIVO** por defecto: no hay evidencia de que esté activo. El orden de
+locks en `desactivar`/`reactivar` es: bloqueo de fila FOR UPDATE del
+productor → lock nombrado del periodo por productor; idempotente: desactivar
+dos veces seguidas no duplica periodos.
+
+## DEC-20 - Periodos de estado sobre persona con capacidades
+
+Al integrar este tramo con la unificación de personas (DEC de `tbpersona`),
+la identidad y el contacto del productor vienen de `tbpersona` y su estado
+del periodo abierto: son dos ejes independientes. Un productor cuenta como
+**ACTIVO** solo si su periodo abierto está en 1 **y** `tbpersonaestado` es 1,
+porque una identidad inactiva desactiva todas sus capacidades. El modelo
+expone el estado derivado con el alias `tbproductorestado` en cada consulta,
+de modo que `FincaController`, `ProductorUbicacionController` y
+`ProductorController` siguen leyendo el estado por el mismo nombre sin
+depender de una columna que ya no existe. La migración MySQL se renumeró a
+`004` porque `003` lo ocupa `003personacapacidades.sql`, y debe ejecutarse
+después de ella: primero se unifica la persona, luego se retira la columna.
+
+# Decisiones - Respaldo previo al remodelado
+
+## DEC-21 - Respaldo previo al remodelado (tramo 1)
+
+El tramo 2 se ejecutó antes que el tramo 1 porque solo agregaba tablas y no
+arriesgaba datos existentes; el tramo 6, que sí escribe sobre datos
+existentes, no podía arrancar sin un punto de reversión. Por eso se generó
+`Database/Backups/Avance02/`, etiquetado explícitamente como "previo al
+remodelado por tramos (EIF400)" en su `MANIFEST.md`, con
+`Tools/backup-database.sh Avance02` y verificado con `Tools/test-restore.sh
+Avance02`: quince tablas, cero PK/FK/CHECK/índices/AUTO_INCREMENT y
+restauración completa y por partes idénticas al origen (`APROBADO`). Los ocho
+respaldos anteriores (`Avance01` hasta `LineaBase`) se conservan intactos, tal
+como exige el plan.
+
+# Decisiones - Migrar lo que ya existe (tramo 6)
+
+## DEC-22 - Backfill de fecha de inicio en dirección histórica, y conteo de comprador
+
+`tbproductordireccionfechainicio` quedó nullable en
+`Migrations/002historicoproductor.sql` para no romper el `ALTER TABLE` sobre
+filas ya existentes; a esas filas heredadas nunca nadie les asignó una fecha
+de inicio porque no existía el concepto antes del tramo 2. La semilla
+`103exampleproductores.sql` insertaba `tbproductordireccion` sin esa columna
+y reproducía el mismo hueco en cada instalación limpia; se corrigió para
+fijar `NOW()` igual que ya hacía el periodo de estado.
+
+Para bases con datos heredados de antes del tramo 2,
+`Migrations/005backfilldireccionfechainicio.sql` asigna una única marca de
+tiempo (capturada una sola vez con `SET @fechaMigracion := NOW()`) a toda fila
+con `tbproductordireccionfechainicio IS NULL`; es la frase que hay que poder
+decir en la defensa: **"el histórico confiable empieza en la fecha de
+migración; los datos anteriores no existían en el modelo previo"**. Es
+idempotente (solo toca filas con la columna en `NULL`) y no inventa fechas
+distintas por productor porque no hay evidencia de cuándo empezó cada una.
+
+`Database/Tests/diagnostico.sql` se actualizó porque su D-01 verificaba una
+política ya reemplazada por DEC-18 (una sola dirección por productor): con
+histórico, tener varias filas cerradas es normal. D-01 ahora detecta
+productores con más de un periodo de dirección **abierto**, D-01b detecta
+productores sin ninguno abierto, y D-01c detecta periodos abiertos sin fecha
+de inicio (el síntoma exacto que corrige esta migración). Se agregaron
+también D-10 y D-11, equivalentes para `tbproductorestadoperiodo`, que no
+tenía ninguna consulta de diagnóstico propia.
+
+Conteo de `tbcomprador` en la instalación limpia de referencia: **0 filas**
+(sin datos heredados en este entorno). No es criterio para decidir si se
+borra la tabla — DEC-TRAMO-7 ya la conserva — sirve para confirmar que la
+corrección del tramo 7 no perdió compradores existentes. Si el equipo tiene
+una base de desarrollo compartida con compradores reales cargados, debe
+correrse `SELECT COUNT(*) FROM tbcomprador;` ahí antes de cerrar el tramo con
+el equipo, porque este conteo es local.
+
+Verificado: instalación limpia (`docker compose down -v && up`) levanta sin
+errores, `Tests/naming_gate.php` pasa, `Database/Tests/diagnostico.sql`
+devuelve cero filas en todas las consultas, y la suite PHP relevante
+(`schema_test`, `direccion_test`, `address_policy_test`,
+`productor_estado_periodo_test`, `productor_estado_flujo_test`,
+`comprador_test`, `productor_ubicacion_test`, `finca_direccion_test`) pasa
+completa. Ningún productor quedó sin periodo de dirección o estado abierto,
+ninguno con dos a la vez.
+
+# Decisiones - Esquema histórico transversal (tramo 13)
+
+## DEC-26 - La conclusión del Tramo 13 queda SUPERADA por evidencia posterior de Calidad
+
+**Estado: SUPERADA, no eliminada.** La DEC-23 siguiente fue válida contra la
+matriz disponible al cerrar el PR #21: por eso confirmó las quince tablas y
+dejó `tbcomprador` sin histórico profundo. La evidencia posterior, aprobada
+por Calidad, cambia el contrato: Productor es el núcleo y Comprador/Vendedor
+son clasificaciones derivadas de su comportamiento; Compra y Venta son hechos
+históricos; y el funnel debe registrar al menos me gusta, seguir, carrito y
+compra.
+
+Esta decisión no autoriza SQL todavía. P0-C debe definir el destino de
+`tbcomprador`, la representación temporal de las clasificaciones y las
+políticas de transición antes de ampliar el esquema. D-12 y D-13 se conservan
+como trazabilidad del diagnóstico previo: no se borran ni se reinterpretan como
+prueba de que la política nueva ya esté implementada.
+
+## DEC-P0C-001 - Matriz arquitectónica cerrada
+
+P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
+decisión vigente es: Productor es núcleo; Comprador y Vendedor son
+clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
+`tbcomprador` se conserva solo como legacy de compatibilidad temporal hasta que
+Backend deje de depender de ella; Compra y Venta son hechos históricos propios.
+
+La representación vigente de base es `tbproductorclasificacionperiodo`, con
+`tbproductorclasificacionperiodotipo` validado por PHP como `COMPRADOR` o
+`VENDEDOR`. Un Productor puede tener ambos tipos abiertos simultáneamente. No
+se crean `tbvendedor`, `tbvendedorestadoperiodo`, `tbvendedoractividad` ni
+`tbcompradorestadoperiodo`.
+
+La matriz también deja PENDIENTE lo que no tiene evidencia suficiente:
+criterios y pesos del algoritmo, pérdida/reactivación automática,
+`tbanimalestado`, `tbcompraestado`, horario, cobertura, temporalidad de
+vehículo-transportista y captura de visualización por fila. Ningún punto
+PENDIENTE autoriza SQL.
+
+## DEC-DBREADY-001 - Estructura comercial lista para Backend
+
+La capa DB queda preparada con 12 tablas nuevas:
+`tbproductorclasificacionperiodo`, `tbanimal`, `tbanimalproduccionsalud`,
+`tbanimalpublicacion`, `tbcompra`, `tbventa`, `tbanimalinteraccion`,
+`tbcarrito`, `tbcarritoanimal`, `tbtransportistaestadoperiodo`,
+`tbtransportistaflete` y `tbtransportistaresena`.
+
+`tbanimal` es identidad estable. Peso, edad, estado reproductivo, partos,
+litros de leche, producción y salud son observaciones históricas en
+`tbanimalproduccionsalud`; no se inventa fecha de nacimiento. `tbanimalpublicacion`
+congela productor vendedor y finca del momento. `tbcompra` y `tbventa` son
+hechos económicos propios y guardan método de pago usado; `tbventa.tbcompraid`
+es NULL porque un animal pudo nacer en la finca o existir antes del sistema.
+No se crea `tbcompraestado` porque no hay ciclo de estados aprobado.
+
+El funnel confirmado vive en `tbanimalinteraccion` para `ME_GUSTA`, `SEGUIR`,
+`CARRITO` y `COMPRA`; `tbcarrito` y `tbcarritoanimal` representan colección e
+historial de agregar/retirar sin borrar pasado. No se captura cada
+visualización porque no está confirmada como requisito obligatorio.
+
+Transporte agrega `tbtransportistaestadoperiodo`, `tbtransportistaflete` y
+`tbtransportistaresena`. No se almacenan `cantidadfletessemanales`,
+`metodopagofrecuente` ni `calificacionpromedio`; se derivan con `COUNT`,
+`GROUP BY` y `AVG`. La fecha real de inicio de un transportista puede quedar
+NULL si no existe evidencia; `fecharegistroensistema` solo prueba cuándo el
+sistema registró el periodo.
+
+## DEC-DBREADY-005 - Pasada de concordancia contra la evidencia directa de Calidad
+
+Última revisión del esquema contra la evidencia directa, sin tocar Backend ni
+ampliar alcance. Ocho divergencias corregidas:
+
+1. **`tbcomprador` es LEGACY, no destino definitivo.** Comprador es una
+   clasificación del Productor, no una capacidad de Persona: la única fuente de
+   verdad es `tbproductorclasificacionperiodo` con `tipo = COMPRADOR`.
+   `tbcomprador` sobrevive únicamente porque el CRUD actual de Backend depende
+   de ella (`Application/Model/Comprador.php`,
+   `Application/Controller/CompradorController.php`, `Public/api/compradores*`,
+   `Public/js/shared/capacidades.js` y `Tests/comprador_test.php`). Mientras
+   exista: no se amplía, no recibe históricos y no se crea
+   `tbcompradorestadoperiodo`.
+
+   **Trabajo de Backend que permite retirarla**, en este orden:
+   a) que toda lectura de "es comprador" pase por
+   `tbproductorclasificacionperiodo` en vez de `tbcomprador.tbcompradorestado`;
+   b) que el alta/baja del CRUD abra y cierre periodos de clasificación en vez
+   de escribir el bit;
+   c) migrar cada fila viva de `tbcomprador` a un periodo `COMPRADOR` del
+   Productor de esa persona, y registrar en bitácora la equivalencia;
+   d) retirar modelo, controlador, endpoints y contrato de frontend;
+   e) recién entonces, `DROP TABLE tbcomprador` en una migración propia con
+   respaldo previo. Ningún paso de este tramo lo ejecuta.
+2. **El flete recupera lo que se perdió al pasar a SQL.**
+   `tbtransportistaflete` gana `tbvehiculoid`, `tbtransportistafletecantidadcabezas`
+   y `tbtransportistafletedistanciakm`. Ninguna DEC los había descartado: se
+   cayeron sin justificación. Son NULL cuando no se conocen.
+3. **Horario de transportista.** `tbtransportistahorario` guarda día, hora de
+   inicio, hora de fin y periodo de vigencia. Cambiar el horario cierra el
+   periodo y abre otro; no se sobrescribe. La cobertura geográfica sigue
+   PENDIENTE porque no hay evidencia.
+4. **La reseña la firma la persona.** `tbtransportistaresena.tbproductorid` pasa
+   a `tbpersonaid`. La identidad de quien contrata vive en `tbpersona`; exigir
+   productor dejaba fuera a quien contrata un flete sin serlo.
+5. **`tbanimal` es la identidad aprobada.** `tbanimalcodigo` pasa a
+   `tbanimalidentificacion` y se agrega `tbanimalcaracteristicas`. Raza y sexo
+   se mantienen. Edad y peso siguen fuera de la identidad.
+6. **`tbanimalobservacion` se revierte a `tbanimalproduccionsalud`.** El nombre
+   genérico "observación" no aparece en la evidencia: Calidad pidió producción y
+   salud del animal. Se conserva la forma histórica (una fila por registro con
+   fecha, origen y contexto) porque eso sí es requisito; lo que cambia es el
+   nombre, que ahora dice qué guarda.
+7. **La venta recupera dirección y propósito.** `tbventadireccionid` y
+   `tbventaproposito`. No existe DEC que los descarte; se habían perdido.
+8. **Cero estados mutables sin histórico.** Se eliminan `tbcarritoestado` y
+   `tbanimalpublicacionestado`. Sus transiciones viven en
+   `tbcarritoestadoperiodo` y `tbanimalpublicacionestadoperiodo`, con la misma
+   regla de periodo abierto único que ya aplica a productor y transportista.
+   Los bits `tbpersonaestado`, `tbfincaestado`, `tbvehiculoestado` y
+   `tbpagometodoactivo` no cambian: son disponibilidad técnica, no estado de
+   negocio.
+
+El esquema queda en 30 tablas. La migración 006 sigue siendo solo
+`CREATE TABLE IF NOT EXISTS`, así que un entorno que ya la había corrido con la
+versión anterior debe reinstalarse limpio: la corrección renombra y retira
+columnas y una migración aditiva no puede hacerlo sin perder o duplicar datos.
+Ningún entorno con datos reales tiene esas tablas todavía.
+
+## DEC-DBREADY-006 - Paso (a) del retiro de tbcomprador: la lectura
+
+Primer paso, y solo el primero, del plan de retiro de DEC-DBREADY-005. La
+pregunta "¿este productor es comprador?" ya no se responde con
+`tbcomprador.tbcompradorestado`: se responde con
+`ProductorClasificacionPeriodo::esComprador()`, que devuelve verdadero si y solo
+si existe un periodo `COMPRADOR` abierto.
+
+Semántica fijada por la prueba `Tests/comprador_clasificacion_test.php`:
+
+| Situación del productor | `esComprador()` |
+|---|---|
+| Sin ningún periodo `COMPRADOR` | `false` |
+| Periodo `COMPRADOR` abierto | `true` |
+| Periodo `COMPRADOR` cerrado | `false` |
+| `COMPRADOR` y `VENDEDOR` abiertos | `true` |
+
+Un periodo cerrado significa que lo fue y dejó de serlo; la fila no se borra.
+`COMPRADOR` y `VENDEDOR` son independientes, así que cerrar `VENDEDOR` no altera
+la respuesta de comprador. La prueba también verifica que la respuesta no
+depende del CRUD legacy: el productor del caso 4 nunca tuvo fila en
+`tbcomprador` y aun así el sistema lo reconoce como comprador.
+
+`Tests/naming_gate.php` impide la regresión: exige que
+`ProductorClasificacionPeriodo` declare `esComprador()`, prohíbe que lea
+`tbcomprador` y prohíbe que cualquier modelo distinto de `Comprador.php`
+(el CRUD heredado) toque `tbcompradorestado`.
+
+**Deliberadamente fuera de este paso.** No se cambia ninguna escritura: el CRUD
+de comprador sigue insertando y actualizando `tbcomprador` y su endpoint sigue
+devolviendo el `estado` derivado de ese bit. Cambiar eso es el paso (b) y es más
+delicado, porque hasta que las altas y bajas abran y cierren periodos, la
+clasificación estará vacía para los compradores existentes: leer la
+clasificación en el panel hoy los mostraría a todos como no compradores.
+El orden importa y por eso (b) va después, con su propia migración de datos.
+
+## DEC-DBREADY-007 - Paso (b): backfill primero, escrituras después
+
+Segundo paso del retiro de la tabla legacy de comprador, con estrategia
+expandir → migrar → cortar. El orden no es negociable: si primero se cambiara la
+lectura del panel, todos los compradores legacy aparecerían como falso porque
+sus periodos todavía no existirían.
+
+### 1. Precheck
+
+El CRUD viejo trabaja sobre `tbpersona` y podía registrar un comprador sin que
+esa persona fuera productora. La clasificación exige `tbproductorid`, así que
+antes del backfill se auditan todas las filas legacy contra `tbproductor` por
+`tbpersonaid`:
+
+- `Tools/backfill-clasificacion-comprador.php --check` audita y no escribe.
+- `D-22 comprador legacy sin productor` en `Database/Tests/diagnostico.sql`
+  reporta lo mismo desde SQL.
+
+Si aparece una sola fila incompatible, el script aborta con código 1, imprime
+identificación, persona y nombre afectados, y no migra nada. **No se inventa un
+`tbproductor`**: quién es esa persona en el negocio es una decisión humana.
+
+Conteo en la instalación limpia de referencia: 0 compradores legacy, 0
+incompatibles. En una base con datos reales hay que correr el `--check` antes de
+tocar nada.
+
+### 2. Backfill
+
+Para cada comprador legacy **activo** (bit en 1 y persona activa) que tenga
+productor y no tenga periodo `COMPRADOR` abierto, se abre uno con
+`fechainicio` = momento de la migración y motivo
+`MIGRACION_TBCOMPRADOR_LEGACY`. Esa fecha significa "desde aquí hay evidencia
+confiable", no que la persona empezó a comprar ese día; el motivo explícito
+existe para que nadie lea la fecha como historia real.
+
+Para el comprador legacy **inactivo** no se abre nada ni se inventa un periodo
+cerrado: no se sabe cuándo dejó de serlo. La fila legacy se conserva hasta el
+retiro.
+
+La migración es idempotente: `activar()` no hace nada si ya hay un periodo
+abierto, así que correrla dos veces deja un solo periodo.
+
+Cada corrida deja snapshot CSV antes y después, y bitácora de progreso, en
+`/tmp/backfill-clasificacion-comprador/` (`tail -f .../progress.log`).
+
+### 2b. La auditoría es una foto: revalidación por fila
+
+La lista de migrables se calcula una vez y se procesa después. En una base
+compartida ese intervalo alcanza para que alguien desactive al comprador, a la
+persona o mueva su vínculo con el productor, y el backfill abriría una
+clasificación con información vieja.
+
+Por eso `--apply` revalida **cada fila justo antes de migrarla**, ya dentro del
+lock de clasificación y de la transacción, releyendo la fila legacy con
+`FOR UPDATE`: eso la serializa contra `Comprador::bloquear()`, que es por donde
+pasa el CRUD para desactivar. Comprueba que la fila siga existiendo, que el bit
+y `tbpersonaestado` sigan en 1, que el productor sea el mismo y que no haya
+aparecido ya un periodo abierto.
+
+Si una fila dejó de ser migrable no se abre nada, se marca
+`OMITIDA_POR_CAMBIO_CONCURRENTE` (o `SIN_PRODUCTOR` si perdió o cambió el
+vínculo, que sigue sin inventarse) y el backfill continúa con las demás. Todas
+quedan listadas en el reporte final, que diferencia `MIGRADOS`, `YA_MIGRADOS`,
+`INACTIVOS`, `SIN_PRODUCTOR` y `OMITIDOS_POR_CAMBIO_CONCURRENTE`.
+
+El lock es por productor+tipo, no sobre la tabla: el backfill no congela el CRUD
+de los demás compradores mientras corre.
+
+### 3. Verificación
+
+Antes de tocar endpoints: todo comprador legacy activo migrable con exactamente
+un periodo abierto, todo inactivo con cero, cero duplicados y cero
+incompatibles. Lo vigilan `D-22`, `D-23` (activo sin clasificación abierta) y
+`D-24` (inactivo con clasificación abierta), más `D-18`/`D-19` que ya cubrían
+periodos abiertos duplicados y solapados.
+
+### 4. Escrituras
+
+`Application/Service/CompradorClasificacionService.php` traduce el CRUD a
+periodos, dentro de la transacción del llamador y bajo el lock nombrado por
+productor+tipo:
+
+- alta y reactivación abren `COMPRADOR`; repetirlas es idempotente;
+- baja cierra el periodo abierto; repetirla no modifica la historia cerrada;
+- reactivar abre un periodo **nuevo**, nunca reabre el cerrado;
+- sin productor existente no se escribe clasificación: el alta responde 409 con
+  el mensaje explícito y la transacción revierte también la fila legacy, así que
+  no se siguen creando compradores que la clasificación no pueda representar.
+
+Consecuencia visible: `POST /api/compradores.php` sobre una persona que no es
+productora ahora falla. Es el comportamiento correcto bajo el modelo aprobado, y
+es lo que impide que el problema del precheck se siga reproduciendo.
+
+### 5. Fuente de verdad
+
+El `estado` que devuelven la API y el panel sale de la clasificación abierta
+(`CASE` sobre el periodo `COMPRADOR` vigente por `tbpersonaestado`), no de
+`tbcompradorestado`. El filtro `ACTIVO/INACTIVO` y el orden del listado usan la
+misma expresión. El bit sigue escribiéndose para no romper la compatibilidad,
+pero ya no decide nada.
+
+### 5b. Regresión de auditoría corregida antes de migrar nada
+
+Primera versión de este paso: el controlador cerraba/abría la clasificación y
+después llamaba a `EstadoService::transicionar()`. Como `Comprador::buscar()` ya
+deriva el `estado` de la clasificación, el `anterior` que llegaba a la bitácora
+ya venía con el estado nuevo, y `DESACTIVAR` quedaba registrado como
+`INACTIVO -> INACTIVO` (y `REACTIVAR` como `ACTIVO -> ACTIVO`): la auditoría
+perdía la transición.
+
+`EstadoService::transicionar()` recibe ahora dos parámetros opcionales:
+`$estadoDeNegocio`, que lee el estado vigente de la fila mapeada en vez de la
+columna legacy, y `$sincronizar`, la escritura que acompaña la transición y que
+corre **después** de capturar `$anterior` y dentro de la misma transacción. Las
+otras tres entidades que usan el esqueleto (transportista, vehículo, método de
+pago) no cambian: sin esos parámetros el comportamiento es el de antes.
+
+Con eso, comprador conserva las tres propiedades a la vez: la bitácora ve
+`ACTIVO -> INACTIVO` y `INACTIVO -> ACTIVO`, el bit legacy no vuelve a decidir
+negocio (la idempotencia la decide la clasificación) y clasificación y bit
+siguen en la misma transacción, así que un fallo posterior revierte ambos.
+
+`Tests/comprador_backfill_test.php` inspecciona `tbbitacoradatosanteriores` y
+`tbbitacoradatosnuevos`, no solo la acción, y añade el caso de fallo posterior a
+la modificación de la clasificación: el `ROLLBACK` restaura periodo, bit y
+bitácora.
+
+### 6. Legacy
+
+No hay `DROP TABLE` en este tramo. Quedan los pasos (d) y (e): retirar modelo,
+controlador, endpoints y contrato de frontend, y recién después borrar la tabla
+con respaldo previo.
+
+### 7. Pruebas
+
+`Tests/comprador_backfill_test.php` cubre además las dos carreras, con una
+segunda conexión real: una fila que la auditoría vio activa y que se desactiva
+antes de aplicar no recibe clasificación y se reporta omitida; una fila cuya
+clasificación abre otra conexión en el intervalo termina idempotente, sin
+periodo duplicado y contada como ya migrada.
+
+`Tests/comprador_backfill_test.php` cubre los nueve casos exigidos: legacy
+activo migrado, legacy inactivo sin periodo, backfill dos veces con un solo
+periodo, activar dos veces idempotente, desactivar conservando el periodo
+cerrado, reactivar abriendo uno nuevo sin reabrir el anterior, COMPRADOR y
+VENDEDOR independientes, rollback ante fallo entre cierre y apertura, y legacy
+sin productor con error explícito y cero creación silenciosa.
+
+## DEC-DBREADY-002 - Migración sin pasado inventado
+
+`Database/Migrations/006estructuracomercialhistorica.sql` es idempotente y solo
+ejecuta `CREATE TABLE IF NOT EXISTS`. No hace `INSERT`, `UPDATE`, `DELETE` ni
+`ALTER TABLE tbcomprador`. Las bases existentes ganan la estructura nueva sin
+perder datos ni crear clasificaciones, animales, compras, ventas, interacciones,
+fletes o reseñas que nunca fueron registradas.
+
+## DEC-DBREADY-003 - Contrato de IDs para Backend
+
+Toda tabla nueva conserva IDs manuales. Backend debe usar `MAX(id)+1` bajo lock
+global de generación de ID por tabla y, cuando exista una invariante local,
+además un lock por entidad. Orden esperado: lock de entidad exterior si aplica,
+lock global de ID, escritura dentro de la misma transacción, commit y liberación
+en `finally`. Las consultas de diagnóstico detectan IDs repetidos, huérfanos,
+periodos abiertos duplicados, solapes y dominios fuera de lo que PHP debe
+validar. Esta decisión deja los locks en Backend especificados sin implementar
+endpoints ni algoritmo.
+
+## DEC-DBREADY-004 - Bits de estado restantes
+
+`tbpersonaestado`, `tbfincaestado`, `tbpagometodoactivo` y `tbvehiculoestado`
+no reciben históricos nuevos porque Calidad no aprobó semántica temporal
+defendible para esta fase. `tbtransportistaestado` sí tiene histórico confirmado
+y queda preparado en `tbtransportistaestadoperiodo`; mientras Backend mantenga
+ambos, el bit actual y el periodo abierto pueden divergir, por eso el
+diagnóstico cubre periodos duplicados y el modelo documenta que Backend debe
+sincronizarlos.
+
+## DEC-T0-001 - SQL como fuente única de tablas
+
+`Database/SqlScripts/000instalacioncompleta.sql` es la fuente canónica del
+listado de tablas. `Tools/schema-manifest.php` extrae de ese SQL la base
+activa, las tablas en orden de creación y las tablas ordenadas para gates,
+tests y restore. No se edita un JSON o listado paralelo a mano.
+
+El manifest también rechaza scripts que mezclen nombres de base entre
+`CREATE DATABASE`, `ALTER DATABASE` y `USE`. Así el defecto de P0-A queda
+cubierto por una herramienta reutilizable y no por una condición aislada en un
+test.
+
+## DEC-23 - Matriz anterior del tramo 12
+
+Estado: SUPERADA por DEC-DBREADY-001.
+
+El tramo 13 recibió del arquitecto `matriz-historica-tramo12.pdf` (resumen en
+Decisiones.md del arquitecto) y su condición de entrega es "cada
+entidad/perfil confirmado tiene un mecanismo histórico coherente, sin
+histórico genérico que mezcle semánticas". En ese momento, contrastando la
+matriz contra `Database/SqlScripts/000instalacioncompleta.sql`, no aparecía
+ninguna tabla ni columna faltante:
+
+1. **Productor - Estado**: `tbproductorestadoperiodo` (creada en el tramo 2,
+   poblada en el tramo 4/6) ya modela apertura/cierre de periodo con
+   `fechainicio`/`fechafin` de servidor, exactamente como pide la matriz.
+2. **Productor - Ubicación**: `tbproductorubicacion` (tramo 2/8/9) ya es
+   append-only con `latitud`, `longitud`, `precision`, `origen` y fecha de
+   servidor (DEC-16), igual que la matriz.
+3. **Productor - Actividad**: `tbproductoractividad` (tramo 2) ya tiene
+   `tipo`, `fecha` de servidor y `origen`. Se documenta ahora en
+   `Documentation/DiccionarioDatos.md` el catálogo cerrado de
+   `tbproductoractividadtipo` que la matriz exige (`login`,
+   `actualizacion_ubicacion`, `actualizacion_perfil`,
+   `registro_actividad_productiva`, `contacto_comprador`); validarlo es
+   trabajo de PHP (tramo 15), fuera del alcance de esta base.
+4. **Comprador - Perfil**: la matriz marca explícitamente el histórico
+   propio de comprador como "fuera del alcance profundo de esta fase".
+   `tbcompradorestado` (DEC-C04-008/DEC-PER-003) sigue siendo su único
+   registro de alta/baja lógica; no se crea tabla de periodos para
+   comprador.
+5. **Persona - Vínculo productor/comprador**: la matriz confirma
+   explícitamente que no lleva tabla histórica propia, para no repetir el
+   error de tratar dos capacidades simultáneas como un solo estado; se
+   deriva de la existencia de filas en `tbproductor` y `tbcomprador`.
+
+`tbbitacora` se mantiene exclusivamente como auditoría técnica (DEC-C04-006)
+y no se convierte en histórico universal, como exige la regla de base del
+tramo 13.
+
+Ese cierre queda como antecedente histórico. El contrato vigente sí crea tablas
+nuevas en DEC-DBREADY-001 y `Database/Tests/comprobacionestructura.sql` ahora
+espera 30 tablas.
+
+## DEC-21 - Fin del UPDATE destructivo de dirección
+
+`ProductorDireccion::actualizar()` deja de hacer `UPDATE` sobre la fila vigente de `tbdireccion`. Un cambio de
+residencia ahora ejecuta **cierre + alta** transaccional bajo el bloqueo nombrado **por productor**
+(`tindercows_productor_direccion_{productorId}`), que a su vez delega al lock global de alta de dirección
+(requisito de `Direccion::crearConBloqueoExistente`). El flujo cierra el periodo abierto (solo `fechafin` = reloj
+de PHP), inserta una `tbdireccion` nueva y su enlace con `fechainicio`, y registra **CAMBIO_DIRECCION** en la
+bitácora dentro de la misma transacción. El lock se libera SIEMPRE en `finally`, incluso ante excepción, y
+cualquier fallo entre el cierre y el INSERT provoca `ROLLBACK` que deja el estado original. La primera residencia
+permanece consultable para siempre mediante `consultarVigenteEn(fecha)`; nunca hay más de un periodo abierto.
+`obtenerDireccionAbiertaId()` y la rama de `UPDATE` se eliminan.
+
+**Fincas:** `tbfincadireccion` no tiene columnas de vigencia. No se inventan columnas ni se hace histórico de
+dirección de finca por ahora: se pide a DBA; las direcciones de finca quedan fuera del histórico de residencia.
+
+## DEC-23 - Estado e histórico de dirección son operaciones atómicas y reutilizables
+
+La transición del estado operativo del productor (desactivar/reactivar) y el cierre+alta de residencia dejan de
+vivir dentro del controlador y pasan a `Application/Service/`:
+
+- `ProductorEstadoService::transicionar()` cierra el periodo abierto y abre el nuevo bajo el lock nombrado por
+  productor, dentro de la transacción que posee el llamador. Es **idempotente**: transicionar al mismo estado
+  vigente es un no-op que NO abre un periodo duplicado. Registra `DESACTIVAR`/`REACTIVAR` en la bitácora solo
+  cuando hubo una transición real.
+- `ProductorDireccionService::cambiar()`/`vaciar()` orquestan cierre+alta y registran
+  `CAMBIO_DIRECCION`/`VACIAR_DIRECCION` bajo el lock por productor.
+
+El controlador conserva el contrato sobre JSON (códigos de estado, mensajes y respuestas) y la resolución de
+bloqueos 409, pero ya no duplica la máquina de estados ni el histórico de residencia. Si una de las escrituras
+falla a mitad, el COMMIT/ROLLBACK exterior deja o todas o ninguna.
+
+## DEC-25 - Contrato de validación unificado reutilizable
+
+La validación de productor (identificación, teléfono, correo, dirección y fincas) se extrae del controlador a
+`Application/Service/ProductorValidacionService`, ejecutable sin el controlador gigante. Mantiene el mismo
+contrato de errores por campo que consume toda la API (HTTP 422 + `errors`). El controlador delega y traduce
+`ProductorValidacionException` a `ProductorHttpException` para no cambiar la respuesta hacia el frontend.
+`ProductorController` deja de reimplementar `TIPOS_IDENTIFICACION`, `validarIdentificacion`, `validarDireccion`,
+`textoCampo`, `rechazarCamposDesconocidos`, etc.; la única fuente es el servicio.

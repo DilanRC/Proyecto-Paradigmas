@@ -3,20 +3,29 @@
 declare(strict_types=1);
 
 $root = dirname(__DIR__);
+require_once "{$root}/Tools/schema-manifest.php";
 $schemaFiles = glob("{$root}/Database/SqlScripts/*.sql");
 $schema = implode("\n", array_map('file_get_contents', $schemaFiles));
+$manifest = schema_manifest();
 $seed = file_get_contents("{$root}/Database/SeedData/101initialpagometodo.sql");
 $diagnostico = file_get_contents("{$root}/Database/Tests/diagnostico.sql");
 $relaciones = file_get_contents("{$root}/Database/Tests/comprobacionrelaciones.sql");
-$docs = file_get_contents("{$root}/Documentation/Decisiones.md") . file_get_contents("{$root}/Documentation/DiccionarioDatos.md");
+$matrizP0C = file_get_contents("{$root}/Documentation/MatrizArquitectonicaP0C.md");
+$actorResolver = file_get_contents("{$root}/Application/Auth/SupabaseActorResolver.php");
+$actorContext = file_get_contents("{$root}/Application/Auth/ActorContext.php");
+$bitacora = file_get_contents("{$root}/Application/Model/Bitacora.php");
+$authActorTest = file_get_contents("{$root}/Tests/auth_actor_test.php");
+$docs = file_get_contents("{$root}/Documentation/Decisiones.md")
+    . file_get_contents("{$root}/Documentation/DiccionarioDatos.md")
+    . $matrizP0C;
 $readme = file_get_contents("{$root}/README.md");
 $restoreTool = file_get_contents("{$root}/Tools/test-restore.sh");
 $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('once_tablas', substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 11,
-    'SQL crea exactamente once tablas: cinco del CRUD vigente y seis del avance de direcciones, pagos y transporte');
+$evaluate('treinta_tablas', $manifest['table_count'] === 30,
+    'SQL crea exactamente treinta tablas, incluida la identidad compartida tbpersona');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -34,12 +43,12 @@ $evaluate('direccion_politica_aplicacion', !str_contains($schema, 'pk_tbproducto
 $evaluate('tabla_finca', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca')
     && !str_contains($schema, 'tbproductorfinca'), 'La finca usa la tabla tbfinca solicitada');
 $evaluate('tabla_comprador', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador')
-    && str_contains($schema, 'tbcompradoridentificacionnumero VARCHAR(250) NOT NULL'),
-    'Comprador tiene nombre singular y perfil de identificación explícito');
+    && str_contains($schema, 'tbpersonaid INT NOT NULL'),
+    'Comprador tiene nombre singular y referencia la identidad compartida');
 $evaluate('sin_roles_catalogos', !str_contains($schema, 'tbrol') && !str_contains($schema, 'tbidentificaciontipo'), 'No existen tablas de rol o tipo');
 $evaluate('bitacora_textual', str_contains($schema, 'tbbitacoraregistroidentificacionnumero VARCHAR'), 'Bitácora conserva la identificación lógica textual');
-$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE dbtindervacas')
-    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === count($schemaFiles),
+$evaluate('collation_consistente', str_contains($schema, 'ALTER DATABASE bdmercadoganadero')
+    && substr_count($schema, 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;') === 12,
     'Base y sesiones declaran utf8mb4_unicode_ci');
 $evaluate('direccion_centralizada', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfincadireccion ')
@@ -66,13 +75,16 @@ $evaluate('diagnostico_sin_restriccion', str_contains($diagnostico, 'DETECTAN')
     'Las consultas de diagnóstico detectan inconsistencias sin impedirlas');
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
-$evaluate('tablas_singulares', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductor ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductordireccion ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbfinca ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbdireccion ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvehiculo ')
-    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistavehiculo '),
+$evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbanimal',
+    'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
+    'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito',
+    'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
+    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
+    'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
+    'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorubicacion',
+    'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
+    'tbtransportistahorario', 'tbtransportistaresena', 'tbtransportistavehiculo',
+    'tbvehiculo', 'tbventa'],
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));
 $evaluate('sentencias_preparadas', str_contains($models, '->prepare(')
@@ -89,7 +101,7 @@ $evaluate('decision_docente', str_contains($docs, 'instrucción docente') && str
 $evaluate('protocolo_identificacion', str_contains($docs, 'desactivar el registro incorrecto')
     && str_contains($docs, 'conservar su bitácora') && str_contains($docs, 'crear el registro correcto'),
     'La corrección de identificación conserva la trazabilidad');
-$evaluate('readme_operativo', str_contains($readme, 'dbtindervacas') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
+$evaluate('readme_operativo', str_contains($readme, 'bdmercadoganadero') && str_contains($readme, 'docker compose'), 'README conserva instalación reproducible');
 $evaluate('pdf_obligatorios', count(array_filter(['AvanceSemanal.pdf', 'DAplicacion.pdf', 'DER.pdf'],
     fn (string $pdf): bool => is_file("{$root}/Documentation/{$pdf}") && filesize("{$root}/Documentation/{$pdf}") > 1000)) === 3,
     'Existen los tres PDF de la entrega');
@@ -102,6 +114,46 @@ $evaluate('restauracion_cero_restricciones', str_contains($restoreTool, 'constra
 $evaluate('restauracion_sin_logica_motor', str_contains($restoreTool, 'automatic_columns')
     && str_contains($restoreTool, 'programmable_objects'),
     'La restauración exige cero defaults, generación automática y objetos programables');
+$evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "'dbmercadoganadero'")
+    && str_contains($restoreTool, 'Respaldo validado sin modificar MANIFEST ni SHA256')
+    && !str_contains($restoreTool, 'mv -- "$manifest_temp" "$manifest_file"')
+    && !str_contains($restoreTool, 'mv -- "$manifest_pending" "$manifest_file"'),
+    'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
+$evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es la entidad de negocio núcleo')
+    && str_contains($matrizP0C, '`tbvendedor` no debe existir')
+    && str_contains($matrizP0C, '`tbcomprador` es LEGACY de compatibilidad')
+    && str_contains($matrizP0C, '`tipo = COMPRADOR`')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo')
+    && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvendedor')
+    && !str_contains($schema, 'tbcompradorestadoperiodo'),
+    'P0-C cierra Productor como núcleo y Comprador/Vendedor como clasificaciones históricas');
+$evaluate('comercio_historico_preparado', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimal')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalpublicacion')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcompra')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbventa')
+    && str_contains($schema, 'tbcompraid INT NULL')
+    && !str_contains($schema, 'tbanimalfechanacimiento')
+    && !str_contains($schema, 'tbcompraestado'),
+    'Animal, observación, publicación, compra y venta quedan listos sin pasado inventado');
+$evaluate('funnel_y_transporte_preparados', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalinteraccion')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcarrito')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcarritoanimal')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistaestadoperiodo')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistaflete')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbtransportistaresena')
+    && !str_contains($schema, 'cantidadfletessemanales')
+    && !str_contains($schema, 'metodopagofrecuente')
+    && !str_contains($schema, 'calificacionpromedio'),
+    'Funnel y transporte quedan modelados sin guardar derivados');
+$evaluate('t3_actor_autenticado', str_contains($actorResolver, '/v1/auth/verify')
+    && str_contains($actorResolver, 'tbpersonacorreoelectronico')
+    && str_contains($actorResolver, 'new HttpException(\'La sesión verificada no tiene vínculo con una persona.\', 409)')
+    && str_contains($actorResolver, 'new HttpException(\'No fue posible validar la sesión.\', 503)')
+    && str_contains($actorContext, 'PERSONA_AUTENTICADA')
+    && str_contains($bitacora, "'usuarioId' => \$this->actor->personaId")
+    && !preg_match('/MAX\s*\(\s*tbpersonaid\s*\)\s*\+\s*1/i', $authActorTest),
+    'T3 resuelve Supabase a tbpersonaid y bitácora guarda actor real');
 $score = (int) round(100 * count(array_filter($checks, fn ($c) => $c['cumple'])) / count($checks));
 echo json_encode(['eval' => 'modelo_simplificado_profesor', 'score' => $score, 'threshold' => 100, 'checks' => $checks], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n";
 if ($score < 100) exit(1);
