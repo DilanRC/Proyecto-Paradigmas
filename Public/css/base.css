@@ -1,3 +1,5 @@
+@import url('./icons.css?v=fa-7.3.1');
+
 /* base.css — Reset y estilos de elementos HTML base. */
 
 * {
@@ -16,6 +18,19 @@ body {
     background:radial-gradient(circle at 90% 0%,rgba(226,242,232,.85),transparent 30rem),var(--background);
     font-size:15px;
     line-height:1.5;
+}
+
+/*
+ * Los paneles privados fallan cerrados en presentación: no se pintan hasta que
+ * auth-gate valida el marcador de sesión. Si JS falla, el panel queda oculto
+ * en lugar de mostrar brevemente datos antes de una redirección.
+ */
+body.rural-panel {
+    visibility:hidden;
+}
+
+html[data-tc-auth='ready'] body.rural-panel {
+    visibility:visible;
 }
 
 button, input, select, textarea {
