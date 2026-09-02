@@ -3,19 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TinderCows — proyecto académico para la gestión de una red ganadera.">
+    <meta name="description" content="TinderCows — experiencia ganadera académica para explorar y administrar una red en un solo lugar.">
     <meta name="theme-color" content="#151a18">
     <title>TinderCows — Red ganadera</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/base.css?v=admin-public-3">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
-    <script type="module" src="js/public-theme.js?v=brand-2"></script>
+    <script type="module" src="js/public-theme.js?v=brand-3"></script>
 </head>
 <body class="public-home">
-    <div class="public-shell">
+    <div class="public-shell" id="inicio">
         <header class="public-header">
-            <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="#inicio" aria-label="TinderCows, inicio">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
@@ -23,98 +23,111 @@
                 <span>Tinder<strong>Cows</strong></span>
             </a>
 
-            <nav class="public-nav" aria-label="Navegación pública">
-                <a href="#sobre">Sobre nosotros</a>
-                <a href="#uso">Cómo usarlo</a>
-                <a href="#modulos">Módulos</a>
-                <a href="privacidad.php">Privacidad</a>
+            <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
+                <a href="#inicio"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
+                <a href="#buscar-ganado"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar ganado</span></a>
+                <a href="#nosotros"><i class="fa-solid fa-people-group" aria-hidden="true"></i><span>Nosotros</span></a>
+                <a href="#como-funciona"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Cómo funciona</span></a>
             </nav>
 
             <div class="public-header__actions">
-                <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar tema" aria-pressed="true">
-                    <span class="theme-toggle__icon" aria-hidden="true">◐</span>
+                <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true">
+                    <i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i>
                     <span class="theme-toggle__label">Claro</span>
                 </button>
-                <a class="public-header__login" href="login.php">Entrar al panel</a>
+                <a class="public-header__login" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
             </div>
         </header>
 
         <main>
-            <section class="public-hero" aria-labelledby="public-title">
+            <section class="public-hero public-hero--clean" aria-labelledby="public-title">
                 <div class="public-hero__copy">
                     <p class="public-eyebrow">EIF400 · Proyecto académico</p>
-                    <h1 id="public-title">La red ganadera, en un solo lugar.</h1>
-                    <p class="public-hero__lead">TinderCows organiza productores, compradores derivados, transporte, vehículos y métodos de pago con una identidad visual propia de la operación ganadera.</p>
+                    <h1 id="public-title">Encuentra. Conecta. Gestiona.</h1>
+                    <p class="public-hero__lead">Una experiencia digital para recorrer la red ganadera con información clara, acciones predecibles y una identidad construida alrededor de TinderCows.</p>
                     <div class="public-hero__actions">
-                        <a class="public-cta" href="login.php">Entrar al panel de demostración</a>
-                        <a class="public-secondary" href="#uso">Ver cómo funciona</a>
+                        <a class="public-cta" href="#buscar-ganado"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Explorar búsqueda</span></a>
+                        <a class="public-secondary" href="#como-funciona"><i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Cómo funciona</span></a>
                     </div>
-                    <p class="public-demo-note"><strong>Estado actual:</strong> el acceso es una sesión local de demostración. No existe todavía autenticación de backend.</p>
+                    <p class="public-demo-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>El acceso administrativo actual es una demostración local mientras se integra autenticación de servidor.</span></p>
                 </div>
 
-                <div class="public-visual" aria-label="Vista conceptual de TinderCows">
+                <div class="public-visual public-visual--brand" aria-label="Identidad visual de TinderCows">
                     <div class="public-logo-stage" aria-hidden="true">
-                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="420" height="420">
-                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="420" height="420">
+                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="430" height="430">
+                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="430" height="430">
                     </div>
-                    <article class="module-chip module-chip--producer"><span>Productores</span><strong>Identidad + fincas</strong></article>
-                    <article class="module-chip module-chip--transport"><span>Transporte</span><strong>Vehículos + asignaciones</strong></article>
-                    <article class="module-chip module-chip--buyer"><span>Compradores</span><strong>Clasificación derivada</strong></article>
+                    <div class="brand-orbit brand-orbit--one" aria-hidden="true"></div>
+                    <div class="brand-orbit brand-orbit--two" aria-hidden="true"></div>
                 </div>
             </section>
 
-            <section class="public-section public-section--about" id="sobre" aria-labelledby="about-title">
-                <div class="section-heading">
-                    <p class="section-kicker">Sobre nosotros</p>
-                    <h2 id="about-title">Un proyecto centrado en procesos reales, no en roles artificiales.</h2>
+            <section class="public-section cattle-search-section" id="buscar-ganado" aria-labelledby="cattle-search-title">
+                <div class="section-heading section-heading--split">
+                    <div>
+                        <p class="section-kicker">Buscar ganado</p>
+                        <h2 id="cattle-search-title">Una búsqueda que se entiende antes de usarla.</h2>
+                    </div>
+                    <span class="preview-badge"><i class="fa-solid fa-eye" aria-hidden="true"></i> Vista previa</span>
                 </div>
-                <div class="about-grid">
-                    <p>TinderCows es un proyecto académico de EIF400 orientado a modelar una red ganadera. La aplicación separa la identidad de las personas de los hechos que ocurren en el tiempo: actividad, direcciones, clasificaciones y relaciones operativas.</p>
-                    <p>El objetivo del frontend es hacer visibles esos procesos sin ocultar su estado: búsquedas, filtros, carga, errores, recuperación y operaciones administrativas deben poder comprenderse y comprobarse.</p>
+
+                <div class="cattle-search-preview" aria-label="Vista previa de búsqueda de ganado">
+                    <div class="cattle-search-preview__toolbar">
+                        <label class="cattle-search-preview__search">
+                            <span class="screen-reader-only">Buscar ganado</span>
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                            <input type="search" value="" placeholder="Buscar ganado por los datos disponibles…" readonly aria-describedby="cattle-preview-note">
+                        </label>
+                        <button class="preview-filter-button" type="button" disabled><i class="fa-solid fa-sliders" aria-hidden="true"></i><span>Filtros</span></button>
+                    </div>
+                    <div class="cattle-search-preview__body">
+                        <div class="cattle-search-preview__visual" aria-hidden="true">
+                            <i class="fa-solid fa-cow"></i>
+                        </div>
+                        <div>
+                            <strong>El patrón visual está listo; los datos todavía no.</strong>
+                            <p id="cattle-preview-note">El repositorio actual no expone aún una entidad ni un endpoint de ganado. Por eso esta sección no inventa animales, razas ni resultados: muestra cómo será la experiencia cuando ese contrato exista.</p>
+                        </div>
+                    </div>
                 </div>
-                <a class="text-link" href="sobre-nosotros.php">Conocer el proyecto completo →</a>
             </section>
 
-            <section class="public-section" id="uso" aria-labelledby="use-title">
+            <section class="public-section public-section--about" id="nosotros" aria-labelledby="about-title">
                 <div class="section-heading">
-                    <p class="section-kicker">Cómo usarlo</p>
-                    <h2 id="use-title">El recorrido actual es simple y explícito.</h2>
+                    <p class="section-kicker">Nosotros</p>
+                    <h2 id="about-title">Tecnología pensada para que la operación se sienta más simple.</h2>
                 </div>
-                <ol class="use-steps">
-                    <li><span>01</span><div><strong>Conozca el proyecto</strong><p>Revise esta portada, los módulos y las condiciones del entorno académico.</p></div></li>
-                    <li><span>02</span><div><strong>Abra el acceso demo</strong><p>El formulario valida formato en el navegador, pero todavía no autentica contra un backend.</p></div></li>
-                    <li><span>03</span><div><strong>Entre a administración</strong><p>Después de continuar se abre Productores, desde donde puede navegar por los CRUD disponibles.</p></div></li>
-                    <li><span>04</span><div><strong>Pruebe los flujos</strong><p>Use búsqueda, filtros, creación, edición, desactivación, reactivación y consulta según el módulo.</p></div></li>
+                <div class="about-grid about-grid--product">
+                    <article><i class="fa-solid fa-seedling" aria-hidden="true"></i><h3>Contexto ganadero</h3><p>La interfaz usa el lenguaje y la identidad visual de TinderCows para que las acciones se reconozcan sin depender de memorizar rutas o símbolos aislados.</p></article>
+                    <article><i class="fa-solid fa-compass" aria-hidden="true"></i><h3>Orientación clara</h3><p>Navegación visible, estados explícitos y opciones consistentes reducen dudas y ayudan a recuperar el flujo cuando algo falla.</p></article>
+                    <article><i class="fa-solid fa-code-branch" aria-hidden="true"></i><h3>Proyecto académico</h3><p>EIF400 combina PHP MVC, MySQL y comunicación AJAX/JSON. El diseño acompaña esa arquitectura en vez de esconderla detrás de una maqueta.</p></article>
+                </div>
+            </section>
+
+            <section class="public-section how-section" id="como-funciona" aria-labelledby="how-title">
+                <div class="section-heading">
+                    <p class="section-kicker">Cómo funciona</p>
+                    <h2 id="how-title">Tres pasos, sin navegación escondida.</h2>
+                </div>
+                <ol class="use-steps use-steps--compact">
+                    <li><span>01</span><div><strong>Explora</strong><p>Recorre la portada y la vista previa de búsqueda para entender el producto antes de entrar.</p></div></li>
+                    <li><span>02</span><div><strong>Accede</strong><p>Usa el acceso de demostración. Mientras no exista autenticación backend, la interfaz lo indica de forma visible.</p></div></li>
+                    <li><span>03</span><div><strong>Gestiona</strong><p>En administración, cada listado conserva búsqueda, filtros, estados, acciones y recuperación ante errores dentro del mismo lenguaje visual.</p></div></li>
                 </ol>
-                <a class="text-link" href="como-usar.php">Ver guía y rutas →</a>
             </section>
 
-            <section class="public-section" id="modulos" aria-labelledby="modules-title">
-                <div class="section-heading">
-                    <p class="section-kicker">Módulos</p>
-                    <h2 id="modules-title">Una administración dividida por responsabilidad.</h2>
-                </div>
-                <div class="module-grid">
-                    <article><span class="module-number">01</span><h3>Productores</h3><p>Identificación, contacto, dirección principal y fincas.</p><a href="login.php?next=productores.php">Abrir vía acceso demo</a></article>
-                    <article><span class="module-number">02</span><h3>Compradores</h3><p>Consulta de la clasificación derivada del comportamiento del productor.</p><a href="login.php?next=compradores.php">Abrir vía acceso demo</a></article>
-                    <article><span class="module-number">03</span><h3>Transportistas</h3><p>Personas dedicadas al transporte y sus relaciones operativas.</p><a href="login.php?next=transportistas.php">Abrir vía acceso demo</a></article>
-                    <article><span class="module-number">04</span><h3>Vehículos</h3><p>Unidades disponibles y asignables a transportistas.</p><a href="login.php?next=vehiculos.php">Abrir vía acceso demo</a></article>
-                    <article><span class="module-number">05</span><h3>Métodos de pago</h3><p>Configuración de opciones disponibles para la operación.</p><a href="login.php?next=pagometodos.php">Abrir vía acceso demo</a></article>
-                </div>
-            </section>
-
-            <section class="public-section public-section--transparency" aria-labelledby="transparency-title">
+            <section class="public-section public-section--cta" aria-labelledby="cta-title">
                 <div>
-                    <p class="section-kicker">Transparencia del prototipo</p>
-                    <h2 id="transparency-title">La interfaz no debe fingir capacidades que todavía no existen.</h2>
+                    <p class="section-kicker">TinderCows</p>
+                    <h2 id="cta-title">¿Listo para entrar al entorno de demostración?</h2>
                 </div>
-                <p>El login actual crea una sesión de navegador y redirige al panel. Eso sirve para recorrer el frontend, pero no sustituye autenticación, autorización ni control de acceso de servidor. Las páginas legales describen el estado actual y separan lo implementado de lo pendiente.</p>
+                <a class="public-cta" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar al panel</span></a>
             </section>
         </main>
 
-        <footer class="public-footer">
+        <footer class="public-footer public-footer--complete">
             <div class="public-footer__brand">
-                <a class="public-brand public-brand--footer" href="./">
+                <a class="public-brand public-brand--footer" href="#inicio">
                     <span class="public-brand__logo" aria-hidden="true">
                         <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40">
                         <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40">
@@ -124,8 +137,9 @@
                 <p>Proyecto académico EIF400 · 2026.</p>
             </div>
             <div class="public-footer__links">
-                <div><strong>Proyecto</strong><a href="sobre-nosotros.php">Sobre nosotros</a><a href="como-usar.php">Cómo usar</a><a href="login.php">Acceso demo</a></div>
-                <div><strong>Información</strong><a href="privacidad.php">Privacidad</a><a href="terminos.php">Términos</a><a href="legal.php">Legal</a></div>
+                <div><strong>Explorar</strong><a href="#inicio">Inicio</a><a href="#buscar-ganado">Buscar ganado</a><a href="#nosotros">Nosotros</a><a href="#como-funciona">Cómo funciona</a></div>
+                <div><strong>Acceso</strong><a href="login.php">Entrar al panel</a><a href="sobre-nosotros.php">Sobre el proyecto</a><a href="como-usar.php">Ayuda de uso</a></div>
+                <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad.php">Privacidad</a><a href="terminos.php">Términos</a><a href="legal.php">Información legal</a></div>
             </div>
         </footer>
     </div>
