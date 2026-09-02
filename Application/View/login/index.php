@@ -48,7 +48,7 @@
                     </span>
                     <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a TinderCows</h1></div>
                 </div>
-                <p class="auth-card__copy">Continúa para volver a Explorar. Si llegaste desde una herramienta interna, TinderCows conserva ese destino de forma segura.</p>
+                <p class="auth-card__copy">Continúa para volver a Explorar y mantener tus oportunidades en un solo recorrido.</p>
                 <p class="auth-demo-banner"><strong>Estado actual:</strong> este acceso guarda una sesión local en el navegador y todavía no valida credenciales contra un servidor.</p>
 
                 <form class="auth-form" id="formulario-login" novalidate>
