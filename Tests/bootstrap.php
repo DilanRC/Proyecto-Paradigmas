@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
 use Application\Controller\ProductorUbicacionController;
+use Application\Controller\IdentidadController;
 use Application\Model\Bitacora;
 use Application\Model\ProductorFinca;
 use Application\Model\ProductorUbicacion;
@@ -25,6 +26,7 @@ foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionServ
 require_once $testRoot . '/Application/Controller/ProductorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
 require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
+require_once $testRoot . '/Application/Controller/IdentidadController.php';
 
 function test_assert(bool $condition, string $message): void
 {
