@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
     <link rel="stylesheet" href="css/public-v3.css?v=public-4">
+    <link rel="stylesheet" href="css/public-product.css?v=product-1">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
     <script type="module" src="js/public-ui.js?v=public-1"></script>
 </head>

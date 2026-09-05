@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Application\Controller\AnimalPublicacionController;
 use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
 use Application\Controller\ProductorUbicacionController;
@@ -25,6 +26,7 @@ foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionServ
 require_once $testRoot . '/Application/Controller/ProductorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
 require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
+require_once $testRoot . '/Application/Controller/AnimalPublicacionController.php';
 
 function test_assert(bool $condition, string $message): void
 {
@@ -63,6 +65,11 @@ function test_new_db(): PDO
 function test_controller(?string $requestId = null): ProductorController
 {
     return new ProductorController(test_db(), $requestId ?? test_token('request'));
+}
+
+function test_publicacion_controller(?string $requestId = null): AnimalPublicacionController
+{
+    return new AnimalPublicacionController(test_db(), $requestId ?? test_token('request'));
 }
 
 function test_finca_controller(?string $requestId = null): FincaController
