@@ -5,6 +5,9 @@
 // web sin pasar primero por login.php y conserva un destino local seguro.
 // La autorización real de API sigue perteneciendo al mecanismo Bearer/Supabase.
 
+import { capturarEnInicioDeSesion } from './ubicacion-sesion.js';
+import { request } from './api.js';
+
 export const SESSION_KEY = 'tindercows:login';
 
 const PRIVATE_ROUTES = new Set([
@@ -99,6 +102,27 @@ if (typeof window !== 'undefined') {
             document.addEventListener('DOMContentLoaded', () => wirePrivateShell(window.sessionStorage), { once: true });
         } else {
             wirePrivateShell(window.sessionStorage);
+        }
+
+        // Captura de ubicación en background: una por inicio de sesión.
+        const sesion = readBrowserSession(window.sessionStorage);
+        const emailSesion = sesion?.email ?? null;
+        if (emailSesion) {
+            capturarEnInicioDeSesion({
+                storage: window.sessionStorage,
+                requestFn: request,
+                resolverIdentificacion: async (email) => {
+                    try {
+                        const resp = await request('api/identidad.php');
+                        if (resp?.data?.esProductor) {
+                            return { identificacionNumero: resp.data.identificacionNumero, productorId: resp.data.productorId };
+                        }
+                        return null;
+                    } catch {
+                        return null;
+                    }
+                },
+            });
         }
     }
 }

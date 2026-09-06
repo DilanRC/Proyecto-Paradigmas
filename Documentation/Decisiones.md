@@ -836,3 +836,23 @@ contrato de errores por campo que consume toda la API (HTTP 422 + `errors`). El 
 `ProductorValidacionException` a `ProductorHttpException` para no cambiar la respuesta hacia el frontend.
 `ProductorController` deja de reimplementar `TIPOS_IDENTIFICACION`, `validarIdentificacion`, `validarDireccion`,
 `textoCampo`, `rechazarCamposDesconocidos`, etc.; la única fuente es el servicio.
+
+## DEC-27 - Captura automática de ubicación del navegador por inicio de sesión
+
+La ubicación del navegador se captura automáticamente en cada inicio de sesión del panel privado (una lectura
+puntual, `origen='NAVEGADOR'`). La fecha la define PHP con el reloj del servidor y el cliente no puede falsearla.
+El histórico en `tbproductorubicacion` es append-only y conserva todas las observaciones sin sobrescritura ni
+purga.
+
+La unicidad "una captura por sesión" se implementa en el cliente mediante un marcador en `sessionStorage`
+(clave `tindercows:ubicacion-sesion`), sin agregar índices, constraints ni columnas al esquema existente.
+Cada nuevo inicio de sesión suma una fila nueva; recargar la página no re-dispara la captura.
+
+El `productorId` del actor autenticado se resuelve por identidad mediante el endpoint `GET api/identidad.php`,
+que devuelve `{ esProductor, productorId, identificacionNumero }` a partir del `ActorContext` del Bearer token.
+Sin sesión autenticada (demo local) la captura se omite por diseño (actor `NO_AUTENTICADO` →
+`esProductor:false`). El esquema actual de `tbproductorubicacion` es suficiente y no se modifica.
+
+Los módulos nuevos son `Public/js/shared/geo.js` (captura pura de GPS, agnóstico de mapa) y
+`Public/js/shared/ubicacion-sesion.js` (orquestador background, nunca lanza). El enganche se realiza en
+`auth-gate.js` tras revelar la UI privada, sin tocar `login.js`.
