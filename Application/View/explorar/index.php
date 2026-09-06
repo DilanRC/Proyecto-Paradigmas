@@ -66,77 +66,34 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     <h1 id="explore-title">Oportunidades para descubrir, comparar y decidir.</h1>
                     <p>Desliza entre publicaciones de ganado y subastas, guarda lo que te interesa y abre contacto o puja cuando corresponda.</p>
                 </div>
-                <div class="explore-heading__controls" aria-label="Filtros rápidos">
-                    <button class="explore-chip is-active" type="button" data-explore-filter="all"><i class="fa-solid fa-layer-group" aria-hidden="true"></i><span>Todo</span></button>
-                    <button class="explore-chip" type="button" data-explore-filter="ganado"><i class="fa-solid fa-cow" aria-hidden="true"></i><span>Ganado</span></button>
-                    <button class="explore-chip" type="button" data-explore-filter="subasta"><i class="fa-solid fa-gavel" aria-hidden="true"></i><span>Subastas</span></button>
-                    <button class="explore-chip" type="button" data-explore-filter="cerca"><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>Cerca de mí</span></button>
+                <div class="explore-heading__controls" data-explore-filters aria-label="Filtrar por propósito">
+                    <button class="explore-chip is-active" type="button" data-explore-filter="todos"><span>Todo</span></button>
                 </div>
             </section>
 
-            <p class="explore-sample-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>Las tarjetas usan contenido de muestra mientras se conecta el catálogo real de publicaciones.</span></p>
-
             <section class="explore-deck" aria-label="Publicaciones para explorar">
-                <div class="explore-deck__viewport" data-explore-deck tabindex="0">
-                    <article class="explore-card" data-type="ganado cerca" data-searchable="novillas engorde san carlos alajuela ganado cerca">
-                        <div class="explore-card__visual explore-card__visual--green" aria-hidden="true"><i class="fa-solid fa-cow"></i></div>
-                        <div class="explore-card__body">
-                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> San Carlos, Alajuela</span><span>8 km</span></div>
-                            <span class="explore-card__type">Ganado · Muestra</span>
-                            <h2>Novillas de engorde</h2>
-                            <p>Una publicación pensada para revisar rápidamente ubicación, categoría y acciones antes de abrir el detalle.</p>
-                            <div class="explore-card__tags"><span>Disponibles</span><span>Cercano</span><span>Contacto directo</span></div>
-                            <div class="explore-card__actions">
-                                <button type="button" data-explore-action="Pasar"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Pasar</span></button>
-                                <button type="button" data-explore-action="Me interesa"><i class="fa-solid fa-heart" aria-hidden="true"></i><span>Me interesa</span></button>
-                                <button type="button" data-explore-action="Contactar"><i class="fa-solid fa-message" aria-hidden="true"></i><span>Contactar</span></button>
-                            </div>
-                        </div>
-                    </article>
+                <p class="explore-state" data-explore-loading hidden>
+                    <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Cargando publicaciones…</span>
+                </p>
 
-                    <article class="explore-card" data-type="subasta cerca" data-searchable="subasta ganado grecia alajuela puja cerca">
-                        <div class="explore-card__visual explore-card__visual--orange" aria-hidden="true"><i class="fa-solid fa-gavel"></i></div>
-                        <div class="explore-card__body">
-                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Grecia, Alajuela</span><span>12 km</span></div>
-                            <span class="explore-card__type">Subasta · Muestra</span>
-                            <h2>Subasta de ganado</h2>
-                            <p>La tarjeta destaca que existe una puja activa y mantiene contacto, interés y descarte dentro del mismo flujo.</p>
-                            <div class="explore-card__tags"><span>Puja activa</span><span>Cercano</span><span>Hoy</span></div>
-                            <div class="explore-card__actions">
-                                <button type="button" data-explore-action="Pasar"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Pasar</span></button>
-                                <button type="button" data-explore-action="Me interesa"><i class="fa-solid fa-heart" aria-hidden="true"></i><span>Me interesa</span></button>
-                                <button type="button" data-explore-action="Contactar"><i class="fa-solid fa-message" aria-hidden="true"></i><span>Contactar</span></button>
-                                <button class="is-primary" type="button" data-explore-action="Pujar"><i class="fa-solid fa-gavel" aria-hidden="true"></i><span>Pujar</span></button>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article class="explore-card" data-type="ganado" data-searchable="toro reproductor tilaran guanacaste ganado">
-                        <div class="explore-card__visual explore-card__visual--cream" aria-hidden="true"><i class="fa-solid fa-cow"></i></div>
-                        <div class="explore-card__body">
-                            <div class="explore-card__meta"><span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Tilarán, Guanacaste</span><span>16 km</span></div>
-                            <span class="explore-card__type">Ganado · Muestra</span>
-                            <h2>Toro reproductor</h2>
-                            <p>El formato permite decidir si seguir explorando, guardar la publicación o iniciar una conversación con el publicador.</p>
-                            <div class="explore-card__tags"><span>Disponible</span><span>Reproductor</span><span>Contacto</span></div>
-                            <div class="explore-card__actions">
-                                <button type="button" data-explore-action="Pasar"><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Pasar</span></button>
-                                <button type="button" data-explore-action="Me interesa"><i class="fa-solid fa-heart" aria-hidden="true"></i><span>Me interesa</span></button>
-                                <button type="button" data-explore-action="Contactar"><i class="fa-solid fa-message" aria-hidden="true"></i><span>Contactar</span></button>
-                            </div>
-                        </div>
-                    </article>
+                <div class="explore-empty" data-explore-error hidden>
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    <h2>No pudimos cargar las publicaciones.</h2>
+                    <p data-explore-error-message></p>
+                    <button type="button" data-explore-retry><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Reintentar</span></button>
                 </div>
+
+                <div class="explore-deck__viewport" data-explore-deck tabindex="0"></div>
 
                 <div class="explore-deck__navigation">
                     <button type="button" data-explore-prev><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Anterior</span></button>
-                    <span data-explore-position aria-live="polite">1 de 3</span>
+                    <span data-explore-position aria-live="polite">0 de 0</span>
                     <button type="button" data-explore-next><span>Siguiente</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
                 </div>
 
                 <div class="explore-empty" data-explore-empty hidden>
                     <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                    <h2>No encontramos coincidencias en esta muestra.</h2>
+                    <h2>No encontramos publicaciones.</h2>
                     <p>Prueba otra búsqueda o vuelve a mostrar todas las publicaciones.</p>
                     <button type="button" data-explore-reset><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Restablecer</span></button>
                 </div>

@@ -282,6 +282,152 @@ final class AnimalComercial
     }
 
     /**
+     * Lista publicaciones para la vista Explorar.
+     *
+     * Tres decisiones que el esquema impone y que no son negociables aquí:
+     *
+     * 1. El estado vigente es el periodo abierto (fechafin NULL), no una
+     *    columna mutable. Filtrar por el periodo abierto es la única lectura
+     *    correcta del estado actual.
+     * 2. Edad, peso y propósito son observaciones históricas: hay N filas por
+     *    animal. Se toma la más reciente por animal con ROW_NUMBER, y el
+     *    desempate por id descendente evita que dos observaciones con la misma
+     *    fecha devuelvan una fila distinta en cada ejecución.
+     * 3. Los tres campos salen de la MISMA observación. Con subconsultas
+     *    escalares separadas podrían venir de filas distintas y describir un
+     *    animal que no existe.
+     *
+     * La validación de los argumentos es del controlador, como en
+     * Productor::listar(): aquí llegan ya normalizados.
+     *
+     * @return array{publicaciones:array<int,array<string,mixed>>,total:int}
+     */
+    public function listarPublicaciones(string $busqueda, string $estado, int $pagina, int $tamano): array
+    {
+        $condiciones = ['ep.tbanimalpublicacionestadoperiodofechafin IS NULL'];
+        $parametros = [];
+        if ($estado !== 'TODOS') {
+            $condiciones[] = 'ep.tbanimalpublicacionestadoperiodoestado = :estado';
+            $parametros[':estado'] = $estado;
+        }
+        if ($busqueda !== '') {
+            $condiciones[] = '(p.tbanimalpublicaciontitulo LIKE :busquedaTitulo'
+                . ' OR a.tbanimalraza LIKE :busquedaRaza'
+                . ' OR pe.tbpersonanombre LIKE :busquedaVendedor'
+                . ' OR f.tbfincanombre LIKE :busquedaFinca'
+                . ' OR d.tbdireccioncanton LIKE :busquedaCanton'
+                . ' OR d.tbdireccionprovincia LIKE :busquedaProvincia)';
+            foreach (['Titulo', 'Raza', 'Vendedor', 'Finca', 'Canton', 'Provincia'] as $campo) {
+                $parametros[":busqueda{$campo}"] = "%{$busqueda}%";
+            }
+        }
+        $where = 'WHERE ' . implode(' AND ', $condiciones);
+
+        $desde = <<<SQL
+            FROM tbanimalpublicacion p
+            INNER JOIN tbanimal a ON a.tbanimalid = p.tbanimalid
+            INNER JOIN tbanimalpublicacionestadoperiodo ep
+                ON ep.tbanimalpublicacionid = p.tbanimalpublicacionid
+            INNER JOIN tbproductor pr ON pr.tbproductorid = p.tbproductorvendedorid
+            INNER JOIN tbpersona pe ON pe.tbpersonaid = pr.tbpersonaid
+            INNER JOIN tbfinca f ON f.tbfincaid = p.tbfincaid
+            LEFT JOIN tbfincadireccion fd ON fd.tbfincaid = f.tbfincaid
+            LEFT JOIN tbdireccion d ON d.tbdireccionid = fd.tbdireccionid
+            LEFT JOIN (
+                SELECT s.tbanimalid,
+                       s.tbanimalproduccionsaludedadmeses AS edadmeses,
+                       s.tbanimalproduccionsaludpeso AS peso,
+                       s.tbanimalproduccionsaludproposito AS proposito,
+                       s.tbanimalproduccionsaludestadoreproductivo AS estadoreproductivo,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY s.tbanimalid
+                           ORDER BY s.tbanimalproduccionsaludfecha DESC,
+                                    s.tbanimalproduccionsaludid DESC
+                       ) AS fila
+                FROM tbanimalproduccionsalud s
+            ) obs ON obs.tbanimalid = a.tbanimalid AND obs.fila = 1
+            {$where}
+            SQL;
+
+        $conteo = $this->conexion->prepare("SELECT COUNT(*) {$desde}");
+        $conteo->execute($parametros);
+        $total = (int) $conteo->fetchColumn();
+
+        $sentencia = $this->conexion->prepare(
+            "SELECT p.tbanimalpublicacionid AS publicacionId,
+                    p.tbanimalpublicaciontitulo AS titulo,
+                    p.tbanimalpublicaciondescripcion AS descripcion,
+                    p.tbanimalpublicacionprecio AS precio,
+                    p.tbanimalpublicacionfecha AS fecha,
+                    ep.tbanimalpublicacionestadoperiodoestado AS estado,
+                    a.tbanimalid AS animalId,
+                    a.tbanimalidentificacion AS animalIdentificacion,
+                    a.tbanimalsexo AS sexo,
+                    a.tbanimalraza AS raza,
+                    a.tbanimalcaracteristicas AS caracteristicas,
+                    obs.edadmeses AS edadMeses,
+                    obs.peso AS peso,
+                    obs.proposito AS proposito,
+                    obs.estadoreproductivo AS estadoReproductivo,
+                    pe.tbpersonanombre AS vendedorNombre,
+                    f.tbfincanombre AS fincaNombre,
+                    d.tbdireccionprovincia AS provincia,
+                    d.tbdireccioncanton AS canton,
+                    d.tbdirecciondistrito AS distrito,
+                    d.tbdireccionpueblo AS pueblo
+             {$desde}
+             ORDER BY p.tbanimalpublicacionfecha DESC, p.tbanimalpublicacionid DESC
+             LIMIT :limite OFFSET :desplazamiento"
+        );
+        foreach ($parametros as $nombre => $valor) {
+            $sentencia->bindValue($nombre, $valor);
+        }
+        $sentencia->bindValue(':limite', $tamano, PDO::PARAM_INT);
+        $sentencia->bindValue(':desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
+        $sentencia->execute();
+
+        return [
+            'publicaciones' => array_map(
+                static fn (array $fila): array => self::mapearPublicacion($fila),
+                $sentencia->fetchAll()
+            ),
+            'total' => $total,
+        ];
+    }
+
+    /** Normaliza tipos: PDO devuelve DECIMAL e INT como texto en MySQL. */
+    private static function mapearPublicacion(array $fila): array
+    {
+        return [
+            'publicacionId' => (int) $fila['publicacionId'],
+            'animalId' => (int) $fila['animalId'],
+            'titulo' => $fila['titulo'],
+            'descripcion' => $fila['descripcion'],
+            'precio' => $fila['precio'] === null ? null : (float) $fila['precio'],
+            'fecha' => $fila['fecha'],
+            'estado' => $fila['estado'],
+            'animal' => [
+                'identificacion' => $fila['animalIdentificacion'],
+                'sexo' => $fila['sexo'],
+                'raza' => $fila['raza'],
+                'caracteristicas' => $fila['caracteristicas'],
+                'edadMeses' => $fila['edadMeses'] === null ? null : (int) $fila['edadMeses'],
+                'peso' => $fila['peso'] === null ? null : (float) $fila['peso'],
+                'proposito' => $fila['proposito'],
+                'estadoReproductivo' => $fila['estadoReproductivo'],
+            ],
+            'vendedor' => ['nombre' => $fila['vendedorNombre']],
+            'finca' => ['nombre' => $fila['fincaNombre']],
+            'direccion' => [
+                'provincia' => $fila['provincia'],
+                'canton' => $fila['canton'],
+                'distrito' => $fila['distrito'],
+                'pueblo' => $fila['pueblo'],
+            ],
+        ];
+    }
+
+    /**
      * Abre el primer periodo de estado de una entidad cuyo estado dejó de ser
      * columna mutable. Cerrar y reabrir periodos es responsabilidad de Backend;
      * aquí solo se registra el estado inicial sin perder historia.

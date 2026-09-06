@@ -331,16 +331,23 @@ html {
     grid-template-columns:repeat(3,minmax(0,1fr));
 }
 
+/* El bloque tiene borde y fondo propios: necesita padding lateral, y el par
+   texto + boton se centra como grupo en vez de irse a los dos extremos. */
 .public-section--cta {
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap:28px;
+    justify-content:center;
+    gap:48px;
+    padding:72px 56px;
     border:1px solid var(--tc-line-strong);
     border-radius:28px;
     background:
         radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--tc-primary) 18%,transparent),transparent 28rem),
         var(--tc-bg-elevated);
+}
+
+.public-section--cta > div {
+    max-width:720px;
 }
 
 .public-section--cta h2 {
@@ -441,6 +448,11 @@ html {
     .public-footer--complete {
         align-items:flex-start;
         flex-direction:column;
+    }
+    .public-section--cta {
+        justify-content:flex-start;
+        gap:28px;
+        padding:48px 26px;
     }
     .cattle-search-preview__toolbar {
         grid-template-columns:1fr;
