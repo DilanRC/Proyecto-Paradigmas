@@ -32,7 +32,9 @@ test('la landing se comporta como producto y deriva la exploración a una ruta p
     assert.equal(home.includes('id="modulos"'), false);
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false);
     assert.ok(explore.includes('data-explore-deck'));
-    assert.ok(explore.includes('data-explore-action="Pujar"'));
+    // Las tarjetas y sus acciones las construye explore.js desde
+    // api/publicaciones.php: en el PHP solo queda el contenedor del deck.
+    assert.ok(explore.includes('js/explore.js'));
 });
 
 test('navbar y búsqueda pública conservan icono más texto sin meter legal en navegación primaria', () => {
