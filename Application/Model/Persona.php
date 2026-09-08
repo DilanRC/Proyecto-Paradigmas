@@ -13,8 +13,11 @@ final class PersonaConflictException extends \RuntimeException
 /** Fuente única de identidad y contacto para todas las capacidades. */
 final class Persona
 {
+    private PersonaTelefonoHistorico $telefonoHistorico;
+
     public function __construct(private readonly PDO $conexion)
     {
+        $this->telefonoHistorico = new PersonaTelefonoHistorico($conexion);
     }
 
     public function buscar(string $identificacionNumero): ?array
@@ -62,15 +65,16 @@ final class Persona
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbpersona
              (tbpersonaid, tbpersonaidentificacionnumero, tbpersonaidentificaciontipo,
-              tbpersonanombre, tbpersonatelefono, tbpersonacorreoelectronico, tbpersonaestado)
+              tbpersonanombre, tbpersonaalias, tbpersonatelefono, tbpersonacorreoelectronico, tbpersonaestado)
              VALUES (:personaId, :identificacionNumero, :identificacionTipo, :nombre,
-                     :telefono, :correoElectronico, 1)'
+                     :alias, :telefono, :correoElectronico, 1)'
         );
         $sentencia->execute([
             'personaId' => $personaId,
             'identificacionNumero' => $datos['identificacionNumero'],
             'identificacionTipo' => $datos['identificacionTipo'],
             'nombre' => $datos['nombre'],
+            'alias' => $datos['alias'] ?? null,
             'telefono' => $datos['telefono'],
             'correoElectronico' => $datos['correoElectronico'],
         ]);
@@ -79,11 +83,32 @@ final class Persona
             ?? throw new \RuntimeException('No fue posible leer la persona recién creada.');
     }
 
+    /**
+     * Actualiza los datos vigentes. Si el teléfono cambia, antes de sustituir el
+     * valor se registra el número nuevo en cada contexto de negocio que tenga la
+     * Persona (Productor y/o Comprador). La transacción la controla el flujo que
+     * llama este método; si falla cualquier histórico, tampoco cambia Persona.
+     */
     public function actualizar(string $identificacionNumero, array $datos): void
     {
+        $persona = $this->bloquear($identificacionNumero);
+        if ($persona === null) {
+            throw new PersonaConflictException('La persona no existe.');
+        }
+
+        $telefonoNuevo = $datos['telefono'];
+        if ($persona['tbpersonatelefono'] !== $telefonoNuevo) {
+            $this->telefonoHistorico->registrarCambio(
+                (int) $persona['tbpersonaid'],
+                $telefonoNuevo,
+                gmdate('Y-m-d H:i:s'),
+            );
+        }
+
         $sentencia = $this->conexion->prepare(
             'UPDATE tbpersona SET tbpersonaidentificaciontipo = :identificacionTipo,
-                    tbpersonanombre = :nombre, tbpersonatelefono = :telefono,
+                    tbpersonanombre = :nombre, tbpersonaalias = :alias,
+                    tbpersonatelefono = :telefono,
                     tbpersonacorreoelectronico = :correoElectronico
              WHERE tbpersonaidentificacionnumero = :identificacionNumero'
         );
@@ -91,7 +116,8 @@ final class Persona
             'identificacionNumero' => $identificacionNumero,
             'identificacionTipo' => $datos['identificacionTipo'],
             'nombre' => $datos['nombre'],
-            'telefono' => $datos['telefono'],
+            'alias' => array_key_exists('alias', $datos) ? $datos['alias'] : $persona['tbpersonaalias'],
+            'telefono' => $telefonoNuevo,
             'correoElectronico' => $datos['correoElectronico'],
         ]);
     }
@@ -116,8 +142,12 @@ final class Persona
 
     private function coincide(array $persona, array $datos): bool
     {
+        $aliasCoincide = !array_key_exists('alias', $datos)
+            || $persona['tbpersonaalias'] === $datos['alias'];
+
         return $persona['tbpersonaidentificaciontipo'] === $datos['identificacionTipo']
             && $persona['tbpersonanombre'] === $datos['nombre']
+            && $aliasCoincide
             && $persona['tbpersonatelefono'] === $datos['telefono']
             && $persona['tbpersonacorreoelectronico'] === $datos['correoElectronico'];
     }
