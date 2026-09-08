@@ -5,30 +5,23 @@ declare(strict_types=1);
 namespace Application\Controller;
 
 use Application\HttpException;
-use Application\Model\ProductorClasificacionPeriodo;
-use Application\Service\CompradorClasificacionService;
+use Application\Model\Comprador;
 use PDO;
 
 /**
- * Consulta de solo lectura de los productores clasificados como COMPRADOR
- * (paso (d) de DEC-DBREADY-005, detallado en DEC-DBREADY-008).
+ * Consulta de solo lectura del contexto Comprador relacionado con Persona.
  *
- * Reemplaza al CRUD legacy de comprador. No expone alta, edición, baja ni
- * reactivación **a propósito**: Comprador es una clasificación derivada del
- * comportamiento del Productor, no una decisión administrativa. Marcar a
- * alguien como comprador desde una pantalla convertiría la clasificación en un
- * dato capturado a mano, que es justo lo que la evidencia de Calidad descarta.
- *
- * Mientras T10 no exista, el sistema conserva las clasificaciones que ya tiene
- * (las del backfill) y no genera nuevas. Esa carencia es deliberada y visible.
+ * Durante Avance 2 no se expone un CRUD administrativo de Comprador: la fila de
+ * contexto debe originarse en el proceso de negocio correspondiente. Esta vista
+ * solo consulta lo que efectivamente existe en tbcomprador.
  */
 final class CompradorConsultaController
 {
-    private ProductorClasificacionPeriodo $clasificacion;
+    private Comprador $comprador;
 
     public function __construct(PDO $conexion)
     {
-        $this->clasificacion = new ProductorClasificacionPeriodo($conexion);
+        $this->comprador = new Comprador($conexion);
     }
 
     public function procesar(string $metodo, array $consulta): array
@@ -38,15 +31,20 @@ final class CompradorConsultaController
                 'GET' => $this->consultar($consulta),
                 'POST', 'PUT', 'DELETE', 'PATCH' => $this->respuesta(
                     false,
-                    'La clasificación Comprador se deriva del comportamiento del productor y no se administra a mano.',
+                    'Comprador no se administra como un rol manual; su contexto se genera desde el proceso de negocio.',
                     null,
                     405,
                 ),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
         } catch (HttpException $excepcion) {
-            return $this->respuesta(false, $excepcion->getMessage(), $excepcion->datos,
-                $excepcion->estadoHttp, $excepcion->errores);
+            return $this->respuesta(
+                false,
+                $excepcion->getMessage(),
+                $excepcion->datos,
+                $excepcion->estadoHttp,
+                $excepcion->errores,
+            );
         }
     }
 
@@ -57,28 +55,12 @@ final class CompradorConsultaController
             if ($identificacion === '') {
                 throw new HttpException('La identificación no es válida.', 422);
             }
-            $resultado = $this->clasificacion->listarClasificados(
-                CompradorClasificacionService::TIPO,
-                $identificacion,
-                1,
-                2,
-            );
-            $exactos = array_values(array_filter(
-                $resultado['clasificados'],
-                static fn (array $fila): bool => $fila['identificacionNumero'] === $identificacion,
-            ));
-            if ($exactos === []) {
-                throw new HttpException('Ese productor no tiene una clasificación Comprador abierta.', 404);
+            $comprador = $this->comprador->buscar($identificacion);
+            if ($comprador === null) {
+                throw new HttpException('Comprador no encontrado.', 404);
             }
 
-            // `estado` conserva el contrato que consume el panel de capacidades:
-            // aquí significa "la clasificación está abierta y la persona
-            // disponible", no el bit de una tabla de perfil.
-            $clasificado = $exactos[0] + [
-                'estado' => $exactos[0]['personaEstado'] === 'ACTIVA' ? 'ACTIVO' : 'INACTIVO',
-            ];
-
-            return $this->respuesta(true, 'Clasificación consultada correctamente.', $clasificado);
+            return $this->respuesta(true, 'Comprador consultado correctamente.', $comprador);
         }
 
         $busqueda = $this->texto($consulta['q'] ?? '', 150);
@@ -91,15 +73,10 @@ final class CompradorConsultaController
             ]);
         }
 
-        $resultado = $this->clasificacion->listarClasificados(
-            CompradorClasificacionService::TIPO,
-            $busqueda,
-            $pagina,
-            $tamano,
-        );
+        $resultado = $this->comprador->listar($busqueda, $pagina, $tamano);
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;
-        $resultado['fuente'] = 'tbproductorclasificacionperiodo';
+        $resultado['fuente'] = 'tbcomprador + tbpersona';
 
         return $this->respuesta(true, 'Compradores consultados correctamente.', $resultado);
     }
@@ -128,9 +105,13 @@ final class CompradorConsultaController
         return $entero;
     }
 
-    private function respuesta(bool $exito, string $mensaje, ?array $datos, int $estado = 200,
-        array $errores = []): array
-    {
+    private function respuesta(
+        bool $exito,
+        string $mensaje,
+        ?array $datos,
+        int $estado = 200,
+        array $errores = [],
+    ): array {
         $cuerpo = ['success' => $exito, 'message' => $mensaje, 'data' => $datos];
         if ($errores !== []) {
             $cuerpo['errors'] = $errores;
