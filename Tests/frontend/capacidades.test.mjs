@@ -1,8 +1,6 @@
-// Lecturas de una persona: Productor, clasificación Comprador y Transportista.
-//
-// La propiedad crítica es distinguir ausencia comprobada de fallo de consulta y,
-// además, distinguir una capacidad registrada de una clasificación derivada.
-// Comprador no puede volver a presentarse como un alta administrativa.
+// Relaciones de una persona: Productor, Comprador y Transportista.
+// La prueba distingue ausencia comprobada de fallo de consulta y garantiza que
+// Comprador se trate como contexto de Persona, no como clasificación de Productor.
 
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -20,13 +18,8 @@ test('un 404 significa ausencia comprobada', () => {
     );
 });
 
-test('un fallo de red no permite concluir ausencia', () => {
-    const red = interpretarCapacidad({ ok: false, error: fallo(null) });
-    assert.equal(red.situacion, 'desconocido');
-    assert.notEqual(red.situacion, 'no-registrado');
-});
-
-test('un 500 tampoco permite concluir ausencia', () => {
+test('un fallo de red o 500 no permite concluir ausencia', () => {
+    assert.equal(interpretarCapacidad({ ok: false, error: fallo(null) }).situacion, 'desconocido');
     assert.equal(interpretarCapacidad({ ok: false, error: fallo(500) }).situacion, 'desconocido');
 });
 
@@ -46,61 +39,24 @@ test('una respuesta sin estado nunca concede estado activo', () => {
     assert.equal(interpretarCapacidad({ ok: true, data: undefined }).estado, 'INACTIVO');
 });
 
-test('capacidades registradas conservan etiquetas de registro', () => {
-    assert.equal(
-        describirCapacidad({ situacion: 'registrado', estado: 'ACTIVO', derivada: false }),
-        'Registrado y activo',
-    );
-    assert.equal(
-        describirCapacidad({ situacion: 'registrado', estado: 'INACTIVO', derivada: false }),
-        'Registrado, inactivo',
-    );
-    assert.equal(
-        describirCapacidad({ situacion: 'no-registrado', estado: null, derivada: false }),
-        'No registrado',
-    );
-});
-
-test('Comprador se describe como clasificación y nunca como registro', () => {
-    assert.equal(
-        describirCapacidad({ situacion: 'registrado', estado: 'ACTIVO', derivada: true }),
-        'Clasificado actualmente',
-    );
-    assert.equal(
-        describirCapacidad({ situacion: 'registrado', estado: 'INACTIVO', derivada: true }),
-        'Clasificado, persona inactiva',
-    );
-    assert.equal(
-        describirCapacidad({ situacion: 'no-registrado', estado: null, derivada: true }),
-        'Sin clasificación vigente',
-    );
-    assert.doesNotMatch(
-        describirCapacidad({ situacion: 'registrado', estado: 'ACTIVO', derivada: true }),
-        /registrad/i,
-    );
-});
-
-test('un fallo conserva una etiqueta de incertidumbre para ambos tipos', () => {
+test('los contextos usan etiquetas de registro', () => {
+    assert.equal(describirCapacidad({ situacion: 'registrado', estado: 'ACTIVO' }), 'Registrado y activo');
+    assert.equal(describirCapacidad({ situacion: 'registrado', estado: 'INACTIVO' }), 'Registrado, inactivo');
+    assert.equal(describirCapacidad({ situacion: 'no-registrado', estado: null }), 'No registrado');
     assert.match(describirCapacidad({ situacion: 'desconocido', estado: null }), /no se pudo/i);
-    assert.match(describirCapacidad({ situacion: 'desconocido', estado: null, derivada: true }), /no se pudo/i);
 });
 
-test('el catálogo contiene dos capacidades y una clasificación derivada', () => {
+test('el catálogo contiene tres contextos de Persona y Comprador no es derivado', () => {
     assert.deepEqual(CAPACIDADES.map((c) => c.clave), ['productor', 'comprador', 'transportista']);
-    const comprador = CAPACIDADES.find((c) => c.clave === 'comprador');
-    const productor = CAPACIDADES.find((c) => c.clave === 'productor');
-    const transportista = CAPACIDADES.find((c) => c.clave === 'transportista');
-
-    assert.equal(comprador.derivada, true, 'Comprador debe quedar marcado como clasificación derivada');
-    assert.equal(productor.derivada, false);
-    assert.equal(transportista.derivada, false);
+    for (const capacidad of CAPACIDADES) {
+        assert.equal(capacidad.derivada, false, `${capacidad.clave} no debe presentarse como clasificación derivada`);
+    }
 });
 
 test('Productor no es alias de Vendedor', () => {
     const productor = CAPACIDADES.find((c) => c.clave === 'productor');
     assert.equal(productor.alias, null);
-    assert.equal(CAPACIDADES.some((c) => c.alias === 'vendedor'), false,
-        'VENDEDOR es clasificación del Productor, no alias ni entidad propia');
+    assert.equal(CAPACIDADES.some((c) => c.alias === 'vendedor'), false);
 });
 
 test('cada lectura apunta a su API y a su panel', () => {
@@ -110,7 +66,7 @@ test('cada lectura apunta a su API y a su panel', () => {
     }
 });
 
-test('consulta las tres lecturas y conserva la semántica derivada de comprador', async () => {
+test('consulta los tres contextos y conserva ausencia de Comprador', async () => {
     const urls = [];
     const resultado = await consultarCapacidades('1-1111-1111', {
         requestImpl: async (url) => {
@@ -121,16 +77,16 @@ test('consulta las tres lecturas y conserva la semántica derivada de comprador'
         },
     });
 
-    assert.equal(urls.length, 3, 'cada lectura se consulta una sola vez');
+    assert.equal(urls.length, 3);
     assert.deepEqual(
         resultado.map((c) => [c.clave, c.situacion, c.estado, c.derivada]),
         [
             ['productor', 'registrado', 'ACTIVO', false],
-            ['comprador', 'no-registrado', null, true],
+            ['comprador', 'no-registrado', null, false],
             ['transportista', 'registrado', 'INACTIVO', false],
         ],
     );
-    assert.equal(describirCapacidad(resultado[1]), 'Sin clasificación vigente');
+    assert.equal(describirCapacidad(resultado[1]), 'No registrado');
 });
 
 test('una consulta que falla no arrastra a las demás', async () => {
@@ -144,7 +100,7 @@ test('una consulta que falla no arrastra a las demás', async () => {
     assert.equal(resultado.length, 3);
     assert.equal(resultado.filter((c) => c.situacion === 'registrado').length, 2);
     assert.equal(resultado.find((c) => c.clave === 'transportista').situacion, 'desconocido');
-    assert.equal(describirCapacidad(resultado.find((c) => c.clave === 'comprador')), 'Clasificado actualmente');
+    assert.equal(describirCapacidad(resultado.find((c) => c.clave === 'comprador')), 'Registrado y activo');
 });
 
 test('la identificación viaja escapada en la URL', async () => {
@@ -163,7 +119,6 @@ test('cada resultado conserva la identificación consultada', async () => {
     const resultado = await consultarCapacidades('7-0777-0777', {
         requestImpl: async () => { throw fallo(404); },
     });
-
     for (const capacidad of resultado) {
         assert.equal(capacidad.identificacionNumero, '7-0777-0777');
     }
