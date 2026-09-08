@@ -101,6 +101,13 @@ final class Persona
             );
         }
 
+        // Los contextos que todavía no exponen Alias (por ejemplo Transportista)
+        // envían null desde el validador. Ese null significa "no tocar" para no
+        // borrar un alias existente al editar otro contexto de la misma Persona.
+        $alias = ($datos['alias'] ?? null) !== null
+            ? $datos['alias']
+            : $persona['tbpersonaalias'];
+
         $sentencia = $this->conexion->prepare(
             'UPDATE tbpersona SET tbpersonaidentificaciontipo = :identificacionTipo,
                     tbpersonanombre = :nombre, tbpersonaalias = :alias,
@@ -112,7 +119,7 @@ final class Persona
             'identificacionNumero' => $identificacionNumero,
             'identificacionTipo' => $datos['identificacionTipo'],
             'nombre' => $datos['nombre'],
-            'alias' => array_key_exists('alias', $datos) ? $datos['alias'] : $persona['tbpersonaalias'],
+            'alias' => $alias,
             'telefono' => $telefonoNuevo,
             'correoElectronico' => $datos['correoElectronico'],
         ]);
@@ -138,7 +145,7 @@ final class Persona
 
     private function coincide(array $persona, array $datos): bool
     {
-        $aliasCoincide = !array_key_exists('alias', $datos)
+        $aliasCoincide = ($datos['alias'] ?? null) === null
             || $persona['tbpersonaalias'] === $datos['alias'];
 
         return $persona['tbpersonaidentificaciontipo'] === $datos['identificacionTipo']
