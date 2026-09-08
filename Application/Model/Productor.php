@@ -16,13 +16,6 @@ final class Productor
         $this->persona = new Persona($conexion);
     }
 
-    /**
-     * Estado vigente derivado del periodo abierto de tbproductorestadoperiodo.
-     * tbproductor ya no guarda estado propio: un productor sin periodos (dato
-     * heredado o corrupto) se considera INACTIVO porque no hay evidencia de
-     * que esté activo. Se expone con el alias tbproductorestado para que los
-     * consumidores lean el estado por el mismo nombre de siempre.
-     */
     private function sqlEstadoVigente(string $alias): string
     {
         return "COALESCE((SELECT ep.tbproductorestadoperiodoestado
@@ -49,7 +42,9 @@ final class Productor
         $sql = "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
                        pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
                        pe.tbpersonaidentificaciontipo AS tbproductoridentificaciontipo,
-                       pe.tbpersonanombre AS tbproductornombre, pe.tbpersonatelefono AS tbproductortelefono,
+                       pe.tbpersonanombre AS tbproductornombre,
+                       pe.tbpersonaalias AS tbproductoralias,
+                       pe.tbpersonatelefono AS tbproductortelefono,
                        pe.tbpersonacorreoelectronico AS tbproductorcorreoelectronico, pe.tbpersonaestado,
                        d.tbdireccionprovincia AS tbproductordireccionprovincia,
                        d.tbdireccioncanton AS tbproductordireccioncanton,
@@ -92,7 +87,9 @@ final class Productor
             "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
                     pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
                     pe.tbpersonaidentificaciontipo AS tbproductoridentificaciontipo,
-                    pe.tbpersonanombre AS tbproductornombre, pe.tbpersonatelefono AS tbproductortelefono,
+                    pe.tbpersonanombre AS tbproductornombre,
+                    pe.tbpersonaalias AS tbproductoralias,
+                    pe.tbpersonatelefono AS tbproductortelefono,
                     pe.tbpersonacorreoelectronico AS tbproductorcorreoelectronico, pe.tbpersonaestado,
                     d.tbdireccionprovincia AS tbproductordireccionprovincia,
                     d.tbdireccioncanton AS tbproductordireccioncanton,
@@ -121,13 +118,13 @@ final class Productor
         return $this->mapear($fila, $this->fincas->listarActivas((int) $fila['tbproductorid']));
     }
 
-    /** Fila cruda por ID numérico; usada para validar existencia y estado. */
     public function buscarPorId(int $productorId): ?array
     {
         $sentencia = $this->conexion->prepare(
             "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
                     pe.tbpersonaidentificacionnumero AS tbproductoridentificacionnumero,
-                    pe.tbpersonanombre AS tbproductornombre, pe.tbpersonaestado
+                    pe.tbpersonanombre AS tbproductornombre, pe.tbpersonaalias AS tbproductoralias,
+                    pe.tbpersonaestado
              FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid
              WHERE p.tbproductorid = :productorId"
         );
@@ -173,10 +170,6 @@ final class Productor
         NamedLock::release($this->conexion, 'tindercows_persona_alta');
     }
 
-    /**
-     * Crea la capacidad de productor sobre la persona. El periodo de estado
-     * inicial lo abre el controlador bajo el lock del productor recién creado.
-     */
     public function crear(array $datos): int
     {
         $persona = $this->persona->obtenerOCrear($datos);
@@ -212,16 +205,16 @@ final class Productor
         $parametros = [];
         if ($busqueda !== '') {
             $condiciones[] = '(pe.tbpersonanombre LIKE :busquedaNombre
+                OR pe.tbpersonaalias LIKE :busquedaAlias
                 OR pe.tbpersonacorreoelectronico LIKE :busquedaCorreo
                 OR pe.tbpersonaidentificacionnumero LIKE :busquedaIdentificacion)';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
+                ':busquedaAlias' => "%{$busqueda}%",
                 ':busquedaCorreo' => "%{$busqueda}%",
                 ':busquedaIdentificacion' => '%' . mb_strtoupper(preg_replace('/[ -]+/u', '', $busqueda) ?? '', 'UTF-8') . '%',
             ];
         }
-        // ACTIVO exige periodo abierto en estado 1 y persona activa: la
-        // identidad inactiva desactiva todas sus capacidades.
         if ($estado !== 'TODOS') {
             $activo = '(' . $this->sqlExistePeriodoActivo('p') . ' AND pe.tbpersonaestado = 1)';
             $condiciones[] = $estado === 'ACTIVO' ? $activo : 'NOT ' . $activo;
@@ -240,6 +233,7 @@ final class Productor
                 'numero' => $fila['tbproductoridentificacionnumero'],
             ],
             'nombre' => $fila['tbproductornombre'],
+            'alias' => $fila['tbproductoralias'],
             'telefono' => $fila['tbproductortelefono'],
             'correoElectronico' => $fila['tbproductorcorreoelectronico'],
             'estado' => (int) $fila['tbproductorestado'] === 1 && (int) $fila['tbpersonaestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
