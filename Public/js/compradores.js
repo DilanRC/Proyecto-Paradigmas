@@ -1,12 +1,6 @@
 // Panel de compradores: solo lectura.
-//
-// El CRUD legacy se retiró en el paso (d). Comprador no es un registro que
-// alguien dé de alta: es una clasificación del Productor cuya única fuente de
-// verdad es `tbproductorclasificacionperiodo` con un periodo COMPRADOR abierto.
-//
-// Este módulo no tiene formulario ni acciones de crear, editar, desactivar o
-// reactivar. Mientras T10 no exista, muestra únicamente clasificaciones ya
-// registradas o migradas; no genera nuevas.
+// Comprador es un contexto de negocio relacionado con Persona; no se administra
+// como un rol manual desde esta pantalla.
 
 import { request } from './shared/api.js';
 import { consultarCapacidades, describirCapacidad } from './shared/capacidades.js';
@@ -17,31 +11,11 @@ import {
 import { createToast } from './shared/toast.js';
 
 const API_URL = 'api/compradores.php';
-const ETIQUETAS = { singular: 'productor clasificado', plural: 'productores clasificados' };
+const ETIQUETAS = { singular: 'comprador', plural: 'compradores' };
 
-/** Iniciales del productor clasificado; la letra de reserva es de este panel. */
 function getInitials(name = '') {
     return name.split(/\s+/).filter(Boolean).slice(0, 2)
         .map((part) => part.charAt(0).toUpperCase()).join('') || 'C';
-}
-
-/** Fecha legible del inicio de la clasificación. Pura, para poder probarla. */
-export function formatearClasificadoDesde(valor) {
-    if (typeof valor !== 'string' || valor.trim() === '') return 'Sin fecha registrada';
-    const fecha = new Date(valor.replace(' ', 'T'));
-    if (Number.isNaN(fecha.getTime())) return valor;
-    return fecha.toLocaleDateString('es-CR', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-/** Traduce motivos técnicos/legacy a texto defendible para la vista. */
-export function describirOrigen(motivo) {
-    const etiquetas = {
-        MIGRACION_TBCOMPRADOR_LEGACY: 'Migración del registro anterior',
-        ALTA_CRUD_COMPRADOR: 'Alta registrada antes del retiro del CRUD',
-        REACTIVACION_CRUD_COMPRADOR: 'Reactivación registrada antes del retiro del CRUD',
-    };
-    if (typeof motivo !== 'string' || motivo.trim() === '') return 'Sin origen declarado';
-    return etiquetas[motivo] ?? motivo;
 }
 
 function initialize() {
@@ -58,7 +32,7 @@ function initialize() {
         toastPolite: $('#toast-status'), toastAssertive: $('#toast-alert'),
     };
 
-    const clasificados = new Map();
+    const compradores = new Map();
     const toast = createToast({ polite: elements.toastPolite, assertive: elements.toastAssertive });
     const dialogs = createDialogController();
     let state = createListState({ pageSize: 25 });
@@ -95,40 +69,37 @@ function initialize() {
         identidad.type = 'button';
         identidad.className = 'link-button identity';
         identidad.dataset.identificacion = item.identificacionNumero;
+        identidad.setAttribute('aria-label', `Ver comprador ${item.nombre}`);
         const avatar = document.createElement('span');
         avatar.className = 'avatar';
         avatar.setAttribute('aria-hidden', 'true');
         avatar.textContent = getInitials(item.nombre);
         const nombre = document.createElement('span');
-        nombre.textContent = item.nombre;
+        nombre.textContent = item.nombre || 'Sin nombre';
         identidad.append(avatar, nombre);
-        identidad.setAttribute('aria-label', `Ver la clasificación de ${item.nombre}`);
         persona.appendChild(identidad);
+
+        const alias = document.createElement('td');
+        alias.textContent = item.alias || '—';
 
         const identificacion = document.createElement('td');
         identificacion.textContent = item.identificacionNumero;
 
         const contacto = document.createElement('td');
         const correo = document.createElement('span');
-        correo.textContent = item.correoElectronico;
+        correo.textContent = item.correoElectronico || 'Sin correo';
         const telefono = document.createElement('small');
-        telefono.textContent = item.telefono;
+        telefono.textContent = item.telefono || 'Sin teléfono';
         contacto.append(correo, document.createElement('br'), telefono);
 
-        const desde = document.createElement('td');
-        desde.textContent = formatearClasificadoDesde(item.clasificadoDesde);
-
-        const origen = document.createElement('td');
-        origen.textContent = describirOrigen(item.motivo);
-
-        const disponibilidad = document.createElement('td');
-        const personaActiva = item.personaEstado === 'ACTIVA';
+        const estado = document.createElement('td');
+        const activo = item.estado === 'ACTIVO';
         const badge = document.createElement('span');
-        badge.className = `badge badge--${personaActiva ? 'active' : 'inactive'}`;
-        badge.textContent = personaActiva ? 'Persona activa' : 'Persona inactiva';
-        disponibilidad.appendChild(badge);
+        badge.className = `badge badge--${activo ? 'active' : 'inactive'}`;
+        badge.textContent = activo ? 'Activo' : 'Inactivo';
+        estado.appendChild(badge);
 
-        row.append(persona, identificacion, contacto, desde, origen, disponibilidad);
+        row.append(persona, alias, identificacion, contacto, estado);
         return row;
     }
 
@@ -148,15 +119,15 @@ function initialize() {
         try {
             const respuesta = await request(`${API_URL}?${parametros}`, { signal });
             const datos = respuesta.data ?? {};
-            const items = datos.clasificados ?? [];
-            clasificados.clear();
-            items.forEach((item) => clasificados.set(item.identificacionNumero, item));
+            const items = Array.isArray(datos.compradores) ? datos.compradores : [];
+            compradores.clear();
+            items.forEach((item) => compradores.set(item.identificacionNumero, item));
             state = applyResult(state, {
                 sequence: opened.sequence,
                 items,
-                total: datos.total ?? items.length,
-                page: datos.pagina ?? state.page,
-                pageSize: datos.tamanoPagina ?? state.pageSize,
+                total: Number(datos.total) || 0,
+                page: Number(datos.pagina) || state.page,
+                pageSize: Number(datos.tamanoPagina) || state.pageSize,
             });
         } catch (error) {
             if (error?.name === 'AbortError') {
@@ -169,11 +140,11 @@ function initialize() {
     }
 
     async function openDetail(identificacionNumero) {
-        const item = clasificados.get(identificacionNumero);
+        const item = compradores.get(identificacionNumero);
         if (!item) return;
-        elements.detailTitle.textContent = item.nombre;
+        elements.detailTitle.textContent = item.nombre || 'Comprador';
         elements.detailContent.replaceChildren(createDetail(item));
-        dialogs.open(elements.detailModal);
+        dialogs.open(elements.detailModal, { focus: elements.closeDetail });
 
         capacityController?.abort();
         capacityController = new AbortController();
@@ -200,11 +171,11 @@ function initialize() {
         const fragment = document.createDocumentFragment();
         const filas = [
             ['Identificación', `${item.identificacion?.tipoCodigo ?? ''} ${item.identificacionNumero}`.trim()],
-            ['Teléfono', item.telefono],
-            ['Correo electrónico', item.correoElectronico],
-            ['Clasificado desde', formatearClasificadoDesde(item.clasificadoDesde)],
-            ['Origen de la clasificación', describirOrigen(item.motivo)],
-            ['Disponibilidad de la persona', item.personaEstado === 'ACTIVA' ? 'Activa' : 'Inactiva'],
+            ['Nombre', item.nombre],
+            ['Alias', item.alias || '—'],
+            ['Teléfono', item.telefono || '—'],
+            ['Correo electrónico', item.correoElectronico || '—'],
+            ['Estado', item.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'],
         ];
         filas.forEach(([etiqueta, valor]) => {
             const dt = document.createElement('dt');
@@ -266,6 +237,8 @@ function initialize() {
         event.preventDefault();
         closeDetail();
     });
+    elements.detailModal.addEventListener('click', dialogs.handleBackdropClick);
+    elements.detailModal.addEventListener('close', dialogs.restoreFocus);
 
     const consulta = new URLSearchParams(window.location.search).get('q');
     if (consulta) elements.search.value = consulta;
