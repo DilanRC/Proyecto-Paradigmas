@@ -6,6 +6,8 @@ namespace Application\Model;
 
 use PDO;
 
+require_once __DIR__ . '/PersonaTelefonoHistorico.php';
+
 final class PersonaConflictException extends \RuntimeException
 {
 }
@@ -83,12 +85,6 @@ final class Persona
             ?? throw new \RuntimeException('No fue posible leer la persona recién creada.');
     }
 
-    /**
-     * Actualiza los datos vigentes. Si el teléfono cambia, antes de sustituir el
-     * valor se registra el número nuevo en cada contexto de negocio que tenga la
-     * Persona (Productor y/o Comprador). La transacción la controla el flujo que
-     * llama este método; si falla cualquier histórico, tampoco cambia Persona.
-     */
     public function actualizar(string $identificacionNumero, array $datos): void
     {
         $persona = $this->bloquear($identificacionNumero);
