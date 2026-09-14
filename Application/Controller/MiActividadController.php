@@ -169,7 +169,7 @@ final class MiActividadController
 
     private function personaAutenticada(): array
     {
-        if ($this->actor->supabaseUserId === null || $this->actor->personaId === null) {
+        if ($this->actor->proveedorSujeto === null || $this->actor->personaId === null) {
             throw new HttpException('Debe iniciar sesión para administrar sus actividades.', 401);
         }
 
@@ -211,9 +211,6 @@ final class MiActividadController
                 'registro.php?capacidad=TRANSPORTISTA&next=mi-actividad.php',
             ),
         ];
-        // Publicar necesita las fincas de la Persona Productora. Se exponen
-        // desde el mismo modelo autoritativo; sessionStorage puede cachearlas,
-        // pero nunca decide cuáles existen en MySQL.
         $capacidades['PRODUCTOR']['fincas'] = $productor['fincas'] ?? [];
 
         return $capacidades;
