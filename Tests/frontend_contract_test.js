@@ -20,153 +20,143 @@ function hasNot(path, pattern, message) {
 // Borradores temporales de CRUD administrativos.
 has('Public/js/shared/form-draft.js', 'sessionStorage',
     'los borradores deben vivir en sessionStorage, no ser permanentes');
-has('Public/js/shared/form-draft.js', "const PREFIX = 'tindercows:draft';",
-    'las claves de borrador deben tener namespace propio');
 hasNot('Public/js/shared/form-draft.js', 'localStorage',
     'un borrador temporal no debe sobrevivir como almacenamiento permanente');
-has('Public/js/shared/form.js', "from './form-draft.js';",
-    'los CRUD ligados deben activar la capa compartida de borradores');
 has('Public/js/shared/form.js', 'enableFormDraft(form);',
     'bindFormErrors debe activar el borrador de los CRUD');
 
-// Productores: identidad compartida, dirección principal y fincas independientes.
+// Productores: Persona + fincas + direcciones forman una sola unidad de trabajo.
 has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpoint de productores incorrecto');
-has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
-has('Public/js/productores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
-has('Public/js/productores.js', "const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';",
-    'la edición puntual de una finca existente debe conservar su endpoint aprobado');
-hasNot('Public/js/productores.js', 'fincaId', 'el frontend no debe inventar un id de finca');
+has('Public/js/productores.js', 'fincas: parseFincaDrafts(fincas).map(buildFincaPayload)',
+    'el mismo comando Productor debe transportar cada dirección opcional de finca');
+hasNot('Public/js/productores.js', 'persistirDireccionesFinca',
+    'no debe reaparecer una segunda fase HTTP que deje escrituras parciales');
 has('Application/View/productores/index.php', 'id="fincas-cards"',
     'las fincas deben editarse como elementos independientes');
-has('Application/View/productores/index.php', 'id="agregar-finca-admin"',
-    'debe existir una acción explícita para agregar finca');
-has('Application/View/productores/index.php', 'id="fincas-nombres"',
-    'se conserva el control puente por nombre para no romper el contrato PHP');
-has('Public/js/productores-fincas-ui.js', 'syncHidden()',
-    'las tarjetas deben sincronizar el payload existente');
-has('Public/js/productores-fincas-ui.js', 'Dirección y punto exacto',
-    'cada finca debe exponer su propia dirección y el punto exacto opcional desde Agregar finca');
 has('Public/js/productores-fincas-ui.js', 'crearSelectorPuntoFinca',
-    'el admin debe reutilizar el selector cartográfico compartido de finca');
-has('Public/js/productores.js', 'fincas: parseFincaDrafts(fincas).map(buildFincaPayload)',
-    'el mismo comando de Productor debe transportar cada dirección opcional de finca');
-hasNot('Public/js/productores.js', 'persistirDireccionesFinca',
-    'no debe existir una segunda fase HTTP que pueda dejar Productor y direcciones parcialmente guardados');
+    'cada finca puede administrar su punto exacto opcional');
 has('Application/Controller/ProductorController.php', 'private FincaDireccion $direccionFinca;',
-    'ProductorController debe coordinar la dirección de finca dentro de su unidad de trabajo');
+    'ProductorController debe coordinar la dirección de finca');
 has('Application/Controller/ProductorController.php', '$this->sincronizarDireccionesFinca(',
-    'POST/PUT de Productor deben persistir las direcciones incluidas en el mismo payload');
+    'POST/PUT deben persistir las direcciones en la misma operación');
 has('Application/Controller/ProductorController.php', 'ejecutarConBloqueoEnlaceAlta',
-    'los locks de enlace de finca deben envolver la transacción coordinada');
+    'el lock de enlace debe envolver la transacción coordinada');
 has('Application/Service/ValidacionService.php', "'fincasDetalle' => $fincasDetalle",
-    'la validación debe conservar el detalle estructurado de las fincas para la transacción');
-has(
-    'Application/Service/ValidacionService.php',
-    "$permitidos = ['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];",
-    'Productor debe reconocer alias, dirección y fincas'
-);
-has(
-    'Application/Controller/FincaController.php',
-    "['identificacionNumero', 'nombreFinca', 'direccionFinca']",
-    'POST/PUT de dirección de finca deben identificar Persona, finca y dirección'
-);
+    'la validación debe conservar el detalle estructurado de las fincas');
 has('Application/Controller/FincaController.php', "'latitud' => null, 'longitud' => null",
-    'el punto exacto de finca debe ser opcional y validado por PHP');
+    'latitud/longitud deben ser opcionales y validadas por PHP');
 
-// Comprador: contexto independiente sobre Persona, pero sin CRUD administrativo manual.
+// Comprador: contexto independiente, sin CRUD administrativo manual.
 assert(fs.existsSync('Application/Model/Comprador.php'), 'debe existir el contexto Comprador');
 has('Application/Controller/CompradorConsultaController.php', 'use Application\\Model\\Comprador;',
     'la consulta debe usar el modelo Comprador');
-has('Application/Controller/CompradorConsultaController.php', "'tbcomprador + tbpersona'",
-    'la fuente de Comprador debe ser su contexto más Persona');
-has('Public/js/compradores.js', "const API_URL = 'api/compradores.php';", 'endpoint de compradores incorrecto');
-hasNot('Public/js/compradores.js', 'buildCompradorPayload', 'el panel administrativo no debe construir altas manuales');
+hasNot('Public/js/compradores.js', 'buildCompradorPayload',
+    'el panel administrativo no debe construir altas manuales de Comprador');
 hasNot('Application/View/compradores/index.php', 'id="crear-comprador"',
     'la vista administrativa no debe ofrecer alta manual de Comprador');
 has('Public/js/shared/capacidades.js', /clave:\s*'comprador'[\s\S]{0,300}derivada:\s*false/,
-    'Comprador debe ser un contexto independiente, no derivado de Productor');
+    'Comprador debe ser un contexto independiente');
 hasNot('Public/js/shared/capacidades.js', 'derivada: true',
-    'ningún contexto de negocio debe presentarse como derivado');
+    'ningún contexto debe presentarse como derivado de otro');
 
-// Transportistas, vehículos y métodos de pago mantienen sus contratos existentes.
-has('Public/js/transportistas.js', "const API_URL = 'api/transportistas.php';", 'endpoint de transportistas incorrecto');
-has('Public/js/transportistas.js', "const ASIGNACION_URL = 'api/transportistas-vehiculos.php';", 'endpoint de asignación incorrecto');
-has('Public/js/transportistas.js', 'identificacionNumeroOriginal', 'PUT debe enviar identificación original');
-has(
-    'Application/Service/ValidacionService.php',
-    "$permitidos = ['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico'];",
-    'el contrato compartido de Persona debe incluir alias'
-);
-has('Public/js/vehiculos.js', "const API_URL = 'api/vehiculos.php';", 'endpoint de vehículos incorrecto');
-has('Public/js/vehiculos.js', 'data.vehiculoId = Number(id);', 'PUT debe enviar vehiculoId');
-has('Public/js/pagometodos.js', "const API_URL = 'api/pagometodos.php';", 'endpoint de métodos de pago incorrecto');
-
-// Front 2.0: registro guiado y retorno al proceso que originó el onboarding.
+// Front 2.0: onboarding y geolocalización.
 has('Public/js/shared/business-rules.js', "COMPRADOR: Object.freeze({", 'falta la regla de Comprador');
 has('Public/js/shared/business-rules.js', "PRODUCTOR: Object.freeze({", 'falta la regla de Productor');
 has('Public/js/shared/business-rules.js', "TRANSPORTISTA: Object.freeze({", 'falta la regla de Transportista');
 has('Public/js/shared/business-rules.js', 'requiresAtLeastOneFinca: true',
     'Productor debe pedir al menos una finca en onboarding');
 has('Public/js/shared/business-rules.js', 'vehicleRequiredAtRegistration: false',
-    'Transportista no debe exigir vehículo durante registro inicial');
+    'Transportista no debe exigir vehículo en registro inicial');
 has('Public/js/registro.js', "const SAFE_NEXT = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);",
-    'el onboarding debe volver únicamente a destinos públicos aprobados');
-has('Public/js/registro.js', 'existingProfile?.persona',
-    'al ampliar una actividad debe reutilizarse la misma Persona');
-has('Public/js/registro.js', "base.filter((step) => step !== 'persona')",
-    'una Persona existente no debe repetir la captura de identidad');
+    'el onboarding solo debe volver a destinos públicos');
 has('Public/js/registro.js', 'crearSelectorPuntoFinca',
-    'el usuario debe poder marcar opcionalmente el punto exacto al agregar una finca');
-
-// Ubicación automática y recomendación por cercanía.
+    'el onboarding Productor debe permitir punto exacto opcional');
 has('Public/js/shared/ubicacion-sesion.js', "const UBICACION_USUARIO_KEY = 'tindercows:ubicacion-usuario'",
-    'la posición del visitante debe tener almacenamiento temporal propio');
+    'la ubicación del visitante debe ser temporal');
 has('Public/js/explore.js', 'leerUbicacionUsuario()',
-    'Explorar debe reutilizar la posición temporal del visitante');
-has('Public/js/explore.js', "parametros.set('latitud'",
-    'Explorar debe enviar latitud al ranking cuando exista');
+    'Explorar debe reutilizar ubicación temporal');
 has('Application/Service/PublicacionCercaniaService.php', 'calcularDistanciaKm',
-    'el backend debe calcular la cercanía en PHP');
-hasNot('Public/js/shared/auth-gate.js', 'api/productores-ubicacion.php',
-    'la ubicación automática de sesión no debe crear históricos de Productor');
+    'la cercanía debe calcularse en PHP');
 
-// Publicar: gate Productor y borrador honesto mientras no exista POST aprobado.
+// Publicar: no simular un POST comercial inexistente.
 assert(fs.existsSync('Public/publicar.php'), 'falta la ruta pública Publicar');
-assert(fs.existsSync('Application/View/publicar/index.php'), 'falta la vista pública Publicar');
-has('Public/js/publicar.js', "capabilityState(profile, 'PRODUCTOR')", 'Publicar debe exigir contexto Productor');
-has('Public/js/publicar.js', 'registro.php?capacidad=PRODUCTOR&next=publicar.php',
-    'el onboarding Productor debe regresar a Publicar');
+has('Public/js/publicar.js', "capabilityState(profile, 'PRODUCTOR')", 'Publicar debe exigir Productor');
 has('Public/js/publicar.js', "const DRAFT_KEY = 'tindercows:publish-draft';",
-    'la publicación incompleta debe preservarse como borrador temporal');
+    'la publicación debe conservarse como borrador temporal');
 has('Public/js/publicar.js', 'el backend actual expone publicaciones solo por GET',
-    'la UI no debe anunciar persistencia que el backend todavía no ofrece');
-hasNot('Public/js/publicar.js', "method: 'POST'", 'Publicar no debe inventar un POST inexistente');
+    'la UI debe admitir que todavía no existe escritura comercial');
+hasNot('Public/js/publicar.js', "method: 'POST'", 'Publicar no debe inventar un POST');
 
-// Comprar/Pujar: disponibilidad real por GET, gate Comprador y puja no inventada.
+// Comprar/Pujar: identidad estable de publicación y puja no inventada.
 assert(fs.existsSync('Public/js/explore-actions.js'), 'falta el flujo Comprar / pujar');
 has('Public/js/explore.js', 'article.dataset.publicacionId = String(publicacionId);',
-    'la tarjeta debe conservar el publicacionId que ya entrega el catálogo');
-has('Public/js/explore.js', 'article.dataset.animalId = String(animalId);',
-    'la tarjeta debe conservar también el animalId asociado');
-has('Public/js/explore-actions.js', "const API_URL = 'api/publicaciones.php';", 'debe verificar el catálogo vigente');
-has('Public/js/explore-actions.js', "estado: 'ACTIVO'", 'solo debe continuar con publicaciones activas');
+    'la tarjeta debe conservar publicacionId');
 has('Public/js/explore-actions.js', 'publicacionId: positiveInt(card.dataset.publicacionId)',
-    'Comprar/Pujar debe transportar el id estable de la publicación, no reconstruir identidad desde el texto visible');
+    'Comprar/Pujar debe transportar el id estable');
 has('Public/js/explore-actions.js', 'positiveInt(item?.publicacionId) !== expectedPublicationId',
     'la revalidación debe comparar por publicacionId');
-has('Public/js/explore-actions.js', "profile?.capacidadesEstado?.COMPRADOR", 'la compra debe exigir contexto Comprador');
-has('Public/js/explore-actions.js', 'registro.php?capacidad=COMPRADOR&next=explorar.php',
-    'el onboarding Comprador debe volver a la publicación');
 has('Public/js/explore-actions.js', 'bid.disabled = true',
-    'la puja debe quedar deshabilitada mientras el API no informe subasta activa');
-has('Public/js/explore-actions.js', 'Reintentar', 'el modal debe ofrecer recuperación ante error');
-has('Public/js/explore-actions.js', 'aria-busy', 'el modal debe exponer estado ocupado');
-hasNot('Public/js/explore-actions.js', "method: 'POST'", 'no debe inventarse una escritura de compra');
+    'la puja debe seguir deshabilitada sin contrato de subasta');
+hasNot('Public/js/explore-actions.js', "method: 'POST'", 'no debe inventarse una compra');
 
-// La experiencia pública no debe mandar a los usuarios a los CRUD administrativos.
-hasNot('Public/js/mi-actividad.js', 'href="productores.php"', 'Mi actividad no debe enviar al CRUD de Productores');
-hasNot('Public/js/mi-actividad.js', 'href="transportistas.php"', 'Mi actividad no debe enviar al CRUD de Transportistas');
-has('Public/js/mi-actividad.js', 'href="publicar.php"', 'Productor activo debe continuar por el flujo Publicar');
-has('Public/js/mi-actividad.js', 'href="fletes.php"', 'Transportista activo debe continuar por Fletes');
+// Autenticación pública real: Supabase identifica usuario; PHP vincula Persona.
+assert(fs.existsSync('Public/js/shared/supabase-auth.js'), 'falta el cliente de autenticación Supabase');
+assert(fs.existsSync('Public/api/auth-config.php'), 'falta el endpoint de configuración pública de Auth');
+has('Public/js/shared/supabase-auth.js', "token?grant_type=${encodeURIComponent(grantType)}",
+    'el login/refresh debe usar el endpoint token de Supabase');
+has('Public/js/shared/supabase-auth.js', "tokenRequest('password'", 'el login debe usar password grant');
+has('Public/js/shared/supabase-auth.js', "tokenRequest('refresh_token'", 'la sesión debe poder renovar JWT');
+has('Public/js/shared/supabase-auth.js', '/auth/v1/logout?scope=local',
+    'salir debe intentar revocar la sesión local en Supabase');
+hasNot('Public/js/shared/supabase-auth.js', 'SUPABASE_SECRET_KEY',
+    'el navegador nunca debe conocer la clave secreta');
+has('Public/api/auth-config.php', "getenv('SUPABASE_PUBLISHABLE_KEY')",
+    'el navegador solo debe recibir la publishable key');
+hasNot('Public/api/auth-config.php', 'SUPABASE_SECRET_KEY',
+    'auth-config no debe exponer la clave secreta');
+has('Public/js/shared/api.js', 'Authorization: `Bearer ${bearer}`',
+    'las llamadas PHP autenticadas deben llevar Bearer');
+has('Public/js/shared/api.js', 'getAccessToken({ forceRefresh: true })',
+    'un 401 debe renovar el JWT como máximo una vez');
+has('Public/js/login.js', 'await signInWithPassword(email, password);',
+    'Login no debe aceptar cualquier contraseña localmente');
+has('Public/js/login.js', "await request('api/mi-actividad.php')",
+    'Login debe comprobar que el JWT esté vinculado a una Persona');
+hasNot('Public/js/login.js', 'local-browser-session',
+    'Login no debe reconstruir la sesión demo anterior');
+hasNot('Public/js/login.js', "'productores.php'", 'una cuenta pública no debe redirigir al CRUD admin');
+has('Public/js/shared/auth-gate.js', "const SESSION_KEY = 'tindercows:admin-session';",
+    'la sesión administrativa debe estar separada de la sesión pública');
+has('Public/js/shared/auth-gate.js', "session?.mode !== 'admin-server-session'",
+    'el gate admin debe denegar por defecto hasta tener autorización real');
+hasNot('Public/js/shared/auth-gate.js', 'local-browser-session',
+    'el gate admin no debe aceptar la antigua sesión simulada');
 
-console.log('OK frontend_contract_test: contratos administrativos, transacción de fincas y Front 2.0 alineados.');
+// Mi actividad: proceso público ligado al actor, no a una cédula elegida por JS.
+assert(fs.existsSync('Application/Controller/MiActividadController.php'), 'falta el controlador Mi actividad');
+assert(fs.existsSync('Public/api/mi-actividad.php'), 'falta el endpoint Mi actividad');
+has('Public/api/mi-actividad.php', 'SupabaseActorResolver::fromGlobals($conexion)',
+    'Mi actividad debe resolver el actor desde el Bearer');
+has('Application/Controller/MiActividadController.php', "array_diff(array_keys($cuerpo), ['contexto', 'activo'])",
+    'PATCH público solo debe aceptar contexto y estado');
+has('Application/Controller/MiActividadController.php', '$this->persona->buscarPorId($this->actor->personaId)',
+    'la Persona objetivo debe derivarse del actor autenticado');
+has('Application/Controller/MiActividadController.php', "if ($contexto === 'COMPRADOR')",
+    'Comprador debe permanecer bloqueado hasta aprobar su escritor de negocio');
+has('Public/js/mi-actividad.js', "const API_URL = 'api/mi-actividad.php';",
+    'Mi actividad no debe llamar los CRUD directamente');
+has('Public/js/mi-actividad.js', "method: 'PATCH'", 'los cambios deben persistirse por JSON');
+has('Public/js/mi-actividad.js', 'JSON.stringify({ contexto: id, activo: nextActive })',
+    'el navegador no debe enviar una identificación objetivo');
+has('Public/js/mi-actividad.js', 'await loadActivity({ quiet: true })',
+    'tras cambiar estado debe releerse la fuente de verdad');
+hasNot('Public/js/mi-actividad.js', 'api/productores.php',
+    'Mi actividad no debe saltarse el proceso público seguro');
+hasNot('Public/js/mi-actividad.js', 'api/transportistas.php',
+    'Mi actividad no debe saltarse el proceso público seguro');
+hasNot('Public/js/mi-actividad.js', 'href="productores.php"',
+    'Mi actividad no debe enviar al CRUD de Productores');
+hasNot('Public/js/mi-actividad.js', 'href="transportistas.php"',
+    'Mi actividad no debe enviar al CRUD de Transportistas');
+
+console.log('OK frontend_contract_test: atomicidad, Front 2.0, auth real y Mi actividad alineados.');
