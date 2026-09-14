@@ -84,7 +84,9 @@ CREATE TABLE IF NOT EXISTS tbdireccion (
     tbdireccioncanton VARCHAR(100) NOT NULL,
     tbdirecciondistrito VARCHAR(100) NOT NULL,
     tbdireccionpueblo VARCHAR(150) NULL,
-    tbdireccionsenas VARCHAR(500) NULL
+    tbdireccionsenas VARCHAR(500) NULL,
+    tbdireccionlatitud DECIMAL(10,7) NULL,
+    tbdireccionlongitud DECIMAL(10,7) NULL
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
