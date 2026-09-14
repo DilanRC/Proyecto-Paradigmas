@@ -1,8 +1,10 @@
 // Puerta de navegacion del frontend privado.
 //
-// Esta capa solo controla la sesion de demostracion del navegador. No solicita
-// geolocalizacion ni ejecuta efectos de negocio en background. Cualquier
-// ubicacion observada requiere una accion explicita del usuario desde su flujo.
+// Esta capa controla la sesion de demostracion del navegador. La ubicacion
+// automatica que inicia aqui es efimera y solo prepara la experiencia por
+// cercania/centrado; no escribe datos de Persona, Productor ni historicos.
+
+import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
 
 export const SESSION_KEY = 'tindercows:login';
 
@@ -85,7 +87,13 @@ if (typeof window !== 'undefined') {
     if (allowed && typeof document !== 'undefined') {
         revealPrivateUi();
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => wirePrivateShell(window.sessionStorage), { once: true });
-        } else wirePrivateShell(window.sessionStorage);
+            document.addEventListener('DOMContentLoaded', () => {
+                wirePrivateShell(window.sessionStorage);
+                inicializarUbicacionAutomatica();
+            }, { once: true });
+        } else {
+            wirePrivateShell(window.sessionStorage);
+            inicializarUbicacionAutomatica();
+        }
     }
 }
