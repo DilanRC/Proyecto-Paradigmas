@@ -7,11 +7,12 @@ namespace Application\Controller;
 use Application\Auth\ActorContext;
 use Application\HttpException;
 use Application\Model\Bitacora;
+use Application\Model\Direccion;
+use Application\Model\FincaDireccion;
 use Application\Model\Productor;
 use Application\Model\ProductorDireccion;
 use Application\Model\ProductorEstadoPeriodo;
 use Application\Model\ProductorFinca;
-use Application\Model\Direccion;
 use Application\Service\ProductorDireccionService;
 use Application\Service\ProductorEstadoService;
 use Application\Service\ValidacionException;
@@ -23,6 +24,7 @@ final class ProductorController
 {
     private Productor $productor;
     private ProductorDireccion $direccion;
+    private FincaDireccion $direccionFinca;
     private ProductorEstadoPeriodo $estadoPeriodos;
     private ProductorFinca $fincas;
     private Bitacora $bitacora;
@@ -35,12 +37,27 @@ final class ProductorController
     {
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
-        $this->direccion = new ProductorDireccion($conexion, new Direccion($conexion));
+
+        // Una sola instancia de Direccion comparte el estado del lock global
+        // entre la residencia del productor y las direcciones de sus fincas.
+        $direccionBase = new Direccion($conexion);
+        $this->direccion = new ProductorDireccion($conexion, $direccionBase);
+        $this->direccionFinca = new FincaDireccion($conexion, $direccionBase);
+
         $this->estadoPeriodos = new ProductorEstadoPeriodo($conexion);
         $this->bitacora = new Bitacora($conexion, $actor);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
-        $this->estadoService = new ProductorEstadoService($this->estadoPeriodos, $this->productor, $this->bitacora, $this->solicitudId);
-        $this->direccionService = new ProductorDireccionService($this->direccion, $this->bitacora, $this->solicitudId);
+        $this->estadoService = new ProductorEstadoService(
+            $this->estadoPeriodos,
+            $this->productor,
+            $this->bitacora,
+            $this->solicitudId,
+        );
+        $this->direccionService = new ProductorDireccionService(
+            $this->direccion,
+            $this->bitacora,
+            $this->solicitudId,
+        );
         $this->validacion = new ValidacionService();
     }
 
@@ -65,7 +82,7 @@ final class ProductorController
                 $excepcion->getMessage(),
                 $excepcion->datos,
                 $excepcion->estadoHttp,
-                $excepcion->errores
+                $excepcion->errores,
             );
         }
     }
@@ -74,7 +91,7 @@ final class ProductorController
     {
         if (array_key_exists('identificacionNumero', $consulta)) {
             $identificacion = $this->validacion->normalizarIdentificacion(
-                $this->textoConsulta($consulta['identificacionNumero'], 250)
+                $this->textoConsulta($consulta['identificacionNumero'], 250),
             );
             if ($identificacion === '') {
                 throw new HttpException('La identificación no es válida.', 422);
@@ -93,7 +110,8 @@ final class ProductorController
                 'estado' => 'Use TODOS, ACTIVO o INACTIVO.',
             ]);
         }
-        $pagina = array_key_exists('pagina', $consulta) ? $this->enteroConsulta($consulta['pagina'], 'pagina') : 1;
+        $pagina = array_key_exists('pagina', $consulta)
+            ? $this->enteroConsulta($consulta['pagina'], 'pagina') : 1;
         $tamano = array_key_exists('tamanoPagina', $consulta)
             ? $this->enteroConsulta($consulta['tamanoPagina'], 'tamanoPagina') : 25;
         if ($tamano > 100) {
@@ -112,50 +130,67 @@ final class ProductorController
     private function crear(array $cuerpo): array
     {
         $datos = $this->validarCuerpoProductor($cuerpo, false);
+
+        // Una sola unidad de trabajo: Persona/Productor + residencia + fincas +
+        // direcciones de finca + estado + bitácora. Los locks que protegen
+        // MAX+1 permanecen hasta que transaccion() haga COMMIT o ROLLBACK.
         $nuevo = $this->productor->ejecutarConBloqueoAlta(
             fn (): array => $this->direccion->ejecutarConBloqueoAlta(
                 fn (): array => $this->fincas->ejecutarConBloqueoAlta(
-                    fn (): array => $this->transaccion(function () use ($datos): array {
-                        $existente = $this->productor->buscar($datos['identificacionNumero']);
-                        if ($existente !== null) {
-                            $inactivo = $existente['estado'] === 'INACTIVO';
-                            throw new HttpException(
-                                $inactivo
-                                    ? 'La identificación pertenece a un productor inactivo.'
-                                    : 'La identificación ya está registrada.',
-                                409,
-                                $inactivo
-                                    ? ['reactivacion' => ['identificacionNumero' => $datos['identificacionNumero']]]
-                                    : null,
-                                ['identificacion.numero' => $inactivo
-                                    ? 'Debe reactivarse el productor existente.'
-                                    : 'El número de identificación ya existe.'],
+                    fn (): array => $this->direccionFinca->ejecutarConBloqueoEnlaceAlta(
+                        fn (): array => $this->transaccion(function () use ($datos): array {
+                            $existente = $this->productor->buscar($datos['identificacionNumero']);
+                            if ($existente !== null) {
+                                $inactivo = $existente['estado'] === 'INACTIVO';
+                                throw new HttpException(
+                                    $inactivo
+                                        ? 'La identificación pertenece a un productor inactivo.'
+                                        : 'La identificación ya está registrada.',
+                                    409,
+                                    $inactivo
+                                        ? ['reactivacion' => ['identificacionNumero' => $datos['identificacionNumero']]]
+                                        : null,
+                                    ['identificacion.numero' => $inactivo
+                                        ? 'Debe reactivarse el productor existente.'
+                                        : 'El número de identificación ya existe.'],
+                                );
+                            }
+
+                            $productorId = $this->productor->crear($datos);
+                            if ($datos['direccion'] === null) {
+                                $this->direccion->crearVacia($productorId);
+                            } else {
+                                $this->direccion->crear($productorId, $datos['direccion']);
+                            }
+                            $this->fincas->sincronizar($productorId, $datos['fincas']);
+                            $this->sincronizarDireccionesFinca(
+                                $productorId,
+                                $datos['identificacionNumero'],
+                                $datos['fincasDetalle'],
                             );
-                        }
-                        $productorId = $this->productor->crear($datos);
-                        if ($datos['direccion'] === null) {
-                            $this->direccion->crearVacia($productorId);
-                        } else {
-                            $this->direccion->crear($productorId, $datos['direccion']);
-                        }
-                        $this->fincas->sincronizar($productorId, $datos['fincas']);
-                        $this->estadoPeriodos->ejecutarConBloqueo(
-                            $productorId,
-                            fn (): int => $this->estadoPeriodos->abrir($productorId, 1, 'Alta del productor'),
-                        );
-                        $nuevo = $this->productor->buscar($datos['identificacionNumero']);
-                        if ($nuevo === null) {
-                            throw new \RuntimeException('No fue posible leer el productor recién creado.');
-                        }
-                        $this->bitacora->registrar(
-                            'CREAR',
-                            $datos['identificacionNumero'],
-                            null,
-                            $nuevo,
-                            $this->solicitudId,
-                        );
-                        return $nuevo;
-                    }),
+                            $this->estadoPeriodos->ejecutarConBloqueo(
+                                $productorId,
+                                fn (): int => $this->estadoPeriodos->abrir(
+                                    $productorId,
+                                    1,
+                                    'Alta del productor',
+                                ),
+                            );
+
+                            $nuevo = $this->productor->buscar($datos['identificacionNumero']);
+                            if ($nuevo === null) {
+                                throw new \RuntimeException('No fue posible leer el productor recién creado.');
+                            }
+                            $this->bitacora->registrar(
+                                'CREAR',
+                                $datos['identificacionNumero'],
+                                null,
+                                $nuevo,
+                                $this->solicitudId,
+                            );
+                            return $nuevo;
+                        }),
+                    ),
                 ),
             ),
         );
@@ -173,42 +208,159 @@ final class ProductorController
             ]);
         }
 
-        $nuevo = $this->fincas->ejecutarConBloqueoAlta(
-            fn (): array => $this->transaccion(function () use ($datos, $identificacion): array {
-                $bloqueado = $this->productor->bloquear($identificacion);
-                if ($bloqueado === null) {
-                    throw new HttpException('Productor no encontrado.', 404);
-                }
-                if ((int) $bloqueado['tbproductorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
-                    throw new HttpException(
-                        'El productor está inactivo. Debe reactivarlo antes de actualizarlo.',
-                        409,
-                    );
-                }
-                $anterior = $this->productor->buscar($identificacion);
-                if ($anterior === null) {
-                    throw new HttpException('El productor no conserva su dirección obligatoria.', 409);
-                }
-                $this->productor->actualizar($identificacion, $datos);
-                $productorId = (int) $bloqueado['tbproductorid'];
-                $direccionAnterior = $this->direccion->buscar($productorId);
-                $this->direccionService->cambiar(
-                    $productorId,
-                    $identificacion,
-                    $direccionAnterior,
-                    $datos['direccion'],
-                );
-                $this->fincas->sincronizar($productorId, $datos['fincas']);
-                $nuevo = $this->productor->buscar($identificacion);
-                if ($nuevo === null) {
-                    throw new \RuntimeException('No fue posible leer el productor actualizado.');
-                }
-                $this->bitacora->registrar('ACTUALIZAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
-                return $nuevo;
-            }),
+        $existente = $this->productor->buscar($identificacion);
+        if ($existente === null) {
+            throw new HttpException('Productor no encontrado.', 404);
+        }
+        $productorId = (int) $existente['productorId'];
+
+        $nuevo = $this->direccion->ejecutarConBloqueoProducto(
+            $productorId,
+            fn (): array => $this->fincas->ejecutarConBloqueoAlta(
+                fn (): array => $this->direccionFinca->ejecutarConBloqueoEnlaceAlta(
+                    fn (): array => $this->transaccion(function () use (
+                        $datos,
+                        $identificacion,
+                        $productorId,
+                    ): array {
+                        $bloqueado = $this->productor->bloquear($identificacion);
+                        if ($bloqueado === null) {
+                            throw new HttpException('Productor no encontrado.', 404);
+                        }
+                        if ((int) $bloqueado['tbproductorid'] !== $productorId) {
+                            throw new HttpException('El productor cambió durante la operación; reintente.', 409);
+                        }
+                        if ((int) $bloqueado['tbproductorestado'] !== 1
+                            || (int) $bloqueado['tbpersonaestado'] !== 1) {
+                            throw new HttpException(
+                                'El productor está inactivo. Debe reactivarlo antes de actualizarlo.',
+                                409,
+                            );
+                        }
+
+                        $anterior = $this->productor->buscar($identificacion);
+                        if ($anterior === null) {
+                            throw new HttpException('El productor no conserva su dirección obligatoria.', 409);
+                        }
+
+                        $this->productor->actualizar($identificacion, $datos);
+                        $direccionAnterior = $this->direccion->buscar($productorId);
+                        try {
+                            $this->direccionService->cambiarConBloqueosExistentes(
+                                $productorId,
+                                $identificacion,
+                                $direccionAnterior,
+                                $datos['direccion'],
+                            );
+                        } catch (\RuntimeException $excepcion) {
+                            throw new HttpException($excepcion->getMessage(), 409);
+                        }
+
+                        $this->fincas->sincronizar($productorId, $datos['fincas']);
+                        $this->sincronizarDireccionesFinca(
+                            $productorId,
+                            $identificacion,
+                            $datos['fincasDetalle'],
+                        );
+
+                        $nuevo = $this->productor->buscar($identificacion);
+                        if ($nuevo === null) {
+                            throw new \RuntimeException('No fue posible leer el productor actualizado.');
+                        }
+                        $this->bitacora->registrar(
+                            'ACTUALIZAR',
+                            $identificacion,
+                            $anterior,
+                            $nuevo,
+                            $this->solicitudId,
+                        );
+                        return $nuevo;
+                    }),
+                ),
+            ),
         );
 
         return $this->respuesta(true, 'Productor actualizado correctamente.', $nuevo);
+    }
+
+    /**
+     * Persiste únicamente las direcciones incluidas en el payload. Omitir
+     * direccion significa "conservar la existente", no vaciarla. Eso permite
+     * editar un Productor aun si la consulta opcional de una finca falló en el
+     * navegador, sin destruir datos previamente almacenados.
+     */
+    private function sincronizarDireccionesFinca(
+        int $productorId,
+        string $identificacion,
+        array $fincasDetalle,
+    ): void {
+        foreach ($fincasDetalle as $finca) {
+            if (!array_key_exists('direccion', $finca)) {
+                continue;
+            }
+
+            $nombre = $finca['nombre'];
+            $fincaId = $this->fincas->buscarIdActivo($productorId, $nombre);
+            if ($fincaId === null) {
+                throw new HttpException(
+                    "La finca {$nombre} no quedó activa; no es seguro guardar su dirección.",
+                    409,
+                );
+            }
+
+            try {
+                $anterior = $this->direccionFinca->buscar($fincaId);
+                $nuevaSolicitada = $finca['direccion'];
+                if ($anterior !== null && $this->mismaDireccionFinca($anterior, $nuevaSolicitada)) {
+                    continue;
+                }
+
+                if ($anterior === null) {
+                    $this->direccionFinca->crear($fincaId, $nuevaSolicitada);
+                    $accion = 'CREAR_DIRECCION_FINCA';
+                } else {
+                    $this->direccionFinca->actualizar($fincaId, $nuevaSolicitada);
+                    $accion = 'ACTUALIZAR_DIRECCION_FINCA';
+                }
+                $nueva = $this->direccionFinca->buscar($fincaId);
+            } catch (\RuntimeException $excepcion) {
+                throw new HttpException(
+                    "No fue posible guardar la dirección de {$nombre}: {$excepcion->getMessage()}",
+                    409,
+                );
+            }
+
+            $this->bitacora->registrar(
+                $accion,
+                "{$identificacion}:{$nombre}",
+                $anterior === null ? null : ['direccionFinca' => $anterior],
+                ['direccionFinca' => $nueva],
+                $this->solicitudId,
+                'FINCA',
+                'API_PRODUCTORES',
+            );
+        }
+    }
+
+    private function mismaDireccionFinca(array $anterior, array $nueva): bool
+    {
+        $normalizar = static function (array $direccion): array {
+            $coordenada = static function (mixed $valor): ?string {
+                if ($valor === null || $valor === '') return null;
+                return number_format((float) $valor, 7, '.', '');
+            };
+            return [
+                'provincia' => (string) ($direccion['provincia'] ?? ''),
+                'canton' => (string) ($direccion['canton'] ?? ''),
+                'distrito' => (string) ($direccion['distrito'] ?? ''),
+                'pueblo' => ($direccion['pueblo'] ?? null) === '' ? null : ($direccion['pueblo'] ?? null),
+                'senas' => ($direccion['senas'] ?? null) === '' ? null : ($direccion['senas'] ?? null),
+                'latitud' => $coordenada($direccion['latitud'] ?? null),
+                'longitud' => $coordenada($direccion['longitud'] ?? null),
+            ];
+        };
+
+        return $normalizar($anterior) === $normalizar($nueva);
     }
 
     /**
@@ -237,8 +389,15 @@ final class ProductorController
                         throw new HttpException($excepcion->getMessage(), 409);
                     }
                     $nuevo = $this->productor->buscar($identificacion);
-                    $this->bitacora->registrar('CREAR_DIRECCION', $identificacion, null, $nuevo, $this->solicitudId);
-                    return $nuevo ?? throw new \RuntimeException('No fue posible leer el productor tras crear la dirección.');
+                    $this->bitacora->registrar(
+                        'CREAR_DIRECCION',
+                        $identificacion,
+                        null,
+                        $nuevo,
+                        $this->solicitudId,
+                    );
+                    return $nuevo
+                        ?? throw new \RuntimeException('No fue posible leer el productor tras crear la dirección.');
                 }),
             );
 
@@ -249,7 +408,7 @@ final class ProductorController
                 $excepcion->getMessage(),
                 $excepcion->datos,
                 $excepcion->estadoHttp,
-                $excepcion->errores
+                $excepcion->errores,
             );
         }
     }
@@ -270,7 +429,7 @@ final class ProductorController
                 $excepcion->getMessage(),
                 $excepcion->datos,
                 $excepcion->estadoHttp,
-                $excepcion->errores
+                $excepcion->errores,
             );
         }
     }
@@ -286,7 +445,12 @@ final class ProductorController
             if ((int) $bloqueado['tbpersonaestado'] !== 1) {
                 throw new HttpException('La persona está inactiva y no puede operar capacidades.', 409);
             }
-            $this->estadoService->transicionar((int) $bloqueado['tbproductorid'], 0, 'Desactivación', $identificacion);
+            $this->estadoService->transicionar(
+                (int) $bloqueado['tbproductorid'],
+                0,
+                'Desactivación',
+                $identificacion,
+            );
 
             return $this->productor->buscar($identificacion)
                 ?? throw new \RuntimeException('No fue posible leer el productor desactivado.');
@@ -306,7 +470,12 @@ final class ProductorController
             if ((int) $bloqueado['tbpersonaestado'] !== 1) {
                 throw new HttpException('La persona está inactiva y no puede reactivar capacidades.', 409);
             }
-            $this->estadoService->transicionar((int) $bloqueado['tbproductorid'], 1, 'Reactivación', $identificacion);
+            $this->estadoService->transicionar(
+                (int) $bloqueado['tbproductorid'],
+                1,
+                'Reactivación',
+                $identificacion,
+            );
 
             return $this->productor->buscar($identificacion)
                 ?? throw new \RuntimeException('No fue posible leer el productor reactivado.');
@@ -324,7 +493,7 @@ final class ProductorController
                 $excepcion->getMessage(),
                 422,
                 null,
-                $excepcion->errores
+                $excepcion->errores,
             );
         }
     }
@@ -337,7 +506,7 @@ final class ProductorController
             ]);
         }
         $identificacion = $this->normalizarIdentificacion(
-            $this->textoConsulta($consulta['identificacionNumero'], 250)
+            $this->textoConsulta($consulta['identificacionNumero'], 250),
         );
         if ($identificacion === '') {
             throw new HttpException('La identificación no es válida.', 422);
@@ -363,35 +532,55 @@ final class ProductorController
         $validada = $this->validarIdentificacionYDireccion($cuerpo, 'direccionPrincipal');
         $identificacion = $validada['identificacionNumero'];
         $direccion = $validada['direccion'];
+        $productor = $this->productor->buscar($identificacion);
+        if ($productor === null) {
+            throw new HttpException('Productor no encontrado.', 404);
+        }
+        $productorId = (int) $productor['productorId'];
 
-        $resultado = $this->transaccion(function () use ($identificacion, $direccion): array {
-            $bloqueado = $this->productor->bloquear($identificacion);
-            if ($bloqueado === null) {
-                throw new HttpException('Productor no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbproductorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
-                throw new HttpException(
-                    'El productor está inactivo. Debe reactivarlo antes de actualizar su dirección.',
-                    409,
-                );
-            }
-            $productorId = (int) $bloqueado['tbproductorid'];
-            $anterior = $this->direccion->buscar($productorId);
-            if ($anterior === null) {
-                throw new HttpException(
-                    'El productor no tiene una dirección registrada; use POST para crearla.',
-                    404,
-                );
-            }
+        $resultado = $this->direccion->ejecutarConBloqueoProducto(
+            $productorId,
+            fn (): array => $this->transaccion(function () use (
+                $identificacion,
+                $direccion,
+                $productorId,
+            ): array {
+                $bloqueado = $this->productor->bloquear($identificacion);
+                if ($bloqueado === null) {
+                    throw new HttpException('Productor no encontrado.', 404);
+                }
+                if ((int) $bloqueado['tbproductorid'] !== $productorId) {
+                    throw new HttpException('El productor cambió durante la operación; reintente.', 409);
+                }
+                if ((int) $bloqueado['tbproductorestado'] !== 1
+                    || (int) $bloqueado['tbpersonaestado'] !== 1) {
+                    throw new HttpException(
+                        'El productor está inactivo. Debe reactivarlo antes de actualizar su dirección.',
+                        409,
+                    );
+                }
+                $anterior = $this->direccion->buscar($productorId);
+                if ($anterior === null) {
+                    throw new HttpException(
+                        'El productor no tiene una dirección registrada; use POST para crearla.',
+                        404,
+                    );
+                }
 
-            try {
-                $nueva = $this->direccionService->cambiar($productorId, $identificacion, $anterior, $direccion);
-            } catch (\RuntimeException $excepcion) {
-                throw new HttpException($excepcion->getMessage(), 409);
-            }
+                try {
+                    $nueva = $this->direccionService->cambiarConBloqueosExistentes(
+                        $productorId,
+                        $identificacion,
+                        $anterior,
+                        $direccion,
+                    );
+                } catch (\RuntimeException $excepcion) {
+                    throw new HttpException($excepcion->getMessage(), 409);
+                }
 
-            return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
-        });
+                return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
+            }),
+        );
 
         return $this->respuesta(true, 'Dirección actualizada correctamente.', $resultado);
     }
@@ -399,34 +588,52 @@ final class ProductorController
     private function eliminarDireccion(array $cuerpo): array
     {
         $identificacion = $this->validarIdentificacionUnica($cuerpo);
+        $productor = $this->productor->buscar($identificacion);
+        if ($productor === null) {
+            throw new HttpException('Productor no encontrado.', 404);
+        }
+        $productorId = (int) $productor['productorId'];
 
-        $resultado = $this->transaccion(function () use ($identificacion): array {
-            $bloqueado = $this->productor->bloquear($identificacion);
-            if ($bloqueado === null) {
-                throw new HttpException('Productor no encontrado.', 404);
-            }
-            if ((int) $bloqueado['tbproductorestado'] !== 1 || (int) $bloqueado['tbpersonaestado'] !== 1) {
-                throw new HttpException(
-                    'El productor está inactivo. Debe reactivarlo antes de modificar su dirección.',
-                    409,
-                );
-            }
-            $productorId = (int) $bloqueado['tbproductorid'];
-            $anterior = $this->direccion->buscar($productorId);
-            if ($anterior === null) {
-                throw new HttpException(
-                    'El productor no tiene una dirección registrada; no hay nada que eliminar.',
-                    404,
-                );
-            }
-            try {
-                $nueva = $this->direccionService->vaciar($productorId, $identificacion, $anterior);
-            } catch (\RuntimeException $excepcion) {
-                throw new HttpException($excepcion->getMessage(), 409);
-            }
+        $resultado = $this->direccion->ejecutarConBloqueoProducto(
+            $productorId,
+            fn (): array => $this->transaccion(function () use (
+                $identificacion,
+                $productorId,
+            ): array {
+                $bloqueado = $this->productor->bloquear($identificacion);
+                if ($bloqueado === null) {
+                    throw new HttpException('Productor no encontrado.', 404);
+                }
+                if ((int) $bloqueado['tbproductorid'] !== $productorId) {
+                    throw new HttpException('El productor cambió durante la operación; reintente.', 409);
+                }
+                if ((int) $bloqueado['tbproductorestado'] !== 1
+                    || (int) $bloqueado['tbpersonaestado'] !== 1) {
+                    throw new HttpException(
+                        'El productor está inactivo. Debe reactivarlo antes de modificar su dirección.',
+                        409,
+                    );
+                }
+                $anterior = $this->direccion->buscar($productorId);
+                if ($anterior === null) {
+                    throw new HttpException(
+                        'El productor no tiene una dirección registrada; no hay nada que eliminar.',
+                        404,
+                    );
+                }
+                try {
+                    $nueva = $this->direccionService->vaciarConBloqueosExistentes(
+                        $productorId,
+                        $identificacion,
+                        $anterior,
+                    );
+                } catch (\RuntimeException $excepcion) {
+                    throw new HttpException($excepcion->getMessage(), 409);
+                }
 
-            return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
-        });
+                return ['identificacionNumero' => $identificacion, 'direccionPrincipal' => $nueva];
+            }),
+        );
 
         return $this->respuesta(true, 'Dirección vaciada correctamente.', $resultado);
     }
@@ -440,7 +647,7 @@ final class ProductorController
                 $excepcion->getMessage(),
                 422,
                 null,
-                $excepcion->errores
+                $excepcion->errores,
             );
         }
     }
@@ -454,7 +661,7 @@ final class ProductorController
                 $excepcion->getMessage(),
                 422,
                 null,
-                $excepcion->errores
+                $excepcion->errores,
             );
         }
     }
@@ -505,8 +712,13 @@ final class ProductorController
         return 'REQ-' . bin2hex(random_bytes(16));
     }
 
-    private function respuesta(bool $exito, string $mensaje, ?array $datos, int $estado = 200, array $errores = []): array
-    {
+    private function respuesta(
+        bool $exito,
+        string $mensaje,
+        ?array $datos,
+        int $estado = 200,
+        array $errores = [],
+    ): array {
         $cuerpo = ['success' => $exito, 'message' => $mensaje, 'data' => $datos];
         if ($errores !== []) {
             $cuerpo['errors'] = $errores;
