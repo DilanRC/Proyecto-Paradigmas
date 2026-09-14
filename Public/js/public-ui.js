@@ -1,4 +1,5 @@
 const SESSION_KEY = 'tindercows:login';
+const PROFILE_KEY = 'tindercows:profile';
 
 function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
@@ -9,8 +10,12 @@ function ensureProductStyles() {
     document.head.appendChild(link);
 }
 
+function readStorage(key) {
+    try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
+}
+
 function readSession() {
-    try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+    return readStorage(SESSION_KEY);
 }
 
 function setSearchOpen(root, open) {
@@ -76,9 +81,39 @@ function enhancePublicNavigation() {
     }
 }
 
+function initializeBusinessActionGate() {
+    document.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('[data-explore-action]') : null;
+        if (!(button instanceof HTMLButtonElement)) return;
+        const action = button.dataset.exploreAction;
+        if (!['Me interesa', 'Contactar'].includes(action)) return;
+
+        const session = readStorage(SESSION_KEY);
+        const profile = readStorage(PROFILE_KEY);
+        const buyerState = profile?.capacidadesEstado?.COMPRADOR ?? 'NO_CONFIGURADO';
+        let destination = null;
+
+        if (!session?.authenticated) {
+            destination = profile ? 'login.php?next=explorar.php' : 'registro.php?capacidad=COMPRADOR';
+        } else if (!profile) {
+            destination = 'registro.php?capacidad=COMPRADOR';
+        } else if (buyerState === 'NO_CONFIGURADO') {
+            destination = 'registro.php?capacidad=COMPRADOR';
+        } else if (buyerState === 'INACTIVO') {
+            destination = 'mi-actividad.php';
+        }
+
+        if (!destination) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.location.assign(destination);
+    }, true);
+}
+
 function initialize() {
     initializePublicSearch();
     enhancePublicNavigation();
+    initializeBusinessActionGate();
 }
 
 if (typeof document !== 'undefined') {
