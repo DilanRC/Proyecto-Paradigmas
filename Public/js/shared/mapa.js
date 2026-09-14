@@ -64,6 +64,7 @@ export async function crearMapa({
     timeoutMs = MAP_LOAD_TIMEOUT_MS,
     maplibreLoader = cargarMapLibre,
     onMarkerChange = () => {},
+    onMapClick = () => {},
     onError = () => {},
     ResizeObserverImpl = typeof ResizeObserver !== 'undefined' ? ResizeObserver : null,
 } = {}) {
@@ -152,6 +153,12 @@ export async function crearMapa({
         return formatearCoordenadas(marker.getLngLat());
     }
 
+    function quitarMarcador() {
+        if (destroyed || !marker) return;
+        try { marker.remove?.(); } catch {}
+        marker = null;
+    }
+
     function obtenerCoordenadas() { return marker ? formatearCoordenadas(marker.getLngLat()) : null; }
 
     function centrar(nuevasCoordenadas, nuevoZoom = zoomMarcador) {
@@ -183,6 +190,12 @@ export async function crearMapa({
         try { map.remove?.(); } catch {}
     }
 
+    if (interactive) {
+        map.on?.('click', (event) => {
+            if (destroyed || !event?.lngLat) return;
+            onMapClick(formatearCoordenadas(event.lngLat));
+        });
+    }
     if (ResizeObserverImpl) {
         resizeObserver = new ResizeObserverImpl(redimensionar);
         resizeObserver.observe?.(contenedor);
@@ -191,6 +204,7 @@ export async function crearMapa({
 
     return Object.freeze({
         establecerMarcador,
+        quitarMarcador,
         obtenerCoordenadas,
         centrar,
         ajustar,
