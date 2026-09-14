@@ -6,11 +6,16 @@ import {
     validateFincas,
     validatePersonaDraft,
 } from './shared/business-rules.js';
+import { conectarDireccion } from './shared/direccion.js';
+import { crearSelectorPuntoFinca } from './shared/finca-mapa.js';
+import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 
 const DRAFT_KEY = 'tindercows:registration-draft';
 const PROFILE_KEY = 'tindercows:profile';
 const SESSION_KEY = 'tindercows:login';
 const SAFE_NEXT = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
+const editoresFinca = new WeakMap();
+let secuenciaFinca = 0;
 
 function readStored(key) {
     try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
@@ -39,10 +44,79 @@ function selectedCapabilities(form) {
     return normalizeCapabilities([...form.querySelectorAll('input[name="capacidades"]:checked')].map((input) => input.value));
 }
 
+function montarDireccionFinca(card, direccionInicial = null) {
+    const details = card.querySelector('.finca-address');
+    if (!details) return;
+    const numero = ++secuenciaFinca;
+    const listaId = `registro-pueblos-finca-${numero}`;
+    details.innerHTML = `
+        <summary>Dirección y punto exacto <span>opcional</span></summary>
+        <div class="farm-address-editor">
+            <p class="fieldset-help">Puede completar la dirección ahora. El mapa es opcional y solo sirve para marcar el punto exacto de esta finca.</p>
+            <div class="farm-address-editor__grid">
+                <label class="field"><span>Provincia</span><select data-finca-provincia></select></label>
+                <label class="field"><span>Cantón</span><select data-finca-canton></select></label>
+                <label class="field"><span>Distrito</span><select data-finca-distrito disabled><option value="">Seleccione un distrito</option></select></label>
+                <label class="field"><span>Pueblo</span><input data-finca-pueblo maxlength="150" list="${listaId}" autocomplete="off" disabled><datalist id="${listaId}"></datalist></label>
+                <label class="field field--full"><span>Señas</span><textarea data-finca-senas maxlength="500" rows="2"></textarea></label>
+            </div>
+            <div data-finca-mapa></div>
+        </div>`;
+
+    const direccion = conectarDireccion({
+        provincia: details.querySelector('[data-finca-provincia]'),
+        canton: details.querySelector('[data-finca-canton]'),
+        distrito: details.querySelector('[data-finca-distrito]'),
+        pueblo: details.querySelector('[data-finca-pueblo]'),
+        listaPueblos: details.querySelector(`#${listaId}`),
+    });
+    direccion.aplicar(direccionInicial ?? {});
+    details.querySelector('[data-finca-senas]').value = direccionInicial?.senas ?? '';
+    const mapa = crearSelectorPuntoFinca({
+        mount: details.querySelector('[data-finca-mapa]'),
+        puntoInicial: {
+            latitud: direccionInicial?.latitud ?? null,
+            longitud: direccionInicial?.longitud ?? null,
+        },
+    });
+    editoresFinca.set(card, { direccion, mapa });
+}
+
+function leerDireccionFinca(card) {
+    const punto = editoresFinca.get(card)?.mapa?.obtenerPunto?.() ?? null;
+    const direccion = {
+        provincia: String(card.querySelector('[data-finca-provincia]')?.value ?? '').trim(),
+        canton: String(card.querySelector('[data-finca-canton]')?.value ?? '').trim(),
+        distrito: String(card.querySelector('[data-finca-distrito]')?.value ?? '').trim(),
+        pueblo: String(card.querySelector('[data-finca-pueblo]')?.value ?? '').trim() || null,
+        senas: String(card.querySelector('[data-finca-senas]')?.value ?? '').trim() || null,
+        latitud: punto?.latitud ?? null,
+        longitud: punto?.longitud ?? null,
+    };
+    const tieneAlgo = Boolean(
+        direccion.provincia || direccion.canton || direccion.distrito || direccion.pueblo
+        || direccion.senas || direccion.latitud || direccion.longitud
+    );
+    return tieneAlgo ? direccion : null;
+}
+
 function readFincas() {
     return [...document.querySelectorAll('[data-finca]')].map((card) => ({
         nombre: String(card.querySelector('[data-finca-nombre]')?.value ?? '').trim(),
+        direccion: leerDireccionFinca(card),
     }));
+}
+
+function validarDireccionesFinca(fincas) {
+    for (const finca of fincas) {
+        if (!finca.direccion) continue;
+        if (!finca.direccion.provincia || !finca.direccion.canton || !finca.direccion.distrito) {
+            return {
+                fincas: `Complete provincia, cantón y distrito de ${finca.nombre || 'la finca'} o deje toda su dirección vacía.`,
+            };
+        }
+    }
+    return {};
 }
 
 function setErrors(errors = {}) {
@@ -67,14 +141,17 @@ function persistDraft(form, existingProfile = null) {
     return draft;
 }
 
-function addFinca(name = '') {
+function addFinca(valor = {}) {
+    const finca = typeof valor === 'string' ? { nombre: valor, direccion: null } : (valor ?? {});
     const template = document.querySelector('#finca-template');
     const list = document.querySelector('#fincas-list');
     if (!(template instanceof HTMLTemplateElement) || !list) return;
     const node = template.content.firstElementChild.cloneNode(true);
     const input = node.querySelector('[data-finca-nombre]');
-    if (input) input.value = name;
+    if (input) input.value = finca.nombre ?? '';
+    montarDireccionFinca(node, finca.direccion ?? null);
     node.querySelector('[data-remove-finca]')?.addEventListener('click', () => {
+        editoresFinca.get(node)?.mapa?.destruir?.();
         node.remove();
         if (!document.querySelector('[data-finca]')) addFinca();
     });
@@ -106,7 +183,7 @@ function restoreDraft(form, existingProfile) {
     }
 
     const fincas = existingProfile?.fincas ?? draft?.fincas ?? [];
-    if (Array.isArray(fincas)) fincas.forEach((finca) => addFinca(finca.nombre));
+    if (Array.isArray(fincas)) fincas.forEach((finca) => addFinca(finca));
 }
 
 function renderSummary(draft, extending) {
@@ -124,7 +201,7 @@ function renderSummary(draft, extending) {
             <div><dt>Correo</dt><dd>${escapeHtml(summary.persona.correoElectronico)}</dd></div>
         </dl></section>
         <section><h3>Actividades elegidas</h3><p>${capabilities.map(escapeHtml).join(' · ') || 'Ninguna'}</p></section>
-        ${summary.capacidades.includes('PRODUCTOR') ? `<section><h3>Fincas</h3><ul>${summary.fincas.map((f) => `<li>${escapeHtml(f.nombre)}</li>`).join('')}</ul></section>` : ''}
+        ${summary.capacidades.includes('PRODUCTOR') ? `<section><h3>Fincas</h3><ul>${summary.fincas.map((f) => `<li>${escapeHtml(f.nombre)}${f.direccion?.latitud ? ' · punto exacto agregado' : ''}</li>`).join('')}</ul></section>` : ''}
         <section><h3>Reglas respetadas</h3><ul class="rules-list">
             <li>Tu identidad se registra una sola vez.</li>
             <li>Comprar, vender y transportar son actividades de negocio, no roles administrativos.</li>
@@ -144,6 +221,8 @@ function initialize() {
     const finishButton = document.querySelector('#registro-finalizar');
     const status = document.querySelector('#registro-status');
     if (!(form instanceof HTMLFormElement) || !nextButton || !previousButton || !finishButton || !status) return;
+
+    inicializarUbicacionAutomatica();
 
     const existingProfile = readStored(PROFILE_KEY);
     const extending = Boolean(existingProfile?.persona);
@@ -187,7 +266,10 @@ function initialize() {
         let errors = {};
         if (active === 'persona') errors = validatePersonaDraft(formPersona(form));
         if (active === 'intereses') errors = validateCapabilities(selectedCapabilities(form));
-        if (active === 'fincas') errors = validateFincas(readFincas(), selectedCapabilities(form));
+        if (active === 'fincas') {
+            const fincas = readFincas();
+            errors = { ...validateFincas(fincas, selectedCapabilities(form)), ...validarDireccionesFinca(fincas) };
+        }
         setErrors(errors);
         const first = Object.keys(errors)[0];
         if (first) {
