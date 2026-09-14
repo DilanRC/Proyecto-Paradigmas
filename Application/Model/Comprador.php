@@ -9,9 +9,10 @@ use PDO;
 /**
  * Contexto de negocio Comprador sobre una Persona.
  *
- * No duplica identidad ni contacto: esos datos viven en tbpersona. Este modelo
- * es de consulta durante el Avance 2; la creación del contexto debe provenir
- * del proceso de negocio correspondiente y no de un rol administrativo manual.
+ * No duplica identidad ni contacto: esos datos viven en tbpersona. El panel
+ * administrativo sigue siendo solo lectura. La única escritura expuesta por
+ * este modelo es crearParaPersona(), pensada para procesos de negocio como el
+ * registro público o, más adelante, la compra; nunca para un CRUD manual.
  */
 final class Comprador
 {
@@ -40,6 +41,39 @@ final class Comprador
         }
 
         return $this->mapear($filas[0]);
+    }
+
+    /**
+     * Crea el contexto sobre una Persona ya existente. El llamador debe
+     * mantener el lock global tindercows_persona_alta hasta COMMIT/ROLLBACK,
+     * porque el id se calcula en PHP mediante MAX+1 y la base no impone UNIQUE.
+     */
+    public function crearParaPersona(int $personaId): int
+    {
+        $comprobar = $this->conexion->prepare(
+            'SELECT tbcompradorid FROM tbcomprador WHERE tbpersonaid = :personaId'
+        );
+        $comprobar->execute(['personaId' => $personaId]);
+        $filas = $comprobar->fetchAll(PDO::FETCH_COLUMN);
+        if ($filas !== []) {
+            if (count($filas) > 1) {
+                throw new \RuntimeException('La Persona conserva más de un contexto Comprador.');
+            }
+            throw new \RuntimeException('La Persona ya tiene contexto Comprador.');
+        }
+
+        $compradorId = $this->siguienteId();
+        $insertar = $this->conexion->prepare(
+            'INSERT INTO tbcomprador (tbcompradorid, tbpersonaid, tbcompradorestado)
+             VALUES (:compradorId, :personaId, :estado)'
+        );
+        $insertar->execute([
+            'compradorId' => $compradorId,
+            'personaId' => $personaId,
+            'estado' => 1,
+        ]);
+
+        return $compradorId;
     }
 
     public function listar(string $busqueda, int $pagina, int $tamano): array
@@ -88,6 +122,16 @@ final class Comprador
             'compradores' => array_map(fn (array $fila): array => $this->mapear($fila), $sentencia->fetchAll()),
             'total' => $total,
         ];
+    }
+
+    private function siguienteId(): int
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT COALESCE(MAX(tbcompradorid), 0) + 1 FROM tbcomprador'
+        );
+        $sentencia->execute();
+
+        return (int) $sentencia->fetchColumn();
     }
 
     private function mapear(array $fila): array
