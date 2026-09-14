@@ -8,7 +8,12 @@ import {
 } from './shared/business-rules.js';
 
 const DRAFT_KEY = 'tindercows:registration-draft';
+const PROFILE_KEY = 'tindercows:profile';
 const SESSION_KEY = 'tindercows:login';
+
+function readStored(key) {
+    try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
+}
 
 function formPersona(form) {
     const data = new FormData(form);
@@ -37,7 +42,6 @@ function readFincas() {
 function setErrors(errors = {}) {
     document.querySelectorAll('[data-error-for]').forEach((node) => { node.textContent = ''; });
     document.querySelectorAll('[aria-invalid="true"]').forEach((node) => node.removeAttribute('aria-invalid'));
-
     for (const [field, message] of Object.entries(errors)) {
         const errorNode = document.querySelector(`[data-error-for="${CSS.escape(field)}"]`);
         if (errorNode) errorNode.textContent = message;
@@ -46,16 +50,13 @@ function setErrors(errors = {}) {
     }
 }
 
-function snapshot(form) {
-    return {
-        persona: formPersona(form),
-        capacidades: selectedCapabilities(form),
-        fincas: readFincas(),
-    };
+function snapshot(form, existingProfile = null) {
+    const persona = existingProfile?.persona ? { ...existingProfile.persona } : formPersona(form);
+    return { persona, capacidades: selectedCapabilities(form), fincas: readFincas() };
 }
 
-function persistDraft(form) {
-    const draft = snapshot(form);
+function persistDraft(form, existingProfile = null) {
+    const draft = snapshot(form, existingProfile);
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
     return draft;
 }
@@ -74,33 +75,43 @@ function addFinca(name = '') {
     list.append(node);
 }
 
-function restoreDraft(form) {
-    let draft = null;
-    try { draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null'); } catch { draft = null; }
-    if (!draft) return;
-
-    for (const [name, value] of Object.entries(draft.persona ?? {})) {
+function fillPersona(form, persona = {}) {
+    for (const [name, value] of Object.entries(persona)) {
         const control = form.elements.namedItem(name);
         if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) control.value = String(value ?? '');
     }
-    for (const capability of draft.capacidades ?? []) {
+}
+
+function restoreDraft(form, existingProfile) {
+    const draft = readStored(DRAFT_KEY);
+    if (existingProfile?.persona) fillPersona(form, existingProfile.persona);
+    if (draft && !existingProfile) fillPersona(form, draft.persona ?? {});
+
+    const storedCapabilities = existingProfile?.capacidades ?? draft?.capacidades ?? [];
+    for (const capability of storedCapabilities) {
         const control = form.querySelector(`input[name="capacidades"][value="${CSS.escape(capability)}"]`);
         if (control instanceof HTMLInputElement) control.checked = true;
     }
-    const fincas = Array.isArray(draft.fincas) ? draft.fincas : [];
-    fincas.forEach((finca) => addFinca(finca.nombre));
+    const requested = new URLSearchParams(window.location.search).get('capacidad');
+    if (requested) {
+        const normalized = normalizeCapabilities([requested])[0];
+        const control = normalized ? form.querySelector(`input[name="capacidades"][value="${CSS.escape(normalized)}"]`) : null;
+        if (control instanceof HTMLInputElement) control.checked = true;
+    }
+
+    const fincas = existingProfile?.fincas ?? draft?.fincas ?? [];
+    if (Array.isArray(fincas)) fincas.forEach((finca) => addFinca(finca.nombre));
 }
 
-function renderSummary(draft) {
+function renderSummary(draft, extending) {
     const target = document.querySelector('#registro-resumen');
     if (!target) return;
     const summary = buildRegistrationSummary(draft);
     const capabilities = summary.capacidades.map((cap) => ({
         COMPRADOR: 'Comprar ganado', PRODUCTOR: 'Vender o publicar', TRANSPORTISTA: 'Ofrecer fletes',
     }[cap] ?? cap));
-
     target.innerHTML = `
-        <section><h3>Persona</h3><dl>
+        <section><h3>${extending ? 'Identidad reutilizada' : 'Persona'}</h3><dl>
             <div><dt>Nombre</dt><dd>${escapeHtml(summary.persona.nombre)}</dd></div>
             <div><dt>Identificación</dt><dd>${escapeHtml(summary.persona.identificacionNumero)}</dd></div>
             <div><dt>Teléfono</dt><dd>${escapeHtml(summary.persona.telefono)}</dd></div>
@@ -128,14 +139,27 @@ function initialize() {
     const status = document.querySelector('#registro-status');
     if (!(form instanceof HTMLFormElement) || !nextButton || !previousButton || !finishButton || !status) return;
 
-    restoreDraft(form);
+    const existingProfile = readStored(PROFILE_KEY);
+    const extending = Boolean(existingProfile?.persona);
+    restoreDraft(form, existingProfile);
     if (!document.querySelector('[data-finca]')) addFinca();
 
+    if (extending) {
+        const title = document.querySelector('#registro-title');
+        if (title) title.textContent = 'Amplía cómo quieres usar TinderCows.';
+        const intro = title?.nextElementSibling;
+        if (intro) intro.textContent = 'Ya conocemos tu identidad. Solo preguntaremos los datos adicionales que requiera la nueva actividad.';
+    }
+
     let stepIndex = 0;
-    let steps = requiredRegistrationSteps(selectedCapabilities(form));
+    const computeSteps = () => {
+        const base = requiredRegistrationSteps(selectedCapabilities(form));
+        return extending ? base.filter((step) => step !== 'persona') : base;
+    };
+    let steps = computeSteps();
 
     const sync = () => {
-        steps = requiredRegistrationSteps(selectedCapabilities(form));
+        steps = computeSteps();
         if (stepIndex >= steps.length) stepIndex = steps.length - 1;
         const active = steps[stepIndex];
         document.querySelectorAll('[data-step]').forEach((section) => { section.hidden = section.dataset.step !== active; });
@@ -149,8 +173,7 @@ function initialize() {
         nextButton.hidden = stepIndex === steps.length - 1;
         finishButton.hidden = stepIndex !== steps.length - 1;
         status.textContent = '';
-        if (active === 'revision') renderSummary(snapshot(form));
-        document.querySelector(`[data-step="${active}"] h2`)?.focus?.();
+        if (active === 'revision') renderSummary(snapshot(form, existingProfile), extending);
     };
 
     const validateCurrent = () => {
@@ -172,29 +195,33 @@ function initialize() {
 
     nextButton.addEventListener('click', () => {
         if (!validateCurrent()) return;
-        persistDraft(form);
+        persistDraft(form, existingProfile);
         stepIndex += 1;
         sync();
     });
     previousButton.addEventListener('click', () => { stepIndex = Math.max(0, stepIndex - 1); sync(); });
     document.querySelector('#agregar-finca')?.addEventListener('click', () => addFinca());
-    form.addEventListener('input', () => { setErrors({}); persistDraft(form); });
-    form.addEventListener('change', () => { persistDraft(form); });
+    form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });
+    form.addEventListener('change', () => { persistDraft(form, existingProfile); });
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         if (!validateCurrent()) return;
-        const draft = persistDraft(form);
+        const draft = persistDraft(form, existingProfile);
         form.setAttribute('aria-busy', 'true');
         finishButton.disabled = true;
 
-        const profile = buildRegistrationSummary(draft);
-        sessionStorage.setItem('tindercows:profile', JSON.stringify({
-            ...profile,
-            capacidadesEstado: Object.fromEntries(profile.capacidades.map((cap) => [cap, 'ACTIVO'])),
-            onboardingCompletedAt: new Date().toISOString(),
+        const summary = buildRegistrationSummary(draft);
+        const previousStates = existingProfile?.capacidadesEstado ?? {};
+        const profile = {
+            ...(existingProfile ?? {}),
+            ...summary,
+            capacidadesEstado: Object.fromEntries(summary.capacidades.map((cap) => [cap, previousStates[cap] ?? 'ACTIVO'])),
+            onboardingCompletedAt: existingProfile?.onboardingCompletedAt ?? new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
             persistence: 'frontend-prototype',
-        }));
+        };
+        sessionStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({
             authenticated: true,
             version: 2,
@@ -203,8 +230,8 @@ function initialize() {
             mode: 'frontend-prototype',
         }));
         sessionStorage.removeItem(DRAFT_KEY);
-        status.textContent = 'Registro completado. Preparando tu espacio…';
-        window.location.assign('mi-actividad.php?bienvenida=1');
+        status.textContent = extending ? 'Actividad actualizada. Volviendo a tu espacio…' : 'Registro completado. Preparando tu espacio…';
+        window.location.assign(`mi-actividad.php?${extending ? 'actualizado' : 'bienvenida'}=1`);
     });
 
     sync();
