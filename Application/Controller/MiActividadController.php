@@ -76,6 +76,7 @@ final class MiActividadController
             'persona' => [
                 'personaId' => (int) $persona['tbpersonaid'],
                 'identificacionNumero' => $identificacion,
+                'identificacionTipo' => $persona['tbpersonaidentificaciontipo'],
                 'nombre' => $persona['tbpersonanombre'],
                 'alias' => $persona['tbpersonaalias'],
                 'telefono' => $persona['tbpersonatelefono'],
@@ -189,7 +190,7 @@ final class MiActividadController
         $comprador = $this->comprador->buscar($identificacion);
         $transportista = $this->transportista->buscar($identificacion);
 
-        return [
+        $capacidades = [
             'PRODUCTOR' => $this->capacidad(
                 $productor,
                 true,
@@ -210,6 +211,12 @@ final class MiActividadController
                 'registro.php?capacidad=TRANSPORTISTA&next=mi-actividad.php',
             ),
         ];
+        // Publicar necesita las fincas de la Persona Productora. Se exponen
+        // desde el mismo modelo autoritativo; sessionStorage puede cachearlas,
+        // pero nunca decide cuáles existen en MySQL.
+        $capacidades['PRODUCTOR']['fincas'] = $productor['fincas'] ?? [];
+
+        return $capacidades;
     }
 
     private function capacidad(
