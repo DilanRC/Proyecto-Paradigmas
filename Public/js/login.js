@@ -7,7 +7,7 @@ const PRIVATE_ROUTES = new Set([
     'vehiculos.php',
     'pagometodos.php',
 ]);
-const PUBLIC_DESTINATIONS = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php']);
+const PUBLIC_DESTINATIONS = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
 
 export function resolveNext(search = '', hasProfile = false) {
     const requested = new URLSearchParams(search).get('next');
