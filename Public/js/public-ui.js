@@ -51,14 +51,18 @@ function initializePublicSearch() {
     }
 }
 
+function addNavLink(nav, href, icon, label) {
+    if (!nav || nav.querySelector(`a[href="${href}"]`)) return;
+    const link = document.createElement('a');
+    link.href = href;
+    link.innerHTML = `<i class="fa-solid ${icon}" aria-hidden="true"></i><span>${label}</span>`;
+    nav.append(link);
+}
+
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
-    if (nav && !nav.querySelector('a[href="fletes.php"]')) {
-        const link = document.createElement('a');
-        link.href = 'fletes.php';
-        link.innerHTML = '<i class="fa-solid fa-truck" aria-hidden="true"></i><span>Fletes</span>';
-        nav.append(link);
-    }
+    addNavLink(nav, 'publicar.php', 'fa-circle-plus', 'Publicar');
+    addNavLink(nav, 'fletes.php', 'fa-truck', 'Fletes');
 
     const actions = document.querySelector('.public-header__actions');
     const login = actions?.querySelector('.public-header__login');
@@ -94,11 +98,11 @@ function initializeBusinessActionGate() {
         let destination = null;
 
         if (!session?.authenticated) {
-            destination = profile ? 'login.php?next=explorar.php' : 'registro.php?capacidad=COMPRADOR';
+            destination = profile ? 'login.php?next=explorar.php' : 'registro.php?capacidad=COMPRADOR&next=explorar.php';
         } else if (!profile) {
-            destination = 'registro.php?capacidad=COMPRADOR';
+            destination = 'registro.php?capacidad=COMPRADOR&next=explorar.php';
         } else if (buyerState === 'NO_CONFIGURADO') {
-            destination = 'registro.php?capacidad=COMPRADOR';
+            destination = 'registro.php?capacidad=COMPRADOR&next=explorar.php';
         } else if (buyerState === 'INACTIVO') {
             destination = 'mi-actividad.php';
         }
@@ -110,10 +114,18 @@ function initializeBusinessActionGate() {
     }, true);
 }
 
+function initializeExploreCommerce() {
+    if (!document.body.classList.contains('explore-page')) return;
+    import('./explore-actions.js').catch((error) => {
+        console.error('No se pudo inicializar el flujo Comprar / pujar.', error);
+    });
+}
+
 function initialize() {
     initializePublicSearch();
     enhancePublicNavigation();
     initializeBusinessActionGate();
+    initializeExploreCommerce();
 }
 
 if (typeof document !== 'undefined') {
