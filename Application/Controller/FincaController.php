@@ -92,7 +92,7 @@ final class FincaController
 
         $resultado = $this->direccionFinca->ejecutarConBloqueoAlta(
             fn (): array => $this->transaccion(function () use ($identificacion, $nombreFinca, $direccion): array {
-                [$productorId, $fincaId] = $this->resolverFincaActiva($identificacion, $nombreFinca, true);
+                [, $fincaId] = $this->resolverFincaActiva($identificacion, $nombreFinca, true);
                 try {
                     $this->direccionFinca->crear($fincaId, $direccion);
                 } catch (\RuntimeException $excepcion) {
@@ -211,11 +211,6 @@ final class FincaController
         return $this->respuesta(true, 'Dirección de finca vaciada correctamente.', $resultado);
     }
 
-    /**
-     * Bloquea al productor (misma disciplina que ProductorController antes de
-     * tocar datos hijos), valida que esté activo, y resuelve el tbfincaid
-     * activo para el nombre dado.
-     */
     private function resolverFincaActiva(string $identificacion, string $nombreFinca, bool $exigirProductorActivo): array
     {
         $bloqueado = $this->productor->bloquear($identificacion);
@@ -282,7 +277,59 @@ final class FincaController
 
     private function validarDireccion(mixed $valor, array &$errores): array
     {
-        return $this->validacion->validarDireccionEnCampo($valor, 'direccionFinca', $errores);
+        if (!is_array($valor)) {
+            return $this->validacion->validarDireccionEnCampo($valor, 'direccionFinca', $errores);
+        }
+
+        $base = $valor;
+        unset($base['latitud'], $base['longitud']);
+        $direccion = $this->validacion->validarDireccionEnCampo($base, 'direccionFinca', $errores);
+        $punto = $this->validarPuntoFinca($valor, $errores);
+
+        return [...$direccion, ...$punto];
+    }
+
+    private function validarPuntoFinca(array $direccion, array &$errores): array
+    {
+        $latitudCruda = $direccion['latitud'] ?? null;
+        $longitudCruda = $direccion['longitud'] ?? null;
+        $latitudVacia = $latitudCruda === null || (is_string($latitudCruda) && trim($latitudCruda) === '');
+        $longitudVacia = $longitudCruda === null || (is_string($longitudCruda) && trim($longitudCruda) === '');
+
+        if ($latitudVacia && $longitudVacia) {
+            return ['latitud' => null, 'longitud' => null];
+        }
+        if ($latitudVacia || $longitudVacia) {
+            $mensaje = 'Latitud y longitud deben enviarse juntas o ambas quedar vacías.';
+            $errores['direccionFinca.latitud'] = $mensaje;
+            $errores['direccionFinca.longitud'] = $mensaje;
+            return ['latitud' => null, 'longitud' => null];
+        }
+        if (!is_numeric($latitudCruda) || !is_numeric($longitudCruda)) {
+            $errores['direccionFinca.latitud'] = 'La latitud debe ser numérica.';
+            $errores['direccionFinca.longitud'] = 'La longitud debe ser numérica.';
+            return ['latitud' => null, 'longitud' => null];
+        }
+
+        $latitud = (float) $latitudCruda;
+        $longitud = (float) $longitudCruda;
+        $puntoValido = true;
+        if (!is_finite($latitud) || $latitud < -90 || $latitud > 90) {
+            $errores['direccionFinca.latitud'] = 'La latitud debe estar entre -90 y 90.';
+            $puntoValido = false;
+        }
+        if (!is_finite($longitud) || $longitud < -180 || $longitud > 180) {
+            $errores['direccionFinca.longitud'] = 'La longitud debe estar entre -180 y 180.';
+            $puntoValido = false;
+        }
+        if (!$puntoValido) {
+            return ['latitud' => null, 'longitud' => null];
+        }
+
+        return [
+            'latitud' => number_format($latitud, 7, '.', ''),
+            'longitud' => number_format($longitud, 7, '.', ''),
+        ];
     }
 
     private function normalizarIdentificacion(string $valor): string
