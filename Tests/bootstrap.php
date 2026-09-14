@@ -213,11 +213,10 @@ function test_http_json(
 }
 
 /**
- * Limpia productor, fincas, enlaces de dirección (productor y finca) y las
- * filas de tbdireccion que quedaron huérfanas por la prueba. Con el esquema
- * normalizado (DEC-13) tbdireccion es independiente y nadie más la borra
- * automáticamente, así que esta limpieza es la única forma de no dejar
- * basura acumulándose entre corridas de test.
+ * Limpia productor, fincas, enlaces de dirección (productor y finca), bitácora
+ * y las filas de tbdireccion que quedaron huérfanas por la prueba. Las acciones
+ * de FINCA usan registro "IDENTIFICACION:nombre", por eso se elimina tanto la
+ * identificación exacta como ese prefijo antes de retirar Persona/Productor.
  */
 function test_cleanup_productores(array $identificaciones): void
 {
@@ -231,7 +230,18 @@ function test_cleanup_productores(array $identificaciones): void
             WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})");
         $buscarProductorIds->execute($ids);
         $productorIds = array_map('intval', $buscarProductorIds->fetchAll(PDO::FETCH_COLUMN));
-        $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
+
+        $borrarBitacora = $db->prepare(
+            'DELETE FROM tbbitacora
+             WHERE tbbitacoraregistroidentificacionnumero = :identificacion
+                OR tbbitacoraregistroidentificacionnumero LIKE :prefijo'
+        );
+        foreach ($ids as $identificacion) {
+            $borrarBitacora->execute([
+                'identificacion' => $identificacion,
+                'prefijo' => $identificacion . ':%',
+            ]);
+        }
 
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));
