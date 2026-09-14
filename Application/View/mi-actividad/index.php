@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/public-v3.css?v=public-4">
     <link rel="stylesheet" href="css/onboarding.css?v=front-2">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/mi-actividad.js?v=front-2"></script>
+    <script type="module" src="js/mi-actividad.js?v=front-3"></script>
 </head>
 <body class="public-home">
 <div class="activity-shell">
@@ -45,7 +45,19 @@
         Registro completado. Ya puedes decidir qué hacer primero.
     </div>
 
-    <div class="activity-grid">
+    <section id="activity-loading" class="activity-panel" role="status" aria-live="polite">
+        <div class="purchase-loader"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Cargando tu identidad y actividades…</span></div>
+    </section>
+
+    <section id="activity-error" class="activity-panel" hidden role="alert">
+        <div class="purchase-result">
+            <h2>No pudimos cargar Mi actividad</h2>
+            <p id="activity-error-message">Intenta nuevamente.</p>
+            <button id="activity-retry" class="activity-button activity-button--primary" type="button">Reintentar</button>
+        </div>
+    </section>
+
+    <div id="activity-content" class="activity-grid" hidden>
         <section class="activity-panel" aria-labelledby="capabilities-title">
             <div class="step-heading"><span class="step-number"><i class="fa-solid fa-route" aria-hidden="true"></i></span><div><h2 id="capabilities-title">Cómo participas</h2><p>Estas son actividades de negocio independientes.</p></div></div>
             <div id="activity-list" class="activity-list" aria-live="polite"></div>
