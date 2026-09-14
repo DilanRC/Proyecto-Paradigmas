@@ -1,76 +1,107 @@
-// Operaciones explicitas sobre la ubicacion observada del productor.
-// El nombre del archivo se conserva por compatibilidad historica, pero ya NO
-// existe captura automatica al iniciar sesion. El navegador solo pide permiso
-// despues de una accion consciente del usuario.
-
 import { capturar, esSoportado } from './geo.js';
 
-export const PRECISION_AVISO_METROS = 100;
+export const UBICACION_USUARIO_KEY = 'tindercows:ubicacion-usuario';
+export const UBICACION_USUARIO_EVENT = 'tindercows:ubicacion-usuario';
+export const UBICACION_USUARIO_ERROR_EVENT = 'tindercows:ubicacion-error';
+export const UBICACION_USUARIO_MAX_EDAD_MS = 15 * 60 * 1000;
 
-export function validarCoordenadasManual({ latitud, longitud } = {}) {
-    const errors = {};
-    const lat = Number(latitud);
-    const lon = Number(longitud);
-    if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-        errors.latitud = 'La latitud debe estar entre -90 y 90.';
-    }
-    if (!Number.isFinite(lon) || lon < -180 || lon > 180) {
-        errors.longitud = 'La longitud debe estar entre -180 y 180.';
-    }
-    if (Object.keys(errors).length) return { ok: false, errors };
+function storagePredeterminado() {
+    return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
+}
+
+function ahoraPredeterminado() {
+    return Date.now();
+}
+
+function numeroEnRango(valor, minimo, maximo) {
+    const numero = Number(valor);
+    return Number.isFinite(numero) && numero >= minimo && numero <= maximo ? numero : null;
+}
+
+function normalizarGuardada(valor) {
+    if (!valor || typeof valor !== 'object') return null;
+    const latitud = numeroEnRango(valor.latitud, -90, 90);
+    const longitud = numeroEnRango(valor.longitud, -180, 180);
+    const capturadaEnMs = Date.parse(String(valor.capturadaEn ?? ''));
+    if (latitud === null || longitud === null || Number.isNaN(capturadaEnMs)) return null;
+    const precision = valor.precisionMetros === null || valor.precisionMetros === undefined
+        ? null : Number(valor.precisionMetros);
     return {
-        ok: true,
-        data: {
-            latitud: lat.toFixed(7),
-            longitud: lon.toFixed(7),
-            precisionMetros: null,
-            origen: 'MANUAL',
-        },
+        latitud: latitud.toFixed(7),
+        longitud: longitud.toFixed(7),
+        precisionMetros: Number.isFinite(precision) && precision >= 0 ? precision : null,
+        origen: 'NAVEGADOR',
+        capturadaEn: new Date(capturadaEnMs).toISOString(),
     };
 }
 
-export function evaluarPrecision(precisionMetros, umbralAviso = PRECISION_AVISO_METROS) {
-    if (precisionMetros === null || precisionMetros === undefined || !Number.isFinite(Number(precisionMetros))) {
-        return { nivel: 'desconocida', mensaje: 'La precision no fue informada por el origen.' };
+export function leerUbicacionUsuario(
+    storage = storagePredeterminado(),
+    { ahoraFn = ahoraPredeterminado, maxEdadMs = UBICACION_USUARIO_MAX_EDAD_MS } = {},
+) {
+    try {
+        const normalizada = normalizarGuardada(JSON.parse(storage?.getItem(UBICACION_USUARIO_KEY) ?? 'null'));
+        if (!normalizada) return null;
+        if (maxEdadMs >= 0 && ahoraFn() - Date.parse(normalizada.capturadaEn) > maxEdadMs) return null;
+        return normalizada;
+    } catch {
+        return null;
     }
-    const precision = Number(precisionMetros);
-    if (precision > umbralAviso) {
-        return {
-            nivel: 'baja',
-            mensaje: `Precision aproximada: ${precision.toFixed(0)} m. Puede repetir la captura antes de registrar esta observacion.`,
-        };
-    }
-    return { nivel: 'normal', mensaje: `Precision aproximada: ${precision.toFixed(0)} m.` };
 }
 
-export async function solicitarUbicacionNavegador({
+export async function capturarUbicacionAutomatica({
+    storage = storagePredeterminado(),
     capturarFn = capturar,
     esSoportadoFn = esSoportado,
-    timeoutMs = 10000,
-    altaPrecision = false,
+    ahoraFn = ahoraPredeterminado,
+    maxEdadMs = UBICACION_USUARIO_MAX_EDAD_MS,
+    forzar = false,
 } = {}) {
+    if (!forzar) {
+        const existente = leerUbicacionUsuario(storage, { ahoraFn, maxEdadMs });
+        if (existente) return { ubicacion: existente, reutilizada: true };
+    }
+
     if (!esSoportadoFn()) {
-        const error = new Error('Este navegador no ofrece geolocalizacion.');
+        const error = new Error('Este navegador no ofrece geolocalización.');
         error.kind = 'unsupported';
         throw error;
     }
-    return capturarFn({ timeoutMs, altaPrecision });
+
+    const capturada = await capturarFn({ altaPrecision: false, timeoutMs: 8000 });
+    const ubicacion = normalizarGuardada({
+        ...capturada,
+        capturadaEn: new Date(ahoraFn()).toISOString(),
+    });
+    if (!ubicacion) {
+        const error = new Error('La ubicación devuelta por el navegador no es válida.');
+        error.kind = 'invalid';
+        throw error;
+    }
+    storage?.setItem(UBICACION_USUARIO_KEY, JSON.stringify(ubicacion));
+    return { ubicacion, reutilizada: false };
 }
 
-export async function registrarUbicacionObservada({ productorId, ubicacion, requestFn }) {
-    if (!Number.isInteger(Number(productorId)) || Number(productorId) <= 0) {
-        throw new TypeError('Se requiere un productorId valido.');
+function emitir(windowRef, nombre, detail) {
+    if (!windowRef?.dispatchEvent) return;
+    const EventCtor = windowRef.CustomEvent ?? (typeof CustomEvent !== 'undefined' ? CustomEvent : null);
+    if (!EventCtor) return;
+    windowRef.dispatchEvent(new EventCtor(nombre, { detail }));
+}
+
+export async function inicializarUbicacionAutomatica({
+    windowRef = typeof window !== 'undefined' ? window : null,
+    ...opciones
+} = {}) {
+    try {
+        const resultado = await capturarUbicacionAutomatica(opciones);
+        if (!resultado.reutilizada) emitir(windowRef, UBICACION_USUARIO_EVENT, resultado.ubicacion);
+        return resultado;
+    } catch (error) {
+        emitir(windowRef, UBICACION_USUARIO_ERROR_EVENT, {
+            kind: error?.kind ?? 'unknown',
+            message: error?.message ?? 'No fue posible obtener la ubicación.',
+        });
+        return { ubicacion: null, reutilizada: false, error };
     }
-    if (typeof requestFn !== 'function') throw new TypeError('Se requiere requestFn.');
-    const payload = {
-        productorId: Number(productorId),
-        latitud: ubicacion?.latitud,
-        longitud: ubicacion?.longitud,
-        precisionMetros: ubicacion?.precisionMetros ?? null,
-        origen: ubicacion?.origen,
-    };
-    return requestFn('api/productores-ubicacion.php', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-    });
 }
