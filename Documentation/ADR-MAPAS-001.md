@@ -1,220 +1,200 @@
-# ADR-MAPAS-001 - Cartografia, ubicaciones y futura logistica
+# ADR-MAPAS-001 - Ubicacion automatica, punto exacto de finca y cercania
 
-**Estado:** aceptada para Front 2.0, con puntos pendientes de validacion de Calidad  
+**Estado:** aceptada para Front 2.0  
 **Fecha:** 2026-09-14  
-**Alcance:** frontend cartografico y politica de ubicacion. No modifica el esquema MySQL.
+**Alcance:** ubicacion del visitante, cartografia de finca y ranking por cercania.
 
-## Clasificacion
+## Conclusion
 
-### HECHO COMPROBADO
+TinderCows maneja dos hechos espaciales diferentes:
 
-- La aplicacion ya posee `tbdireccion` para provincia, canton, distrito, pueblo y senas.
-- `Public/js/shared/territorio.js` y `direccion.js` mantienen el catalogo territorial propio y la cascada administrativa.
-- `tbproductorubicacion` representa observaciones historicas del productor y es append-only desde PHP.
-- `ProductorUbicacionController` solo permite GET y POST para ese historico; PUT/PATCH/DELETE estan rechazados.
-- Antes de esta ADR, `auth-gate.js` iniciaba una captura GPS en background despues del login.
-- El frontend no tiene bundler ni gestor de dependencias de navegador: `Public/js/package.json` solo declara `type=module`.
+1. **ubicacion actual del visitante**: se intenta obtener automaticamente con la API de geolocalizacion del navegador y se conserva solo temporalmente en la sesion del navegador para recomendar publicaciones cercanas;
+2. **punto exacto de una finca**: dato persistente y opcional de `tbdireccion`, elegido con un mapa solo cuando el usuario o el administrador desea precisar la finca.
 
-### INFERENCIA
+`tbproductorubicacion` no se usa para recomendar cercania. Ese historico representa observaciones del productor y no indica necesariamente donde esta el ganado publicado.
 
-- Una coordenada permanente de finca seria un hecho diferente de la direccion declarada y de la ubicacion observada del productor.
-- Las futuras rutas de flete necesitaran puntos de origen/destino estables o confirmados, pero ese proceso aun no justifica modificar la base.
+## Hechos comprobados del modelo
 
-### PROPUESTA ADOPTADA
+- Una publicacion de animal referencia `tbfinca`.
+- `tbfincadireccion` enlaza la finca con `tbdireccion`.
+- `tbdireccion` ya contiene provincia, canton, distrito, pueblo y senas.
+- El frontend ya posee un catalogo territorial interno para provincia -> canton -> distrito -> pueblo/localidad.
+- `tbproductorubicacion` es un historico separado de observaciones GPS del productor.
+- La API de publicaciones permite leer el catalogo para Explorar.
 
-- MapLibre GL JS como renderer cartografico.
-- OpenStreetMap como fuente abierta de datos geograficos.
-- OpenFreeMap como proveedor inicial de estilo/vector tiles, configurado en un unico modulo sustituible.
-- El mapa es ayuda visual y nunca requisito para completar un CRUD.
-- La geolocalizacion del navegador solo se solicita despues de una accion explicita y no se persiste hasta una confirmacion adicional.
-- La ubicacion observada del productor se muestra como dato distinto de direccion/finca.
+## Decision de datos
 
-### PENDIENTE
+`tbdireccion` incorpora dos atributos opcionales:
 
-- Confirmar con Calidad si “comunicacion exclusivamente mediante JSON” se refiere al API de negocio Browser <-> PHP o literalmente a todas las peticiones HTTP del navegador. MapLibre consume style JSON, vector tiles, sprites y fuentes que no forman parte del API de negocio.
-- Definir el hecho espacial permanente de una finca antes de crear estructura para coordenadas de finca.
-- Aprobar un caso de uso real de geocodificacion antes de integrar Photon.
-- Aprobar un caso de uso de rutas/distancias antes de integrar Valhalla.
+```text
+tbdireccionlatitud  DECIMAL(10,7) NULL
+tbdireccionlongitud DECIMAL(10,7) NULL
+```
 
-## Necesidad
+No se crea `tbfincaubicacion` porque el punto describe la ubicacion fisica que ya representa `tbdireccion`.
 
-El sistema necesita capacidades geograficas para tres problemas distintos:
+No se agregan PK, FK, UNIQUE, CHECK, AUTO_INCREMENT, indices, triggers ni procedimientos. PHP valida:
 
-1. visualizar lugares sin reemplazar el catalogo territorial del negocio;
-2. permitir observaciones de ubicacion de un productor con consentimiento explicito;
-3. preparar una base tecnica para futura exploracion geografica y logistica.
+- que latitud y longitud lleguen juntas o ambas ausentes;
+- latitud entre -90 y 90;
+- longitud entre -180 y 180;
+- formato numerico;
+- relacion conceptual con la finca mediante los modelos existentes.
 
-El mapa no debe convertir por accidente esos tres problemas en un solo dato.
+Las direcciones que no necesiten punto exacto conservan ambas columnas en `NULL`.
 
-## Alternativas
+## Ubicacion automatica del visitante
 
-### Leaflet + OSM raster
+### Proposito
 
-Beneficios: integracion simple, madura y apropiada para mapas basicos y pocos marcadores.  
-Costos: el crecimiento hacia capas vectoriales, clustering intensivo y estilos complejos queda menos natural. Ademas, no se desea depender directamente de `tile.openstreetmap.org` en produccion.
+Permitir que Explorar muestre primero ganado ubicado en fincas mas cercanas a la posicion actual del visitante.
 
-### MapLibre GL JS
+### Mecanismo
 
-Beneficios:
-- open source;
-- vector tiles y renderizado WebGL/GPU;
-- estilos intercambiables;
-- sources/layers y clustering adecuados para una futura vista lista + mapa;
-- permite cambiar proveedor sin cambiar reglas de negocio si la configuracion se centraliza.
+El sitio intenta `navigator.geolocation.getCurrentPosition()` automaticamente al iniciar la experiencia publica y en el shell privado cuando corresponde.
 
-Costos:
-- mayor complejidad que Leaflet;
-- requiere WebGL;
-- mayor peso inicial;
-- la accesibilidad exige alternativa HTML/textual.
+El navegador mantiene su propia politica de permisos: el sistema puede iniciar la solicitud automaticamente, pero no puede saltarse una decision del usuario o del navegador.
 
-### OpenLayers
+La posicion obtenida:
 
-Beneficios: open source y muy completo para GIS, proyecciones y multiples fuentes.  
-Costo: para los casos actuales aporta una superficie de API y complejidad mayor de la necesaria; el proyecto no requiere aun GIS avanzado.
+- vive en `sessionStorage` bajo `tindercows:ubicacion-usuario`;
+- caduca a los 15 minutos;
+- no se escribe en MySQL;
+- no modifica Persona, Productor, Comprador ni Transportista;
+- no crea filas en `tbproductorubicacion`;
+- no se envia a OpenFreeMap solo por obtenerla.
 
-## Decision
+Si dos modulos la solicitan al mismo tiempo, comparten la misma captura en curso para evitar dos prompts/lecturas simultaneas.
 
-Usar **MapLibre GL JS 6.9.0** como renderer y **OpenFreeMap** como proveedor inicial de estilo/vector tiles mediante:
+### Fallos
 
-- modulo propio: `Public/js/shared/mapa.js`;
-- MapLibre fijado a `6.9.0`;
-- ESM: `https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.mjs`;
-- CSS: `https://unpkg.com/maplibre-gl@6.9.0/dist/maplibre-gl.css`;
-- estilo inicial: `https://tiles.openfreemap.org/styles/liberty`.
+Si el permiso se deniega, el navegador no soporta geolocalizacion, hay timeout o la posicion no esta disponible:
 
-La URL de estilo vive en `MAP_STYLE_URL` y `crearMapa()` acepta otro `styleUrl`. OpenFreeMap no forma parte del dominio ni de las reglas del negocio.
+- Explorar sigue funcionando;
+- no se anuncia una ubicacion ficticia;
+- el orden vuelve al criterio normal de publicaciones recientes.
 
-### Por que CDN en este avance
+## Ranking por cercania
 
-El repositorio no tiene bundler ni flujo npm de navegador; introducir uno solo para el mapa seria un refactor desproporcionado. Se usa CDN con version exacta y la dependencia queda documentada.
+Cuando existe una posicion fresca del visitante, el frontend envia al API de publicaciones:
 
-Riesgo: indisponibilidad del CDN/proveedor.  
-Mitigacion: version fijada, proveedor configurable, timeout, fallback manual y mapa no critico para CRUD. Una evolucion posterior puede vendorizar MapLibre o incorporarlo a un pipeline real.
+```text
+latitud
+longitud
+```
 
-## API propia del mapa
+El controlador valida ambos valores y `PublicacionCercaniaService`:
 
-Los consumidores usan:
+1. resuelve la finca de cada publicacion;
+2. obtiene el punto opcional de su `tbdireccion`;
+3. calcula distancia Haversine en PHP;
+4. ordena primero publicaciones con punto conocido por distancia ascendente;
+5. deja publicaciones sin punto despues, conservando recencia como desempate;
+6. devuelve `distanciaKm`, no las coordenadas privadas de la finca.
 
-- `crearMapa()`;
-- `establecerMarcador()`;
-- `obtenerCoordenadas()`;
-- `centrar()`;
-- `ajustar()`;
-- `redimensionar()`;
-- `destruir()`.
+Sin posicion del visitante se conserva el ranking `RECIENTE`.
 
-Los formularios de negocio no construyen `new maplibre.Map()` ni conocen la URL de OpenFreeMap.
+### Limite de escala actual
 
-## Direccion declarada vs coordenada vs observacion
+Para ordenar correctamente antes de paginar, la implementacion del avance obtiene el conjunto filtrado y lo ordena en PHP. Es suficiente para el volumen actual del proyecto, pero si el catalogo crece de forma importante debe evolucionar a una estrategia de candidatos por zona/geohash/bounding box antes de calcular distancia fina.
 
-### Direccion declarada
+No se agrega un indice espacial a MySQL porque contradice la regla actual de Calidad de mantener la base deliberadamente minima y sin indices.
 
-`provincia -> canton -> distrito -> pueblo -> senas` se valida con el catalogo interno. Es la fuente administrativa del negocio.
+## Mapa de finca
 
-### Coordenada de finca
+El mapa aparece **solo de forma opcional dentro de una finca**.
 
-No se persiste en este avance. Falta decidir si representa centro de finca, entrada, corral, punto de retiro u otro punto logistico; quien la valida; precision requerida; si cambia; si el valor anterior importa y como se corrige.
+Casos:
 
-### Ubicacion observada de productor
-
-Se conserva en `tbproductorubicacion` como historico append-only. Puede originarse en navegador o entrada manual. No modifica la direccion del productor ni una finca.
-
-## Consentimiento y privacidad
-
-La geolocalizacion deja de ejecutarse al entrar al sistema.
+- registro/configuracion de Productor por el usuario;
+- CRUD administrativo de Productor/Finca;
+- edicion posterior de la direccion de una finca.
 
 Flujo:
 
-1. el usuario ve para que sirve la captura;
-2. pulsa **Usar mi ubicacion**;
-3. se invoca `navigator.geolocation`;
-4. se muestran latitud, longitud, precision y origen;
-5. puede cancelar/repetir;
-6. solo **Registrar observacion** hace POST al API propio.
+1. agregar o editar finca;
+2. completar provincia, canton, distrito, pueblo y senas cuando corresponda;
+3. opcionalmente pulsar **Abrir mapa para ubicar finca**;
+4. el mapa se centra en el punto existente, en la ubicacion temporal del visitante si esta disponible o, como ultimo recurso, en Costa Rica;
+5. hacer clic o arrastrar el marcador;
+6. el punto queda pendiente en el formulario;
+7. solo guardar la direccion persiste las coordenadas.
 
-Por defecto se usa `enableHighAccuracy=false` para no pedir mas precision de la necesaria. Un aviso de UX se presenta sobre 100 m, pero ese umbral **no es una regla de negocio ni rechaza el dato**.
+**Quitar punto exacto** deja latitud/longitud en `NULL` sin eliminar la direccion textual.
 
-**Ingresar ubicacion manualmente** permanece disponible aunque GPS o mapa fallen.
+## Renderer y proveedor
 
-### Terceros
+Se mantiene:
 
-- GPS: no se envia a OpenFreeMap automaticamente.
-- API propio: las coordenadas confirmadas se envian a PHP por JSON.
-- Mapa: solo se abre al pulsar **Mostrar en mapa**. En ese momento el navegador solicita a OpenFreeMap estilo/teselas de la zona y el proveedor recibe los metadatos normales de una peticion web.
-- No se ejecuta reverse geocoding en este avance, por lo que no se envian coordenadas a Photon.
+- **MapLibre GL JS 6.9.0** como renderer;
+- **OpenStreetMap** como fuente geografica abierta;
+- **OpenFreeMap** como proveedor inicial de estilo/vector tiles;
+- `Public/js/shared/mapa.js` como unica capa que conoce MapLibre directamente;
+- `Public/js/shared/finca-mapa.js` como componente de negocio reutilizable por usuario y admin.
+
+El mapa no se carga al mostrar un formulario. MapLibre/OpenFreeMap se cargan solo al pulsar el boton de mapa.
+
+La atribucion a OpenFreeMap y OpenStreetMap permanece visible.
+
+## Privacidad
+
+### Posicion del visitante
+
+Se usa para cercania y centrado de mapa. No se guarda en servidor en este flujo.
+
+### Punto de finca
+
+Es persistente porque describe un lugar del negocio. La UI debe dejar claro que marcarlo es opcional.
+
+### OpenFreeMap
+
+OpenFreeMap recibe peticiones de estilo/teselas solamente cuando se abre un mapa. Obtener GPS automaticamente no abre el mapa ni envia esa coordenada al proveedor cartografico.
+
+## Contrato JSON
+
+El contrato de negocio Browser <-> PHP sigue usando JSON.
+
+El ranking de publicaciones utiliza parametros de consulta para GET, igual que los filtros existentes, y las escrituras de direccion de finca se realizan mediante cuerpos JSON.
+
+Style JSON, tiles, sprites y fuentes son recursos cartograficos externos y no endpoints del dominio PHP.
+
+## Geocodificacion y rutas
+
+### Photon
+
+No se integra todavia. El catalogo territorial interno resuelve la validacion administrativa y actualmente no existe una necesidad aprobada de autocomplete/reverse geocoding que justifique enviar direcciones o coordenadas a otro tercero.
+
+Si se incorpora, sera detras de PHP:
+
+```text
+Frontend -> JSON -> Controller -> Service -> PhotonClient -> Photon
+```
+
+con timeout, debounce, cancelacion de consultas obsoletas, limite geografico cuando aplique y sin sobrescribir silenciosamente la direccion elegida por el usuario.
+
+### Valhalla
+
+Se reserva para un proceso real de fletes que requiera ruta, distancia vial, duracion, matriz o multiples paradas. MapLibre solo dibuja; no decide precio ni elegibilidad de transporte.
 
 ## Fallos y degradacion
 
-- Permiso denegado: mensaje claro + alternativa manual.
-- Navegador sin geolocalizacion: alternativa manual.
-- Timeout/ubicacion no disponible: reintento + alternativa manual.
-- Cancelacion: una respuesta tardia del navegador se ignora y no se persiste.
-- Baja precision: aviso y posibilidad de repetir; no hay falso rechazo.
-- MapLibre/CDN/style/OpenFreeMap inaccesible: timeout/fallback; datos textuales y CRUD siguen disponibles.
-- Error de tesela/recurso posterior: mapa parcialmente disponible; no bloquea el proceso.
-- POST 4xx/5xx/red/JSON invalido: no se anuncia exito y la candidata queda para reintentar.
-- Cierre/reapertura: el mapa se destruye y puede recrearse.
-- Resize: `ResizeObserver` solicita `map.resize()`.
-- Movil: el caso actual usa mapa de lectura `interactive=false`, por lo que no secuestra scroll/zoom tactil.
+- GPS denegado/no disponible: ranking reciente.
+- ubicacion vencida: se intenta renovar.
+- mapa/CDN/style/teselas fallan: direccion manual sigue disponible.
+- mapa tarda demasiado: timeout y fallback, nunca `Cargando...` permanente.
+- punto de finca ausente: publicacion sigue visible, pero queda despues de las publicaciones cuya distancia puede calcularse.
+- escritura opcional de direccion de finca falla tras guardar Productor: la UI informa especificamente que finca no pudo completar su direccion y permite reintentar desde esa finca; no anuncia que todo se guardo correctamente.
 
-## Geocodificacion - Photon
+## Pendiente
 
-**No se integra Photon todavia.**
+- Ejecutar migracion `008coordenadasdireccionfinca.sql` sobre una base MySQL existente antes de usar el nuevo contrato.
+- Alinear y ejecutar el espejo PostgreSQL/Supabase antes de desplegar esa variante.
+- Verificar navegador real: permisos GPS, WebGL, movil, teclado y fallo real del proveedor.
+- Validar con Calidad si el punto exacto debe representar entrada, corral/punto de retiro u otra referencia cuando Transporte se implemente; por ahora la UI lo presenta como punto de referencia exacto de la finca, no como poligono ni limite catastral.
 
-Motivos:
-- no existe un proceso aprobado que necesite autocomplete/reverse geocoding;
-- el catalogo territorial interno ya resuelve la validacion administrativa;
-- la instancia publica de Photon puede limitar uso y no garantiza disponibilidad;
-- reverse geocoding enviaria coordenadas a un tercero y requiere una decision de privacidad.
-
-Punto de extension futuro:
-
-```text
-Frontend -> JSON -> GeocodificacionController
-                 -> GeocodificacionService
-                 -> GeocodificacionProvider / PhotonClient
-                 -> Photon
-Frontend <- JSON <- Controller <- Service <- Provider
-```
-
-Politicas previstas: limitar a Costa Rica cuando corresponda, debounce, AbortController, minimo de caracteres, timeout, cache justificada, sanitizacion, validacion del servidor y nunca sobrescribir silenciosamente provincia/canton/distrito/pueblo.
-
-## Routing - Valhalla
-
-No se implementa ahora. Si Transporte requiere distancia, duracion, origen/destino, rutas, matrices o varias paradas, el candidato open source sera Valhalla:
-
-```text
-Frontend -> JSON -> PHP Controller -> Service -> Valhalla
-         <- JSON <- PHP Controller <- Service <- geometria/metricas
-```
-
-MapLibre solo dibuja geometria; no decide precio, transportista, elegibilidad ni reglas de transporte.
-
-## PMTiles
-
-Se conserva como alternativa futura para reducir dependencia del proveedor y habilitar self-hosting. No se incorpora ahora porque su complejidad no aporta valor suficiente al avance actual.
-
-## Contrato JSON y recursos cartograficos
-
-El contrato de negocio Browser <-> PHP continua siendo JSON.
-
-Style JSON, vector tiles, sprites y fuentes son recursos cartograficos estaticos externos al API de negocio. **PENDIENTE CALIDAD:** confirmar si “exclusivamente JSON” pretende abarcar tambien estos recursos tecnicos. Si el profesor lo interpreta literalmente para toda peticion del navegador, la arquitectura debera revisarse antes de fusionar a `dev`.
-
-## Decision sobre DB
-
-No se agregan ni modifican tablas/columnas. En particular:
-
-- no se agregan coordenadas a `tbfinca`;
-- no se agrega tabla de puntos de finca;
-- no se modifica `tbproductorubicacion`;
-- no se agregan PK/FK/UNIQUE/CHECK/AUTO_INCREMENT, indices, triggers ni procedimientos.
-
-La estructura de finca solo se reconsiderara despues de definir: que punto representa, quien lo captura/valida, si cambia, si el anterior importa, precision, origen, correccion y proceso dependiente.
-
-## Fuentes tecnicas consultadas
+## Fuentes tecnicas
 
 - MapLibre GL JS: https://maplibre.org/maplibre-gl-js/docs/
 - OpenFreeMap: https://openfreemap.org/
-- Photon: https://github.com/komoot/photon
 - OpenStreetMap attribution: https://www.openstreetmap.org/copyright
+- Photon: https://github.com/komoot/photon
