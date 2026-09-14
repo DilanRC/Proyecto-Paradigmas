@@ -119,6 +119,14 @@ function specEntry(icono, etiqueta, valor) {
 
 export function buildCard(publicacion) {
     const article = element('article', 'explore-card');
+    const publicacionId = Number(publicacion?.publicacionId);
+    const animalId = Number(publicacion?.animalId);
+    if (Number.isInteger(publicacionId) && publicacionId > 0) {
+        article.dataset.publicacionId = String(publicacionId);
+    }
+    if (Number.isInteger(animalId) && animalId > 0) {
+        article.dataset.animalId = String(animalId);
+    }
 
     const visual = element('div', 'explore-card__visual explore-card__visual--green');
     visual.setAttribute('aria-hidden', 'true');
