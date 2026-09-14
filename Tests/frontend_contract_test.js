@@ -29,7 +29,7 @@ has('Public/js/shared/form.js', "from './form-draft.js';",
 has('Public/js/shared/form.js', 'enableFormDraft(form);',
     'bindFormErrors debe activar el borrador de los CRUD');
 
-// Productores: identidad compartida, dirección principal y fincas por nombre.
+// Productores: identidad compartida, dirección principal y fincas independientes.
 has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpoint de productores incorrecto');
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
 has('Public/js/productores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
@@ -44,8 +44,12 @@ has('Application/View/productores/index.php', 'id="fincas-nombres"',
     'se conserva el control puente por nombre para no romper el contrato PHP');
 has('Public/js/productores-fincas-ui.js', 'syncHidden()',
     'las tarjetas deben sincronizar el payload existente');
-has('Public/js/productores-fincas-ui.js', 'evitar escrituras parciales',
-    'la UI debe explicar por qué la dirección no se encadena al alta');
+has('Public/js/productores-fincas-ui.js', 'Dirección y punto exacto',
+    'cada finca debe exponer su propia dirección y el punto exacto opcional desde Agregar finca');
+has('Public/js/productores-fincas-ui.js', 'crearSelectorPuntoFinca',
+    'el admin debe reutilizar el selector cartográfico compartido de finca');
+has('Public/js/productores.js', 'persistirDireccionesFinca',
+    'el guardado administrativo debe intentar persistir la dirección opcional de las fincas');
 has(
     'Application/Service/ValidacionService.php',
     "$permitidos = ['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];",
@@ -56,6 +60,8 @@ has(
     "['identificacionNumero', 'nombreFinca', 'direccionFinca']",
     'POST/PUT de dirección de finca deben identificar Persona, finca y dirección'
 );
+has('Application/Controller/FincaController.php', "'latitud' => null, 'longitud' => null",
+    'el punto exacto de finca debe ser opcional y validado por PHP');
 
 // Comprador: contexto independiente sobre Persona, pero sin CRUD administrativo manual.
 assert(fs.existsSync('Application/Model/Comprador.php'), 'debe existir el contexto Comprador');
@@ -99,6 +105,20 @@ has('Public/js/registro.js', 'existingProfile?.persona',
     'al ampliar una actividad debe reutilizarse la misma Persona');
 has('Public/js/registro.js', "base.filter((step) => step !== 'persona')",
     'una Persona existente no debe repetir la captura de identidad');
+has('Public/js/registro.js', 'crearSelectorPuntoFinca',
+    'el usuario debe poder marcar opcionalmente el punto exacto al agregar una finca');
+
+// Ubicación automática y recomendación por cercanía.
+has('Public/js/shared/ubicacion-sesion.js', "const UBICACION_USUARIO_KEY = 'tindercows:ubicacion-usuario'",
+    'la posición del visitante debe tener almacenamiento temporal propio');
+has('Public/js/explore.js', 'leerUbicacionUsuario()',
+    'Explorar debe reutilizar la posición temporal del visitante');
+has('Public/js/explore.js', "parametros.set('latitud'",
+    'Explorar debe enviar latitud al ranking cuando exista');
+has('Application/Service/PublicacionCercaniaService.php', 'calcularDistanciaKm',
+    'el backend debe calcular la cercanía en PHP');
+hasNot('Public/js/shared/auth-gate.js', 'api/productores-ubicacion.php',
+    'la ubicación automática de sesión no debe crear históricos de Productor');
 
 // Publicar: gate Productor y borrador honesto mientras no exista POST aprobado.
 assert(fs.existsSync('Public/publicar.php'), 'falta la ruta pública Publicar');
@@ -131,4 +151,4 @@ hasNot('Public/js/mi-actividad.js', 'href="transportistas.php"', 'Mi actividad n
 has('Public/js/mi-actividad.js', 'href="publicar.php"', 'Productor activo debe continuar por el flujo Publicar');
 has('Public/js/mi-actividad.js', 'href="fletes.php"', 'Transportista activo debe continuar por Fletes');
 
-console.log('OK frontend_contract_test: contratos administrativos y Front 2.0 alineados con Persona y contextos de negocio.');
+console.log('OK frontend_contract_test: contratos administrativos, fincas con mapa opcional y Front 2.0 alineados.');
