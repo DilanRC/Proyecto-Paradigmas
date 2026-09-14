@@ -5,6 +5,8 @@ export const UBICACION_USUARIO_EVENT = 'tindercows:ubicacion-usuario';
 export const UBICACION_USUARIO_ERROR_EVENT = 'tindercows:ubicacion-error';
 export const UBICACION_USUARIO_MAX_EDAD_MS = 15 * 60 * 1000;
 
+let capturaEnCurso = null;
+
 function storagePredeterminado() {
     return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
 }
@@ -49,19 +51,7 @@ export function leerUbicacionUsuario(
     }
 }
 
-export async function capturarUbicacionAutomatica({
-    storage = storagePredeterminado(),
-    capturarFn = capturar,
-    esSoportadoFn = esSoportado,
-    ahoraFn = ahoraPredeterminado,
-    maxEdadMs = UBICACION_USUARIO_MAX_EDAD_MS,
-    forzar = false,
-} = {}) {
-    if (!forzar) {
-        const existente = leerUbicacionUsuario(storage, { ahoraFn, maxEdadMs });
-        if (existente) return { ubicacion: existente, reutilizada: true };
-    }
-
+async function ejecutarCaptura({ storage, capturarFn, esSoportadoFn, ahoraFn }) {
     if (!esSoportadoFn()) {
         const error = new Error('Este navegador no ofrece geolocalización.');
         error.kind = 'unsupported';
@@ -82,6 +72,29 @@ export async function capturarUbicacionAutomatica({
     return { ubicacion, reutilizada: false };
 }
 
+export async function capturarUbicacionAutomatica({
+    storage = storagePredeterminado(),
+    capturarFn = capturar,
+    esSoportadoFn = esSoportado,
+    ahoraFn = ahoraPredeterminado,
+    maxEdadMs = UBICACION_USUARIO_MAX_EDAD_MS,
+    forzar = false,
+} = {}) {
+    if (!forzar) {
+        const existente = leerUbicacionUsuario(storage, { ahoraFn, maxEdadMs });
+        if (existente) return { ubicacion: existente, reutilizada: true };
+        if (capturaEnCurso) return capturaEnCurso;
+    }
+
+    const promesa = ejecutarCaptura({ storage, capturarFn, esSoportadoFn, ahoraFn });
+    if (!forzar) capturaEnCurso = promesa;
+    try {
+        return await promesa;
+    } finally {
+        if (!forzar && capturaEnCurso === promesa) capturaEnCurso = null;
+    }
+}
+
 function emitir(windowRef, nombre, detail) {
     if (!windowRef?.dispatchEvent) return;
     const EventCtor = windowRef.CustomEvent ?? (typeof CustomEvent !== 'undefined' ? CustomEvent : null);
@@ -95,7 +108,7 @@ export async function inicializarUbicacionAutomatica({
 } = {}) {
     try {
         const resultado = await capturarUbicacionAutomatica(opciones);
-        if (!resultado.reutilizada) emitir(windowRef, UBICACION_USUARIO_EVENT, resultado.ubicacion);
+        emitir(windowRef, UBICACION_USUARIO_EVENT, resultado.ubicacion);
         return resultado;
     } catch (error) {
         emitir(windowRef, UBICACION_USUARIO_ERROR_EVENT, {
