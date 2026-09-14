@@ -10,9 +10,15 @@ import {
 const DRAFT_KEY = 'tindercows:registration-draft';
 const PROFILE_KEY = 'tindercows:profile';
 const SESSION_KEY = 'tindercows:login';
+const SAFE_NEXT = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
 
 function readStored(key) {
     try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
+}
+
+function resolveNext(fallback) {
+    const requested = new URLSearchParams(window.location.search).get('next');
+    return requested && SAFE_NEXT.has(requested) ? requested : fallback;
 }
 
 function formPersona(form) {
@@ -230,8 +236,9 @@ function initialize() {
             mode: 'frontend-prototype',
         }));
         sessionStorage.removeItem(DRAFT_KEY);
-        status.textContent = extending ? 'Actividad actualizada. Volviendo a tu espacio…' : 'Registro completado. Preparando tu espacio…';
-        window.location.assign(`mi-actividad.php?${extending ? 'actualizado' : 'bienvenida'}=1`);
+        status.textContent = extending ? 'Actividad actualizada. Volviendo al flujo anterior…' : 'Registro completado. Preparando tu espacio…';
+        const fallback = extending ? 'mi-actividad.php?actualizado=1' : 'mi-actividad.php?bienvenida=1';
+        window.location.assign(resolveNext(fallback));
     });
 
     sync();
