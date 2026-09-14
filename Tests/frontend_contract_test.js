@@ -134,8 +134,16 @@ hasNot('Public/js/publicar.js', "method: 'POST'", 'Publicar no debe inventar un 
 
 // Comprar/Pujar: disponibilidad real por GET, gate Comprador y puja no inventada.
 assert(fs.existsSync('Public/js/explore-actions.js'), 'falta el flujo Comprar / pujar');
+has('Public/js/explore.js', 'article.dataset.publicacionId = String(publicacionId);',
+    'la tarjeta debe conservar el publicacionId que ya entrega el catálogo');
+has('Public/js/explore.js', 'article.dataset.animalId = String(animalId);',
+    'la tarjeta debe conservar también el animalId asociado');
 has('Public/js/explore-actions.js', "const API_URL = 'api/publicaciones.php';", 'debe verificar el catálogo vigente');
 has('Public/js/explore-actions.js', "estado: 'ACTIVO'", 'solo debe continuar con publicaciones activas');
+has('Public/js/explore-actions.js', 'publicacionId: positiveInt(card.dataset.publicacionId)',
+    'Comprar/Pujar debe transportar el id estable de la publicación, no reconstruir identidad desde el texto visible');
+has('Public/js/explore-actions.js', 'positiveInt(item?.publicacionId) !== expectedPublicationId',
+    'la revalidación debe comparar por publicacionId');
 has('Public/js/explore-actions.js', "profile?.capacidadesEstado?.COMPRADOR", 'la compra debe exigir contexto Comprador');
 has('Public/js/explore-actions.js', 'registro.php?capacidad=COMPRADOR&next=explorar.php',
     'el onboarding Comprador debe volver a la publicación');
