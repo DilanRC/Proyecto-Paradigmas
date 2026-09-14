@@ -1,4 +1,5 @@
 const SESSION_KEY = 'tindercows:login';
+const PROFILE_KEY = 'tindercows:profile';
 const PRIVATE_ROUTES = new Set([
     'productores.php',
     'compradores.php',
@@ -6,14 +7,12 @@ const PRIVATE_ROUTES = new Set([
     'vehiculos.php',
     'pagometodos.php',
 ]);
+const PUBLIC_DESTINATIONS = new Set(['explorar.php', 'mi-actividad.php']);
 
-const PUBLIC_DESTINATIONS = new Set(['explorar.php']);
-
-export function resolveNext(search = '') {
+export function resolveNext(search = '', hasProfile = false) {
     const requested = new URLSearchParams(search).get('next');
-    return requested && (PRIVATE_ROUTES.has(requested) || PUBLIC_DESTINATIONS.has(requested))
-        ? requested
-        : 'explorar.php';
+    if (requested && (PRIVATE_ROUTES.has(requested) || PUBLIC_DESTINATIONS.has(requested))) return requested;
+    return hasProfile ? 'mi-actividad.php' : 'explorar.php';
 }
 
 function setError(control, message) {
@@ -27,14 +26,16 @@ function validate(form) {
     for (const control of form.querySelectorAll('input')) {
         let message = '';
         if (!control.validity.valid) {
-            message = control.type === 'email'
-                ? 'Ingrese un correo válido.'
-                : 'Ingrese al menos 8 caracteres.';
+            message = control.type === 'email' ? 'Ingrese un correo válido.' : 'Ingrese al menos 8 caracteres.';
             valid = false;
         }
         setError(control, message);
     }
     return valid;
+}
+
+function hasProfile() {
+    try { return Boolean(JSON.parse(sessionStorage.getItem(PROFILE_KEY) || 'null')?.persona); } catch { return false; }
 }
 
 function initialize() {
@@ -53,16 +54,14 @@ function initialize() {
         const email = String(new FormData(form).get('email') ?? '').trim();
         sessionStorage.setItem(SESSION_KEY, JSON.stringify({
             authenticated: true,
-            version: 1,
+            version: 2,
             email,
             startedAt: new Date().toISOString(),
-            mode: 'local-browser-session',
+            mode: 'frontend-prototype',
         }));
-        status.textContent = 'Acceso confirmado. Abriendo TinderCows…';
-        window.location.assign(resolveNext(window.location.search));
+        status.textContent = 'Acceso confirmado en el prototipo. Abriendo TinderCows…';
+        window.location.assign(resolveNext(window.location.search, hasProfile()));
     });
 }
 
-if (typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', initialize);
-}
+if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', initialize);
