@@ -47,8 +47,6 @@ final class RegistroPublicoService
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
 
-        // Productor y finca comparten la misma instancia para respetar un único
-        // lock global de tbdireccion durante la transacción compuesta.
         $direccion = new Direccion($conexion);
         $this->direccionProductor = new ProductorDireccion($conexion, $direccion);
         $this->direccionFinca = new FincaDireccion($conexion, $direccion);
@@ -98,8 +96,6 @@ final class RegistroPublicoService
             $personaId = (int) $persona['tbpersonaid'];
             $identificacion = (string) $persona['tbpersonaidentificacionnumero'];
 
-            // A partir de aquí el mismo JWT ya puede auditarse contra la Persona
-            // creada/resuelta, aun cuando al iniciar la solicitud no existía.
             $actorVinculado = ActorContext::personaAutenticada(
                 $personaId,
                 (string) $this->actor->proveedorSujeto,
@@ -108,8 +104,6 @@ final class RegistroPublicoService
             );
             $bitacora = new Bitacora($this->conexion, $actorVinculado);
 
-            // El lock de bitácora se libera DESPUÉS de COMMIT/ROLLBACK para que
-            // otra conexión no reutilice MAX(tbbitacoraid)+1 prematuramente.
             return $bitacora->ejecutarConBloqueoAlta(function () use (
                 $persona,
                 $personaDatos,
@@ -122,25 +116,24 @@ final class RegistroPublicoService
                 $creadas = [];
 
                 foreach ($capacidades as $capacidad) {
-                    match ($capacidad) {
-                        'PRODUCTOR' => $this->asegurarProductor(
-                            $personaDatos,
-                            $identificacion,
-                            $fincasDetalle,
-                            $creadas,
-                        ),
-                        'COMPRADOR' => $this->asegurarComprador(
-                            $personaId,
-                            $identificacion,
-                            $creadas,
-                        ),
-                        'TRANSPORTISTA' => $this->asegurarTransportista(
-                            $personaDatos,
-                            $identificacion,
-                            $creadas,
-                        ),
-                        default => throw new HttpException('La actividad solicitada no es válida.', 422),
-                    };
+                    switch ($capacidad) {
+                        case 'PRODUCTOR':
+                            $this->asegurarProductor(
+                                $personaDatos,
+                                $identificacion,
+                                $fincasDetalle,
+                                $creadas,
+                            );
+                            break;
+                        case 'COMPRADOR':
+                            $this->asegurarComprador($personaId, $identificacion, $creadas);
+                            break;
+                        case 'TRANSPORTISTA':
+                            $this->asegurarTransportista($personaDatos, $identificacion, $creadas);
+                            break;
+                        default:
+                            throw new HttpException('La actividad solicitada no es válida.', 422);
+                    }
                 }
 
                 if ($creadas !== []) {
@@ -212,8 +205,6 @@ final class RegistroPublicoService
             );
         }
 
-        // Bajo tindercows_persona_alta el correo no puede ganar una segunda
-        // Persona entre esta comprobación y el INSERT.
         $porCorreo = $this->conexion->prepare(
             'SELECT tbpersonaid, tbpersonaidentificacionnumero FROM tbpersona
              WHERE LOWER(tbpersonacorreoelectronico) = LOWER(:correo)
