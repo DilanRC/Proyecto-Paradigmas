@@ -4,35 +4,45 @@ import test from 'node:test';
 
 const auth = fs.readFileSync('Public/js/shared/auth-gate.js', 'utf8');
 const map = fs.readFileSync('Public/js/shared/mapa.js', 'utf8');
-const location = fs.readFileSync('Public/js/shared/productor-ubicacion-ui.js', 'utf8');
+const farmMap = fs.readFileSync('Public/js/shared/finca-mapa.js', 'utf8');
 const adapter = fs.readFileSync('Public/js/productores-fincas-ui.js', 'utf8');
+const registration = fs.readFileSync('Public/js/registro.js', 'utf8');
+const explore = fs.readFileSync('Public/js/explore.js', 'utf8');
 
-test('auth-gate no solicita geolocalizacion automaticamente', () => {
-    assert.equal(auth.includes('navigator.geolocation'), false);
-    assert.equal(auth.includes('capturarEnInicioDeSesion'), false);
-    assert.equal(auth.includes('capturar('), false);
+test('la ubicacion del usuario se intenta automaticamente pero no se persiste como productor', () => {
+    assert.ok(auth.includes('inicializarUbicacionAutomatica()'));
+    assert.equal(auth.includes('api/productores-ubicacion.php'), false);
+    assert.equal(auth.includes('REGISTRAR_UBICACION'), false);
+    assert.ok(explore.includes('leerUbicacionUsuario()'));
+    assert.ok(explore.includes("parametros.set('latitud'"));
+    assert.ok(explore.includes("parametros.set('longitud'"));
 });
 
-test('MapLibre y OpenFreeMap estan centralizados en mapa.js', () => {
+test('MapLibre y OpenFreeMap siguen centralizados en mapa.js', () => {
     assert.match(map, /MAPLIBRE_VERSION = '6\.9\.0'/);
     assert.match(map, /MAP_STYLE_URL = 'https:\/\/tiles\.openfreemap\.org\/styles\/liberty'/);
-    assert.equal(location.includes('new maplibre.Map'), false);
+    assert.equal(farmMap.includes('new maplibre.Map'), false);
     assert.equal(adapter.includes('new maplibre.Map'), false);
+    assert.equal(registration.includes('new maplibre.Map'), false);
     assert.ok(map.includes('OpenStreetMap contributors'));
 });
 
-test('UI del productor ofrece GPS explicito y alternativa manual', () => {
-    assert.ok(location.includes('Usar mi ubicacion'));
-    assert.ok(location.includes('Ingresar ubicacion manualmente'));
-    assert.ok(location.includes('Cancelar solicitud'));
-    assert.ok(location.includes('operationId += 1'));
-    assert.ok(location.includes('token !== operationId'));
-    assert.ok(location.includes('createdMap?.destruir?.()'));
-    assert.ok(location.includes('Mapa no disponible'));
-    assert.ok(location.includes('No modifica su direccion declarada ni representa la ubicacion de una finca'));
+test('el mapa se usa como selector opcional de punto exacto de finca', () => {
+    assert.ok(farmMap.includes('Punto exacto de la finca'));
+    assert.ok(farmMap.includes('Abrir mapa para ubicar finca'));
+    assert.ok(farmMap.includes('Quitar punto exacto'));
+    assert.ok(farmMap.includes('La dirección escrita sigue siendo válida sin mapa'));
+    assert.ok(farmMap.includes('onMapClick'));
+    assert.ok(farmMap.includes('draggable: true'));
 });
 
-test('integracion se carga desde el modulo ya asociado al panel de productores', () => {
-    assert.ok(adapter.includes("from './shared/productor-ubicacion-ui.js'"));
-    assert.ok(adapter.includes('inicializarUbicacionProductorUI()'));
+test('usuario y admin reutilizan el mismo selector de finca', () => {
+    assert.ok(registration.includes("from './shared/finca-mapa.js'"));
+    assert.ok(registration.includes('crearSelectorPuntoFinca'));
+    assert.ok(adapter.includes("from './shared/finca-mapa.js'"));
+    assert.ok(adapter.includes('crearSelectorPuntoFinca'));
+});
+
+test('la UI equivocada de ubicacion observada del productor ya no existe', () => {
+    assert.equal(fs.existsSync('Public/js/shared/productor-ubicacion-ui.js'), false);
 });
