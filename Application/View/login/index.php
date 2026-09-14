@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/login.js?v=front-2"></script>
+    <script type="module" src="js/login.js?v=front-3"></script>
 </head>
 <body class="auth-page">
     <main class="auth-stage" aria-labelledby="login-title">
@@ -49,7 +49,7 @@
                     <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a TinderCows</h1></div>
                 </div>
                 <p class="auth-card__copy">Continúa para volver a Explorar o administrar tus actividades.</p>
-                <p class="auth-demo-banner"><strong>Estado actual:</strong> el frontend ya modela cuenta y actividades, pero las credenciales todavía no se validan contra un endpoint de autenticación del servidor.</p>
+                <p class="auth-demo-banner"><strong>Cuenta pública:</strong> las credenciales se validan con Supabase Auth y, antes de entrar, el servidor comprueba que el correo esté vinculado a una Persona de TinderCows. Esta sesión no concede acceso administrativo.</p>
 
                 <form class="auth-form" id="formulario-login" novalidate>
                     <label class="auth-field">
