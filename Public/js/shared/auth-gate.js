@@ -1,12 +1,13 @@
-// Puerta de navegacion del frontend privado.
+// Puerta del frontend administrativo.
 //
-// Esta capa controla la sesion de demostracion del navegador. La ubicacion
-// automatica que inicia aqui es efimera y solo prepara la experiencia por
-// cercania/centrado; no escribe datos de Persona, Productor ni historicos.
+// IMPORTANTE: una sesión pública Supabase identifica a una Persona, pero NO
+// demuestra que esa Persona sea administradora. Calidad pidió separar sesión
+// pública y administrativa; mientras la política admin no esté aprobada, este
+// gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
 import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
 
-export const SESSION_KEY = 'tindercows:login';
+export const SESSION_KEY = 'tindercows:admin-session';
 
 const PRIVATE_ROUTES = new Set([
     'productores.php',
@@ -16,6 +17,10 @@ const PRIVATE_ROUTES = new Set([
     'pagometodos.php',
 ]);
 
+/**
+ * Contrato reservado para una futura sesión administrativa emitida/verificada
+ * por servidor. Ningún flujo público actual escribe esta clave.
+ */
 export function readBrowserSession(storage) {
     try {
         const raw = storage?.getItem(SESSION_KEY);
@@ -23,10 +28,9 @@ export function readBrowserSession(storage) {
         const session = JSON.parse(raw);
         if (
             session?.authenticated !== true
+            || session?.adminAuthorized !== true
             || session?.version !== 1
-            || session?.mode !== 'local-browser-session'
-            || typeof session?.email !== 'string'
-            || session.email.trim() === ''
+            || session?.mode !== 'admin-server-session'
             || typeof session?.startedAt !== 'string'
             || Number.isNaN(Date.parse(session.startedAt))
         ) return null;
@@ -48,7 +52,7 @@ export function isPrivateRoute(pathname = '') {
 export function loginTarget(pathname = '') {
     const route = routeName(pathname);
     return PRIVATE_ROUTES.has(route)
-        ? `login.php?next=${encodeURIComponent(route)}`
+        ? `login.php?area=admin&next=${encodeURIComponent(route)}`
         : 'login.php';
 }
 
@@ -62,19 +66,19 @@ export function enforceBrowserSession({ location, storage } = {}) {
 function wirePrivateShell(storage) {
     const publicLink = document.querySelector('.rural-panel__admin-link[href="./"]');
     if (publicLink) {
-        publicLink.textContent = 'Sitio publico';
-        publicLink.setAttribute('aria-label', 'Volver al sitio publico de TinderCows');
-        publicLink.title = 'Inicio publico de TinderCows';
+        publicLink.textContent = 'Sitio público';
+        publicLink.setAttribute('aria-label', 'Volver al sitio público de TinderCows');
+        publicLink.title = 'Inicio público de TinderCows';
     }
 
     const logoutLink = document.querySelector('.rural-panel__admin-link[href="login.php"]');
     if (!logoutLink) return;
-    logoutLink.textContent = 'Cerrar sesion';
-    logoutLink.setAttribute('aria-label', 'Cerrar sesion de demostracion');
+    logoutLink.textContent = 'Cerrar sesión administrativa';
+    logoutLink.setAttribute('aria-label', 'Cerrar sesión administrativa');
     logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
         try { storage?.removeItem(SESSION_KEY); }
-        finally { window.location.assign('login.php'); }
+        finally { window.location.assign('login.php?area=admin'); }
     });
 }
 
