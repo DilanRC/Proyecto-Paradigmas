@@ -20,6 +20,11 @@ function writeStored(key, value) {
     sessionStorage.setItem(key, JSON.stringify(value));
 }
 
+function positiveInt(value) {
+    const number = Number(value);
+    return Number.isInteger(number) && number > 0 ? number : null;
+}
+
 function ensureStyles() {
     if (document.querySelector('link[data-front2-flow]')) return;
     const link = document.createElement('link');
@@ -158,6 +163,8 @@ function renderError(message) {
 function contextFromCard(card) {
     const meta = card.querySelectorAll('.explore-card__meta span');
     return {
+        publicacionId: positiveInt(card.dataset.publicacionId),
+        animalId: positiveInt(card.dataset.animalId),
         title: card.querySelector('h2')?.textContent?.trim() ?? '',
         animalIdentification: meta[1]?.textContent?.trim() ?? '',
         price: card.querySelector('.explore-card__price strong')?.textContent?.trim() ?? '',
@@ -171,8 +178,18 @@ function normalize(value) {
 }
 
 function publicationMatches(item, context) {
-    if (normalize(item?.titulo) !== normalize(context.title)) return false;
-    const expectedAnimal = normalize(context.animalIdentification);
+    const expectedPublicationId = positiveInt(context?.publicacionId);
+    if (expectedPublicationId !== null) {
+        if (positiveInt(item?.publicacionId) !== expectedPublicationId) return false;
+        const expectedAnimalId = positiveInt(context?.animalId);
+        return expectedAnimalId === null || positiveInt(item?.animalId) === expectedAnimalId;
+    }
+
+    // Compatibilidad con una acción pendiente guardada antes de que las tarjetas
+    // conservaran publicacionId. El fallback solo sirve para reanudar esa sesión;
+    // las tarjetas nuevas siempre se verifican por id.
+    if (normalize(item?.titulo) !== normalize(context?.title)) return false;
+    const expectedAnimal = normalize(context?.animalIdentification);
     return expectedAnimal === '' || normalize(item?.animal?.identificacion) === expectedAnimal;
 }
 
@@ -190,7 +207,7 @@ async function verifyCurrentPublication() {
         if (matches.length !== 1) {
             throw new Error(matches.length === 0
                 ? 'La publicación ya no aparece como activa o cambió desde que se mostró en Explorar.'
-                : 'Hay más de una publicación con los mismos datos visibles y no es seguro elegir una automáticamente.');
+                : 'No fue posible identificar una única publicación vigente de forma segura.');
         }
         verifiedPublication = matches[0];
         renderVerified();
@@ -347,10 +364,15 @@ function addCommerceButtons() {
 
     const pending = readStored(PENDING_KEY);
     if (pending && cards.length > 0) {
-        const card = [...cards].find((candidate) => publicationMatches({
-            titulo: candidate.querySelector('h2')?.textContent,
-            animal: { identificacion: candidate.querySelectorAll('.explore-card__meta span')[1]?.textContent },
-        }, pending));
+        const card = [...cards].find((candidate) => {
+            const context = contextFromCard(candidate);
+            return publicationMatches({
+                publicacionId: context.publicacionId,
+                animalId: context.animalId,
+                titulo: context.title,
+                animal: { identificacion: context.animalIdentification },
+            }, pending);
+        });
         if (card) guardAndOpen(contextFromCard(card));
     }
 }
