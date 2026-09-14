@@ -43,6 +43,14 @@ function actionFor(capability, state) {
     return `<button class="activity-button activity-button--primary" type="button" data-toggle-capability="${capability}" data-next-state="ACTIVO">${capability === 'PRODUCTOR' ? 'Volver a vender' : capability === 'COMPRADOR' ? 'Volver a comprar' : 'Volver a ofrecer fletes'}</button>`;
 }
 
+function businessLink(id, state) {
+    if (state !== 'ACTIVO') return '';
+    if (id === 'PRODUCTOR') return '<a class="activity-button activity-button--primary" href="publicar.php">Publicar ganado</a>';
+    if (id === 'COMPRADOR') return '<a class="activity-button activity-button--primary" href="explorar.php">Explorar ganado</a>';
+    if (id === 'TRANSPORTISTA') return '<a class="activity-button activity-button--primary" href="fletes.php">Ver fletes</a>';
+    return '';
+}
+
 function renderActivities(profile) {
     const target = document.querySelector('#activity-list');
     if (!target) return;
@@ -57,9 +65,8 @@ function renderActivities(profile) {
                 <span class="activity-state" data-state="${escapeHtml(state)}">${configured ? escapeHtml(state) : 'Aún no configurado'}</span>
             </div>
             <div class="activity-actions">
-                ${configured ? actionFor(id, state) : `<a class="activity-button activity-button--primary" href="registro.php?capacidad=${id}">Configurar</a>`}
-                ${id === 'PRODUCTOR' && configured ? '<a class="activity-button" href="productores.php">Administrar fincas</a>' : ''}
-                ${id === 'TRANSPORTISTA' && configured ? '<a class="activity-button" href="transportistas.php">Vehículos</a>' : ''}
+                ${configured ? actionFor(id, state) : `<a class="activity-button activity-button--primary" href="registro.php?capacidad=${id}&next=mi-actividad.php">Configurar</a>`}
+                ${businessLink(id, state)}
             </div>
         </article>`;
     }).join('');
