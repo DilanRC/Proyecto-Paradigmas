@@ -36,6 +36,26 @@ final class Persona
         return $filas[0] ?? null;
     }
 
+    /**
+     * Resuelve una Persona por su identificador interno. Esta vía existe para
+     * procesos autenticados: SupabaseActorResolver ya vinculó el JWT con
+     * tbpersonaid en el servidor, por lo que el navegador no necesita enviar
+     * una cédula para operar sobre "Mi actividad".
+     */
+    public function buscarPorId(int $personaId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT * FROM tbpersona WHERE tbpersonaid = :personaId'
+        );
+        $sentencia->execute(['personaId' => $personaId]);
+        $filas = $sentencia->fetchAll();
+        if (count($filas) > 1) {
+            throw new PersonaConflictException('El identificador interno está duplicado en la base de datos.');
+        }
+
+        return $filas[0] ?? null;
+    }
+
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(
