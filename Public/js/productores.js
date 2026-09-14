@@ -30,7 +30,10 @@ export function buildProductorPayload({
             pueblo: nullable(pueblo),
             senas: nullable(senas),
         },
-        fincas: parseFincaDrafts(fincas).map((finca) => ({ nombre: finca.nombre })),
+        // La dirección opcional viaja junto con su finca en el MISMO comando
+        // JSON. ProductorController confirma o revierte Productor + fincas +
+        // direcciones como una sola unidad de trabajo.
+        fincas: parseFincaDrafts(fincas).map(buildFincaPayload),
     };
     if (identificacionNumeroOriginal !== '') data.identificacionNumeroOriginal = identificacionNumeroOriginal;
     return data;
@@ -50,6 +53,22 @@ export function parseFincaDrafts(value) {
         } catch {}
     }
     return raw.split(/\r?\n/).map((nombre) => nombre.trim()).filter(Boolean).map((nombre) => ({ nombre }));
+}
+
+function buildFincaPayload(finca) {
+    const payload = { nombre: String(finca?.nombre ?? '').trim() };
+    if (!finca?.direccion || typeof finca.direccion !== 'object') return payload;
+    const direccion = finca.direccion;
+    payload.direccion = {
+        provincia: String(direccion.provincia ?? '').trim(),
+        canton: String(direccion.canton ?? '').trim(),
+        distrito: String(direccion.distrito ?? '').trim(),
+        pueblo: nullable(direccion.pueblo),
+        senas: nullable(direccion.senas),
+        latitud: nullable(direccion.latitud),
+        longitud: nullable(direccion.longitud),
+    };
+    return payload;
 }
 
 export function buildFincaDireccionPayload({
@@ -439,42 +458,6 @@ function initialize() {
         });
     }
 
-    async function persistirDireccionesFinca(identificacionNumero, borradorCrudo) {
-        const fallos = [];
-        for (const finca of parseFincaDrafts(borradorCrudo)) {
-            if (!finca.direccion) continue;
-            const direccion = finca.direccion;
-            const data = buildFincaDireccionPayload({
-                identificacionNumero,
-                nombreFinca: finca.nombre,
-                provincia: direccion.provincia ?? '',
-                canton: direccion.canton ?? '',
-                distrito: direccion.distrito ?? '',
-                pueblo: direccion.pueblo ?? '',
-                senas: direccion.senas ?? '',
-                latitud: direccion.latitud ?? null,
-                longitud: direccion.longitud ?? null,
-            });
-            let metodo = finca.direccionExiste ? 'PUT' : 'POST';
-            try {
-                await request(FINCAS_DIRECCION_URL, { method: metodo, body: JSON.stringify(data) });
-            } catch (error) {
-                if ((metodo === 'PUT' && error.status === 404) || (metodo === 'POST' && error.status === 409)) {
-                    metodo = metodo === 'PUT' ? 'POST' : 'PUT';
-                    try {
-                        await request(FINCAS_DIRECCION_URL, { method: metodo, body: JSON.stringify(data) });
-                        continue;
-                    } catch (retryError) {
-                        fallos.push({ nombre: finca.nombre, error: retryError });
-                        continue;
-                    }
-                }
-                fallos.push({ nombre: finca.nombre, error });
-            }
-        }
-        return fallos;
-    }
-
     function renderTypeOptions() {
         const selected = elements.types.value;
         const fragment = document.createDocumentFragment();
@@ -561,16 +544,8 @@ function initialize() {
                 const response = await request(API_URL, {
                     method: editing ? 'PUT' : 'POST', body: JSON.stringify(data),
                 });
-                const identificacionGuardada = response.data?.identificacionNumero
-                    ?? data.identificacion.numero;
-                const fallosDireccion = await persistirDireccionesFinca(identificacionGuardada, elements.farms.value);
                 dialogs.close(elements.modal);
-                if (fallosDireccion.length === 0) {
-                    toast.success(response.message);
-                } else {
-                    const nombres = fallosDireccion.map((fallo) => fallo.nombre).join(', ');
-                    toast.error(`${response.message} No se pudo guardar la dirección opcional de: ${nombres}. Puede reintentar desde la finca.`);
-                }
+                toast.success(response.message);
                 await listProducers();
             } catch (error) {
                 if (error.errors) errores.showErrors(error.errors);
