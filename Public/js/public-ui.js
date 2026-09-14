@@ -1,3 +1,5 @@
+import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
+
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';
 
@@ -126,6 +128,9 @@ function initialize() {
     enhancePublicNavigation();
     initializeBusinessActionGate();
     initializeExploreCommerce();
+    // Explorar coordina su propia recarga al recibir la ubicación. El resto del
+    // sitio público inicia la captura aquí para que la sesión ya conozca la zona.
+    if (!document.body.classList.contains('explore-page')) inicializarUbicacionAutomatica();
 }
 
 if (typeof document !== 'undefined') {
