@@ -1,0 +1,17 @@
+.location-observation{margin-top:1.25rem;padding-top:1.25rem;border-top:1px solid var(--color-border,#d7ddd9)}
+.location-observation__header{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.location-observation__header h3{margin:.15rem 0 .35rem}.location-observation__header p{margin:0;max-width:68ch}
+.location-observation__actions{display:flex;gap:.65rem;flex-wrap:wrap;margin:1rem 0}
+.location-observation__status{min-height:1.5rem;margin:.5rem 0}.location-observation__status[data-kind="error"]{font-weight:700}
+.location-observation__status[data-kind="warning"]{font-weight:600}
+.location-manual[hidden],.location-candidate[hidden],.map-shell[hidden]{display:none!important}
+.location-manual{padding:1rem;border:1px solid var(--color-border,#d7ddd9);border-radius:14px;margin-top:.75rem}
+.location-manual__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+.location-manual__grid label{display:grid;gap:.35rem}.location-manual input{min-height:44px}
+.location-candidate{padding:1rem;border:1px solid var(--color-border,#d7ddd9);border-radius:14px;margin-top:.75rem}
+.location-candidate dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem;margin:.75rem 0}.location-candidate dt{font-size:.78rem;opacity:.75}.location-candidate dd{margin:0;font-weight:700}
+.map-shell{margin-top:1rem}.map-shell__notice{display:flex;gap:.65rem;align-items:flex-start;margin:.5rem 0;font-size:.9rem}
+.map-shell__canvas{min-height:280px;height:min(42vh,380px);border-radius:16px;overflow:hidden;border:1px solid var(--color-border,#d7ddd9);background:#eef2ef}
+.map-shell__fallback{padding:1rem;border:1px dashed currentColor;border-radius:12px;margin-top:.75rem}.map-shell__fallback[hidden]{display:none}
+.maplibregl-ctrl-attrib{font-size:11px!important}
+@media(max-width:720px){.location-manual__grid,.location-candidate dl{grid-template-columns:1fr}.map-shell__canvas{height:300px;min-height:240px}.location-observation__actions .button{width:100%}}

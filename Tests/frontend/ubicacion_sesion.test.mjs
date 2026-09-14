@@ -1,209 +1,62 @@
-// Tests de ubicacion-sesion.js: orquestador una captura por sesión.
-
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {
+    evaluarPrecision,
+    registrarUbicacionObservada,
+    solicitarUbicacionNavegador,
+    validarCoordenadasManual,
+} from '../../Public/js/shared/ubicacion-sesion.js';
 
-import { capturarEnInicioDeSesion } from '../../Public/js/shared/ubicacion-sesion.js';
+test('coordenadas manuales validas se normalizan y quedan como MANUAL', () => {
+    const result = validarCoordenadasManual({ latitud: '9.9280694', longitud: '-84.0907246' });
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.data, {
+        latitud: '9.9280694', longitud: '-84.0907246', precisionMetros: null, origen: 'MANUAL',
+    });
+});
 
-function crearStorage(data = {}) {
-    const mapa = new Map(Object.entries(data));
-    return {
-        getItem(k) { return mapa.has(k) ? mapa.get(k) : null; },
-        setItem(k, v) { mapa.set(k, String(v)); },
-        removeItem(k) { mapa.delete(k); },
-    };
-}
+test('coordenadas manuales fuera de rango no se aceptan', () => {
+    const result = validarCoordenadasManual({ latitud: '91', longitud: '-181' });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.latitud);
+    assert.ok(result.errors.longitud);
+});
 
-function sesionLogin(startedAt = '2026-01-01T12:00:00.000Z', email = 'test@example.com') {
-    return JSON.stringify({ authenticated: true, version: 1, email, startedAt, mode: 'local-browser-session' });
-}
+test('precision baja genera aviso, no rechazo de negocio', () => {
+    assert.equal(evaluarPrecision(250).nivel, 'baja');
+    assert.equal(evaluarPrecision(25).nivel, 'normal');
+    assert.equal(evaluarPrecision(null).nivel, 'desconocida');
+});
 
-const geoExito = async () => ({ latitud: '9.9280694', longitud: '-84.0907246', precisionMetros: 12.5, origen: 'NAVEGADOR' });
-const geoDenegado = async () => { const e = new Error('denegado'); e.kind = 'denied'; throw e; };
-const geoNoDisponible = async () => { const e = new Error('unavailable'); e.kind = 'unavailable'; throw e; };
-
-test('primera invocación → captura + un POST', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => { posts++; return { success: true }; },
+test('GPS solo se invoca cuando el consumidor llama solicitarUbicacionNavegador', async () => {
+    let calls = 0;
+    const result = await solicitarUbicacionNavegador({
         esSoportadoFn: () => true,
-        capturarFn: geoExito,
+        capturarFn: async (options) => { calls++; assert.equal(options.altaPrecision, false); return { latitud: '9', longitud: '-84', precisionMetros: 20, origen: 'NAVEGADOR' }; },
     });
-
-    assert.equal(posts, 1);
-    const marcador = JSON.parse(storage.getItem('tindercows:ubicacion-sesion'));
-    assert.equal(marcador.estado, 'capturada');
+    assert.equal(calls, 1);
+    assert.equal(result.origen, 'NAVEGADOR');
 });
 
-test('misma sesión (mismo startedAt) → sin segundo POST', async () => {
-    const startedAt = '2026-01-01T12:00:00.000Z';
-    const storage = crearStorage({
-        'tindercows:login': sesionLogin(startedAt),
-        'tindercows:ubicacion-sesion': JSON.stringify({ estado: 'capturada', startedAt, en: new Date().toISOString() }),
-    });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => { posts++; return { success: true }; },
-        esSoportadoFn: () => true,
-        capturarFn: geoExito,
-    });
-
-    assert.equal(posts, 0);
+test('navegador sin soporte produce unsupported antes de capturar', async () => {
+    let calls = 0;
+    await assert.rejects(() => solicitarUbicacionNavegador({
+        esSoportadoFn: () => false,
+        capturarFn: async () => { calls++; },
+    }), (error) => error.kind === 'unsupported');
+    assert.equal(calls, 0);
 });
 
-test('nueva sesión (distinto startedAt) → POST nuevo → suma una fila', async () => {
-    const storage = crearStorage({
-        'tindercows:login': sesionLogin('2026-02-01T12:00:00.000Z'),
-        'tindercows:ubicacion-sesion': JSON.stringify({ estado: 'capturada', startedAt: '2026-01-01T12:00:00.000Z' }),
+test('registrarUbicacionObservada usa JSON y el endpoint existente', async () => {
+    let received;
+    await registrarUbicacionObservada({
+        productorId: 7,
+        ubicacion: { latitud: '9.1', longitud: '-84.2', precisionMetros: 30, origen: 'NAVEGADOR' },
+        requestFn: async (url, options) => { received = { url, options }; return { success: true }; },
     });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => { posts++; return { success: true }; },
-        esSoportadoFn: () => true,
-        capturarFn: geoExito,
+    assert.equal(received.url, 'api/productores-ubicacion.php');
+    assert.equal(received.options.method, 'POST');
+    assert.deepEqual(JSON.parse(received.options.body), {
+        productorId: 7, latitud: '9.1', longitud: '-84.2', precisionMetros: 30, origen: 'NAVEGADOR',
     });
-
-    assert.equal(posts, 1);
-    const marcador = JSON.parse(storage.getItem('tindercows:ubicacion-sesion'));
-    assert.equal(marcador.startedAt, '2026-02-01T12:00:00.000Z');
-    assert.equal(marcador.estado, 'capturada');
-});
-
-test('resolución null (sin perfil productor) → cero POSTs, cero filas', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => null,
-        requestFn: async () => { posts++; return { success: true }; },
-        esSoportadoFn: () => true,
-        capturarFn: geoExito,
-    });
-
-    assert.equal(posts, 0);
-    const marcador = JSON.parse(storage.getItem('tindercows:ubicacion-sesion'));
-    assert.equal(marcador.estado, 'omitida');
-});
-
-test('permiso denegado → marca, no reintenta esa sesión, cero filas', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => { posts++; return { success: true }; },
-        esSoportadoFn: () => true,
-        capturarFn: geoDenegado,
-    });
-
-    assert.equal(posts, 0);
-    const marcador = JSON.parse(storage.getItem('tindercows:ubicacion-sesion'));
-    assert.equal(marcador.estado, 'omitida');
-});
-
-test('ubicación no disponible → sin marcar (reintenta en próxima carga)', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => { posts++; return { success: true }; },
-        esSoportadoFn: () => true,
-        capturarFn: geoNoDisponible,
-    });
-
-    assert.equal(posts, 0);
-    assert.equal(storage.getItem('tindercows:ubicacion-sesion'), null);
-});
-
-test('fallo de red en resolverIdentificacion → sin marcar (reintenta en próxima carga)', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => { throw new Error('network error'); },
-        requestFn: async () => { posts++; return { success: true }; },
-        esSoportadoFn: () => true,
-        capturarFn: geoExito,
-    });
-
-    assert.equal(posts, 0);
-    assert.equal(storage.getItem('tindercows:ubicacion-sesion'), null);
-});
-
-test('fallo retryable en POST (500) → sin marcar', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => {
-            posts++;
-            const err = new Error('Internal error');
-            err.retryable = true;
-            throw err;
-        },
-        esSoportadoFn: () => true,
-        capturarFn: geoExito,
-    });
-
-    assert.equal(posts, 1);
-    assert.equal(storage.getItem('tindercows:ubicacion-sesion'), null);
-});
-
-test('fallo definitivo en POST (422) → marca omitida', async () => {
-    const storage = crearStorage({ 'tindercows:login': sesionLogin() });
-    let posts = 0;
-
-    await capturarEnInicioDeSesion({
-        storage,
-        resolverIdentificacion: async () => ({ identificacionNumero: '12345', productorId: 1 }),
-        requestFn: async () => {
-            posts++;
-            const err = new Error('Validation error');
-            err.retryable = false;
-            throw err;
-        },
-        esSoportadoFn: () => true,
-        capturarFn: geoExito,
-    });
-
-    assert.equal(posts, 1);
-    const marcador = JSON.parse(storage.getItem('tindercows:ubicacion-sesion'));
-    assert.equal(marcador.estado, 'omitida');
-});
-
-test('sin storage → no hace nada', async () => {
-    let posts = 0;
-    await capturarEnInicioDeSesion({
-        storage: null,
-        requestFn: async () => { posts++; return { success: true }; },
-    });
-    assert.equal(posts, 0);
-});
-
-test('sin login en storage → no hace nada', async () => {
-    const storage = crearStorage({});
-    let posts = 0;
-    await capturarEnInicioDeSesion({
-        storage,
-        requestFn: async () => { posts++; return { success: true }; },
-    });
-    assert.equal(posts, 0);
-    assert.equal(storage.getItem('tindercows:ubicacion-sesion'), null);
 });

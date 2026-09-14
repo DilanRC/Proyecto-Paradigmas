@@ -1,3 +1,5 @@
+import { inicializarUbicacionProductorUI } from './shared/productor-ubicacion-ui.js';
+
 const modal = document.querySelector('#modal-productor');
 const hiddenField = document.querySelector('#fincas-nombres');
 const list = document.querySelector('#fincas-cards');
@@ -67,11 +69,11 @@ function buildCard(name = '', persisted = false) {
     icon.setAttribute('aria-hidden', 'true');
     const copy = document.createElement('div');
     const strong = document.createElement('strong');
-    strong.textContent = 'Dirección de esta finca';
+    strong.textContent = 'Direccion de esta finca';
     const text = document.createElement('span');
     text.textContent = persisted
-        ? 'Ya está asociada a esta finca. Para verla o editarla use Ver → Dirección en la ficha del productor.'
-        : 'Se habilita después de guardar el productor, para evitar escrituras parciales entre endpoints separados.';
+        ? 'Ya esta asociada a esta finca. Para verla o editarla use Ver → Direccion en la ficha del productor.'
+        : 'Se habilita despues de guardar el productor, para evitar escrituras parciales entre endpoints separados.';
     copy.append(strong, text);
     address.append(icon, copy);
 
@@ -87,22 +89,21 @@ function renderFromHidden() {
 }
 
 function initialize() {
-    if (!modal || !hiddenField || !list || !addButton) return;
+    if (modal && hiddenField && list && addButton) {
+        addButton.addEventListener('click', () => {
+            const card = buildCard('', false);
+            list.append(card);
+            renderEmptyState();
+            card.querySelector('[data-farm-name]')?.focus();
+        });
 
-    addButton.addEventListener('click', () => {
-        const card = buildCard('', false);
-        list.append(card);
+        const observer = new MutationObserver(() => {
+            if (modal.hasAttribute('open')) queueMicrotask(renderFromHidden);
+        });
+        observer.observe(modal, { attributes: true, attributeFilter: ['open'] });
         renderEmptyState();
-        card.querySelector('[data-farm-name]')?.focus();
-    });
-
-    const observer = new MutationObserver(() => {
-        if (modal.hasAttribute('open')) {
-            queueMicrotask(renderFromHidden);
-        }
-    });
-    observer.observe(modal, { attributes: true, attributeFilter: ['open'] });
-    renderEmptyState();
+    }
+    inicializarUbicacionProductorUI();
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
