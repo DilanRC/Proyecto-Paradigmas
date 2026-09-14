@@ -22,22 +22,36 @@ final class ProductorDireccion
         private readonly Direccion $direccion,
     ) {}
 
+    /**
+     * Orden global de locks para altas de dirección:
+     * Direccion -> ProductorDireccion.
+     *
+     * El lock global debe permanecer adquirido hasta COMMIT/ROLLBACK para que
+     * MAX(tbdireccionid)+1 no pueda reutilizar un id todavía no confirmado.
+     */
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
+    {
+        return $this->direccion->ejecutarConBloqueoAlta(
+            fn (): mixed => $this->ejecutarConBloqueoEnlaceAlta($operacion),
+        );
+    }
+
+    /** Úselo cuando el llamador ya posee el lock global de Direccion. */
+    public function ejecutarConBloqueoEnlaceAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
         try {
-            return $this->direccion->ejecutarConBloqueoAlta($operacion);
+            return $operacion();
         } finally {
             $this->liberarBloqueoAlta();
         }
     }
 
     /**
-     * Envuelve la operación bajo el lock nombrado POR PRODUCTOR de dirección y,
-     * dentro de él, delega al lock global de alta (requisito de
-     * Direccion::crearConBloqueoExistente). El callback debe contener toda la
-     * transacción de cierre+alta: el lock se libera en finally SIEMPRE, incluso
-     * ante excepción, para no dejar un productor bloqueado.
+     * Envuelve la operación bajo el lock nombrado POR PRODUCTOR de dirección y
+     * luego aplica el orden global Direccion -> ProductorDireccion. El callback
+     * debe contener la transacción completa para que los locks se liberen solo
+     * después de COMMIT/ROLLBACK.
      */
     public function ejecutarConBloqueoProducto(int $productorId, callable $operacion): mixed
     {
