@@ -7,6 +7,7 @@ use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
 use Application\Controller\ProductorUbicacionController;
 use Application\Controller\IdentidadController;
+use Application\Controller\MiActividadController;
 use Application\Model\Bitacora;
 use Application\Model\ProductorFinca;
 use Application\Model\ProductorUbicacion;
@@ -18,17 +19,19 @@ require_once $testRoot . '/Configuration/Database.php';
 require_once $testRoot . '/Application/HttpException.php';
 require_once $testRoot . '/Application/Auth/ActorContext.php';
 require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
-foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico'] as $testModel) {
+foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaVehiculo', 'Transportista', 'Comprador', 'TransportistaHistorico'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService', 'CompradorClasificacionService'] as $testServicio) {
     require_once $testRoot . "/Application/Service/{$testServicio}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
+require_once $testRoot . '/Application/Controller/TransportistaController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
 require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
 require_once $testRoot . '/Application/Controller/IdentidadController.php';
 require_once $testRoot . '/Application/Controller/AnimalPublicacionController.php';
+require_once $testRoot . '/Application/Controller/MiActividadController.php';
 
 function test_assert(bool $condition, string $message): void
 {
