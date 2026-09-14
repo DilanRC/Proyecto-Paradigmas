@@ -64,12 +64,21 @@ async function readJsonResponse(response) {
 }
 
 function friendlyAuthMessage(status, payload, fallback) {
-    if (status === 400 || status === 401) {
-        return 'El correo o la contraseña no son correctos.';
-    }
+    const code = payload?.code ?? payload?.error_code ?? null;
+    if (code === 'email_not_confirmed') return 'Debes confirmar tu correo antes de entrar.';
+    if (status === 400 || status === 401) return 'El correo o la contraseña no son correctos.';
     if (status === 429) return 'Hubo demasiados intentos. Intenta de nuevo más tarde.';
-    if (payload?.code === 'email_not_confirmed') return 'Debes confirmar tu correo antes de entrar.';
     return fallback;
+}
+
+function friendlySignupMessage(status, payload) {
+    const code = payload?.code ?? payload?.error_code ?? null;
+    if (status === 429) return 'Hubo demasiados intentos. Intenta de nuevo más tarde.';
+    if (code === 'user_already_exists' || code === 'email_exists') {
+        return 'Ya existe una cuenta con este correo. Entra con tu contraseña para continuar.';
+    }
+    if (code === 'weak_password') return 'La contraseña no cumple la política de seguridad de la cuenta.';
+    return payload?.msg || payload?.message || 'No fue posible crear la cuenta.';
 }
 
 async function authConfig() {
@@ -128,11 +137,11 @@ function sessionFromTokenResponse(payload, previous = null) {
     };
 }
 
-async function tokenRequest(grantType, body) {
+async function postAuth(path, body) {
     const config = await authConfig();
     let response;
     try {
-        response = await fetch(`${config.url}/auth/v1/token?grant_type=${encodeURIComponent(grantType)}`, {
+        response = await fetch(`${config.url}${path}`, {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
@@ -144,8 +153,15 @@ async function tokenRequest(grantType, body) {
     } catch {
         throw new AuthError('No fue posible contactar el servicio de autenticación.');
     }
-
     const payload = await readJsonResponse(response);
+    return { response, payload };
+}
+
+async function tokenRequest(grantType, body) {
+    const { response, payload } = await postAuth(
+        `/auth/v1/token?grant_type=${encodeURIComponent(grantType)}`,
+        body,
+    );
     if (!response.ok) {
         const code = payload?.code ?? payload?.error_code ?? null;
         throw new AuthError(
@@ -163,6 +179,52 @@ export async function signInWithPassword(email, password, storage = storageAvail
         password: String(password ?? ''),
     });
     return writeAuthSession(sessionFromTokenResponse(payload), storage);
+}
+
+/**
+ * Crea la cuenta sin inventar una sesión. Si el proyecto exige confirmación de
+ * correo, Supabase puede devolver el usuario sin access_token; en ese caso el
+ * llamador debe conservar un borrador no sensible y esperar confirmación/login.
+ */
+export async function signUpWithPassword(email, password, storage = storageAvailable()) {
+    const normalizedEmail = String(email ?? '').trim().toLowerCase();
+    const { response, payload } = await postAuth('/auth/v1/signup', {
+        email: normalizedEmail,
+        password: String(password ?? ''),
+    });
+    if (!response.ok) {
+        const code = payload?.code ?? payload?.error_code ?? null;
+        throw new AuthError(friendlySignupMessage(response.status, payload), {
+            status: response.status,
+            code,
+        });
+    }
+
+    // GoTrue/Supabase ha usado ambas formas en distintas superficies: tokens en
+    // el objeto raíz o dentro de session. Admitimos ambas sin depender del SDK.
+    const tokenPayload = payload?.session?.access_token
+        ? { ...payload.session, user: payload.user ?? payload.session.user }
+        : payload;
+    if (tokenPayload?.access_token && tokenPayload?.refresh_token) {
+        const session = writeAuthSession(sessionFromTokenResponse(tokenPayload), storage);
+        return {
+            session,
+            user: tokenPayload.user ?? payload?.user ?? null,
+            requiresEmailConfirmation: false,
+        };
+    }
+
+    const user = payload?.user ?? (typeof payload?.id === 'string' ? payload : null);
+    if (user && (typeof user.email === 'string' || normalizedEmail !== '')) {
+        clearAuthSession(storage);
+        return {
+            session: null,
+            user,
+            requiresEmailConfirmation: true,
+        };
+    }
+
+    throw new AuthError('Supabase creó una respuesta de registro que no pudimos interpretar.');
 }
 
 export async function refreshAuthSession(storage = storageAvailable()) {
@@ -201,9 +263,6 @@ export async function signOut({ storage = storageAvailable() } = {}) {
         return;
     }
 
-    // Supabase Auth admite POST /auth/v1/logout?scope=local: revoca únicamente
-    // la sesión actual. El access token ya emitido puede seguir siendo válido
-    // hasta su expiración, por eso igualmente se elimina del navegador siempre.
     try {
         const config = await authConfig();
         await fetch(`${config.url}/auth/v1/logout?scope=local`, {
