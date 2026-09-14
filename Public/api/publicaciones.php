@@ -13,6 +13,7 @@ require_once $raiz . '/Application/HttpException.php';
 foreach (['NamedLock', 'AnimalComercial'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
+require_once $raiz . '/Application/Service/PublicacionCercaniaService.php';
 require_once $raiz . '/Application/Controller/AnimalPublicacionController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
@@ -21,8 +22,6 @@ if ($metodo === 'OPTIONS') {
     http_response_code(204);
     exit;
 }
-// Solo lectura: el catálogo se publica desde los flujos de AnimalComercial,
-// que escriben bajo lock y transacción, no por este endpoint.
 if ($metodo !== 'GET') {
     header('Allow: GET, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
