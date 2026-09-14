@@ -34,7 +34,7 @@ has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpo
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
 has('Public/js/productores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
 has('Public/js/productores.js', "const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';",
-    'la dirección de finca debe usar su endpoint aprobado');
+    'la edición puntual de una finca existente debe conservar su endpoint aprobado');
 hasNot('Public/js/productores.js', 'fincaId', 'el frontend no debe inventar un id de finca');
 has('Application/View/productores/index.php', 'id="fincas-cards"',
     'las fincas deben editarse como elementos independientes');
@@ -48,8 +48,18 @@ has('Public/js/productores-fincas-ui.js', 'Dirección y punto exacto',
     'cada finca debe exponer su propia dirección y el punto exacto opcional desde Agregar finca');
 has('Public/js/productores-fincas-ui.js', 'crearSelectorPuntoFinca',
     'el admin debe reutilizar el selector cartográfico compartido de finca');
-has('Public/js/productores.js', 'persistirDireccionesFinca',
-    'el guardado administrativo debe intentar persistir la dirección opcional de las fincas');
+has('Public/js/productores.js', 'fincas: parseFincaDrafts(fincas).map(buildFincaPayload)',
+    'el mismo comando de Productor debe transportar cada dirección opcional de finca');
+hasNot('Public/js/productores.js', 'persistirDireccionesFinca',
+    'no debe existir una segunda fase HTTP que pueda dejar Productor y direcciones parcialmente guardados');
+has('Application/Controller/ProductorController.php', 'private FincaDireccion $direccionFinca;',
+    'ProductorController debe coordinar la dirección de finca dentro de su unidad de trabajo');
+has('Application/Controller/ProductorController.php', '$this->sincronizarDireccionesFinca(',
+    'POST/PUT de Productor deben persistir las direcciones incluidas en el mismo payload');
+has('Application/Controller/ProductorController.php', 'ejecutarConBloqueoEnlaceAlta',
+    'los locks de enlace de finca deben envolver la transacción coordinada');
+has('Application/Service/ValidacionService.php', "'fincasDetalle' => $fincasDetalle",
+    'la validación debe conservar el detalle estructurado de las fincas para la transacción');
 has(
     'Application/Service/ValidacionService.php',
     "$permitidos = ['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];",
@@ -159,4 +169,4 @@ hasNot('Public/js/mi-actividad.js', 'href="transportistas.php"', 'Mi actividad n
 has('Public/js/mi-actividad.js', 'href="publicar.php"', 'Productor activo debe continuar por el flujo Publicar');
 has('Public/js/mi-actividad.js', 'href="fletes.php"', 'Transportista activo debe continuar por Fletes');
 
-console.log('OK frontend_contract_test: contratos administrativos, fincas con mapa opcional y Front 2.0 alineados.');
+console.log('OK frontend_contract_test: contratos administrativos, transacción de fincas y Front 2.0 alineados.');
