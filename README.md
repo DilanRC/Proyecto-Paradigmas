@@ -38,17 +38,20 @@ La base `bdmercadoganadero` contiene exactamente 30 tablas:
 29. `tbtransportistaflete`
 30. `tbtransportistaresena`
 
-`tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
-de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
-`tbcomprador` es legacy de compatibilidad temporal: sobrevive mientras el CRUD
-actual dependa de ella y debe retirarse. Su migración se audita y ejecuta con
+`tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
+y `tbtransportista` son contextos de esa misma persona (DEC-28): cada perfil de
+negocio tiene su propio estado y audita sus operaciones en `tbbitacora`.
+Inscribir un comprador reutiliza la persona por identificación o la crea si no
+existe; los datos personales son únicos a través de los contextos y la ficha
+consulta la misma identidad en un perfil u otro con
+`Public/js/shared/capacidades.js`. `tbproductorclasificacionperiodo`
+(`tipo = COMPRADOR` o `VENDEDOR`) queda como registro analítico del periodo en
+que la persona fue comprador; la migración histórica se audita y ejecuta con
 `php Tools/backfill-clasificacion-comprador.php --check` (audita) y `--apply`
-(migra); el estado que muestran API y panel ya sale de la clasificación. Comprador y Vendedor son
-clasificaciones del Productor y su única fuente de verdad es
-`tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`). Animal, publicación, compra,
-venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
-Backend implemente comportamiento después. La ubicación física vive **únicamente** en
-`tbdireccion`: `tbproductordireccion` y
+(migra), y ya no es fuente de verdad del contexto (DEC-29). Animal, publicación,
+compra, venta, funnel, carrito, fletes y reseñas quedan preparados en base para
+que Backend implemente comportamiento después. La ubicación física vive
+**únicamente** en `tbdireccion`: `tbproductordireccion` y
 `tbfincadireccion` solo guardan el enlace `tbdireccionid`, de modo que productor
 y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
 `Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
@@ -236,6 +239,23 @@ adapte, el CRUD de productores falla con `Unknown column
 
 ## API JSON
 
+### Superficies y autenticación (DEC-30)
+
+La API se divide en dos superficies:
+
+- **Administración** (exige `Authorization: Bearer <jwt>` en **todas** sus
+  lecturas y escrituras; sin sesión responde 401
+  `errors['auth'] = 'SIN_SESION'`): `productores`, `productores-direccion`,
+  `transportistas`, `vehiculos`, `pagometodos`, `compradores`,
+  `fincas-direccion` y `transportistas-vehiculos`.
+- **Pública** (solo lectura, no exige sesión): `publicaciones`, `identidad` y
+  `productores-ubicacion`.
+
+En local, sin sidecar de autenticación configurado, el modo demo navega en la
+superficie pública; un Bearer cualquiera responde 503 (`SERVICE_NOT_CONFIGURED`)
+hasta que se configure `SUPABASE_SECRET_KEY`. El orden de chequeos se conserva:
+405/415/400 y OPTIONS (preflight) no exigen sesión.
+
 Endpoint: `/api/productores.php`
 
 | Método | Operación |
@@ -313,6 +333,34 @@ consulta los respectivos `MAX(id) + 1`, ejecuta la transacción y libera los
 bloqueos en orden inverso después del commit o rollback. Las actualizaciones
 que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
+
+### Contexto Comprador
+
+Endpoint: `/api/compradores.php`
+
+| Método | Operación |
+|---|---|
+| GET | Listar, buscar, filtrar o consultar por `identificacionNumero`, con las capacidades propias de la misma persona |
+| POST | Inscribir el contexto (201); 200 si la persona ya es comprador activo |
+| DELETE | Desactivar por `identificacionNumero` |
+| PATCH | Reactivar por `identificacionNumero` |
+
+```json
+{
+  "identificacion": {"tipoCodigo": "CEDULA_FISICA", "numero": "1-1111-1111"},
+  "nombre": "Persona de ejemplo",
+  "telefono": "88888888",
+  "correoElectronico": "contacto@example.test"
+}
+```
+
+Inscribir reutiliza la persona por identificación o la crea si no existe y
+después abre el contexto. Reinscribir a una persona que ya es comprador activo
+responde 200 sin tocar nada; si la persona ya existía con datos personales
+distintos, la API responde 409 con `errors['identificacion.numero']`. `DELETE`
+desactiva solo el contexto y `PATCH` reactiva la misma fila; ninguno puede
+operar si `tbpersonaestado` está inactivo (409). Ningún endpoint ejecuta
+`DELETE FROM`.
 
 ### Ubicaciones GPS del productor
 

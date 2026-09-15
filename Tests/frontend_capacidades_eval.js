@@ -1,10 +1,11 @@
-// Eval: Productor y Transportista siguen siendo capacidades operativas; Comprador
-// es una clasificación derivada del Productor con panel de solo lectura.
+// Eval: Productor, Comprador y Transportista son contextos de Persona
+// registrables (DEC-28/29). Ninguno es una clasificación derivada de otro; el
+// panel de Comprador conserva su lectura y no construye cuerpos.
 //
 // El objetivo de navegación se conserva: desde las fichas se puede consultar la
 // misma identidad en Productor, Comprador y Transportista. Lo que NO se permite
-// es volver a tratar Comprador como un registro administrable ni usar Productor
-// como alias de Vendedor.
+// es volver a tratar Comprador como clasificación derivada del Productor ni
+// usar Productor como alias de Vendedor.
 
 const fs = require('node:fs');
 const assert = require('node:assert');
@@ -27,10 +28,11 @@ const checks = [
     { name: 'javascript_compradores', pass: fs.existsSync('Public/js/compradores.js') },
     { name: 'modulo_relaciones_persona', pass: fs.existsSync('Public/js/shared/capacidades.js') },
     {
-        name: 'comprador_marcado_derivado',
-        // El comentario que documenta por qué Comprador es derivado puede crecer;
-        // el gate no debe fallar solo porque se agreguen unas líneas explicativas.
-        pass: /clave:\s*'comprador'[\s\S]{0,800}derivada:\s*true/.test(capacidadesJs),
+        name: 'comprador_contexto_registrable',
+        // Los tres contextos se marcan derivada: false (capacidades registrables
+        // sobre la misma Persona), nunca derivada: true.
+        pass: /clave:\s*'comprador'[\s\S]{0,800}derivada:\s*false/.test(capacidadesJs)
+            && !/derivada:\s*true/.test(capacidadesJs),
     },
     {
         name: 'productor_no_alias_vendedor',
