@@ -1,54 +1,72 @@
 <?php
 
+
 declare(strict_types=1);
 
-/**
- * Consulta de contextos Comprador relacionados con Persona. Solo lectura.
- *
- * No existe un CRUD administrativo de roles: las filas de tbcomprador deben
- * originarse en el proceso de negocio que corresponda. La API expone únicamente
- * consulta durante Avance 2.
- */
-
-use Application\Controller\CompradorConsultaController;
+use Application\Controller\CompradorController;
+use Application\Auth\SupabaseActorResolver;
 use Configuration\Database;
+use function Configuration\readJsonBody;
 use function Configuration\sendJsonResponse;
 
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
-require_once $raiz . '/Application/Model/Comprador.php';
-require_once $raiz . '/Application/Controller/CompradorConsultaController.php';
+require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
+foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'Comprador', 'Bitacora'] as $modelo) {
+    require_once $raiz . "/Application/Model/{$modelo}.php";
+}
+foreach (['ValidacionService', 'CompradorClasificacionService', 'AuthGuard'] as $servicio) {
+    require_once $raiz . "/Application/Service/{$servicio}.php";
+}
+require_once $raiz . '/Application/Controller/CompradorController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$permitidos = ['GET', 'POST', 'DELETE', 'PATCH'];
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, OPTIONS');
+    header('Allow: GET, POST, DELETE, PATCH, OPTIONS');
     http_response_code(204);
     exit;
 }
-if ($metodo !== 'GET') {
-    header('Allow: GET, OPTIONS');
+if (!in_array($metodo, $permitidos, true)) {
+    header('Allow: GET, POST, DELETE, PATCH, OPTIONS');
+    sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
+}
+
+$metodosConCuerpo = ['POST', 'DELETE', 'PATCH'];
+$tipoContenido = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
+if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'application/json') {
     sendJsonResponse([
         'success' => false,
-        'message' => 'Comprador no se administra como un rol manual; su contexto se genera desde el proceso de negocio.',
+        'message' => 'El cuerpo debe usar Content-Type: application/json.',
         'data' => null,
-    ], 405);
+    ], 415);
 }
 
 try {
-    $controlador = new CompradorConsultaController(Database::getConnection());
-    $respuesta = $controlador->procesar('GET', $_GET);
+    $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
+    $conexion = Database::getConnection();
+    $actor = SupabaseActorResolver::fromGlobals($conexion);
+    Application\Service\AuthGuard::requerirAutenticado($actor);
+    $controlador = new CompradorController(
+        $conexion,
+        is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
+        $actor,
+    );
+    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
+} catch (UnexpectedValueException $excepcion) {
+    sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
 } catch (Application\HttpException $excepcion) {
-    sendJsonResponse([
-        'success' => false,
-        'message' => $excepcion->getMessage(),
-        'data' => $excepcion->datos,
-    ], $excepcion->estadoHttp);
+    $cuerpoError = ['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos];
+    if ($excepcion->errores !== []) {
+        $cuerpoError['errors'] = $excepcion->errores;
+    }
+    sendJsonResponse($cuerpoError, $excepcion->estadoHttp);
 } catch (Throwable $excepcion) {
-    error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(),
-        $excepcion->getFile(), $excepcion->getLine()));
+    error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(), $excepcion->getFile(), $excepcion->getLine()));
     sendJsonResponse([
         'success' => false,
         'message' => 'No fue posible completar la solicitud.',

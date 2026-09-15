@@ -147,6 +147,7 @@ final class ProductorController
                         if ($nuevo === null) {
                             throw new \RuntimeException('No fue posible leer el productor recién creado.');
                         }
+                        $nuevo['advertencias'] = $this->fincasAdvertencias($datos['fincas'], $productorId);
                         $this->bitacora->registrar(
                             'CREAR',
                             $datos['identificacionNumero'],
@@ -203,6 +204,7 @@ final class ProductorController
                 if ($nuevo === null) {
                     throw new \RuntimeException('No fue posible leer el productor actualizado.');
                 }
+                $nuevo['advertencias'] = $this->fincasAdvertencias($datos['fincas'], $productorId);
                 $this->bitacora->registrar('ACTUALIZAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
                 return $nuevo;
             }),
@@ -327,6 +329,35 @@ final class ProductorController
                 $excepcion->errores
             );
         }
+    }
+
+    /**
+     * Política de duplicados DEC-31: dos fincas con el mismo nombre en
+     * productores distintos son legítimas; se ADVUERTE sin bloquear. Las fincas
+     * del propio productor se deduplican en el modelo (reactivación, nunca un
+     * segundo registro). Nunca lanza: es informativo.
+     */
+    private function fincasAdvertencias(array $nombres, int $productorId): array
+    {
+        $advertencias = [];
+        $sentencia = $this->conexion->prepare(
+            'SELECT 1 FROM tbfinca
+             WHERE tbfincanombre = :nombre
+               AND tbproductorid <> :productorId
+               AND tbfincaestado = 1
+             LIMIT 1'
+        );
+        foreach (array_values(array_unique($nombres)) as $nombre) {
+            $sentencia->execute(['nombre' => $nombre, 'productorId' => $productorId]);
+            if ($sentencia->fetch() !== false) {
+                $advertencias[] = $this->validacion->advertencia(
+                    'fincas',
+                    "El nombre \"{$nombre}\" ya existe en otro productor; caso legítimo, no se bloquea.",
+                );
+            }
+        }
+
+        return $advertencias;
     }
 
     private function consultarDireccion(array $consulta): array

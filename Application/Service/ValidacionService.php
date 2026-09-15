@@ -22,6 +22,14 @@ final class ValidacionService
         'PASAPORTE' => 'Pasaporte',
     ];
 
+    /**
+     * Duplicados imposibles (DEC-31): combinaciones que la regla de negocio
+     * declara únicas. La identificación normalizada de persona es la única
+     * imposible hoy (409); fincas con el mismo nombre son legítimas y solo se
+     * advierten.
+     */
+    public const DUPLICADOS_IMPOSIBLES = ['persona.identificacion'];
+
     public function tiposIdentificacion(): array
     {
         $resultado = [];
@@ -29,6 +37,18 @@ final class ValidacionService
             $resultado[] = ['codigo' => $codigo, 'nombre' => $nombre];
         }
         return $resultado;
+    }
+
+    /**
+     * Advertencia por campo del contrato de duplicados (DEC-31): informa sin
+     * bloquear. La respuesta exitosa incorpora las advertencias; quien llama
+     * decide con la información.
+     *
+     * @return array{campo: string, mensaje: string}
+     */
+    public function advertencia(string $campo, string $mensaje): array
+    {
+        return ['campo' => $campo, 'mensaje' => $mensaje];
     }
 
     public function validarProductor(array $cuerpo, bool $actualizacion): array

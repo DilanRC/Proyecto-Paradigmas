@@ -167,31 +167,25 @@ test('cada panel conserva su endpoint', async () => {
 });
 
 // --- compradores -------------------------------------------------------------
-// El panel de compradores ya no envia ningun cuerpo: el CRUD legacy se retiro
-// en el paso (d) (DEC-DBREADY-008) y la vista quedo de solo lectura, porque
-// Comprador es una clasificacion derivada del comportamiento del productor.
-// La paridad que se prueba ahora es la contraria: que no haya vuelto a aparecer
-// un constructor de payload ni una escritura desde ese panel.
-import { formatearClasificadoDesde, describirOrigen } from '../../Public/js/compradores.js';
-
+// Comprador es un contexto de Persona (DEC-28/29): la API vuelve a inscribir
+// (POST), desactivar (DELETE) y reactivar (PATCH), pero el panel conserva su
+// vista de solo lectura y no construye cuerpos de escritura. La paridad que se
+// prueba no es un payload, sino el contraste: panel sin constructor ni verbos.
 test('el panel de compradores no construye cuerpos de escritura', async () => {
     const { readFile } = await import('node:fs/promises');
     const fuente = await readFile(
         new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
-    assert.equal(/buildCompradorPayload/.test(fuente), false, 'reaparecio el constructor de payload');
+    assert.equal(/buildCompradorPayload/.test(fuente), false, 'el panel no debe construir cuerpos');
     for (const metodo of ['POST', 'PUT', 'DELETE', 'PATCH']) {
-        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel volvio a emitir ${metodo}`);
+        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel no debe emitir ${metodo}`);
     }
 });
 
-test('la clasificacion se muestra con su fecha y el origen real del periodo', () => {
-    assert.equal(formatearClasificadoDesde(''), 'Sin fecha registrada');
-    assert.equal(formatearClasificadoDesde('no es fecha'), 'no es fecha');
-    assert.match(formatearClasificadoDesde('2026-09-01 10:15:00'), /2026/);
-    assert.equal(describirOrigen('MIGRACION_TBCOMPRADOR_LEGACY'), 'Migración del registro anterior');
-    assert.equal(describirOrigen('ALTA_CRUD_COMPRADOR'), 'Alta registrada antes del retiro del CRUD');
-    assert.equal(describirOrigen('REACTIVACION_CRUD_COMPRADOR'), 'Reactivación registrada antes del retiro del CRUD');
-    assert.equal(describirOrigen(''), 'Sin origen declarado');
-    assert.equal(describirOrigen('T10_REGLA_FUTURA'), 'T10_REGLA_FUTURA',
-        'un motivo futuro no se inventa ni se oculta');
+test('el panel conserva su endpoint y consulta las capacidades de la persona', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const fuente = await readFile(
+        new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
+    assert.match(fuente, /const API_URL = 'api\/compradores\.php';/);
+    assert.equal(fuente.includes('consultarCapacidades'), true,
+        'la ficha debe consultar las relaciones de la misma Persona');
 });
