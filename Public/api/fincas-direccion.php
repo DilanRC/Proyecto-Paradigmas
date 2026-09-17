@@ -18,6 +18,7 @@ foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'FincaDireccion
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Service/ValidacionService.php';
+require_once $raiz . '/Application/Service/AuthGuard.php';
 require_once $raiz . '/Application/Controller/FincaController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
@@ -46,6 +47,7 @@ try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
+    Application\Service\AuthGuard::requerirAutenticado($actor);
     $controlador = new FincaController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
@@ -56,7 +58,11 @@ try {
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
 } catch (Application\HttpException $excepcion) {
-    sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos], $excepcion->estadoHttp);
+    $cuerpoError = ['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos];
+    if ($excepcion->errores !== []) {
+        $cuerpoError['errors'] = $excepcion->errores;
+    }
+    sendJsonResponse($cuerpoError, $excepcion->estadoHttp);
 } catch (Throwable $excepcion) {
     error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(), $excepcion->getFile(), $excepcion->getLine()));
     sendJsonResponse([

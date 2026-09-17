@@ -39,7 +39,7 @@ final class PersonaTelefonoHistorico
         $productores = array_map('intval', $buscar->fetchAll(PDO::FETCH_COLUMN));
 
         foreach ($productores as $productorId) {
-            $id = $this->siguienteId('tbproductorpersonatelefonohistorico', 'tbproductorpersonatelefonohistoricoid');
+            $id = $this->siguienteIdProductores();
             $insertar = $this->conexion->prepare(
                 'INSERT INTO tbproductorpersonatelefonohistorico
                  (tbproductorpersonatelefonohistoricoid, tbproductorid,
@@ -64,7 +64,7 @@ final class PersonaTelefonoHistorico
         $compradores = array_map('intval', $buscar->fetchAll(PDO::FETCH_COLUMN));
 
         foreach ($compradores as $compradorId) {
-            $id = $this->siguienteId('tbcompradorpersonatelefonohistorico', 'tbcompradorpersonatelefonohistoricoid');
+            $id = $this->siguienteIdCompradores();
             $insertar = $this->conexion->prepare(
                 'INSERT INTO tbcompradorpersonatelefonohistorico
                  (tbcompradorpersonatelefonohistoricoid, tbcompradorid,
@@ -80,17 +80,17 @@ final class PersonaTelefonoHistorico
         }
     }
 
-    private function siguienteId(string $tabla, string $columna): int
+    private function siguienteIdProductores(): int
     {
-        $permitidas = [
-            'tbproductorpersonatelefonohistorico' => 'tbproductorpersonatelefonohistoricoid',
-            'tbcompradorpersonatelefonohistorico' => 'tbcompradorpersonatelefonohistoricoid',
-        ];
-        if (($permitidas[$tabla] ?? null) !== $columna) {
-            throw new \InvalidArgumentException('Tabla histórica no permitida.');
-        }
+        $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbproductorpersonatelefonohistoricoid), 0) + 1 FROM tbproductorpersonatelefonohistorico');
+        $sentencia->execute();
 
-        $sentencia = $this->conexion->prepare("SELECT COALESCE(MAX({$columna}), 0) + 1 FROM {$tabla}");
+        return (int) $sentencia->fetchColumn();
+    }
+
+    private function siguienteIdCompradores(): int
+    {
+        $sentencia = $this->conexion->prepare('SELECT COALESCE(MAX(tbcompradorpersonatelefonohistoricoid), 0) + 1 FROM tbcompradorpersonatelefonohistorico');
         $sentencia->execute();
 
         return (int) $sentencia->fetchColumn();
