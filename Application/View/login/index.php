@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
+    <script type="module" src="js/password-toggle.js?v=password-1"></script>
     <script type="module" src="js/login.js?v=front-3"></script>
 </head>
 <body class="auth-page">
@@ -59,7 +60,7 @@
                     </label>
                     <label class="auth-field">
                         <span>Contraseña</span>
-                        <input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Mínimo 8 caracteres" aria-describedby="login-password-error">
+                        <span class="auth-password-control"><input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Mínimo 8 caracteres" aria-describedby="login-password-error"><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="login-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span>
                         <small class="auth-error" id="login-password-error" data-error-for="password"></small>
                     </label>
                     <p class="auth-status" id="login-status" role="status" aria-live="polite"></p>

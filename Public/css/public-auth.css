@@ -758,7 +758,7 @@ html[data-theme='light'] .brand-logo--dark {
     gap:7px;
 }
 
-.auth-field>span {
+.auth-field>span:not(.auth-password-control) {
     color:var(--tc-text);
     font-size:12px;
     font-weight:760;
@@ -773,6 +773,42 @@ html[data-theme='light'] .brand-logo--dark {
     color:var(--tc-text);
     background:var(--tc-bg);
     outline:none;
+}
+
+.auth-password-control {
+    position:relative;
+    display:block;
+}
+
+.auth-password-control input {
+    padding-right:50px;
+}
+
+.auth-password-toggle {
+    position:absolute;
+    top:50%;
+    right:8px;
+    display:grid;
+    width:36px;
+    height:36px;
+    place-items:center;
+    border:0;
+    border-radius:10px;
+    color:var(--tc-muted);
+    background:transparent;
+    cursor:pointer;
+    transform:translateY(-50%);
+}
+
+.auth-password-toggle:hover,
+.auth-password-toggle:focus-visible {
+    color:var(--tc-text);
+    background:var(--tc-line);
+}
+
+.auth-password-toggle:focus-visible {
+    outline:2px solid var(--tc-primary);
+    outline-offset:2px;
 }
 
 .auth-field select,

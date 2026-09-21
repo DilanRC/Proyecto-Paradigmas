@@ -21,6 +21,7 @@ const info = read('../../Application/View/public/info.php');
 const publicCss = read('../../Public/css/public-auth.css');
 const productCss = read('../../Public/css/public-product.css');
 const themeJs = read('../../Public/js/public-theme.js');
+const passwordToggleJs = read('../../Public/js/password-toggle.js');
 const publicUi = read('../../Public/js/public-ui.js');
 const registroJs = read('../../Public/js/registro.js');
 const commerceJs = read('../../Public/js/explore-actions.js');
@@ -111,6 +112,17 @@ test('registro guiado hereda los tokens públicos y conserva contraste al cambia
     assert.ok(themeJs.includes('wireThemeToggle'));
     assert.ok(themeJs.includes('document.documentElement.dataset.theme === \'dark\''));
     assert.ok(themeJs.includes('storeTheme(next)'));
+});
+
+test('login y registro permiten mostrar u ocultar cada contraseña sin enviarla al almacenamiento', () => {
+    for (const view of [login, read('../../Application/View/registro/index.php')]) {
+        assert.ok(view.includes('data-password-toggle'));
+        assert.ok(view.includes('aria-controls='));
+    }
+    assert.ok(passwordToggleJs.includes("input.type === 'password' ? 'text' : 'password'"));
+    assert.ok(passwordToggleJs.includes('aria-pressed'));
+    assert.equal(passwordToggleJs.includes('localStorage'), false);
+    assert.equal(passwordToggleJs.includes('sessionStorage'), false);
 });
 
 test('modo claro y oscuro comparten preferencia persistente e iconos reconocibles', () => {

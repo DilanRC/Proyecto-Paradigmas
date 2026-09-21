@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/onboarding.css?v=front-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
+    <script type="module" src="js/password-toggle.js?v=password-1"></script>
     <script type="module" src="js/registro.js?v=front-4"></script>
 </head>
 <body class="auth-page onboarding-page">
@@ -55,8 +56,8 @@
                     <label class="auth-field"><span>Alias <em>opcional</em></span><input name="alias" type="text" maxlength="150"><small class="auth-error" data-error-for="alias"></small></label>
                     <label class="auth-field"><span>Teléfono *</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></label>
                     <label class="auth-field"><span>Correo electrónico *</span><input name="correoElectronico" type="email" maxlength="150" autocomplete="email" required><small class="auth-error" data-error-for="correoElectronico"></small></label>
-                    <label class="auth-field"><span>Contraseña *</span><input name="password" type="password" minlength="8" autocomplete="new-password" required><small class="auth-error" data-error-for="password"></small></label>
-                    <label class="auth-field"><span>Confirmar contraseña *</span><input name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
+                    <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="password"></small></label>
+                    <label class="auth-field"><span>Confirmar contraseña *</span><span class="auth-password-control"><input id="registro-password-confirmacion" name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password-confirmacion" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
                 </div>
             </section>
 
