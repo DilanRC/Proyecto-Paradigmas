@@ -28,6 +28,7 @@ function setSearchOpen(root, open) {
     const toggle = root.querySelector('[data-public-search-toggle]');
     const input = root.querySelector('input[type="search"]');
     toggle?.setAttribute('aria-expanded', String(safeOpen));
+    toggle?.setAttribute('aria-label', safeOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda');
     if (safeOpen) requestAnimationFrame(() => input?.focus());
 }
 
@@ -58,32 +59,28 @@ function initializePublicCarousel() {
     for (const root of document.querySelectorAll('[data-public-carousel]')) {
         if (root.dataset.ready === 'true') continue;
         const track = root.querySelector('[data-carousel-track]');
-        const slides = [...root.querySelectorAll('.public-carousel__slide')];
+        const pages = [...root.querySelectorAll('.public-carousel__page')];
         const dots = root.querySelector('.public-carousel__dots');
         const status = root.querySelector('[data-carousel-status]');
-        if (!track || slides.length < 2 || !dots) continue;
+        if (!track || pages.length < 2 || !dots) continue;
         root.dataset.ready = 'true';
         let index = 0;
         const render = () => {
-            const visible = window.matchMedia('(max-width: 700px)').matches ? 1 : window.matchMedia('(max-width: 1050px)').matches ? 2 : 3;
-            const max = Math.max(0, slides.length - visible);
-            index = Math.min(index, max);
-            const offset = slides[index].offsetLeft - track.offsetLeft;
-            track.style.transform = `translateX(-${offset}px)`;
-            if (status) status.textContent = `Escena ${index + 1} de ${slides.length}`;
+            index = Math.min(index, pages.length - 1);
+            track.style.transform = `translateX(-${index * 100}%)`;
+            if (status) status.textContent = index === 0 ? 'Escenas 1–3 de 6' : 'Escenas 4–6 de 6';
             dots.querySelectorAll('button').forEach((dot, dotIndex) => dot.setAttribute('aria-selected', String(dotIndex === index)));
         };
-        slides.forEach((slide, slideIndex) => {
+        pages.forEach((page, pageIndex) => {
             const dot = document.createElement('button');
             dot.type = 'button';
             dot.role = 'tab';
-            dot.ariaLabel = `Ver escena ${slideIndex + 1}`;
-            dot.addEventListener('click', () => { index = slideIndex; render(); });
+            dot.ariaLabel = `Ver página ${pageIndex + 1} de escenas`;
+            dot.addEventListener('click', () => { index = pageIndex; render(); });
             dots.append(dot);
         });
         root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => { index = Math.max(0, index - 1); render(); });
-        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => { index = Math.min(slides.length - 1, index + 1); render(); });
-        window.addEventListener('resize', render, { passive: true });
+        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => { index = Math.min(pages.length - 1, index + 1); render(); });
         render();
     }
 }

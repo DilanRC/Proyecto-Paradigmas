@@ -78,6 +78,7 @@ test('la búsqueda pública permanece compacta y se expande bajo demanda', () =>
     assert.ok(home.includes('data-public-search-toggle'));
     assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
     assert.ok(publicUi.includes('root.dataset.open = String(safeOpen)'));
+    assert.ok(publicUi.includes("safeOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'"));
     assert.ok(publicUi.includes("event.key === 'Escape'"));
 });
 
@@ -94,6 +95,8 @@ test('la portada muestra las seis escenas ganaderas en un carrusel navegable', (
     ]) assert.ok(home.includes(asset), `falta ${asset}`);
     assert.ok(publicUi.includes('data-carousel-prev'));
     assert.ok(publicUi.includes('data-carousel-next'));
+    assert.equal((home.match(/<figcaption>/g) || []).length, 0);
+    assert.equal((home.match(/public-carousel__page/g) || []).length, 2);
 });
 
 test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
@@ -101,6 +104,7 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
     assert.ok(explore.includes('data-explore-deck'));
     assert.ok(explore.includes('data-explore-prev'));
     assert.ok(explore.includes('data-explore-next'));
+    assert.ok(read('../../Public/js/explore.js').includes('aria-pressed'));
     // Las acciones viajan con la tarjeta, que ahora construye explore.js con lo
     // que devuelve api/publicaciones.php; la escritura requiere sesión y se
     // realiza desde publicar.js con el bearer verificado.

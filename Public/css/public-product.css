@@ -2,7 +2,8 @@
 
 .public-header--product {
     display:grid;
-    width:min(100% - 28px,1540px);
+    width:calc(100% - 32px);
+    max-width:none;
     grid-template-columns:auto minmax(0,1fr) auto;
     align-items:center;
     gap:12px;
@@ -24,7 +25,6 @@
 
 .public-header--product .public-nav--primary::-webkit-scrollbar { display:none; }
 .public-header--product .public-nav--primary a { flex:0 0 auto; white-space:nowrap; }
-}
 
 .public-nav--primary a.is-active {
     color:var(--tc-text);

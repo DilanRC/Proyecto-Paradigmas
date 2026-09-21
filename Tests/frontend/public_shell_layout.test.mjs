@@ -39,7 +39,7 @@ test('toda vista que use public-header--product carga la hoja que la define', ()
 
 test('la hoja de producto es la unica que define el ancho de la cabecera', () => {
     // Si esta regla desaparece, el link de la vista deja de servir de nada.
-    assert.match(rule(productCss, '.public-header--product'), /width:min\(/);
+    assert.match(rule(productCss, '.public-header--product'), /width:calc\(/);
     assert.match(rule(productCss, '.public-header--product'), /grid-template-columns:/);
 });
 

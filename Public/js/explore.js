@@ -249,6 +249,7 @@ function renderPurposeFilters() {
         boton.type = 'button';
         boton.dataset.exploreFilter = valor;
         boton.classList.toggle('is-active', valor === state.proposito);
+        boton.setAttribute('aria-pressed', String(valor === state.proposito));
         boton.append(element('span', null, etiqueta));
         boton.addEventListener('click', () => {
             state.proposito = valor;
