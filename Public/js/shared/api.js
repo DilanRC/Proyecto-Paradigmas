@@ -153,8 +153,14 @@ async function executeJsonRequest(url, options, fetchImpl, bearer) {
  * bucle; una autorización de negocio 409/422 se devuelve tal como la decidió PHP.
  */
 export async function request(url, options = {}, { fetchImpl = globalThis.fetch } = {}) {
+    const timeoutMs = Number(options.timeoutMs ?? 20000);
+    const controller = options.signal ? null : new AbortController();
+    const requestOptions = controller ? { ...options, signal: controller.signal } : options;
+    const timeout = controller && Number.isFinite(timeoutMs) && timeoutMs > 0
+        ? setTimeout(() => controller.abort(), timeoutMs) : null;
     const bearer = await bearerForRequest(options);
-    let { response, payload } = await executeJsonRequest(url, options, fetchImpl, bearer);
+    try {
+        let { response, payload } = await executeJsonRequest(url, requestOptions, fetchImpl, bearer);
 
     if (
         response.status === 401
@@ -165,7 +171,7 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
         try {
             const refreshedBearer = await getAccessToken({ forceRefresh: true });
             if (refreshedBearer) {
-                ({ response, payload } = await executeJsonRequest(url, options, fetchImpl, refreshedBearer));
+                ({ response, payload } = await executeJsonRequest(url, requestOptions, fetchImpl, refreshedBearer));
             }
         } catch {
             // Conservamos la respuesta 401 original. La UI puede redirigir al
@@ -173,8 +179,16 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
         }
     }
 
-    if (!response.ok || payload.success !== true) {
-        throw toError(describeHttpFailure(response.status, payload));
+        if (!response.ok || payload.success !== true) {
+            throw toError(describeHttpFailure(response.status, payload));
+        }
+        return payload;
+    } catch (error) {
+        if (error?.name === 'AbortError' && controller?.signal.aborted) {
+            throw toError({ ...describeNetworkFailure(error), message: 'El servidor tardó demasiado en responder. Intenta nuevamente.' });
+        }
+        throw error;
+    } finally {
+        if (timeout) clearTimeout(timeout);
     }
-    return payload;
 }

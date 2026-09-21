@@ -137,6 +137,15 @@ test('registro guiado hereda los tokens públicos y conserva contraste al cambia
     assert.ok(themeJs.includes('storeTheme(next)'));
 });
 
+test('registro guiado separa nombres y apellidos y conserva el nombre canónico', () => {
+    const registro = read('../../Application/View/registro/index.php');
+    assert.ok(registro.includes('name="nombres"'));
+    assert.ok(registro.includes('name="apellidos"'));
+    assert.ok(registroJs.includes("const nombres = String(data.get('nombres')"));
+    assert.ok(registroJs.includes("const apellidos = String(data.get('apellidos')"));
+    assert.ok(registroJs.includes("nombre: [nombres, apellidos].filter(Boolean).join(' ')"));
+});
+
 test('login y registro permiten mostrar u ocultar cada contraseña sin enviarla al almacenamiento', () => {
     for (const view of [login, read('../../Application/View/registro/index.php')]) {
         assert.ok(view.includes('data-password-toggle'));

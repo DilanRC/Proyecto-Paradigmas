@@ -169,7 +169,7 @@ final class RegistroPublicoController
         }
         foreach ($this->rechazarCamposDesconocidos(
             $valor,
-            ['identificacionTipo', 'identificacionNumero', 'nombre', 'alias', 'telefono', 'correoElectronico'],
+            ['identificacionTipo', 'identificacionNumero', 'nombre', 'nombres', 'apellidos', 'alias', 'telefono', 'correoElectronico'],
             'persona.',
         ) as $campo => $mensaje) {
             $errores[$campo] = $mensaje;
@@ -183,7 +183,7 @@ final class RegistroPublicoController
                     'tipoCodigo' => $valor['identificacionTipo'] ?? null,
                     'numero' => $valor['identificacionNumero'] ?? null,
                 ],
-                'nombre' => $valor['nombre'] ?? null,
+                'nombre' => $this->nombreCanonico($valor),
                 'alias' => $valor['alias'] ?? null,
                 'telefono' => $valor['telefono'] ?? null,
                 'correoElectronico' => $valor['correoElectronico'] ?? null,
@@ -199,6 +199,16 @@ final class RegistroPublicoController
             }
             return [];
         }
+    }
+
+    private function nombreCanonico(array $valor): ?string
+    {
+        $nombres = trim((string) ($valor['nombres'] ?? ''));
+        $apellidos = trim((string) ($valor['apellidos'] ?? ''));
+        if ($nombres !== '' || $apellidos !== '') {
+            return trim($nombres . ' ' . $apellidos);
+        }
+        return isset($valor['nombre']) ? trim((string) $valor['nombre']) : null;
     }
 
     private function rechazarCamposDesconocidos(array $datos, array $permitidos, string $prefijo = ''): array

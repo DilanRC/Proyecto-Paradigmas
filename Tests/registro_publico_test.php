@@ -18,7 +18,8 @@ function registro_payload(string $identificacion, string $correo, array $capacid
         'persona' => [
             'identificacionTipo' => 'PASAPORTE',
             'identificacionNumero' => $identificacion,
-            'nombre' => 'Persona Registro Público',
+            'nombres' => 'Persona',
+            'apellidos' => 'Registro Público',
             'alias' => 'Registro ' . substr($identificacion, -4),
             'telefono' => '+506 8777-6655',
             'correoElectronico' => $correo,

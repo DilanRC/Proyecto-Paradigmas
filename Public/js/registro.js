@@ -30,10 +30,14 @@ function resolveNext(fallback) {
 
 function formPersona(form) {
     const data = new FormData(form);
+    const nombres = String(data.get('nombres') ?? '').trim();
+    const apellidos = String(data.get('apellidos') ?? '').trim();
     return {
         identificacionTipo: String(data.get('identificacionTipo') ?? ''),
         identificacionNumero: String(data.get('identificacionNumero') ?? ''),
-        nombre: String(data.get('nombre') ?? ''),
+        nombres,
+        apellidos,
+        nombre: [nombres, apellidos].filter(Boolean).join(' '),
         alias: String(data.get('alias') ?? ''),
         telefono: String(data.get('telefono') ?? ''),
         correoElectronico: String(data.get('correoElectronico') ?? ''),
@@ -161,7 +165,11 @@ function addFinca(valor = {}) {
 }
 
 function fillPersona(form, persona = {}) {
-    for (const [name, value] of Object.entries(persona)) {
+    const nombreCompleto = String(persona.nombre ?? '').trim();
+    const nombres = persona.nombres ?? (nombreCompleto ? nombreCompleto.split(/\s+/).slice(0, -1).join(' ') : '');
+    const apellidos = persona.apellidos ?? (nombreCompleto ? nombreCompleto.split(/\s+/).slice(-1).join(' ') : '');
+    const valores = { ...persona, nombres, apellidos };
+    for (const [name, value] of Object.entries(valores)) {
         const control = form.elements.namedItem(name);
         if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement) control.value = String(value ?? '');
     }
@@ -197,7 +205,8 @@ function renderSummary(draft, extending) {
     }[cap] ?? cap));
     target.innerHTML = `
         <section><h3>${extending ? 'Identidad reutilizada' : 'Persona'}</h3><dl>
-            <div><dt>Nombre</dt><dd>${escapeHtml(summary.persona.nombre)}</dd></div>
+            <div><dt>Nombres</dt><dd>${escapeHtml(summary.persona.nombres)}</dd></div>
+            <div><dt>Apellidos</dt><dd>${escapeHtml(summary.persona.apellidos)}</dd></div>
             <div><dt>Identificación</dt><dd>${escapeHtml(summary.persona.identificacionNumero)}</dd></div>
             <div><dt>Teléfono</dt><dd>${escapeHtml(summary.persona.telefono)}</dd></div>
             <div><dt>Correo</dt><dd>${escapeHtml(summary.persona.correoElectronico)}</dd></div>
@@ -317,6 +326,8 @@ function initialize() {
         if (!validateCurrent() || finishButton.disabled) return;
         const draft = persistDraft(form, existingProfile);
         form.setAttribute('aria-busy', 'true');
+        finishButton.setAttribute('aria-busy', 'true');
+        finishButton.querySelector('i')?.classList.add('is-spinning');
         finishButton.disabled = true;
 
         const summary = buildRegistrationSummary(draft);
@@ -355,6 +366,8 @@ function initialize() {
             finishButton.disabled = false;
         } finally {
             form.setAttribute('aria-busy', 'false');
+            finishButton.setAttribute('aria-busy', 'false');
+            finishButton.querySelector('i')?.classList.remove('is-spinning');
         }
     });
 

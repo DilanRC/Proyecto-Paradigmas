@@ -21,7 +21,7 @@ export const BUSINESS_CAPABILITIES = Object.freeze({
 
 export const REGISTRATION_RULES = Object.freeze({
     persona: Object.freeze({
-        required: ['identificacionTipo', 'identificacionNumero', 'nombre', 'telefono', 'correoElectronico', 'password'],
+        required: ['identificacionTipo', 'identificacionNumero', 'nombres', 'apellidos', 'telefono', 'correoElectronico', 'password'],
         aliasOptional: true,
         phoneDigitsMin: 8,
         phoneDigitsMax: 15,
@@ -65,6 +65,9 @@ export function validatePersonaDraft(persona = {}, { requirePassword = true } = 
         if (!String(persona[field] ?? '').trim()) errors[field] = 'Este dato es obligatorio.';
     }
 
+    if (persona.nombres && String(persona.nombres).trim().length < 2) errors.nombres = 'Ingrese al menos 2 caracteres.';
+    if (persona.apellidos && String(persona.apellidos).trim().length < 2) errors.apellidos = 'Ingrese al menos 2 caracteres.';
+
     const phoneDigits = String(persona.telefono ?? '').replace(/\D/g, '');
     if (persona.telefono && (phoneDigits.length < 8 || phoneDigits.length > 15)) {
         errors.telefono = 'Use entre 8 y 15 dígitos.';
@@ -106,11 +109,18 @@ export function validateFincas(fincas = [], capabilities = []) {
 
 export function buildRegistrationSummary(draft) {
     const capabilities = normalizeCapabilities(draft.capacidades);
+    const nombreLegado = String(draft.persona?.nombre ?? '').trim();
+    const nombres = String(draft.persona?.nombres ?? '').trim()
+        || (nombreLegado ? nombreLegado.split(/\s+/).slice(0, -1).join(' ') : '');
+    const apellidos = String(draft.persona?.apellidos ?? '').trim()
+        || (nombreLegado ? nombreLegado.split(/\s+/).slice(-1).join(' ') : '');
     return {
         persona: {
             identificacionTipo: draft.persona?.identificacionTipo ?? '',
             identificacionNumero: String(draft.persona?.identificacionNumero ?? '').trim(),
-            nombre: String(draft.persona?.nombre ?? '').trim(),
+            nombres,
+            apellidos,
+            nombre: [nombres, apellidos].filter(Boolean).join(' '),
             alias: String(draft.persona?.alias ?? '').trim(),
             telefono: String(draft.persona?.telefono ?? '').trim(),
             correoElectronico: String(draft.persona?.correoElectronico ?? '').trim(),

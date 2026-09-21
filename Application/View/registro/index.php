@@ -10,10 +10,10 @@
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/onboarding.css?v=front-2">
+    <link rel="stylesheet" href="css/onboarding.css?v=front-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=front-4"></script>
+    <script type="module" src="js/registro.js?v=front-5"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -52,7 +52,13 @@
                 <div class="form-grid onboarding-grid">
                     <label class="auth-field"><span>Tipo de identificación *</span><select name="identificacionTipo" required><option value="">Seleccione</option><option value="CEDULA_FISICA">Cédula física</option><option value="CEDULA_JURIDICA">Cédula jurídica</option><option value="DIMEX">DIMEX</option><option value="NITE">NITE</option><option value="PASAPORTE">Pasaporte</option></select><small class="auth-error" data-error-for="identificacionTipo"></small></label>
                     <label class="auth-field"><span>Número de identificación *</span><input name="identificacionNumero" type="text" maxlength="250" autocomplete="off" required><small class="auth-error" data-error-for="identificacionNumero"></small></label>
-                    <label class="auth-field auth-field--wide"><span>Nombre completo o razón social *</span><input name="nombre" type="text" minlength="3" maxlength="150" autocomplete="name" required><small class="auth-error" data-error-for="nombre"></small></label>
+                    <div class="identity-name-group auth-field--wide">
+                        <div class="identity-name-group__intro"><span>Tu nombre</span><small>Lo mostraremos en tu perfil y en tus actividades.</small></div>
+                        <div class="identity-name-group__fields">
+                            <label class="auth-field"><span>Nombres *</span><input name="nombres" type="text" minlength="2" maxlength="75" autocomplete="given-name" required placeholder="Ej. María Fernanda"><small class="auth-error" data-error-for="nombres"></small></label>
+                            <label class="auth-field"><span>Apellidos *</span><input name="apellidos" type="text" minlength="2" maxlength="75" autocomplete="family-name" required placeholder="Ej. Solano Vargas"><small class="auth-error" data-error-for="apellidos"></small></label>
+                        </div>
+                    </div>
                     <label class="auth-field"><span>Alias <em>opcional</em></span><input name="alias" type="text" maxlength="150"><small class="auth-error" data-error-for="alias"></small></label>
                     <label class="auth-field"><span>Teléfono *</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></label>
                     <label class="auth-field"><span>Correo electrónico *</span><input name="correoElectronico" type="email" maxlength="150" autocomplete="email" required><small class="auth-error" data-error-for="correoElectronico"></small></label>
