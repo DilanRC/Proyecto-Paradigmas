@@ -59,29 +59,43 @@ function initializePublicCarousel() {
     for (const root of document.querySelectorAll('[data-public-carousel]')) {
         if (root.dataset.ready === 'true') continue;
         const track = root.querySelector('[data-carousel-track]');
-        const pages = [...root.querySelectorAll('.public-carousel__page')];
+        const slides = [...root.querySelectorAll('.public-carousel__slide')];
         const dots = root.querySelector('.public-carousel__dots');
         const status = root.querySelector('[data-carousel-status]');
-        if (!track || pages.length < 2 || !dots) continue;
+        if (!track || slides.length < 2 || !dots) continue;
         root.dataset.ready = 'true';
         let index = 0;
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const render = () => {
-            index = Math.min(index, pages.length - 1);
-            track.style.transform = `translateX(-${index * 100}%)`;
-            if (status) status.textContent = index === 0 ? 'Escenas 1–3 de 6' : 'Escenas 4–6 de 6';
+            index = (index + slides.length) % slides.length;
+            track.style.setProperty('--carousel-angle', `${index * -60}deg`);
+            if (status) status.textContent = `Escena ${index + 1} de ${slides.length}`;
+            slides.forEach((slide, slideIndex) => slide.setAttribute('aria-hidden', String(slideIndex !== index)));
             dots.querySelectorAll('button').forEach((dot, dotIndex) => dot.setAttribute('aria-selected', String(dotIndex === index)));
         };
-        pages.forEach((page, pageIndex) => {
+        slides.forEach((slide, slideIndex) => {
             const dot = document.createElement('button');
             dot.type = 'button';
             dot.role = 'tab';
-            dot.ariaLabel = `Ver página ${pageIndex + 1} de escenas`;
-            dot.addEventListener('click', () => { index = pageIndex; render(); });
+            dot.ariaLabel = `Ver escena ${slideIndex + 1}`;
+            dot.addEventListener('click', () => { index = slideIndex; render(); });
             dots.append(dot);
         });
-        root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => { index = Math.max(0, index - 1); render(); });
-        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => { index = Math.min(pages.length - 1, index + 1); render(); });
+        root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => { index -= 1; render(); });
+        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => { index += 1; render(); });
+        track.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft') { event.preventDefault(); index -= 1; render(); }
+            if (event.key === 'ArrowRight') { event.preventDefault(); index += 1; render(); }
+        });
+        let timer = null;
+        const stop = () => { if (timer) { window.clearInterval(timer); timer = null; } };
+        const start = () => { if (!reducedMotion && !timer) timer = window.setInterval(() => { index += 1; render(); }, 6500); };
+        track.addEventListener('pointerenter', stop);
+        track.addEventListener('pointerleave', start);
+        track.addEventListener('focusin', stop);
+        track.addEventListener('focusout', (event) => { if (!track.contains(event.relatedTarget)) start(); });
         render();
+        start();
     }
 }
 

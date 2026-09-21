@@ -85,20 +85,16 @@
                     <div class="public-carousel__controls"><button type="button" data-carousel-prev aria-label="Escena anterior"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Anterior</span></button><button type="button" data-carousel-next aria-label="Escena siguiente"><span>Siguiente</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
                 </div>
                 <div class="public-carousel__viewport">
-                    <div class="public-carousel__track" data-carousel-track>
-                        <div class="public-carousel__page">
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-camino-costa-rica.png" alt="Ganado recorriendo un camino empedrado y húmedo" width="1536" height="1024" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-potrero-costa-rica.png" alt="Ganado mixto en un potrero verde" width="1538" height="1023" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-bebedero-costa-rica.png" alt="Ganado junto a un bebedero de concreto" width="1540" height="1021" loading="lazy"></figure>
-                        </div>
-                        <div class="public-carousel__page">
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-pasarela-costa-rica.png" alt="Pasarela elevada sobre corrales de un remate" width="1448" height="1086" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-corrales-costa-rica.png" alt="Ganaderos observando ganado desde los corrales" width="1448" height="1086" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-rematador-costa-rica.png" alt="Público participando junto al puesto del rematador" width="1774" height="887" loading="lazy"></figure>
-                        </div>
+                    <div class="card-3d" data-carousel-track tabindex="0" aria-label="Escenas ganaderas de Ganado Cerca">
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/finca-camino-costa-rica.png" alt="Ganado recorriendo un camino empedrado y húmedo" width="1536" height="1024" loading="lazy"></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/finca-potrero-costa-rica.png" alt="Ganado mixto en un potrero verde" width="1538" height="1023" loading="lazy"></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/finca-bebedero-costa-rica.png" alt="Ganado junto a un bebedero de concreto" width="1540" height="1021" loading="lazy"></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-pasarela-costa-rica.png" alt="Pasarela elevada sobre corrales de un remate" width="1448" height="1086" loading="lazy"></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-corrales-costa-rica.png" alt="Ganaderos observando ganado desde los corrales" width="1448" height="1086" loading="lazy"></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-rematador-costa-rica.png" alt="Público participando junto al puesto del rematador" width="1774" height="887" loading="lazy"></figure>
                     </div>
                 </div>
-                <div class="public-carousel__footer"><p data-carousel-status aria-live="polite">Escenas 1–3 de 6</p><div class="public-carousel__dots" role="tablist" aria-label="Páginas de escenas del campo"></div></div>
+                <div class="public-carousel__footer"><p data-carousel-status aria-live="polite">Escena 1 de 6</p><div class="public-carousel__dots" role="tablist" aria-label="Escenas del campo"></div></div>
             </section>
 
             <section class="public-section public-section--about" id="nosotros" aria-labelledby="about-title">

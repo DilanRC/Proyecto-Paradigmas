@@ -96,7 +96,8 @@ test('la portada muestra las seis escenas ganaderas en un carrusel navegable', (
     assert.ok(publicUi.includes('data-carousel-prev'));
     assert.ok(publicUi.includes('data-carousel-next'));
     assert.equal((home.match(/<figcaption>/g) || []).length, 0);
-    assert.equal((home.match(/public-carousel__page/g) || []).length, 2);
+    assert.equal((home.match(/public-carousel__slide/g) || []).length, 6);
+    assert.ok(home.includes('card-3d'));
 });
 
 test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
