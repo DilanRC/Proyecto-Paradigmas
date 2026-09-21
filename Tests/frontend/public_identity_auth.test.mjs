@@ -99,6 +99,20 @@ test('la paleta pública sale del logo y elimina la referencia cromática de Tin
     }
 });
 
+test('registro guiado hereda los tokens públicos y conserva contraste al cambiar tema', () => {
+    for (const token of [
+        '--background:var(--tc-bg)',
+        '--surface:var(--tc-surface)',
+        '--text:var(--tc-text)',
+        '--border-color:var(--tc-line-strong)',
+        '--accent:var(--tc-primary)',
+    ]) assert.ok(publicCss.includes(token), `falta alias visual ${token}`);
+    assert.ok(publicCss.includes('.auth-field select,'));
+    assert.ok(themeJs.includes('wireThemeToggle'));
+    assert.ok(themeJs.includes('document.documentElement.dataset.theme === \'dark\''));
+    assert.ok(themeJs.includes('storeTheme(next)'));
+});
+
 test('modo claro y oscuro comparten preferencia persistente e iconos reconocibles', () => {
     assert.ok(publicCss.includes("html[data-theme='light']"));
     assert.ok(publicCss.includes("html[data-theme='dark'] .brand-logo--light"));
