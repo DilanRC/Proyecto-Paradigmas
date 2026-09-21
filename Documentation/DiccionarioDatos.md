@@ -202,26 +202,33 @@ profesor); el dominio lo valida PHP al escribir (Tramo 15) y
 
 ## tbcomprador
 
-Estructura legacy de compatibilidad temporal. Comprador **no** es una entidad
-ni una capacidad permanente de la persona: es una clasificación del Productor y
-su única fuente de verdad es `tbproductorclasificacionperiodo` con
-`tipo = COMPRADOR`. Esta tabla sobrevive solo mientras el CRUD actual de Backend
-dependa de ella y debe retirarse (plan de retiro en DEC-DBREADY-005). Mientras
-exista: no se amplía, no recibe históricos y no se crea
-`tbcompradorestadoperiodo`.
+Fuente de verdad del contexto Comprador de la Persona (DEC-28): `tbcomprador`
+ya **no** es una tabla legacy por retirar. `tbpersona`, `tbproductor`,
+`tbcomprador` y `tbtransportista` son tres contextos de la misma Persona; la
+ficha consulta la misma identidad en un perfil u otro
+(`Public/js/shared/capacidades.js`). La escritura ocurre contra
+`api/compradores.php` con sesión (POST inscribir → 201 / REACTIVAR, PATCH
+reactiva la misma fila, DELETE desactiva solo el contexto; nunca `DELETE FROM`).
+Los datos personales los resuelve `GET api/identidad.php` desde esta tabla y
+`sus hermanas`. `tbproductorclasificacionperiodo (tipo = COMPRADOR)` ya no
+gobierna el contexto: queda como registro analítico (DEC-29).
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcompradorid` | `INT NOT NULL` | No | Consecutivo legacy asignado por la aplicación. | Aplicación | - |
-| `tbpersonaid` | `INT NOT NULL` | No | Persona vinculada por el CRUD heredado. | Aplicación | `tbpersona` |
-| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Bit legacy de alta/baja del CRUD actual. No es la clasificación Comprador: esa se lee en `tbproductorclasificacionperiodo`. | Aplicación | - |
+| `tbcompradorid` | `INT NOT NULL` | No | Consecutivo calculado por PHP (`MAX(id)+1`) bajo lock `tindercows_persona_alta`. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona del contexto Comprador; se reutiliza por identificación o se crea al inscribir. | Aplicación | `tbpersona` |
+| `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Alta/baja del contexto Comprador (1 activo). El periodo `COMPRADOR` de `tbproductorclasificacionperiodo` es analítico y no determina este bit. | Aplicación | - |
 
 ## tbproductorclasificacionperiodo
 
 Periodos independientes de clasificación comercial del Productor. El tipo
-`COMPRADOR` o `VENDEDOR` se valida en PHP; la base no usa `CHECK`. Un mismo
-productor puede tener ambas clasificaciones abiertas a la vez porque son tipos
-distintos.
+`COMPRADOR` quedó como **registro analítico** (DEC-29): documenta cuándo y con
+qué evidencia una persona fue comprador, pero ya no es la fuente de verdad del
+contexto Comprador (esa es `tbcomprador`, DEC-28) ni abre/cierra el contexto — el
+periodo con `fechafin = NULL` solo describe el historial. `VENDEDOR` conserva su
+carácter de clasificación del Productor. Ambos tipos se validan en PHP; la base
+no usa `CHECK`. Un mismo productor puede tener ambas clasificaciones abiertas a
+la vez porque son tipos distintos.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
@@ -476,17 +483,28 @@ Reseña histórica de transportista. No almacena promedio; se deriva con `AVG`.
 | `tbtransportistaresenacomentario` | `VARCHAR(500) NULL` | Sí | Comentario opcional. | Usuario | - |
 | `tbtransportistaresenaorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
 
-## Histórico transversal (Tramo 12/13)
+## Histórico transversal (Tramo 12/13 y avance 3)
 
 La matriz P0-C (`Documentation/MatrizArquitectonicaP0C.md`) supera la
 conclusión del Tramo 13 anterior. Productor mantiene sus históricos actuales:
 `tbproductorestadoperiodo`, `tbproductorubicacion` y
-`tbproductoractividad`. Comprador y Vendedor se modelan como clasificaciones
-históricas del Productor en `tbproductorclasificacionperiodo`.
+`tbproductoractividad`. El contexto Comprador de la Persona tiene su fuente de
+verdad en `tbcomprador` (DEC-28); `tbproductorclasificacionperiodo` con
+`tipo = COMPRADOR` es registro analítico (DEC-29), así que la matriz se lee con
+esa distinción: Comprador = contexto con estado y audición en `tbbitacora`;
+COMPRADOR/VENDEDOR = clasificaciones históricas del Productor en
+`tbproductorclasificacionperiodo`.
 
 `tbbitacora` se mantiene exclusivamente como auditoría técnica y no sustituye
 históricos de negocio. Compra y Venta son hechos históricos propios, no estados
 de `tbcomprador` ni de un `tbvendedor`.
+
+La identidad reseñable en los tres contextos se resuelve en `GET api/identidad.php`
+desde `tbpersona` + `tbproductor`/`tbcomprador`/`tbtransportista` según la
+sesión (DEC-30); sin sesión, la superficie pública devuelve los tres flags en
+`false` y `persona:null`. La semilla de instalación (`Tools/seed-maestra.php`,
+DEC-32) siembra un productor, un comprador y un transportista con
+identificaciones civiles fijas para demo y verificación.
 
 ## Estado efectivo y coherencia
 

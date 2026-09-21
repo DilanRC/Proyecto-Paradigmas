@@ -11,16 +11,13 @@ $check = static function (bool $condition, string $message): void {
 };
 $check($persona !== false, 'No se pudo leer Persona.php.');
 
-// Comprador salió de la lista: dejó de ser una capacidad con modelo propio y
-// pasó a ser una clasificación del Productor (DEC-DBREADY-008). Su modelo se
-// retiró en el paso (d) y no debe volver.
-$check(!file_exists("{$root}/Application/Model/Comprador.php"),
-    'El modelo legacy de comprador volvió a aparecer.');
-$check(!file_exists("{$root}/Application/Controller/CompradorController.php"),
-    'El CRUD legacy de comprador volvió a aparecer.');
-
-foreach (['Productor', 'Transportista'] as $capacidad) {
-    $modelo = file_get_contents("{$root}/Application/Model/{$capacidad}.php");
+// Comprador regresó como contexto de Persona con modelo y controlador propios
+// (DEC-28): tbcomprador es la fuente de verdad del contexto Comprador. Los tres
+// contextos — Productor, Comprador y Transportista — comparten el mismo contrato:
+// consultan tbpersona por JOIN, enlazan tbpersonaid y nunca ejecutan borrado
+// físico ni insertan identidad duplicada.
+foreach (['Productor', 'Comprador', 'Transportista'] as $capacidad) {
+    $modelo = file_get_contents($root . "/Application/Model/{$capacidad}.php");
     $check($modelo !== false, "No se pudo leer {$capacidad}.php.");
     $check(str_contains($modelo, 'INNER JOIN tbpersona'), "{$capacidad} no consulta tbpersona mediante JOIN.");
     $check(str_contains($modelo, 'tbpersonaid'), "{$capacidad} no enlaza tbpersonaid.");
@@ -28,6 +25,8 @@ foreach (['Productor', 'Transportista'] as $capacidad) {
         "{$capacidad} todavía inserta identidad duplicada.");
     $check(!str_contains($modelo, 'DELETE FROM'), "{$capacidad} contiene borrado físico.");
 }
+$check(file_exists($root . '/Application/Controller/CompradorController.php'),
+    'El controlador del contexto Comprador desapareció (DEC-28).');
 
 $check(str_contains($persona, "'tindercows_persona_alta'"), 'Persona no serializa altas.');
 $check(str_contains($persona, 'datos personales diferentes'), 'Persona no detecta datos incompatibles.');
