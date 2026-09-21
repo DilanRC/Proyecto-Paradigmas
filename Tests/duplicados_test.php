@@ -8,7 +8,11 @@ use Application\Service\ValidacionService;
 /**
  * Política de duplicados DEC-31: identificación de persona normalizada es un
  * duplicado imposible (409); fincas con el mismo nombre en productores
- * distintos son legítimas (advertencia, nunca bloqueo).
+ * distintos son legítimas (advertencia, nunca bloqueo). Cuatro reglas:
+ *   1. persona duplicada (identificación + datos distintos) → 409;
+ *   2. finca con nombre repetido entre productores distintos → advertencia;
+ *   3. persona ya inscrita (datos idénticos) → 201 compartiendo persona;
+ *   4. reenvío idempotente de la misma identificación → no duplica.
  */
 
 $idA = test_document();
@@ -47,6 +51,33 @@ try {
     $legitimo = test_controller()->procesar('POST', [], test_payload($idComprador, $nombreCompartido));
     test_same(201, $legitimo['status'],
         'El mismo número con datos idénticos crea el contexto (la persona se comparte)');
+
+    // ============================================================
+    // REENVÍO IDEMPOTENTE: repetir la misma identificación no duplica
+    // persona ni contexto (regla 4 de la política de duplicados).
+    // El alta administrativa lo trata como duplicado imposible (409); la
+    // inscripción por contexto vía capacidades.php es la idempotente
+    // (200 ACTIVO, probada en capacidad_test.php).
+    // ============================================================
+    $reenvio = test_controller()->procesar('POST', [], test_payload($idComprador, $nombreCompartido));
+    test_same(409, $reenvio['status'],
+        'Reenviar el alta administrativa es duplicado imposible (409, sin duplicar)');
+    test_assert(str_contains((string) $reenvio['body']['message'] ?? '', 'ya está registrada'),
+        'El mensaje del reenvío aclara que la identificación ya está registrada');
+
+    $contarPersonas = test_db()->prepare(
+        'SELECT COUNT(*) FROM tbpersona WHERE tbpersonaidentificacionnumero = :id');
+    $contarPersonas->execute(['id' => $idComprador]);
+    test_same(1, (int) $contarPersonas->fetchColumn(),
+        'El reenvío no duplica la persona (una sola fila por identificación)');
+
+    $contarProductores = test_db()->prepare(
+        'SELECT COUNT(*) FROM tbproductor p
+         INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
+         WHERE pe.tbpersonaidentificacionnumero = :id');
+    $contarProductores->execute(['id' => $idComprador]);
+    test_same(1, (int) $contarProductores->fetchColumn(),
+        'El reenvío no duplica el contexto Productor de la misma persona');
 
     // ============================================================
     // FINCAS: mismo nombre en dos productores → advertencia sin bloqueo.

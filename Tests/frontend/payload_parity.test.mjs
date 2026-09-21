@@ -94,7 +94,7 @@ test('transportista editado: agrega identificacionNumeroOriginal', () => {
 });
 
 // --- productores -------------------------------------------------------------
-import { buildFincaDireccionPayload, buildProductorPayload } from '../../Public/js/productores.js';
+import { buildFincaDireccionPayload, buildProductorPayload, normalizarFincas } from '../../Public/js/productores.js';
 
 const productorBase = {
     tipoCodigo: 'CEDULA_FISICA', numero: ' 1-1111-1111 ', nombre: ' Maria Solano ',
@@ -127,15 +127,36 @@ test('REGRESION: los campos opcionales vacios viajan como null, no como cadena',
     assert.equal(payload.direccionPrincipal.senas, null);
 });
 
-test('las fincas se parten por linea, se recortan y se descartan las vacias', () => {
+test('las fincas se recortan, se descartan las vacías y no se repiten (Tramo C)', () => {
     const payload = buildProductorPayload({
-        ...productorBase, fincas: ' Finca El Roble \n\n  Finca Valle Verde\n   \n',
+        ...productorBase, fincas: [
+            { nombre: '  Finca El Roble ' },
+            { nombre: 'Finca Valle Verde', direccion: { provincia: 'Heredia' } },
+            { nombre: '   ' },
+            { nombre: ' finca el roble  ' },
+        ],
     });
 
+    // El alta solo envía nombres: la dirección de cada finca viaja aparte por
+    // /api/fincas-direccion.php (contrato "únicamente nombre").
     assert.deepEqual(payload.fincas, [
         { nombre: 'Finca El Roble' },
         { nombre: 'Finca Valle Verde' },
     ]);
+});
+
+test('normalizarFincas ignora entradas sin nombre y deduplica sin distinguir mayúsculas', () => {
+    assert.deepEqual(
+        normalizarFincas([
+            { nombre: 'La Esperanza' },
+            { nombre: ' la esperanza ' },
+            {},
+            { nombre: '   ' },
+            null,
+        ]),
+        [{ nombre: 'La Esperanza' }],
+    );
+    assert.deepEqual(normalizarFincas('no-es-una-lista'), []);
 });
 
 test('la direccion de finca conserva su envoltura direccionFinca', () => {

@@ -1,8 +1,11 @@
 // Deck de Explorar contra el catálogo real de publicaciones.
-// El backend decide el ranking: por cercanía cuando hay ubicación de usuario y
-// por recencia como degradación cuando GPS no está disponible.
+//
+// El orden y el filtrado los decide el backend (api/publicaciones.php). Aquí no
+// hay recomendación ni ranking: este módulo formatea lo que llega y lo pinta.
+// Las funciones de formato se exportan puras para poder probarlas sin DOM.
 
 import { request } from './shared/api.js';
+import { montarInscripcion } from './shared/inscripcion.js';
 import {
     inicializarUbicacionAutomatica,
     leerUbicacionUsuario,
@@ -12,7 +15,6 @@ import {
 
 const API_URL = 'api/publicaciones.php';
 const TAMANO_PAGINA = 25;
-let secuenciaCarga = 0;
 
 const state = {
     query: '',
@@ -23,6 +25,14 @@ const state = {
     error: null,
 };
 
+/**
+ * Colones sin decimales: los precios de ganado no se cotizan en céntimos.
+ *
+ * El agrupado se hace a mano y no con toLocaleString porque el resultado de
+ * 'es-CR' depende del ICU del entorno: Node y el navegador no siempre coinciden
+ * en el separador, y el precio es justo el dato que no puede variar según dónde
+ * se renderice.
+ */
 export function formatPrice(precio) {
     if (typeof precio !== 'number' || !Number.isFinite(precio)) return 'Precio a convenir';
     const entero = String(Math.abs(Math.round(precio)));
@@ -30,16 +40,11 @@ export function formatPrice(precio) {
     return `${precio < 0 ? '-' : ''}₡${agrupado}`;
 }
 
+/** De lo específico a lo general, igual que el resto del sistema. */
 export function formatLocation(direccion) {
     const partes = [direccion?.pueblo, direccion?.distrito, direccion?.canton, direccion?.provincia]
         .filter(Boolean);
     return partes.length ? partes.join(', ') : 'Ubicación no registrada';
-}
-
-export function formatDistance(distanciaKm) {
-    if (typeof distanciaKm !== 'number' || !Number.isFinite(distanciaKm) || distanciaKm < 0) return '';
-    if (distanciaKm < 1) return `${Math.max(1, Math.round(distanciaKm * 1000))} m`;
-    return `${distanciaKm < 10 ? distanciaKm.toFixed(1) : Math.round(distanciaKm)} km`;
 }
 
 export function formatAge(edadMeses) {
@@ -52,11 +57,18 @@ export function formatWeight(peso) {
     return `${Number.isInteger(peso) ? peso : peso.toFixed(1)} kg`;
 }
 
+/** Un campo sin observación registrada se muestra vacío, no se inventa. */
 export function formatText(valor) {
     const texto = String(valor ?? '').trim();
     return texto === '' ? '—' : texto;
 }
 
+/**
+ * Los catálogos se guardan en mayúsculas y sin tildes (CRIA, DOBLE PROPOSITO).
+ * Eso es correcto en la base y feo en pantalla, así que la ortografía se
+ * resuelve en presentación. Un valor que no esté en el mapa se capitaliza en
+ * vez de desaparecer: el catálogo puede crecer sin romper la vista.
+ */
 const ETIQUETAS_PROPOSITO = {
     CRIA: 'Cría',
     ENGORDE: 'Engorde',
@@ -77,6 +89,7 @@ export function formatSeller(publicacion) {
     return [finca, vendedor].filter(Boolean).join(' · ') || 'Vendedor no registrado';
 }
 
+/** Propósitos presentes en los datos, para no ofrecer filtros vacíos. */
 export function availablePurposes(items) {
     const propositos = new Set();
     for (const item of items) {
@@ -93,6 +106,7 @@ export function filterByPurpose(items, proposito) {
     );
 }
 
+/** Devuelve el filtro vigente solo si sigue existiendo en los datos; si no, 'todos'. */
 export function normalizePurpose(proposito, disponibles) {
     if (!proposito || proposito === 'todos') return 'todos';
     const clave = String(proposito).toUpperCase();
@@ -117,16 +131,12 @@ function specEntry(icono, etiqueta, valor) {
     return contenedor;
 }
 
+/**
+ * Construye la tarjeta. Se usa createElement y textContent en vez de innerHTML:
+ * título, descripción y nombres vienen de la base y podrían contener markup.
+ */
 export function buildCard(publicacion) {
     const article = element('article', 'explore-card');
-    const publicacionId = Number(publicacion?.publicacionId);
-    const animalId = Number(publicacion?.animalId);
-    if (Number.isInteger(publicacionId) && publicacionId > 0) {
-        article.dataset.publicacionId = String(publicacionId);
-    }
-    if (Number.isInteger(animalId) && animalId > 0) {
-        article.dataset.animalId = String(animalId);
-    }
 
     const visual = element('div', 'explore-card__visual explore-card__visual--green');
     visual.setAttribute('aria-hidden', 'true');
@@ -141,9 +151,7 @@ export function buildCard(publicacion) {
     const pin = element('i');
     pin.className = 'fa-solid fa-location-dot';
     pin.setAttribute('aria-hidden', 'true');
-    const distancia = formatDistance(publicacion.distanciaKm);
-    const textoUbicacion = formatLocation(publicacion.direccion);
-    ubicacion.append(pin, ` ${distancia ? `${distancia} · ` : ''}${textoUbicacion}`);
+    ubicacion.append(pin, ` ${formatLocation(publicacion.direccion)}`);
     meta.append(ubicacion, element('span', null, formatText(publicacion.animal?.identificacion)));
 
     const precio = element('p', 'explore-card__price');
@@ -219,7 +227,7 @@ function showToast(message) {
     toast.textContent = message;
     toast.hidden = false;
     clearTimeout(showToast.timer);
-    showToast.timer = setTimeout(() => { toast.hidden = true; }, 2600);
+    showToast.timer = setTimeout(() => { toast.hidden = true; }, 2200);
 }
 
 function renderPurposeFilters() {
@@ -278,7 +286,6 @@ function render() {
 }
 
 async function load() {
-    const secuencia = ++secuenciaCarga;
     state.cargando = true;
     state.error = null;
     render();
@@ -286,27 +293,24 @@ async function load() {
     const parametros = new URLSearchParams({
         estado: 'ACTIVO', pagina: '1', tamanoPagina: String(TAMANO_PAGINA),
     });
-    if (state.query !== '') parametros.set('q', state.query);
     const ubicacion = leerUbicacionUsuario();
     if (ubicacion) {
         parametros.set('latitud', ubicacion.latitud);
         parametros.set('longitud', ubicacion.longitud);
     }
+    if (state.query !== '') parametros.set('q', state.query);
 
     try {
         const respuesta = await request(`${API_URL}?${parametros}`);
-        if (secuencia !== secuenciaCarga) return;
         const lista = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
         state.items = lista;
         state.index = 0;
     } catch (error) {
-        if (secuencia !== secuenciaCarga) return;
         state.items = [];
         state.error = error.message ?? 'No fue posible cargar las publicaciones.';
     } finally {
-        if (secuencia === secuenciaCarga) state.cargando = false;
+        state.cargando = false;
     }
-    if (secuencia !== secuenciaCarga) return;
     renderPurposeFilters();
     render();
 }
@@ -346,15 +350,23 @@ function initialize() {
     });
     document.querySelector('[data-explore-retry]')?.addEventListener('click', load);
 
-    window.addEventListener(UBICACION_USUARIO_EVENT, () => load());
+    window.addEventListener(UBICACION_USUARIO_EVENT, () => {
+        leerUbicacionUsuario();
+        load();
+    });
     window.addEventListener(UBICACION_USUARIO_ERROR_EVENT, (event) => {
         const kind = event.detail?.kind;
         if (kind === 'denied') showToast('Ubicación denegada: mostramos publicaciones recientes en lugar de cercanas.');
         else if (kind !== 'unsupported') showToast('No pudimos actualizar tu ubicación; Explorar sigue disponible.');
     });
 
-    // Carga inmediata para no bloquear la página. En paralelo el navegador
-    // solicita ubicación; al obtenerla se emite un evento y se reordena solo.
+    // Tramo B: la vista pública permite inscribirse/abandonar/reactivar
+    // contextos sin entrar al CRUD administrativo.
+    const inscripcion = document.querySelector('[data-inscripcion-contextos]');
+    if (inscripcion) {
+        montarInscripcion({ contenedor: inscripcion, requestImpl: request, storage: globalThis.sessionStorage });
+    }
+
     load();
     inicializarUbicacionAutomatica();
 }

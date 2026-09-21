@@ -2,6 +2,20 @@ import './auth-gate.js';
 import './admin-ui.js';
 import { getAccessToken, readAuthSession } from './supabase-auth.js';
 
+// Token Bearer vigente en esta pestaña (Supabase/proveedor de identidad).
+// Se adjunta a las peticiones para que la API resuelva al actor y las
+// superficies privadas dejen de responder 401 SIN_SESION (DEC-30). Sin token,
+// el modo local navega en público de solo lectura (DEC-33).
+let bearerVigente = null;
+
+export function setBearer(token) {
+    bearerVigente = typeof token === 'string' && token.trim() !== '' ? token.trim() : null;
+}
+
+export function getBearer() {
+    return bearerVigente;
+}
+
 // Acceso HTTP y taxonomia de fallos.
 //
 // Separa estructuralmente dos familias que antes se confundian:
@@ -109,6 +123,11 @@ async function executeJsonRequest(url, options, fetchImpl, bearer) {
                 ...(options.body ? { 'Content-Type': 'application/json' } : {}),
                 ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
                 ...(options.headers ?? {}),
+                // El bearer del proveedor viaja adjunto cuando existe; los
+                // headers explícitos del llamador tienen la última palabra.
+                ...(bearerVigente && !(options.headers && 'Authorization' in options.headers)
+                    ? { Authorization: `Bearer ${bearerVigente}` }
+                    : {}),
             },
         });
     } catch (error) {

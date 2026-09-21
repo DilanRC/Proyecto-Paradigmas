@@ -14,9 +14,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/admin-fincas.css?v=front2-1">
     <script type="module" src="js/productores.js"></script>
-    <script type="module" src="js/productores-fincas-ui.js?v=front2-1"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
@@ -103,16 +101,7 @@
                     <label class="field"><span>Pueblo</span><input id="direccion-pueblo" name="direccionPrincipal.pueblo" maxlength="150" list="lista-pueblos" autocomplete="off" disabled placeholder="Escriba para buscar" aria-describedby="ayuda-direccion-pueblo error-direccion-pueblo"><small class="field__hint" id="ayuda-direccion-pueblo">Escriba las primeras letras y elija de la lista.</small><datalist id="lista-pueblos"></datalist><small class="field__error" id="error-direccion-pueblo" data-error-for="direccionPrincipal.pueblo"></small></label>
                     <label class="field field--full"><span>Señas</span><textarea id="direccion-senas" name="direccionPrincipal.senas" maxlength="500" rows="3" aria-describedby="error-direccion-senas"></textarea><small class="field__error" id="error-direccion-senas" data-error-for="direccionPrincipal.senas"></small></label>
                 </div></fieldset>
-                <fieldset class="farm-editor"><legend>Fincas del productor</legend>
-                    <div class="farm-editor__header">
-                        <p class="fieldset-help" id="ayuda-fincas">Agregue cada finca por separado. Su dirección se administra individualmente después de guardar el productor, porque actualmente usa un endpoint distinto.</p>
-                        <button class="button button--secondary" id="agregar-finca-admin" type="button">+ Agregar finca</button>
-                    </div>
-                    <textarea id="fincas-nombres" name="fincas" hidden aria-hidden="true"></textarea>
-                    <div class="farm-editor__list" id="fincas-cards" aria-describedby="ayuda-fincas error-fincas"></div>
-                    <p class="farm-editor__empty" id="fincas-empty">Todavía no hay fincas en este registro.</p>
-                    <small class="field__error" id="error-fincas" data-error-for="fincas"></small>
-                </fieldset>
+                <fieldset><legend>Fincas del productor</legend><p class="fieldset-help" id="ayuda-fincas">Agregue cada finca por separado con su nombre. Puede dejar la lista vacía.</p><div id="fincas-lista" aria-describedby="ayuda-fincas error-fincas"></div><button class="button button--secondary" id="agregar-finca" type="button"><span aria-hidden="true">＋</span>Agregar finca</button><small class="field__error" id="error-fincas" data-error-for="fincas"></small></fieldset>
                 <p class="form-note"><b aria-hidden="true">*</b> Campos obligatorios</p>
             </div>
             <div class="modal__actions"><button class="button button--secondary" id="cancelar-formulario" type="button">Cancelar</button><button class="button button--reactivate" id="reactivar-existente" type="button" hidden>Reactivar registro existente</button><button class="button button--primary" id="guardar-productor" type="submit">Guardar productor</button></div>

@@ -54,9 +54,16 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 | `/api/transportistas-vehiculos.php` |
 | `/api/vehiculos.php` |
 | `/api/pagometodos.php` |
+| `/api/capacidades.php` |
+| `/api/identidad.php` |
 | `/api/metodo-no-permitido.php` |
 
 `/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
+
+`/api/identidad.php` resuelve la superficie del navegador: sin Bearer devuelve
+una respuesta pública y con Bearer devuelve los contextos de la persona.
+`/api/capacidades.php` permite inscribir, abandonar o reactivar contextos desde
+la vista pública, siempre sujeto a la validación del servidor.
 
 ## Estado de autenticación
 

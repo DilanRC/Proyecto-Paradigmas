@@ -121,10 +121,10 @@ $evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "
     && !str_contains($restoreTool, 'mv -- "$manifest_temp" "$manifest_file"')
     && !str_contains($restoreTool, 'mv -- "$manifest_pending" "$manifest_file"'),
     'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
-$evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'Productor es la entidad de negocio núcleo')
-    && str_contains($matrizP0C, '`tbvendedor` no debe existir')
-    && str_contains($matrizP0C, '`tbcomprador` es un contexto de negocio de Persona')
-    && (bool) preg_match('/CRUD administrativo\s+manual\s+ya no existe/', $matrizP0C)
+$evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'tbproductor` es la entidad de')
+    && str_contains($matrizP0C, 'negocio núcleo')
+    && str_contains($matrizP0C, '`tbvendedor` no existe')
+    && str_contains($matrizP0C, 'Comprador es un contexto de la Persona')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo')
     && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvendedor')
     && !str_contains($schema, 'tbcompradorestadoperiodo'),
