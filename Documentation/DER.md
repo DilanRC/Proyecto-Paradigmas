@@ -361,4 +361,8 @@ De forma similar, algunos hechos comerciales actuales todavía usan nombres como
 
 ## Regla física
 
-El SQL canónico mantiene cero PK/FK/UNIQUE/CHECK/AUTO_INCREMENT/triggers/procedimientos/defaults automáticos. Los IDs, relaciones, validación, concurrencia y rollback corresponden a PHP mediante sentencias preparadas, locks y transacciones.
+El SQL canónico mantiene cero claves y cero restricciones, índices u objetos
+programables: PK/FK/UNIQUE/CHECK/AUTO_INCREMENT/triggers/procedimientos/defaults
+automáticos no existen en el esquema. Los IDs, relaciones, validación,
+concurrencia y rollback corresponden a PHP mediante sentencias preparadas,
+locks y transacciones.
