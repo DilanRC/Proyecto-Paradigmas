@@ -294,7 +294,11 @@ final class RegistroPublicoService
             return;
         }
 
-        $this->comprador->crearParaPersona($personaId);
+        $persona = $this->persona->buscarPorId($personaId);
+        if ($persona === null) {
+            throw new HttpException('La Persona no existe para declarar la capacidad Comprador.', 409);
+        }
+        $this->comprador->crear([], $persona);
         $creadas[] = 'COMPRADOR';
     }
 

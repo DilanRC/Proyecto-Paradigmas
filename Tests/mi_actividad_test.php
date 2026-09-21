@@ -14,9 +14,14 @@ try {
         'fincas' => [['nombre' => 'Finca Mi Actividad']],
     ]);
     $ids[] = $creado['identificacionNumero'];
+    $personaIdStatement = test_db()->prepare(
+        'SELECT tbpersonaid FROM tbpersona WHERE tbpersonaidentificacionnumero = :identificacion'
+    );
+    $personaIdStatement->execute(['identificacion' => $creado['identificacionNumero']]);
+    $personaId = (int) $personaIdStatement->fetchColumn();
 
     $actor = ActorContext::personaAutenticada(
-        (int) $creado['personaId'],
+        $personaId,
         'supabase-test-' . test_token('subject'),
         (string) $creado['correoElectronico'],
         'authenticated',
@@ -41,7 +46,7 @@ try {
         'Mi actividad no debe aceptar una sesión anónima');
 
     $actorSinPersona = ActorContext::personaAutenticada(
-        (int) $creado['personaId'] + 999999,
+        $personaId + 999999,
         'supabase-test-inexistente',
         'inexistente@example.test',
         'authenticated',

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
-require dirname(__DIR__) . '/Application/Model/TransportistaVehiculo.php';
-require dirname(__DIR__) . '/Application/Model/Transportista.php';
-require dirname(__DIR__) . '/Application/Controller/TransportistaController.php';
+require_once dirname(__DIR__) . '/Application/Model/TransportistaVehiculo.php';
+require_once dirname(__DIR__) . '/Application/Model/Transportista.php';
+require_once dirname(__DIR__) . '/Application/Controller/TransportistaController.php';
 
 use Application\Controller\TransportistaController;
 

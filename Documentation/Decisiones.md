@@ -1096,3 +1096,19 @@ Hasta aprobar la representación de Persona/Comprador y su migración paralela
 MySQL/PostgreSQL, la interfaz solo consulta publicaciones, conserva borradores
 no sensibles y comunica que la operación comercial está pendiente. No se
 registran intenciones, compras o pujas falsas en el navegador.
+
+## DEC-DBREADY-009 - Normalización de volúmenes MySQL heredados
+
+Las instalaciones creadas antes de la versión canónica pueden conservar
+`tbcompradortelefonohistorico`, columnas con nombres antiguos, un alias de
+Persona obligatorio o no tener todavía las coordenadas opcionales de
+`tbdireccion`. Las migraciones `009normalizahistoricocomprador.sql`,
+`010normalizapersonaalias.sql` y `008coordenadasdireccionfinca.sql` alinean
+esas instalaciones con las 32 tablas canónicas.
+
+La migración 009 hace preflight y aborta ante una colisión de nombres o un
+teléfono que pudiera truncarse; la 010 solo vuelve opcional `tbpersonaalias` y
+conserva sus valores. Ninguna de ellas crea restricciones, índices, triggers,
+procedimientos ni datos históricos inventados. La base persistente debe
+respaldarse antes de aplicarlas y después verificarse con `schema_test.php` e
+`instalacion_limpia_test.php`.

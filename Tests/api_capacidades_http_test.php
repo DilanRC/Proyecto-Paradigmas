@@ -10,7 +10,7 @@ require __DIR__ . '/bootstrap.php';
  * superficies autenticadas de DEC-30.
  */
 
-$url = 'http://127.0.0.1/api/capacidades.php';
+$url = rtrim((string) (getenv('TEST_BASE_URL') ?: 'http://127.0.0.1'), '/') . '/api/capacidades.php';
 
 function test_http_raw_status(string $method, ?string $body, string $target, string $contentType = 'application/json'): int
 {

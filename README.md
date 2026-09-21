@@ -207,6 +207,16 @@ docker compose exec -T app php Tests/schema_test.php
 Antes de usar `ALTER` o `DROP`, compare su estructura con
 `Tests/schema_test.php` y genere un respaldo.
 
+Para una instalación heredada que todavía tenga `tbcompradortelefonohistorico`,
+respalde primero y aplique
+`Database/Migrations/009normalizahistoricocomprador.sql`. La migración aborta
+si detecta simultáneamente el nombre legado y el canónico, o si un teléfono
+supera los 20 caracteres; una base que ya está normalizada no cambia.
+
+Si una instalación heredada rechazara personas sin alias, aplique después
+`Database/Migrations/010normalizapersonaalias.sql`; solo ajusta la nulabilidad
+de `tbpersonaalias` y conserva los valores existentes.
+
 En Vercel, el arranque ejecuta la migración v3 contra Supabase, recarga la caché
 de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
 con columnas incompatibles.

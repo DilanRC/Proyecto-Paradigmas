@@ -12,6 +12,7 @@ use Application\Model\ProductorDireccion;
 use Application\Model\ProductorEstadoPeriodo;
 use Application\Model\ProductorFinca;
 use Application\Model\Direccion;
+use Application\Model\FincaDireccion;
 use Application\Service\ProductorDireccionService;
 use Application\Service\ProductorEstadoService;
 use Application\Service\ValidacionException;
@@ -25,17 +26,21 @@ final class ProductorController
     private ProductorDireccion $direccion;
     private ProductorEstadoPeriodo $estadoPeriodos;
     private ProductorFinca $fincas;
+    private FincaDireccion $direccionFinca;
     private Bitacora $bitacora;
     private ProductorEstadoService $estadoService;
     private ProductorDireccionService $direccionService;
     private ValidacionService $validacion;
+    private Direccion $direccionBase;
     private string $solicitudId;
 
     public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
-        $this->direccion = new ProductorDireccion($conexion, new Direccion($conexion));
+        $this->direccionBase = new Direccion($conexion);
+        $this->direccion = new ProductorDireccion($conexion, $this->direccionBase);
+        $this->direccionFinca = new FincaDireccion($conexion, $this->direccionBase);
         $this->estadoPeriodos = new ProductorEstadoPeriodo($conexion);
         $this->bitacora = new Bitacora($conexion, $actor);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
@@ -139,6 +144,7 @@ final class ProductorController
                             $this->direccion->crear($productorId, $datos['direccion']);
                         }
                         $this->fincas->sincronizar($productorId, $datos['fincas']);
+                        $this->sincronizarDireccionesDeFinca($productorId, $datos['fincasDetalle']);
                         $this->estadoPeriodos->ejecutarConBloqueo(
                             $productorId,
                             fn (): int => $this->estadoPeriodos->abrir($productorId, 1, 'Alta del productor'),
@@ -174,8 +180,9 @@ final class ProductorController
             ]);
         }
 
-        $nuevo = $this->fincas->ejecutarConBloqueoAlta(
-            fn (): array => $this->transaccion(function () use ($datos, $identificacion): array {
+        $nuevo = $this->direccion->ejecutarConBloqueoAlta(
+            fn (): mixed => $this->fincas->ejecutarConBloqueoAlta(
+                fn (): array => $this->transaccion(function () use ($datos, $identificacion): array {
                 $bloqueado = $this->productor->bloquear($identificacion);
                 if ($bloqueado === null) {
                     throw new HttpException('Productor no encontrado.', 404);
@@ -200,6 +207,7 @@ final class ProductorController
                     $datos['direccion'],
                 );
                 $this->fincas->sincronizar($productorId, $datos['fincas']);
+                $this->sincronizarDireccionesDeFinca($productorId, $datos['fincasDetalle']);
                 $nuevo = $this->productor->buscar($identificacion);
                 if ($nuevo === null) {
                     throw new \RuntimeException('No fue posible leer el productor actualizado.');
@@ -207,10 +215,43 @@ final class ProductorController
                 $nuevo['advertencias'] = $this->fincasAdvertencias($datos['fincas'], $productorId);
                 $this->bitacora->registrar('ACTUALIZAR', $identificacion, $anterior, $nuevo, $this->solicitudId);
                 return $nuevo;
-            }),
+                }),
+            ),
         );
 
         return $this->respuesta(true, 'Productor actualizado correctamente.', $nuevo);
+    }
+
+    /**
+     * Persiste el detalle opcional de cada finca dentro de la misma transacción
+     * que crea o actualiza el Productor. Omitir dirección conserva el último
+     * hecho vigente; enviar dirección crea o actualiza solo esa finca.
+     *
+     * @param array<int,array{nombre:string,direccion?:array<string,mixed>}> $detalles
+     */
+    private function sincronizarDireccionesDeFinca(int $productorId, array $detalles): void
+    {
+        foreach ($detalles as $detalle) {
+            if (!array_key_exists('direccion', $detalle)) {
+                continue;
+            }
+            $fincaId = $this->fincas->buscarIdActivo($productorId, $detalle['nombre']);
+            if ($fincaId === null) {
+                throw new HttpException(
+                    "La finca {$detalle['nombre']} no quedó activa; se canceló la operación.",
+                    409,
+                );
+            }
+            try {
+                if ($this->direccionFinca->buscar($fincaId) === null) {
+                    $this->direccionFinca->crear($fincaId, $detalle['direccion']);
+                } else {
+                    $this->direccionFinca->actualizar($fincaId, $detalle['direccion']);
+                }
+            } catch (\RuntimeException $excepcion) {
+                throw new HttpException($excepcion->getMessage(), 409);
+            }
+        }
     }
 
     /**

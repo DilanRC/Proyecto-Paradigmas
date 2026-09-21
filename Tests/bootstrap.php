@@ -20,12 +20,13 @@ require_once $testRoot . '/Configuration/Database.php';
 require_once $testRoot . '/Application/HttpException.php';
 require_once $testRoot . '/Application/Auth/ActorContext.php';
 require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
-foreach (['NamedLock', 'Persona', 'Comprador', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico'] as $testModel) {
+foreach (['NamedLock', 'Persona', 'Comprador', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico', 'TransportistaVehiculo', 'Transportista'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
 foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService', 'CompradorClasificacionService', 'AuthGuard'] as $testServicio) {
     require_once $testRoot . "/Application/Service/{$testServicio}.php";
 }
+require_once $testRoot . '/Application/Controller/MiActividadController.php';
 require_once $testRoot . '/Application/Controller/ProductorController.php';
 require_once $testRoot . '/Application/Controller/CompradorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';

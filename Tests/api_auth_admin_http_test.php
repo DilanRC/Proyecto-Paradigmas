@@ -33,7 +33,7 @@ function test_http_raw_status(string $method, string $url, ?string $body = null)
     return (int) ($match[1] ?? 0);
 }
 
-$base = 'http://127.0.0.1/api';
+$base = rtrim((string) (getenv('TEST_BASE_URL') ?: 'http://127.0.0.1'), '/') . '/api';
 $admins = [
     'productores.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 'prohibido' => null],
     'productores-direccion.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE'], 'prohibido' => 'PATCH'],

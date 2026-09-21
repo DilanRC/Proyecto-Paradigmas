@@ -190,8 +190,8 @@ try {
     )->fetchColumn();
     test_db()->prepare(
         'INSERT INTO tbproductorestadoperiodo
-         (tbproductorestadoperiodoid, tbproductorid, tbproductorestadperiodoestado,
-          tbproductorestadperiodofechainicio, tbproductorestadperiodofechafin, tbproductorestadperiodomotivo)
+         (tbproductorestadoperiodoid, tbproductorid, tbproductorestadoperiodoestado,
+          tbproductorestadoperiodofechainicio, tbproductorestadoperiodofechafin, tbproductorestadoperiodomotivo)
          VALUES (:periodoId, :productorId, 1, :inicio, NULL, :motivo)'
     )->execute([
         'periodoId' => $periodoId,

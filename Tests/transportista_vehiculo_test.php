@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
-require dirname(__DIR__) . '/Application/Model/TransportistaVehiculo.php';
-require dirname(__DIR__) . '/Application/Model/Transportista.php';
-require dirname(__DIR__) . '/Application/Model/Vehiculo.php';
-require dirname(__DIR__) . '/Application/Controller/TransportistaController.php';
-require dirname(__DIR__) . '/Application/Controller/VehiculoController.php';
-require dirname(__DIR__) . '/Application/Controller/TransportistaVehiculoController.php';
+require_once dirname(__DIR__) . '/Application/Model/TransportistaVehiculo.php';
+require_once dirname(__DIR__) . '/Application/Model/Transportista.php';
+require_once dirname(__DIR__) . '/Application/Model/Vehiculo.php';
+require_once dirname(__DIR__) . '/Application/Controller/TransportistaController.php';
+require_once dirname(__DIR__) . '/Application/Controller/VehiculoController.php';
+require_once dirname(__DIR__) . '/Application/Controller/TransportistaVehiculoController.php';
 
 use Application\Controller\TransportistaController;
 use Application\Controller\TransportistaVehiculoController;
