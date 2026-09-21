@@ -56,9 +56,11 @@ export function requiredRegistrationSteps(capabilities = []) {
     return steps;
 }
 
-export function validatePersonaDraft(persona = {}) {
+export function validatePersonaDraft(persona = {}, { requirePassword = true } = {}) {
     const errors = {};
-    const required = REGISTRATION_RULES.persona.required;
+    const required = requirePassword
+        ? REGISTRATION_RULES.persona.required
+        : REGISTRATION_RULES.persona.required.filter((field) => !['password'].includes(field));
     for (const field of required) {
         if (!String(persona[field] ?? '').trim()) errors[field] = 'Este dato es obligatorio.';
     }
@@ -76,7 +78,7 @@ export function validatePersonaDraft(persona = {}) {
         errors.password = 'Use al menos 8 caracteres.';
     }
 
-    if (persona.password !== persona.passwordConfirmacion) {
+    if (requirePassword && persona.password !== persona.passwordConfirmacion) {
         errors.passwordConfirmacion = 'Las contraseñas no coinciden.';
     }
 

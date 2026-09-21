@@ -49,7 +49,7 @@ if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'applicatio
 try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $conexion = Database::getConnection();
-    $actor = SupabaseActorResolver::fromGlobals($conexion);
+    $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
     if ($metodo !== 'GET') AdminAuthorization::require($actor);
     $controlador = new ProductorController(

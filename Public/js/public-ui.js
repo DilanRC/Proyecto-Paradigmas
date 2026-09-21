@@ -1,4 +1,6 @@
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
+import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
+import { readPublicProfile } from './shared/public-profile.js';
 
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';
@@ -7,7 +9,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-1';
+    link.href = 'css/public-product.css?v=product-2';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -16,9 +18,7 @@ function readStorage(key) {
     try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
 }
 
-function readSession() {
-    return readStorage(SESSION_KEY);
-}
+function readSession() { return readAuthSession(); }
 
 function setSearchOpen(root, open) {
     if (!root) return;
@@ -61,6 +61,69 @@ function addNavLink(nav, href, icon, label) {
     nav.append(link);
 }
 
+function createAccountMenu(actions, session, profile) {
+    const login = actions.querySelector('.public-header__login');
+    if (!login || actions.querySelector('[data-public-account]')) return null;
+
+    const menu = document.createElement('div');
+    menu.className = 'public-account-menu';
+    menu.dataset.publicAccount = 'true';
+    const name = profile?.persona?.nombre || session.email || 'Mi cuenta';
+    const initial = String(name).trim().charAt(0).toUpperCase() || 'U';
+    menu.innerHTML = `
+        <button class="public-account-menu__trigger" type="button" aria-expanded="false" aria-controls="public-account-panel">
+            <span class="public-account-menu__avatar" aria-hidden="true">${initial}</span>
+            <span class="public-account-menu__label">Mi perfil</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="public-account-menu__panel" id="public-account-panel" hidden>
+            <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
+            <a href="mi-actividad.php"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi perfil y actividad</span></a>
+            <a href="registro.php" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
+            <a href="productores.php" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
+            <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
+        </div>`;
+
+    login.replaceWith(menu);
+    const trigger = menu.querySelector('.public-account-menu__trigger');
+    const panel = menu.querySelector('.public-account-menu__panel');
+    trigger.addEventListener('click', () => {
+        const open = trigger.getAttribute('aria-expanded') === 'true';
+        trigger.setAttribute('aria-expanded', String(!open));
+        panel.hidden = open;
+    });
+    document.addEventListener('click', (event) => {
+        if (!menu.contains(event.target)) {
+            trigger.setAttribute('aria-expanded', 'false');
+            panel.hidden = true;
+        }
+    });
+    menu.querySelector('[data-public-logout]')?.addEventListener('click', async () => {
+        try { await signOut(); } finally { window.location.assign('explorar.php'); }
+    });
+    return menu;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+async function resolveAdminLink(menu) {
+    const adminLink = menu?.querySelector('[data-admin-link]');
+    if (!adminLink) return;
+    try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const response = await fetch('api/admin-status.php', {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+        });
+        if (response.ok) adminLink.hidden = false;
+    } catch {
+        // El menú de perfil sigue disponible; el acceso admin falla cerrado.
+    }
+}
+
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
     addNavLink(nav, 'publicar.php', 'fa-circle-plus', 'Publicar');
@@ -72,8 +135,8 @@ function enhancePublicNavigation() {
 
     const session = readSession();
     if (session?.authenticated === true) {
-        login.href = 'mi-actividad.php';
-        login.innerHTML = '<i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi actividad</span>';
+        const menu = createAccountMenu(actions, session, readPublicProfile());
+        void resolveAdminLink(menu);
         return;
     }
 

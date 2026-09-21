@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-1">
     <link rel="stylesheet" href="css/front2-flow.css?v=front2-1">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/public-ui.js?v=front2-2"></script>
+    <script type="module" src="js/public-ui.js?v=front2-3"></script>
     <script type="module" src="js/publicar.js?v=front2-1"></script>
 </head>
 <body class="public-home publish-page">
