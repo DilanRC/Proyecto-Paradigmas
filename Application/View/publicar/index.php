@@ -9,11 +9,11 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
-    <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
+    <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-4">
     <link rel="stylesheet" href="css/public-product.css?v=product-1">
     <link rel="stylesheet" href="css/front2-flow.css?v=front2-1">
-    <script type="module" src="js/public-theme.js?v=brand-3"></script>
+    <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=front2-3"></script>
     <script type="module" src="js/publicar.js?v=front2-1"></script>
 </head>

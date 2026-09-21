@@ -9,8 +9,8 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
-    <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
-    <script type="module" src="js/public-theme.js?v=brand-3"></script>
+    <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
+    <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/login.js?v=front-3"></script>
 </head>
 <body class="auth-page">
