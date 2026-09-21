@@ -5,7 +5,7 @@
     width:min(100% - 28px,1540px);
     grid-template-columns:auto minmax(0,1fr) auto;
     align-items:center;
-    gap:18px;
+    gap:12px;
     margin-inline:auto;
     padding:10px 0;
     overflow:visible;
@@ -18,7 +18,12 @@
 .public-header--product .public-nav--primary {
     min-width:0;
     justify-content:center;
-    overflow:visible;
+    overflow-x:auto;
+    scrollbar-width:none;
+}
+
+.public-header--product .public-nav--primary::-webkit-scrollbar { display:none; }
+.public-header--product .public-nav--primary a { flex:0 0 auto; white-space:nowrap; }
 }
 
 .public-nav--primary a.is-active {
@@ -28,10 +33,40 @@
 
 .public-header__actions {
     display:flex;
-    min-width:max-content;
+    min-width:0;
+    flex-shrink:0;
     align-items:center;
     justify-content:flex-end;
     gap:8px;
+}
+
+@media (max-width:1280px) and (min-width:1051px) {
+    .public-header--product { grid-template-columns:auto minmax(0,1fr) auto; }
+    .public-header--product .public-nav--primary { justify-content:flex-start; }
+    .public-header--product .public-nav--primary a { padding-inline:8px; font-size:12px; }
+    .public-header--product .public-header__actions { gap:5px; }
+    .public-header--product .public-header__actions > .theme-toggle,
+    .public-header--product .public-header__actions > .public-search { display:none; }
+    .public-header--product .public-header__login { padding-inline:14px; }
+}
+
+@media (max-width:1050px) {
+    .public-header--product {
+        grid-template-columns:minmax(0,1fr) auto;
+        row-gap:10px;
+    }
+    .public-header--product .public-nav--primary {
+        grid-column:1 / -1;
+        grid-row:2;
+        justify-content:flex-start;
+        min-width:0;
+        padding-bottom:2px;
+    }
+    .public-header--product .public-header__actions {
+        grid-column:2;
+        grid-row:1;
+    }
+    .public-header--product .public-search { display:none; }
 }
 
 .public-account-menu {

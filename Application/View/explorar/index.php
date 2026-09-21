@@ -10,9 +10,9 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Explora ganado y oportunidades cercanas en TinderCows.">
+    <meta name="description" content="Explora ganado y oportunidades cercanas en Ganado Cerca.">
     <meta name="theme-color" content="#151a18">
-    <title>Explorar | TinderCows</title>
+    <title>Explorar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -28,12 +28,12 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
                 </span>
-                <span>Tinder<strong>Cows</strong></span>
+                <span>Ganado<strong>Cerca</strong></span>
             </a>
 
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
@@ -120,13 +120,13 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                         <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40">
                         <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40">
                     </span>
-                    <span>Tinder<strong>Cows</strong></span>
+                    <span>Ganado<strong>Cerca</strong></span>
                 </a>
                 <p>Descubre ganado y oportunidades cerca de ti.</p>
             </div>
             <div class="public-footer__links">
                 <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="./#nosotros">Nosotros</a><a href="./#como-funciona">Cómo funciona</a></div>
-                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre TinderCows</a></div>
+                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div>
                 <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div>
             </div>
         </footer>

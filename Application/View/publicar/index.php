@@ -4,9 +4,9 @@
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Prepara una publicación de ganado en TinderCows.">
+    <meta name="description" content="Prepara una publicación de ganado en Ganado Cerca.">
     <meta name="theme-color" content="#151a18">
-    <title>Publicar ganado | TinderCows</title>
+    <title>Publicar ganado | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -21,12 +21,12 @@
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
                 </span>
-                <span>Tinder<strong>Cows</strong></span>
+                <span>Ganado<strong>Cerca</strong></span>
             </a>
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
@@ -44,7 +44,7 @@
                 <div>
                     <p class="section-kicker">Vender ganado</p>
                     <h1 id="publish-title">Prepara una publicación sin salir del flujo.</h1>
-                    <p>Si todavía no participas como productor, TinderCows te pedirá únicamente los datos que faltan y luego volverá aquí.</p>
+                    <p>Si todavía no participas como productor, Ganado Cerca te pedirá únicamente los datos que faltan y luego volverá aquí.</p>
                 </div>
                 <span class="flow-status-chip"><i class="fa-solid fa-database" aria-hidden="true"></i> Guardado persistente al publicar</span>
             </section>

@@ -4,9 +4,9 @@
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Administra cómo participas en TinderCows.">
+    <meta name="description" content="Administra cómo participas en Ganado Cerca.">
     <meta name="theme-color" content="#151a18">
-    <title>Mi actividad | TinderCows</title>
+    <title>Mi actividad | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -19,12 +19,12 @@
 <body class="public-home">
 <div class="activity-shell">
     <header class="auth-header">
-        <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
             <span class="public-brand__logo" aria-hidden="true">
                 <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                 <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
             </span>
-            <span>Tinder<strong>Cows</strong></span>
+            <span>Ganado<strong>Cerca</strong></span>
         </a>
         <nav class="public-nav public-nav--primary" aria-label="Navegación de cuenta">
             <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
@@ -39,7 +39,7 @@
     <section class="activity-header" aria-labelledby="activity-title">
         <p class="section-kicker">Tu espacio</p>
         <h1 id="activity-title">Mi actividad</h1>
-        <p>Administra las formas en que participas en TinderCows. Desactivar una actividad no borra tu persona ni las demás actividades.</p>
+        <p>Administra las formas en que participas en Ganado Cerca. Desactivar una actividad no borra tu persona ni las demás actividades.</p>
     </section>
 
     <div id="welcome-banner" class="welcome-banner" hidden role="status" aria-live="polite">

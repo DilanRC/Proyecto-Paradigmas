@@ -4,9 +4,9 @@
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TinderCows te ayuda a descubrir ganado y oportunidades cerca de ti.">
+    <meta name="description" content="Ganado Cerca te ayuda a descubrir ganado y oportunidades cerca de ti.">
     <meta name="theme-color" content="#151a18">
-    <title>TinderCows — Ganado y oportunidades cerca de ti</title>
+    <title>Ganado Cerca — Ganado y oportunidades cerca de ti</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -19,12 +19,12 @@
 <body class="public-home">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="#inicio" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="#inicio" aria-label="Ganado Cerca, inicio">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
                 </span>
-                <span>Tinder<strong>Cows</strong></span>
+                <span>Ganado<strong>Cerca</strong></span>
             </a>
 
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
@@ -70,20 +70,37 @@
                     </div>
                 </div>
 
-                <div class="public-visual public-visual--brand" aria-label="Identidad visual de TinderCows">
-                    <div class="public-logo-stage" aria-hidden="true">
-                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="430" height="430">
-                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="430" height="430">
+                <div class="public-visual public-visual--hero-photo">
+                    <img class="public-hero-photo" src="assets/hero-ganado-cerca.png" alt="Ganado recorriendo un camino empedrado entre potreros de Costa Rica">
+                    <div class="public-hero-signature">
+                        <img src="assets/logo_dark.png" alt="" width="42" height="42">
+                        <span>Ganado <strong>Cerca</strong></span>
                     </div>
-                    <div class="brand-orbit brand-orbit--one" aria-hidden="true"></div>
-                    <div class="brand-orbit brand-orbit--two" aria-hidden="true"></div>
                 </div>
+            </section>
+
+            <section class="public-section public-section--carousel" aria-labelledby="field-scenes-title" data-public-carousel>
+                <div class="section-heading section-heading--split">
+                    <div><p class="section-kicker">Así se mueve la red</p><h2 id="field-scenes-title">Del potrero al remate, todo empieza cerca.</h2></div>
+                    <div class="public-carousel__controls"><button type="button" data-carousel-prev aria-label="Escena anterior"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Anterior</span></button><button type="button" data-carousel-next aria-label="Escena siguiente"><span>Siguiente</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
+                </div>
+                <div class="public-carousel__viewport">
+                    <div class="public-carousel__track" data-carousel-track>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/finca-camino-costa-rica.png" alt="Ganado recorriendo un camino empedrado y húmedo"><figcaption>Camino de finca</figcaption></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/finca-potrero-costa-rica.png" alt="Ganado mixto en un potrero verde"><figcaption>Potrero abierto</figcaption></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/finca-bebedero-costa-rica.png" alt="Ganado junto a un bebedero de concreto"><figcaption>Manejo diario</figcaption></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-pasarela-costa-rica.png" alt="Pasarela elevada sobre corrales de un remate"><figcaption>Pasarela del remate</figcaption></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-corrales-costa-rica.png" alt="Ganaderos observando ganado desde los corrales"><figcaption>Recorrido de corrales</figcaption></figure>
+                        <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-rematador-costa-rica.png" alt="Público participando junto al puesto del rematador"><figcaption>Momento de decidir</figcaption></figure>
+                    </div>
+                </div>
+                <div class="public-carousel__footer"><p data-carousel-status aria-live="polite">Escena 1 de 6</p><div class="public-carousel__dots" role="tablist" aria-label="Escenas del campo"></div></div>
             </section>
 
             <section class="public-section public-section--about" id="nosotros" aria-labelledby="about-title">
                 <div class="section-heading">
                     <p class="section-kicker">Nosotros</p>
-                    <h2 id="about-title">TinderCows convierte descubrir ganado en una experiencia simple y cercana.</h2>
+                    <h2 id="about-title">Ganado Cerca convierte descubrir ganado en una experiencia simple y cercana.</h2>
                 </div>
                 <p class="section-lead">Reunimos publicaciones, ubicación y contacto en un solo recorrido para que comparar opciones y tomar una decisión requiera menos pasos.</p>
                 <div class="about-grid about-grid--product">
@@ -121,13 +138,13 @@
                         <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40">
                         <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40">
                     </span>
-                    <span>Tinder<strong>Cows</strong></span>
+                    <span>Ganado<strong>Cerca</strong></span>
                 </a>
                 <p>Descubre ganado y oportunidades cerca de ti.</p>
             </div>
             <div class="public-footer__links">
                 <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="#nosotros">Nosotros</a><a href="#como-funciona">Cómo funciona</a></div>
-                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre TinderCows</a></div>
+                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div>
                 <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div>
             </div>
         </footer>

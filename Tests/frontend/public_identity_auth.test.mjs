@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import test from 'node:test';
 
 import { resolveAdminNext, resolveNext } from '../../Public/js/login.js';
@@ -49,11 +49,14 @@ const PUBLIC_ROUTES = [
     '../../Public/legal.php',
 ];
 
-test('la portada usa identidad TinderCows y habla como producto', () => {
+test('la portada usa identidad Ganado Cerca y habla como producto', () => {
     assert.ok(home.includes('assets/logo_dark.png'));
     assert.ok(home.includes('assets/logo_light.png'));
     assert.ok(home.includes('rel="icon" href="favicon.svg"'));
     assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('Ganado<strong>Cerca</strong>'));
+    assert.ok(home.includes('assets/hero-ganado-cerca.png'));
+    assert.ok(statSync(new URL('../../Public/assets/hero-ganado-cerca.png', import.meta.url)).size > 10000);
     assert.ok(home.includes('href="explorar"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false, 'la experiencia pública no debe hablar del curso ni de evaluación');
     assert.equal(home.includes('Productores</h3>'), false, 'la landing no debe explicar módulos administrativos');
@@ -76,6 +79,21 @@ test('la búsqueda pública permanece compacta y se expande bajo demanda', () =>
     assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
     assert.ok(publicUi.includes('root.dataset.open = String(safeOpen)'));
     assert.ok(publicUi.includes("event.key === 'Escape'"));
+});
+
+test('la portada muestra las seis escenas ganaderas en un carrusel navegable', () => {
+    assert.ok(home.includes('data-public-carousel'));
+    assert.ok(publicUi.includes('initializePublicCarousel'));
+    for (const asset of [
+        'finca-camino-costa-rica.png',
+        'finca-potrero-costa-rica.png',
+        'finca-bebedero-costa-rica.png',
+        'subasta-pasarela-costa-rica.png',
+        'subasta-corrales-costa-rica.png',
+        'subasta-rematador-costa-rica.png',
+    ]) assert.ok(home.includes(asset), `falta ${asset}`);
+    assert.ok(publicUi.includes('data-carousel-prev'));
+    assert.ok(publicUi.includes('data-carousel-next'));
 });
 
 test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
@@ -168,7 +186,7 @@ test('modo claro y oscuro comparten preferencia persistente e iconos reconocible
 });
 
 test('el acceso público valida con Supabase y vuelve a Explorar por defecto', () => {
-    assert.ok(login.includes('Entrar a TinderCows'));
+    assert.ok(login.includes('Entrar a Ganado Cerca'));
     assert.doesNotMatch(login, /Acceso seguro|credenciales se validan con Supabase Auth/);
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));

@@ -4,9 +4,9 @@
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Encuentra transporte ganadero u ofrece fletes en TinderCows.">
+    <meta name="description" content="Encuentra transporte ganadero u ofrece fletes en Ganado Cerca.">
     <meta name="theme-color" content="#151a18">
-    <title>Fletes | TinderCows</title>
+    <title>Fletes | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -19,9 +19,9 @@
 <body class="public-home">
 <div class="activity-shell">
     <header class="public-header public-header--product">
-        <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
             <span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48"></span>
-            <span>Tinder<strong>Cows</strong></span>
+            <span>Ganado<strong>Cerca</strong></span>
         </a>
         <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
             <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>

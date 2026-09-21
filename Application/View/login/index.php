@@ -4,9 +4,9 @@
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Entra a TinderCows para explorar publicaciones y oportunidades ganaderas.">
+    <meta name="description" content="Entra a Ganado Cerca para explorar publicaciones y oportunidades ganaderas.">
     <meta name="theme-color" content="#151a18">
-    <title>Entrar | TinderCows</title>
+    <title>Entrar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -18,12 +18,12 @@
 <body class="auth-page">
     <main class="auth-stage" aria-labelledby="login-title">
         <header class="auth-header">
-            <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
                 </span>
-                <span>Tinder<strong>Cows</strong></span>
+                <span>Ganado<strong>Cerca</strong></span>
             </a>
             <div class="auth-header__actions">
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
@@ -48,7 +48,7 @@
                         <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="54" height="54">
                         <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="54" height="54">
                     </span>
-                    <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a TinderCows</h1></div>
+                    <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a Ganado Cerca</h1></div>
                 </div>
                 <p class="auth-card__copy">Continúa para volver a Explorar o administrar tus actividades.</p>
                 <form class="auth-form" id="formulario-login" novalidate>
@@ -63,7 +63,7 @@
                         <small class="auth-error" id="login-password-error" data-error-for="password"></small>
                     </label>
                     <p class="auth-status" id="login-status" role="status" aria-live="polite"></p>
-                    <button class="auth-submit" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar a TinderCows</span></button>
+                    <button class="auth-submit" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar a Ganado Cerca</span></button>
                 </form>
 
                 <p class="auth-card__copy">¿Primera vez aquí? <a href="registro"><strong>Crear cuenta con registro guiado</strong></a></p>

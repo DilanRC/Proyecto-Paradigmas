@@ -54,6 +54,40 @@ function initializePublicSearch() {
     }
 }
 
+function initializePublicCarousel() {
+    for (const root of document.querySelectorAll('[data-public-carousel]')) {
+        if (root.dataset.ready === 'true') continue;
+        const track = root.querySelector('[data-carousel-track]');
+        const slides = [...root.querySelectorAll('.public-carousel__slide')];
+        const dots = root.querySelector('.public-carousel__dots');
+        const status = root.querySelector('[data-carousel-status]');
+        if (!track || slides.length < 2 || !dots) continue;
+        root.dataset.ready = 'true';
+        let index = 0;
+        const render = () => {
+            const visible = window.matchMedia('(max-width: 700px)').matches ? 1 : window.matchMedia('(max-width: 1050px)').matches ? 2 : 3;
+            const max = Math.max(0, slides.length - visible);
+            index = Math.min(index, max);
+            const offset = slides[index].offsetLeft - track.offsetLeft;
+            track.style.transform = `translateX(-${offset}px)`;
+            if (status) status.textContent = `Escena ${index + 1} de ${slides.length}`;
+            dots.querySelectorAll('button').forEach((dot, dotIndex) => dot.setAttribute('aria-selected', String(dotIndex === index)));
+        };
+        slides.forEach((slide, slideIndex) => {
+            const dot = document.createElement('button');
+            dot.type = 'button';
+            dot.role = 'tab';
+            dot.ariaLabel = `Ver escena ${slideIndex + 1}`;
+            dot.addEventListener('click', () => { index = slideIndex; render(); });
+            dots.append(dot);
+        });
+        root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => { index = Math.max(0, index - 1); render(); });
+        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => { index = Math.min(slides.length - 1, index + 1); render(); });
+        window.addEventListener('resize', render, { passive: true });
+        render();
+    }
+}
+
 function addNavLink(nav, href, icon, label) {
     if (!nav || nav.querySelector(`a[href="${href}"]`)) return;
     const link = document.createElement('a');
@@ -152,6 +186,12 @@ function enhancePublicNavigation() {
         register.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Crear cuenta</span>';
         actions.insertBefore(register, login);
     }
+}
+
+if (typeof document !== 'undefined') {
+    const initialize = () => initializePublicCarousel();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    else initialize();
 }
 
 function initializeBusinessActionGate() {

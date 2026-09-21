@@ -4,9 +4,9 @@
     <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Crea tu cuenta de TinderCows y configura cómo deseas participar.">
+    <meta name="description" content="Crea tu cuenta de Ganado Cerca y configura cómo deseas participar.">
     <meta name="theme-color" content="#151a18">
-    <title>Crear cuenta | TinderCows</title>
+    <title>Crear cuenta | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
@@ -19,12 +19,12 @@
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
     <header class="auth-header onboarding-header">
-        <a class="public-brand" href="./" aria-label="TinderCows, inicio">
+            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
             <span class="public-brand__logo" aria-hidden="true">
                 <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                 <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
             </span>
-            <span>Tinder<strong>Cows</strong></span>
+            <span>Ganado<strong>Cerca</strong></span>
         </a>
         <div class="auth-header__actions">
             <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
@@ -35,7 +35,7 @@
     <section class="onboarding-intro">
         <div>
             <p class="section-kicker">Registro guiado</p>
-            <h1 id="registro-title">Cuéntanos cómo quieres usar TinderCows.</h1>
+            <h1 id="registro-title">Cuéntanos cómo quieres usar Ganado Cerca.</h1>
             <p>No vamos a obligarte a ser productor, comprador o transportista. Primero registramos tu identidad una sola vez y después preguntamos únicamente lo necesario para las actividades que elijas.</p>
         </div>
         <ol class="onboarding-progress" aria-label="Progreso de registro">
