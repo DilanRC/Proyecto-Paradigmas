@@ -105,15 +105,16 @@ test('modo claro y oscuro comparten preferencia persistente e iconos reconocible
     assert.ok(themeJs.includes("'fa-moon'"));
 });
 
-test('el acceso público vuelve a Explorar por defecto y no se presenta como administración', () => {
+test('el acceso público valida con Supabase y vuelve a Explorar por defecto', () => {
     assert.ok(login.includes('Entrar a TinderCows'));
-    assert.ok(login.includes('todavía no valida credenciales contra un servidor'));
+    assert.match(login, /credenciales se validan con Supabase Auth/);
+    assert.match(login, /no concede acceso administrativo/);
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(login), false);
     assert.equal(resolveNext(''), 'explorar.php');
     assert.equal(resolveNext('?next=explorar.php'), 'explorar.php');
-    assert.equal(resolveNext('?next=vehiculos.php'), 'vehiculos.php');
+    assert.equal(resolveNext('?next=vehiculos.php'), 'explorar.php');
     assert.equal(resolveNext('?next=https://example.com'), 'explorar.php');
     assert.equal(resolveNext('?next=//example.com'), 'explorar.php');
     assert.equal(resolveNext('?next=../login.php'), 'explorar.php');
@@ -139,11 +140,11 @@ test('la puerta requiere un marcador de sesión estructurado', () => {
     const valid = JSON.stringify({
         authenticated: true,
         version: 1,
-        email: 'a@b.test',
+        adminAuthorized: true,
         startedAt: '2026-09-01T12:00:00.000Z',
-        mode: 'local-browser-session',
+        mode: 'admin-server-session',
     });
-    assert.equal(readBrowserSession(makeStorage(valid))?.email, 'a@b.test');
+    assert.equal(readBrowserSession(makeStorage(valid))?.adminAuthorized, true);
 });
 
 test('una ruta privada sin sesión vuelve al login conservando destino local', () => {
@@ -151,14 +152,14 @@ test('una ruta privada sin sesión vuelve al login conservando destino local', (
     const location = { pathname: '/productores.php', replace: (target) => { redirected = target; } };
     const storage = { getItem: () => null };
     assert.equal(isPrivateRoute(location.pathname), true);
-    assert.equal(loginTarget(location.pathname), 'login.php?next=productores.php');
+    assert.equal(loginTarget(location.pathname), 'login.php?area=admin&next=productores.php');
     assert.equal(enforceBrowserSession({ location, storage }), false);
-    assert.equal(redirected, 'login.php?next=productores.php');
+    assert.equal(redirected, 'login.php?area=admin&next=productores.php');
 });
 
 test('el shell privado distingue volver al sitio público de cerrar sesión', () => {
     assert.ok(authGate.includes("publicLink.textContent = 'Sitio público'"));
-    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión'"));
+    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión administrativa'"));
     assert.ok(authGate.includes('storage?.removeItem(SESSION_KEY)'));
 });
 

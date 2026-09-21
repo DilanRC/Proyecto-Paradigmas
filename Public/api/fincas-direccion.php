@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Application\Controller\FincaController;
+use Application\Auth\AdminAuthorization;
 use Application\Auth\SupabaseActorResolver;
 use Configuration\Database;
 use function Configuration\readJsonBody;
@@ -13,6 +14,7 @@ require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
 require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/AdminAuthorization.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'FincaDireccion', 'Bitacora', 'Productor'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
@@ -46,6 +48,9 @@ try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
+    if ($metodo !== 'GET') {
+        AdminAuthorization::require($actor);
+    }
     $controlador = new FincaController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,

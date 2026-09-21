@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 30 tablas:
+La base `bdmercadoganadero` contiene exactamente 32 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -37,15 +37,14 @@ La base `bdmercadoganadero` contiene exactamente 30 tablas:
 28. `tbtransportistahorario`
 29. `tbtransportistaflete`
 30. `tbtransportistaresena`
+31. `tbproductorpersonatelefonohistorico`
+32. `tbcompradorpersonatelefonohistorico`
 
-`tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
-de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
-`tbcomprador` es legacy de compatibilidad temporal: sobrevive mientras el CRUD
-actual dependa de ella y debe retirarse. Su migración se audita y ejecuta con
-`php Tools/backfill-clasificacion-comprador.php --check` (audita) y `--apply`
-(migra); el estado que muestran API y panel ya sale de la clasificación. Comprador y Vendedor son
-clasificaciones del Productor y su única fuente de verdad es
-`tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`). Animal, publicación, compra,
+`tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador` y
+`tbtransportista` son contextos de negocio independientes de la misma Persona.
+Comprador no tiene CRUD administrativo manual: su contexto se crea desde un
+proceso de negocio aprobado. Productor y Vendedor son conceptos distintos;
+VENDEDOR se conserva como clasificación histórica del Productor. Animal, publicación, compra,
 venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
 Backend implemente comportamiento después. La ubicación física vive **únicamente** en
 `tbdireccion`: `tbproductordireccion` y
@@ -134,7 +133,9 @@ Las APIs PHP usan ese contrato cuando reciben `Authorization: Bearer <jwt>`.
 El `email` verificado debe coincidir de forma única con
 `tbpersona.tbpersonacorreoelectronico`; si no existe vínculo, la escritura falla
 con 409 y no inventa usuario. Sin encabezado `Authorization` se conserva el modo
-local `NO_AUTENTICADO`.
+local `NO_AUTENTICADO` para lecturas compatibles. Las escrituras administrativas
+además requieren que el correo verificado esté en `SUPABASE_ADMIN_EMAILS`; la
+allowlist no se acepta desde el navegador.
 
 ## Despliegue
 
@@ -178,7 +179,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 30 tablas, incluida la identidad compartida en
+El migrador crea y valida las 32 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -334,7 +335,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 30 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 32 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
@@ -395,7 +396,7 @@ python3 Tests/documentation_test.py
 
 ## Limitaciones
 
-- No hay autenticación ni autorización.
+- La navegación administrativa tiene un gate visual; las escrituras administrativas exigen Bearer verificado y allowlist server-side.
 - El tipo es una columna controlada, no un catálogo.
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.

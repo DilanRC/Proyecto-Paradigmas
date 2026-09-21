@@ -150,7 +150,7 @@ test('la direccion de finca conserva su envoltura direccionFinca', () => {
         nombreFinca: 'Finca El Roble',
         direccionFinca: {
             provincia: 'Alajuela', canton: 'San Carlos', distrito: 'Quesada',
-            pueblo: 'Centro', senas: null,
+            pueblo: 'Centro', senas: null, latitud: null, longitud: null,
         },
     });
 });
@@ -168,11 +168,9 @@ test('cada panel conserva su endpoint', async () => {
 
 // --- compradores -------------------------------------------------------------
 // El panel de compradores ya no envia ningun cuerpo: el CRUD legacy se retiro
-// en el paso (d) (DEC-DBREADY-008) y la vista quedo de solo lectura, porque
-// Comprador es una clasificacion derivada del comportamiento del productor.
+// y la vista quedo de solo lectura, porque Comprador es un contexto de Persona.
 // La paridad que se prueba ahora es la contraria: que no haya vuelto a aparecer
 // un constructor de payload ni una escritura desde ese panel.
-import { formatearClasificadoDesde, describirOrigen } from '../../Public/js/compradores.js';
 
 test('el panel de compradores no construye cuerpos de escritura', async () => {
     const { readFile } = await import('node:fs/promises');
@@ -184,14 +182,11 @@ test('el panel de compradores no construye cuerpos de escritura', async () => {
     }
 });
 
-test('la clasificacion se muestra con su fecha y el origen real del periodo', () => {
-    assert.equal(formatearClasificadoDesde(''), 'Sin fecha registrada');
-    assert.equal(formatearClasificadoDesde('no es fecha'), 'no es fecha');
-    assert.match(formatearClasificadoDesde('2026-09-01 10:15:00'), /2026/);
-    assert.equal(describirOrigen('MIGRACION_TBCOMPRADOR_LEGACY'), 'Migración del registro anterior');
-    assert.equal(describirOrigen('ALTA_CRUD_COMPRADOR'), 'Alta registrada antes del retiro del CRUD');
-    assert.equal(describirOrigen('REACTIVACION_CRUD_COMPRADOR'), 'Reactivación registrada antes del retiro del CRUD');
-    assert.equal(describirOrigen(''), 'Sin origen declarado');
-    assert.equal(describirOrigen('T10_REGLA_FUTURA'), 'T10_REGLA_FUTURA',
-        'un motivo futuro no se inventa ni se oculta');
+test('la vista de compradores conserva lectura y detalle de capacidades', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const fuente = await readFile(
+        new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
+    assert.match(fuente, /api\/compradores\.php/);
+    assert.match(fuente, /consultarCapacidades/);
+    assert.match(fuente, /comprador es un contexto/i);
 });
