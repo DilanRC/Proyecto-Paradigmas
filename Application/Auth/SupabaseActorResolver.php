@@ -20,12 +20,33 @@ final class SupabaseActorResolver
         $this->transport = $transport ?? $this->defaultTransport(...);
     }
 
+    /** Endpoints normales: un JWT válido sin Persona sigue siendo conflicto. */
     public static function fromGlobals(PDO $conexion): ActorContext
     {
         return (new self())->resolve($conexion, $_SERVER);
     }
 
+    /**
+     * Exclusivo para registro público: verifica el JWT, pero permite que todavía
+     * no exista tbpersona. No convierte al usuario en Persona ni le concede
+     * permisos; esa vinculación ocurre dentro de la transacción de registro.
+     */
+    public static function fromGlobalsPermitiendoPersonaNoVinculada(PDO $conexion): ActorContext
+    {
+        return (new self())->resolvePermitiendoPersonaNoVinculada($conexion, $_SERVER);
+    }
+
     public function resolve(PDO $conexion, array $server): ActorContext
+    {
+        return $this->resolver($conexion, $server, true);
+    }
+
+    public function resolvePermitiendoPersonaNoVinculada(PDO $conexion, array $server): ActorContext
+    {
+        return $this->resolver($conexion, $server, false);
+    }
+
+    private function resolver(PDO $conexion, array $server, bool $exigirPersona): ActorContext
     {
         $authorization = $this->authorizationHeader($server);
         if ($authorization === null) {
@@ -60,18 +81,20 @@ final class SupabaseActorResolver
 
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
         $subject = is_string($data['id'] ?? null) ? trim($data['id']) : '';
-        $email = is_string($data['email'] ?? null) ? trim($data['email']) : '';
+        $email = is_string($data['email'] ?? null)
+            ? mb_strtolower(trim($data['email']), 'UTF-8')
+            : '';
         $role = is_string($data['role'] ?? null) ? trim($data['role']) : null;
         if ($subject === '' || $email === '') {
-            throw new HttpException('La sesión verificada no tiene vínculo con una persona.', 409);
+            throw new HttpException('La sesión verificada no contiene una identidad utilizable.', 409);
         }
 
         $personaId = $this->personaIdPorCorreo($conexion, $email);
-        if ($personaId === null) {
+        if ($exigirPersona && $personaId === null) {
             throw new HttpException('La sesión verificada no tiene vínculo con una persona.', 409);
         }
 
-        return ActorContext::personaAutenticada($personaId, $subject, $email, $role);
+        return ActorContext::usuarioVerificado($personaId, $subject, $email, $role);
     }
 
     private function authorizationHeader(array $server): ?string
@@ -95,11 +118,11 @@ final class SupabaseActorResolver
         );
         $sentencia->execute(['correo' => $email]);
         $filas = $sentencia->fetchAll(PDO::FETCH_COLUMN);
-        if (count($filas) !== 1) {
-            return null;
+        if (count($filas) > 1) {
+            throw new HttpException('El correo autenticado está vinculado a más de una Persona.', 409);
         }
 
-        return (int) $filas[0];
+        return $filas === [] ? null : (int) $filas[0];
     }
 
     /** @return array{status:int, body:string} */

@@ -44,7 +44,7 @@ expresa.
 
 ## DEC-PER-005 - Tablas sin objetos de integridad
 
-El modelo final de base preparada tiene exactamente 30 tablas y mantiene cero PK, FK, UNIQUE,
+El modelo final de base preparada tiene exactamente 32 tablas y mantiene cero PK, FK, UNIQUE,
 CHECK, índices, ENUM, defaults, triggers y objetos programables.
 
 ## DEC-C04-001 - Instrucción docente vigente
@@ -248,7 +248,7 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-mediante migraciones versionadas: 30 tablas, `tbpersona` como identidad única,
+mediante migraciones versionadas: 32 tablas, `tbpersona` como identidad única,
 `tbproductordireccion` normalizada, estructura comercial histórica y el mismo
 criterio de cero llaves, restricciones, índices y valores automáticos. El
 espejo sigue a MySQL; nunca al revés. Aplicar el cambio remoto requiere
@@ -433,15 +433,16 @@ analítico (lo dicho sobre vendedor se mantiene: `tbvendedor` no existe y
 VENDEDOR es clasificación del Productor).
 
 P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
-decisión vigente es: Productor es núcleo; Comprador y Vendedor son
-clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
-`tbcomprador` se conserva solo como legacy de compatibilidad temporal hasta que
-Backend deje de depender de ella; Compra y Venta son hechos históricos propios.
+decisión vigente es: Productor es núcleo; Comprador es un contexto de negocio
+enlazado a la misma Persona y se consulta sin CRUD administrativo; Vendedor no
+es una entidad separada; `tbvendedor` no existe; Compra y Venta son hechos
+históricos propios.
 
-La representación vigente de base es `tbproductorclasificacionperiodo`, con
-`tbproductorclasificacionperiodotipo` validado por PHP como `COMPRADOR` o
-`VENDEDOR`. Un Productor puede tener ambos tipos abiertos simultáneamente. No
-se crean `tbvendedor`, `tbvendedorestadoperiodo`, `tbvendedoractividad` ni
+La representación vigente del contexto es `tbcomprador` enlazado mediante
+`tbpersonaid`; su alta pertenece a un proceso de negocio aprobado. Los
+periodos de `tbproductorclasificacionperiodo` se conservan únicamente como
+histórico legado y se validan por PHP. No se crean `tbvendedor`,
+`tbvendedorestadoperiodo`, `tbvendedoractividad` ni
 `tbcompradorestadoperiodo`.
 
 La matriz también deja PENDIENTE lo que no tiene evidencia suficiente:
@@ -478,7 +479,11 @@ Transporte agrega `tbtransportistaestadoperiodo`, `tbtransportistaflete` y
 NULL si no existe evidencia; `fecharegistroensistema` solo prueba cuándo el
 sistema registró el periodo.
 
-## DEC-DBREADY-005 - Pasada de concordancia contra la evidencia directa de Calidad
+## DEC-DBREADY-005 - Pasada de concordancia contra la evidencia directa de Calidad (histórica)
+
+**Estado: SUPERADA para Comprador por DEC-P0C-001 y DEC-DBREADY-008.** Se
+conserva como trazabilidad del diagnóstico que llevó a retirar el CRUD manual;
+no describe la fuente vigente del contexto Comprador.
 
 Estado: SUPERADA por DEC-28/29. `tbcomprador` no es legacy por retirar: vuelve a
 ser la fuente de verdad del contexto Comprador, y `tbproductorclasificacionperiodo`
@@ -536,7 +541,7 @@ ampliar alcance. Ocho divergencias corregidas:
    `tbpagometodoactivo` no cambian: son disponibilidad técnica, no estado de
    negocio.
 
-El esquema queda en 30 tablas. La migración 006 sigue siendo solo
+El esquema queda en 32 tablas. La migración 006 sigue siendo solo
 `CREATE TABLE IF NOT EXISTS`, así que un entorno que ya la había corrido con la
 versión anterior debe reinstalarse limpio: la corrección renombra y retira
 columnas y una migración aditiva no puede hacerlo sin perder o duplicar datos.
@@ -817,7 +822,7 @@ tramo 13.
 
 Ese cierre queda como antecedente histórico. El contrato vigente sí crea tablas
 nuevas en DEC-DBREADY-001 y `Database/Tests/comprobacionestructura.sql` ahora
-espera 30 tablas.
+espera 32 tablas.
 
 ## DEC-21 - Fin del UPDATE destructivo de dirección
 

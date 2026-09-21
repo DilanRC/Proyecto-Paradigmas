@@ -8,10 +8,9 @@ use Application\Model\Bitacora;
 use Application\Model\ProductorDireccion;
 
 /**
- * Orquesta el histórico de residencia (tramo 5/16) bajo el lock por productor:
- * cierre + alta transaccional con bitácora CAMBIO_DIRECCION / VACIAR_DIRECCION
- * en la misma transacción del llamador. El controlador sigue resolviendo el
- * sobre JSON; este servicio concentra la lógica de cambio de residencia.
+ * Orquesta el histórico de residencia (tramo 5/16): cierre + alta con
+ * bitácora CAMBIO_DIRECCION / VACIAR_DIRECCION. El controlador decide el
+ * límite transaccional; este servicio concentra la regla de histórico.
  */
 final class ProductorDireccionService
 {
@@ -21,45 +20,67 @@ final class ProductorDireccionService
         private readonly string $solicitudId,
     ) {}
 
-    /** Cierra el periodo abierto, abre uno nuevo y registra CAMBIO_DIRECCION. */
+    /**
+     * Conveniencia para operaciones cuyo callback completo queda dentro del
+     * lock. Si el llamador ya controla una transacción mayor, debe usar
+     * cambiarConBloqueosExistentes() y envolver ESA transacción con
+     * ProductorDireccion::ejecutarConBloqueoProducto().
+     */
     public function cambiar(int $productorId, string $identificacion, ?array $anterior, array $nueva): array
     {
         return $this->direccion->ejecutarConBloqueoProducto(
             $productorId,
-            function () use ($productorId, $identificacion, $anterior, $nueva): array {
-                $this->direccion->actualizar($productorId, $nueva);
-                $direccionNueva = $this->direccion->buscar($productorId);
-                $this->bitacora->registrar(
-                    'CAMBIO_DIRECCION',
-                    $identificacion,
-                    ['direccionPrincipal' => $anterior],
-                    ['direccionPrincipal' => $direccionNueva],
-                    $this->solicitudId,
-                );
-
-                return $direccionNueva;
-            },
+            fn (): array => $this->cambiarConBloqueosExistentes(
+                $productorId,
+                $identificacion,
+                $anterior,
+                $nueva,
+            ),
         );
     }
 
-    /** Vacía la residencia vigente (cierre + alta vacía) con VACIAR_DIRECCION. */
+    /** El llamador ya mantiene los locks de ProductorDireccion y Direccion. */
+    public function cambiarConBloqueosExistentes(
+        int $productorId,
+        string $identificacion,
+        ?array $anterior,
+        array $nueva,
+    ): array {
+        $this->direccion->actualizar($productorId, $nueva);
+        $direccionNueva = $this->direccion->buscar($productorId);
+        $this->bitacora->registrar(
+            'CAMBIO_DIRECCION',
+            $identificacion,
+            ['direccionPrincipal' => $anterior],
+            ['direccionPrincipal' => $direccionNueva],
+            $this->solicitudId,
+        );
+
+        return $direccionNueva;
+    }
+
+    /** Véase cambiar(): esta variante adquiere los locks por sí misma. */
     public function vaciar(int $productorId, string $identificacion, ?array $anterior): array
     {
         return $this->direccion->ejecutarConBloqueoProducto(
             $productorId,
-            function () use ($productorId, $identificacion, $anterior): array {
-                $this->direccion->vaciar($productorId);
-                $direccionNueva = $this->direccion->buscar($productorId);
-                $this->bitacora->registrar(
-                    'VACIAR_DIRECCION',
-                    $identificacion,
-                    ['direccionPrincipal' => $anterior],
-                    ['direccionPrincipal' => $direccionNueva],
-                    $this->solicitudId,
-                );
-
-                return $direccionNueva;
-            },
+            fn (): array => $this->vaciarConBloqueosExistentes($productorId, $identificacion, $anterior),
         );
+    }
+
+    /** El llamador ya mantiene los locks de ProductorDireccion y Direccion. */
+    public function vaciarConBloqueosExistentes(int $productorId, string $identificacion, ?array $anterior): array
+    {
+        $this->direccion->vaciar($productorId);
+        $direccionNueva = $this->direccion->buscar($productorId);
+        $this->bitacora->registrar(
+            'VACIAR_DIRECCION',
+            $identificacion,
+            ['direccionPrincipal' => $anterior],
+            ['direccionPrincipal' => $direccionNueva],
+            $this->solicitudId,
+        );
+
+        return $direccionNueva;
     }
 }

@@ -1,0 +1,12 @@
+.farm-map-picker{margin-top:1rem;padding:1rem;border:1px solid var(--color-border,#d7ddd9);border-radius:14px;background:var(--color-surface,#fff)}
+.farm-map-picker__copy strong{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.farm-map-picker__copy p{margin:.35rem 0 0;max-width:72ch}
+.farm-map-picker__actions{display:flex;gap:.65rem;flex-wrap:wrap;margin:.9rem 0 .35rem}
+.farm-map-picker__status{min-height:1.4rem;margin:.5rem 0}.farm-map-picker__coords{font-weight:700;margin:.35rem 0}
+.map-shell[hidden],.map-shell__fallback[hidden],.farm-map-picker__coords[hidden]{display:none!important}
+.map-shell{margin-top:1rem}.map-shell__notice{margin:.4rem 0 .7rem;font-size:.92rem}
+.map-shell__canvas{min-height:280px;height:min(42vh,380px);border-radius:16px;overflow:hidden;border:1px solid var(--color-border,#d7ddd9);background:#eef2ef}
+.map-shell__fallback{padding:1rem;border:1px dashed currentColor;border-radius:12px;margin-top:.75rem}
+.maplibregl-ctrl-attrib{font-size:11px!important}
+.farm-address-editor{display:grid;gap:1rem;padding:.9rem 0}.farm-address-editor__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+.farm-address-editor__grid .field--full{grid-column:1/-1}
+@media(max-width:720px){.farm-address-editor__grid{grid-template-columns:1fr}.farm-map-picker__actions .button{width:100%}.map-shell__canvas{height:300px;min-height:240px}}

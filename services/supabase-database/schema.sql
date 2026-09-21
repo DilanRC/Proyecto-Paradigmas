@@ -117,6 +117,20 @@ CREATE TABLE IF NOT EXISTS public.tbcomprador (
     tbcompradorestado SMALLINT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbproductorpersonatelefonohistorico (
+    tbproductorpersonatelefonohistoricoid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbproductorpersonatelefonohistoriconuevo VARCHAR(20) NOT NULL,
+    tbproductorpersonatelefonohistoricofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbcompradorpersonatelefonohistorico (
+    tbcompradorpersonatelefonohistoricoid INTEGER NOT NULL,
+    tbcompradorid INTEGER NOT NULL,
+    tbcompradorpersonatelefonohistoriconuevo VARCHAR(20) NOT NULL,
+    tbcompradorpersonatelefonohistoricofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbproductorclasificacionperiodo (
     tbproductorclasificacionperiodoid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
@@ -307,6 +321,8 @@ ALTER TABLE public.tbvehiculo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistavehiculo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbbitacora ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcomprador ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbproductorpersonatelefonohistorico ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbcompradorpersonatelefonohistorico ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductorclasificacionperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimal ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalproduccionsalud ENABLE ROW LEVEL SECURITY;

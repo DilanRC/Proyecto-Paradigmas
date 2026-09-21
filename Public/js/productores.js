@@ -64,6 +64,7 @@ export function normalizarFincas(fincas) {
 /** Cuerpo de la direccion de finca. Tambien exportado para la paridad. */
 export function buildFincaDireccionPayload({
     identificacionNumero, nombreFinca, provincia, canton, distrito, pueblo, senas,
+    latitud = null, longitud = null,
 }) {
     return {
         identificacionNumero,
@@ -74,6 +75,8 @@ export function buildFincaDireccionPayload({
             distrito: distrito.trim(),
             pueblo: nullable(pueblo),
             senas: nullable(senas),
+            latitud,
+            longitud,
         },
     };
 }

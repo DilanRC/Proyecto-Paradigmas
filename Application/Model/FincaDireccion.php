@@ -13,11 +13,31 @@ final class FincaDireccion
         private readonly Direccion $direccion,
     ) {}
 
+    /**
+     * Orden global de locks para altas de dirección:
+     * Direccion -> FincaDireccion.
+     *
+     * Mantener el mismo orden en todos los consumidores evita el ciclo
+     * FincaDireccion -> Direccion frente a ProductorDireccion -> Direccion
+     * cuando una operación de Productor persiste ambas dentro de una sola
+     * transacción.
+     */
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
+    {
+        return $this->direccion->ejecutarConBloqueoAlta(
+            fn (): mixed => $this->ejecutarConBloqueoEnlaceAlta($operacion),
+        );
+    }
+
+    /**
+     * Úselo solo cuando el llamador ya mantiene el lock global de Direccion
+     * durante toda la transacción.
+     */
+    public function ejecutarConBloqueoEnlaceAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
         try {
-            return $this->direccion->ejecutarConBloqueoAlta($operacion);
+            return $operacion();
         } finally {
             $this->liberarBloqueoAlta();
         }
@@ -69,6 +89,8 @@ final class FincaDireccion
             'distrito' => '',
             'pueblo' => null,
             'senas' => null,
+            'latitud' => null,
+            'longitud' => null,
         ]);
     }
 

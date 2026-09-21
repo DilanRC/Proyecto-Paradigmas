@@ -1,6 +1,6 @@
 # Rutas de TinderCows
 
-Estado documentado: 2026-09-01, rama `dev`.
+Estado documentado: 2026-09-20, rama `feat/Front-2.0`.
 
 ## Ejecución local
 
@@ -29,7 +29,7 @@ La navegación primaria pública expone Inicio, Explorar, Nosotros y Cómo funci
 
 ## Administración interna
 
-Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate comprueba un marcador local de `sessionStorage`; **no es autenticación de servidor**.
+Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate controla la navegación visual, pero no sustituye la autorización de servidor. Las escrituras de las APIs administrativas exigen un JWT Supabase válido y un correo incluido en `SUPABASE_ADMIN_EMAILS`.
 
 | Ruta | Módulo |
 |---|---|
@@ -60,10 +60,10 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 
 `/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
 
-`/api/identidad.php` resuelve la **superficie del navegador** (DEC-30/33): sin
-Bearer devuelve `persona:null` (modo público) y con Bearer devuelve los
-contextos de la persona. `/api/capacidades.php` escribe los contextos
-(inscribir/abandonar/reactivar) desde la vista (Tramo B).
+`/api/identidad.php` resuelve la superficie del navegador: sin Bearer devuelve
+una respuesta pública y con Bearer devuelve los contextos de la persona.
+`/api/capacidades.php` permite inscribir, abandonar o reactivar contextos desde
+la vista pública, siempre sujeto a la validación del servidor.
 
 ## Estado de autenticación
 
@@ -75,21 +75,13 @@ contextos de la persona. `/api/capacidades.php` escribe los contextos
 - Redirección a `login.php?next=...` cuando una ruta administrativa no tiene marcador local válido.
 - Cierre de la sesión local desde el shell administrativo.
 - La interfaz privada se mantiene oculta hasta que el gate del frontend valida el marcador.
-- **Resolución de superficie real** (DEC-33, `Public/js/shared/sesion.js`):
-  el login consulta `GET api/identidad.php`; con Bearer del proveedor conserva
-  el actor y `api.js` adjunta `Authorization` a las peticiones; sin Bearer el
-  navegador queda en modo público de solo lectura (los 401 `SIN_SESION` se
-  muestran como "inicie sesión").
-- **Inscripción desde la vista** (Tramo B, `Public/js/shared/inscripcion.js`):
-  la vista pública Explorar ofrece inscribir/abandonar/reactivar los contextos
-  Comprador/Productor/Transportista contra `/api/capacidades.php` sin entrar al
-  CRUD administrativo.
 
 ### No implementado todavía
 
-- Autorización de servidor basada en la sesión visual del frontend (la autorización real sigue siendo Bearer/Supabase).
+- La marca visual de `sessionStorage` no es una credencial de servidor.
+- La allowlist administrativa debe configurarse en el entorno del servidor.
 - Catálogo real de ganado/subastas conectado a la vista Explorar.
 - Persistencia real de favoritos, contacto y pujas.
 - Política definitiva de privacidad, retención y ejercicio de derechos.
 
-La autorización real de API continúa siendo un mecanismo separado del login visual y debe comprobarse mediante la capa Bearer/Supabase correspondiente.
+La autorización real de API continúa siendo un mecanismo separado del login visual: `SupabaseActorResolver` verifica el Bearer y `AdminAuthorization` aplica la allowlist para escrituras administrativas.
