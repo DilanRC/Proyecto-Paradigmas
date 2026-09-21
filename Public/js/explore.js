@@ -5,6 +5,7 @@
 // Las funciones de formato se exportan puras para poder probarlas sin DOM.
 
 import { request } from './shared/api.js';
+import { montarInscripcion } from './shared/inscripcion.js';
 
 const API_URL = 'api/publicaciones.php';
 const TAMANO_PAGINA = 25;
@@ -337,6 +338,13 @@ function initialize() {
         load();
     });
     document.querySelector('[data-explore-retry]')?.addEventListener('click', load);
+
+    // Tramo B: la vista pública permite inscribirse/abandonar/reactivar
+    // contextos sin entrar al CRUD administrativo.
+    const inscripcion = document.querySelector('[data-inscripcion-contextos]');
+    if (inscripcion) {
+        montarInscripcion({ contenedor: inscripcion, requestImpl: request, storage: globalThis.sessionStorage });
+    }
 
     load();
 }

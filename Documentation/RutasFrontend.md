@@ -54,9 +54,16 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 | `/api/transportistas-vehiculos.php` |
 | `/api/vehiculos.php` |
 | `/api/pagometodos.php` |
+| `/api/capacidades.php` |
+| `/api/identidad.php` |
 | `/api/metodo-no-permitido.php` |
 
 `/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
+
+`/api/identidad.php` resuelve la **superficie del navegador** (DEC-30/33): sin
+Bearer devuelve `persona:null` (modo público) y con Bearer devuelve los
+contextos de la persona. `/api/capacidades.php` escribe los contextos
+(inscribir/abandonar/reactivar) desde la vista (Tramo B).
 
 ## Estado de autenticación
 
@@ -68,11 +75,19 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 - Redirección a `login.php?next=...` cuando una ruta administrativa no tiene marcador local válido.
 - Cierre de la sesión local desde el shell administrativo.
 - La interfaz privada se mantiene oculta hasta que el gate del frontend valida el marcador.
+- **Resolución de superficie real** (DEC-33, `Public/js/shared/sesion.js`):
+  el login consulta `GET api/identidad.php`; con Bearer del proveedor conserva
+  el actor y `api.js` adjunta `Authorization` a las peticiones; sin Bearer el
+  navegador queda en modo público de solo lectura (los 401 `SIN_SESION` se
+  muestran como "inicie sesión").
+- **Inscripción desde la vista** (Tramo B, `Public/js/shared/inscripcion.js`):
+  la vista pública Explorar ofrece inscribir/abandonar/reactivar los contextos
+  Comprador/Productor/Transportista contra `/api/capacidades.php` sin entrar al
+  CRUD administrativo.
 
 ### No implementado todavía
 
-- Validación real de credenciales contra backend.
-- Autorización de servidor basada en la sesión visual del frontend.
+- Autorización de servidor basada en la sesión visual del frontend (la autorización real sigue siendo Bearer/Supabase).
 - Catálogo real de ganado/subastas conectado a la vista Explorar.
 - Persistencia real de favoritos, contacto y pujas.
 - Política definitiva de privacidad, retención y ejercicio de derechos.

@@ -98,6 +98,15 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     <button type="button" data-explore-reset><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Restablecer</span></button>
                 </div>
             </section>
+
+            <section class="inscripcion" aria-labelledby="inscripcion-title">
+                <div class="inscripcion__intro">
+                    <p class="section-kicker">Tu participación</p>
+                    <h2 id="inscripcion-title">Participa sin dominar el modelo de datos</h2>
+                    <p>¿Quieres comprar, vender o fletear? Regístrate desde aquí: el sistema reconoce a la misma persona en cualquiera de sus contextos y no le pide entender tablas ni roles.</p>
+                </div>
+                <div class="inscripcion__contextos" data-inscripcion-contextos aria-live="polite"></div>
+            </section>
         </main>
 
         <div class="explore-toast" role="status" aria-live="polite" data-explore-toast hidden></div>

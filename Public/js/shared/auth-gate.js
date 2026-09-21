@@ -6,7 +6,8 @@
 // La autorización real de API sigue perteneciendo al mecanismo Bearer/Supabase.
 
 import { capturarEnInicioDeSesion } from './ubicacion-sesion.js';
-import { request } from './api.js';
+import { request, setBearer } from './api.js';
+import { guardarActor, guardarBearer, leerActor, leerBearer, resolverSuperficie } from './sesion.js';
 
 export const SESSION_KEY = 'tindercows:login';
 
@@ -91,6 +92,21 @@ function revealPrivateUi() {
     }
 }
 
+// Tramo A: si el navegador porta un Bearer del proveedor, se adjunta a las
+// peticiones (api.js) y se resuelve la superficie de identidad para conservar
+// el actor. Sin Bearer no se fabrica sesión: el modo local sigue en público.
+async function enriquecerSuperficie(storage, requestImpl = request) {
+    try {
+        setBearer(leerBearer(storage));
+        const resuelto = await resolverSuperficie({ requestImpl, storage });
+        if (resuelto.autenticado && resuelto.actor) {
+            guardarActor(storage, resuelto.actor, leerBearer(storage));
+        }
+    } catch {
+        // Sin sesión verificable: el shell conserva el modo público.
+    }
+}
+
 if (typeof window !== 'undefined') {
     const allowed = enforceBrowserSession({
         location: window.location,
@@ -103,6 +119,9 @@ if (typeof window !== 'undefined') {
         } else {
             wirePrivateShell(window.sessionStorage);
         }
+
+        // Tramo A: resolución no bloqueante de la superficie autenticada.
+        enriquecerSuperficie(window.sessionStorage);
 
         // Captura de ubicación en background: una por inicio de sesión.
         const sesion = readBrowserSession(window.sessionStorage);

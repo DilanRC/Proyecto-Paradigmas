@@ -1,4 +1,5 @@
-const SESSION_KEY = 'tindercows:login';
+import { flujoLogin, guardarActor, leerBearer, SESSION_KEY } from './shared/sesion.js';
+
 const PRIVATE_ROUTES = new Set([
     'productores.php',
     'compradores.php',
@@ -37,6 +38,48 @@ function validate(form) {
     return valid;
 }
 
+/**
+ * Marca local de sesión del demo. El backend sigue exigiendo Bearer (DEC-30);
+ * este marcador únicamente abre el shell privado para inspección local y es la
+ * sesión "modo público" documentada en DEC-33: sin sesión real solo hay
+ * lecturas, y los 401 SIN_SESION se muestran como "inicie sesión".
+ */
+function guardarMarcadorLocal(email) {
+    if (typeof globalThis === 'undefined' || !globalThis.sessionStorage) return;
+    globalThis.sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        authenticated: true,
+        version: 1,
+        email: String(email ?? '').trim(),
+        startedAt: new Date().toISOString(),
+        mode: 'local-browser-session',
+    }));
+}
+
+async function enviarLogin(event, form, status, storage) {
+    event.preventDefault();
+    if (!validate(form)) return false;
+
+    const email = String(new FormData(form).get('email') ?? '').trim();
+
+    // Tramo A: resolver la superficie contra identidad.php. Si el navegador ya
+    // porta un Bearer real (proveedor de identidad), flujoLogin conserva el
+    // actor y las superficies privadas funcionan de verdad. Sin Bearer, el
+    // resultado es modo público y la sesión local no representa credenciales
+    // verificadas contra el servidor.
+    const resuelto = await flujoLogin({ email, storage });
+    if (resuelto.autenticado && resuelto.actor && storage) {
+        guardarActor(storage, resuelto.actor, leerBearer(storage));
+        status.textContent = 'Sesión verificada con el proveedor. Abriendo TinderCows…';
+    } else {
+        guardarMarcadorLocal(email);
+        status.textContent = 'Acceso confirmado (modo público de solo lectura). '
+            + 'Para escribir, inicie sesión con su proveedor de identidad.';
+    }
+
+    window.location.assign(resolveNext(window.location.search));
+    return true;
+}
+
 function initialize() {
     const form = document.querySelector('#formulario-login');
     const status = document.querySelector('#login-status');
@@ -47,19 +90,7 @@ function initialize() {
     });
 
     form.addEventListener('submit', (event) => {
-        event.preventDefault();
-        if (!validate(form)) return;
-
-        const email = String(new FormData(form).get('email') ?? '').trim();
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-            authenticated: true,
-            version: 1,
-            email,
-            startedAt: new Date().toISOString(),
-            mode: 'local-browser-session',
-        }));
-        status.textContent = 'Acceso confirmado. Abriendo TinderCows…';
-        window.location.assign(resolveNext(window.location.search));
+        enviarLogin(event, form, status, globalThis.sessionStorage);
     });
 }
 
