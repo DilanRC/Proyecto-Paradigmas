@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TinderCows te ayuda a descubrir ganado, subastas y oportunidades cerca de ti.">
+    <meta name="description" content="TinderCows te ayuda a descubrir ganado y oportunidades cerca de ti.">
     <meta name="theme-color" content="#151a18">
     <title>TinderCows — Ganado y oportunidades cerca de ti</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -40,7 +40,7 @@
                     </button>
                     <div class="public-search__field">
                         <label class="screen-reader-only" for="busqueda-publica-home">Buscar publicaciones</label>
-                        <input id="busqueda-publica-home" name="q" type="search" autocomplete="off" placeholder="Ganado, subastas, zona…">
+                        <input id="busqueda-publica-home" name="q" type="search" autocomplete="off" placeholder="Ganado, zona…">
                         <button type="submit" aria-label="Buscar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
                     </div>
                 </form>
@@ -55,16 +55,16 @@
         <main>
             <section class="public-hero public-hero--clean" aria-labelledby="public-title">
                 <div class="public-hero__copy">
-                    <p class="public-eyebrow">Ganado · Subastas · Cercanía</p>
+                    <p class="public-eyebrow">Ganado · Cercanía · Contacto</p>
                     <h1 id="public-title">El ganado que buscas, más cerca de ti.</h1>
-                    <p class="public-hero__lead">Explora publicaciones, descubre subastas cercanas, guarda lo que te interesa y conecta directamente con quienes están detrás de cada oportunidad.</p>
+                    <p class="public-hero__lead">Explora publicaciones cercanas, guarda lo que te interesa y conecta directamente con quienes están detrás de cada oportunidad.</p>
                     <div class="public-hero__actions">
                         <a class="public-cta" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar publicaciones</span></a>
                         <a class="public-secondary" href="#como-funciona"><i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Cómo funciona</span></a>
                     </div>
                     <div class="public-hero__signals" aria-label="Funciones principales">
                         <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Cerca de ti</span>
-                        <span><i class="fa-solid fa-gavel" aria-hidden="true"></i> Subastas</span>
+                        <span><i class="fa-solid fa-heart" aria-hidden="true"></i> Interés guardado</span>
                         <span><i class="fa-solid fa-message" aria-hidden="true"></i> Contacto directo</span>
                     </div>
                 </div>
@@ -84,11 +84,11 @@
                     <p class="section-kicker">Nosotros</p>
                     <h2 id="about-title">TinderCows convierte descubrir ganado en una experiencia simple y cercana.</h2>
                 </div>
-                <p class="section-lead">Reunimos publicaciones, ubicación, subastas y contacto en un solo recorrido para que comparar opciones y tomar una decisión requiera menos pasos.</p>
+                <p class="section-lead">Reunimos publicaciones, ubicación y contacto en un solo recorrido para que comparar opciones y tomar una decisión requiera menos pasos.</p>
                 <div class="about-grid about-grid--product">
-                    <article><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i><h3>Descubre por cercanía</h3><p>Prioriza oportunidades relevantes por zona y encuentra ganado o subastas que realmente puedas considerar.</p></article>
+                    <article><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i><h3>Descubre por cercanía</h3><p>Prioriza oportunidades relevantes por zona y encuentra ganado que realmente puedas considerar.</p></article>
                     <article><i class="fa-solid fa-layer-group" aria-hidden="true"></i><h3>Decide con contexto</h3><p>Compara publicaciones desde tarjetas claras, guarda favoritas y pasa de largo cuando una opción no encaja contigo.</p></article>
-                    <article><i class="fa-solid fa-handshake" aria-hidden="true"></i><h3>Conecta y negocia</h3><p>Contacta a la persona responsable de una publicación o participa en una puja cuando la oportunidad lo permita.</p></article>
+                    <article><i class="fa-solid fa-handshake" aria-hidden="true"></i><h3>Conecta y registra interés</h3><p>Registra tu interés o contacto sobre una publicación cuando la oportunidad lo permita.</p></article>
                 </div>
             </section>
 
@@ -98,9 +98,9 @@
                     <h2 id="how-title">Explora, decide y conecta sin perder el contexto.</h2>
                 </div>
                 <ol class="use-steps use-steps--compact">
-                    <li><span>01</span><div><strong>Explora</strong><p>Desliza publicaciones de ganado y subastas, usa búsqueda cuando la necesites y filtra por lo que te interesa.</p></div></li>
+                        <li><span>01</span><div><strong>Explora</strong><p>Desliza publicaciones de ganado, usa búsqueda cuando la necesites y filtra por lo que te interesa.</p></div></li>
                     <li><span>02</span><div><strong>Decide</strong><p>Marca una publicación, descártala o abre sus detalles sin salir del flujo de exploración.</p></div></li>
-                    <li><span>03</span><div><strong>Conecta</strong><p>Contacta al publicador o participa en una puja cuando la publicación tenga una subasta activa.</p></div></li>
+                        <li><span>03</span><div><strong>Conecta</strong><p>Contacta al publicador y registra la acción que corresponda.</p></div></li>
                 </ol>
             </section>
 

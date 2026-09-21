@@ -464,9 +464,11 @@ python3 Tests/documentation_test.py
 - SQL directo puede crear huérfanos, duplicados y valores fuera del dominio.
 - `tbproductorid` no tiene garantía de unicidad en MySQL; el consecutivo solo se
   serializa dentro del flujo PHP.
-- Publicar, comprar, pujar, favoritos y contacto todavía no tienen un contrato
-  HTTP de escritura completo; la interfaz lo comunica como preparación o acción
-  no persistente y no anuncia una operación comercial falsa.
+- Publicar y las interacciones públicas (`Me interesa`, `Pasar` y `Contactar`)
+  tienen contrato HTTP de escritura y persistencia. Compra, subastas y pujas
+  quedan fuera del alcance de esta entrega, por indicación de Calidad; sus
+  tablas históricas se conservan en el modelo, pero no se ofrecen como acciones
+  operativas en la interfaz.
 - El modelo comercial histórico aún contiene `tbproductorcompradorid` y
   `tbproductorid` en hechos que deben poder pertenecer a un Comprador sin ser
   Productor. Ese contrato requiere decisión de Calidad y migración coordinada

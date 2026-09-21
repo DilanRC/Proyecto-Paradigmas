@@ -45,7 +45,7 @@
         </ol>
     </section>
 
-    <section class="onboarding-card" aria-live="polite">
+    <section class="onboarding-card">
         <form id="registro-form" novalidate aria-busy="false">
             <section class="onboarding-step" data-step="persona">
                 <div class="step-heading"><span class="step-number">01</span><div><h2>Tu información</h2><p>Estos datos identifican a la persona. No se volverán a pedir por cada actividad.</p></div></div>
@@ -64,7 +64,7 @@
             <section class="onboarding-step" data-step="intereses" hidden>
                 <div class="step-heading"><span class="step-number">02</span><div><h2>¿Qué quieres hacer?</h2><p>Puedes elegir una, varias o todas. Estas opciones describen actividades de negocio, no roles administrativos.</p></div></div>
                 <div class="capability-grid">
-                    <label class="capability-card"><input type="checkbox" name="capacidades" value="COMPRADOR"><span class="capability-card__icon"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span><strong>Comprar ganado</strong><span>Explorar oportunidades, comprar o participar en pujas.</span></label>
+                    <label class="capability-card"><input type="checkbox" name="capacidades" value="COMPRADOR"><span class="capability-card__icon"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span><strong>Explorar como comprador</strong><span>Guardar oportunidades y registrar interés sobre publicaciones activas.</span></label>
                     <label class="capability-card"><input type="checkbox" name="capacidades" value="PRODUCTOR"><span class="capability-card__icon"><i class="fa-solid fa-cow" aria-hidden="true"></i></span><strong>Vender o publicar</strong><span>Registrar tus fincas y publicar ganado cuando lo necesites.</span></label>
                     <label class="capability-card"><input type="checkbox" name="capacidades" value="TRANSPORTISTA"><span class="capability-card__icon"><i class="fa-solid fa-truck" aria-hidden="true"></i></span><strong>Ofrecer fletes</strong><span>Ofrecer transporte; los vehículos se pueden asociar después.</span></label>
                 </div>

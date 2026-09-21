@@ -159,21 +159,16 @@ function initializeBusinessActionGate() {
         const button = event.target instanceof Element ? event.target.closest('[data-explore-action]') : null;
         if (!(button instanceof HTMLButtonElement)) return;
         const action = button.dataset.exploreAction;
-        if (!['Me interesa', 'Contactar'].includes(action)) return;
+        if (!['Me interesa', 'Contactar', 'Pasar'].includes(action)) return;
 
         const session = readStorage(SESSION_KEY);
         const profile = readStorage(PROFILE_KEY);
-        const buyerState = profile?.capacidadesEstado?.COMPRADOR ?? 'NO_CONFIGURADO';
         let destination = null;
 
         if (!session?.authenticated) {
-            destination = profile ? 'login.php?next=explorar.php' : 'registro.php?capacidad=COMPRADOR&next=explorar.php';
-        } else if (!profile) {
-            destination = 'registro.php?capacidad=COMPRADOR&next=explorar.php';
-        } else if (buyerState === 'NO_CONFIGURADO') {
-            destination = 'registro.php?capacidad=COMPRADOR&next=explorar.php';
-        } else if (buyerState === 'INACTIVO') {
-            destination = 'mi-actividad.php';
+            destination = 'login.php?next=explorar.php';
+        } else if (!profile?.persona) {
+            destination = 'registro.php?next=explorar.php';
         }
 
         if (!destination) return;
@@ -183,18 +178,10 @@ function initializeBusinessActionGate() {
     }, true);
 }
 
-function initializeExploreCommerce() {
-    if (!document.body.classList.contains('explore-page')) return;
-    import('./explore-actions.js').catch((error) => {
-        console.error('No se pudo inicializar el flujo Comprar / pujar.', error);
-    });
-}
-
 function initialize() {
     initializePublicSearch();
     enhancePublicNavigation();
     initializeBusinessActionGate();
-    initializeExploreCommerce();
     // Explorar coordina su propia recarga al recibir la ubicación. El resto del
     // sitio público inicia la captura aquí para que la sesión ya conozca la zona.
     if (!document.body.classList.contains('explore-page')) inicializarUbicacionAutomatica();

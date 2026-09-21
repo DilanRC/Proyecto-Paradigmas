@@ -103,6 +103,52 @@ try {
     $fincaId = (int) $buscarFinca->fetchColumn();
     test_assert($fincaId > 0, 'La fixture debe dejar una finca para publicar');
 
+    $buscarPersona = $db->prepare(
+        'SELECT tbpersonaid, tbpersonacorreoelectronico FROM tbpersona
+         WHERE tbpersonaidentificacionnumero = :identificacion'
+    );
+    $buscarPersona->execute(['identificacion' => $vendedor['identificacionNumero']]);
+    $persona = $buscarPersona->fetch();
+    test_assert(is_array($persona), 'La fixture debe dejar una Persona autenticable');
+    $actor = Application\Auth\ActorContext::usuarioVerificado(
+        (int) $persona['tbpersonaid'],
+        'test-subject-' . test_token('subject'),
+        $persona['tbpersonacorreoelectronico'],
+        null,
+    );
+    $publicador = new Application\Controller\AnimalPublicacionController(
+        $db,
+        test_token('publicar'),
+        $actor,
+    );
+    $publicadoPorApi = $publicador->procesar('POST', [], [
+        'fincaNombre' => 'Finca Publicaciones',
+        'animalIdentificacion' => 'API-' . test_token('animal'),
+        'raza' => 'Jersey',
+        'sexo' => 'HEMBRA',
+        'proposito' => 'LECHE',
+        'edadMeses' => 20,
+        'peso' => 330.5,
+        'titulo' => 'Publicación API ' . test_token('titulo'),
+        'descripcion' => 'Creada por el contrato autenticado.',
+        'precio' => 875000,
+    ]);
+    test_same(201, $publicadoPorApi['status'], 'La API autenticada debe crear una publicación');
+    test_assert(($publicadoPorApi['body']['data']['publicacionId'] ?? 0) > 0,
+        'La API debe devolver el identificador persistido');
+    $bitacora = $db->prepare(
+        'SELECT tbbitacoraentidad, tbbitacoraorigen FROM tbbitacora
+         WHERE tbbitacoraregistroidentificacionnumero = :registro
+         ORDER BY tbbitacoraid DESC LIMIT 1'
+    );
+    $bitacora->execute(['registro' => 'PUBLICACION:' . $publicadoPorApi['body']['data']['publicacionId']]);
+    $evento = $bitacora->fetch();
+    test_same('PUBLICACION', $evento['tbbitacoraentidad'] ?? null,
+        'La publicación debe registrar una bitácora propia');
+    test_same('API_PUBLICACIONES', $evento['tbbitacoraorigen'] ?? null,
+        'La bitácora debe identificar el origen de publicación');
+    $animalIds[] = (int) $publicadoPorApi['body']['data']['animalId'];
+
     $marca = 'Novillas ' . test_token('titulo');
     $creado = publicar_animal($animales, $db, $vendedorId, $fincaId,
         ['codigo' => 'AN-' . test_token('animal'), 'sexo' => 'HEMBRA', 'raza' => 'Brahman'],
@@ -155,8 +201,8 @@ try {
         'Un tamaño de página mayor a 100 debe ser 422');
     test_same(422, test_publicacion_controller()->procesar('GET', ['pagina' => '0'], [])['status'],
         'La página debe ser un entero positivo');
-    test_same(405, test_publicacion_controller()->procesar('POST', [], [])['status'],
-        'El endpoint es de solo lectura');
+    test_same(401, test_publicacion_controller()->procesar('POST', [], [])['status'],
+        'La creación de publicaciones exige una Persona autenticada');
 
     echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo y validaciones.\n";
 } finally {

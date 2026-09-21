@@ -106,6 +106,11 @@ const EXPECTED_COLUMNS = [
         'tbanimalinteracciontipo', 'tbanimalinteraccionaccion',
         'tbanimalinteraccionfecha', 'tbanimalinteraccionorigen',
     ],
+    'tbanimalpublicacioninteraccion' => [
+        'tbanimalpublicacioninteraccionid', 'tbpersonaid', 'tbanimalpublicacionid',
+        'tbanimalpublicacioninteracciontipo', 'tbanimalpublicacioninteraccionaccion',
+        'tbanimalpublicacioninteraccionfecha', 'tbanimalpublicacioninteraccionorigen',
+    ],
     'tbcarrito' => [
         'tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion',
     ],
@@ -232,7 +237,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 32 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 33 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -427,7 +432,7 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v7'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v8'))");
     $connection->exec($schema);
     normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
@@ -437,7 +442,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=32 migration=v7\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=33 migration=v8\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

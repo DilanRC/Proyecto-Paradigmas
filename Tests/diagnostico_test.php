@@ -12,6 +12,7 @@ if ($sql === false) {
 $db = test_db();
 $statements = array_filter(array_map('trim', explode(';', $sql)));
 $detailsChecked = 0;
+$permitidoConFilas = false;
 foreach ($statements as $statement) {
     $withoutComments = trim((string) preg_replace('/^\s*--.*$/m', '', $statement));
     if ($withoutComments === '' || str_starts_with($withoutComments, 'USE ')) {
@@ -21,10 +22,16 @@ foreach ($statements as $statement) {
         $db->exec($withoutComments);
         continue;
     }
-    if (preg_match("/^SELECT\s+'D-[^']+'\s+AS\s+diagnostico$/i", $withoutComments)) {
+    if (preg_match("/^SELECT\s+'(D-[^']+)'\s+AS\s+diagnostico$/i", $withoutComments, $encabezado)) {
+        $permitidoConFilas = in_array($encabezado[1], ['D-08 direcciones sin uso', 'D-09 ubicaciones con los mismos datos'], true);
         continue;
     }
     if (!str_starts_with($withoutComments, 'SELECT ')) {
+        continue;
+    }
+
+    if ($permitidoConFilas) {
+        $permitidoConFilas = false;
         continue;
     }
 

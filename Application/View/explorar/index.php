@@ -9,7 +9,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Explora ganado, subastas y oportunidades cercanas en TinderCows.">
+    <meta name="description" content="Explora ganado y oportunidades cercanas en TinderCows.">
     <meta name="theme-color" content="#151a18">
     <title>Explorar | TinderCows</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -21,7 +21,8 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/explore.css?v=explore-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-2"></script>
-    <script type="module" src="js/explore.js?v=explore-1"></script>
+    <script type="module" src="js/explore.js?v=explore-2"></script>
+    <script type="module" src="js/explore-interactions.js?v=interactions-1"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
@@ -48,7 +49,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     </button>
                     <div class="public-search__field">
                         <label class="screen-reader-only" for="busqueda-publica-explorar">Buscar publicaciones</label>
-                        <input id="busqueda-publica-explorar" name="q" type="search" autocomplete="off" value="<?= htmlspecialchars($query, ENT_QUOTES, 'UTF-8') ?>" placeholder="Ganado, subastas, zona…" data-explore-search>
+                        <input id="busqueda-publica-explorar" name="q" type="search" autocomplete="off" value="<?= htmlspecialchars($query, ENT_QUOTES, 'UTF-8') ?>" placeholder="Ganado, zona…" data-explore-search>
                         <button type="submit" aria-label="Buscar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
                     </div>
                 </form>
@@ -64,7 +65,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <div>
                     <p class="section-kicker">Explorar</p>
                     <h1 id="explore-title">Oportunidades para descubrir, comparar y decidir.</h1>
-                    <p>Desliza entre publicaciones de ganado y subastas, guarda lo que te interesa y abre contacto o puja cuando corresponda.</p>
+                    <p>Desliza entre publicaciones de ganado, guarda lo que te interesa y registra tus acciones sobre cada oportunidad.</p>
                 </div>
                 <div class="explore-heading__controls" data-explore-filters aria-label="Filtrar por propósito">
                     <button class="explore-chip is-active" type="button" data-explore-filter="todos"><span>Todo</span></button>
@@ -103,7 +104,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <div class="inscripcion__intro">
                     <p class="section-kicker">Tu participación</p>
                     <h2 id="inscripcion-title">Participa sin dominar el modelo de datos</h2>
-                    <p>¿Quieres comprar, vender o fletear? Regístrate desde aquí: el sistema reconoce a la misma persona en cualquiera de sus contextos y no le pide entender tablas ni roles.</p>
+                    <p>¿Quieres explorar, vender o fletear? Regístrate desde aquí: el sistema reconoce a la misma persona en cualquiera de sus contextos y no le pide entender tablas ni roles.</p>
                 </div>
                 <div class="inscripcion__contextos" data-inscripcion-contextos aria-live="polite"></div>
             </section>

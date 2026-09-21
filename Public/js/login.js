@@ -4,11 +4,17 @@ import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js
 import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js';
 
 const PUBLIC_DESTINATIONS = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
+const ADMIN_DESTINATIONS = new Set(['productores.php', 'compradores.php', 'transportistas.php', 'vehiculos.php', 'pagometodos.php']);
 
 export function resolveNext(search = '', hasProfile = false) {
     const requested = new URLSearchParams(search).get('next');
     if (requested && PUBLIC_DESTINATIONS.has(requested)) return requested;
     return hasProfile ? 'mi-actividad.php' : 'explorar.php';
+}
+
+export function resolveAdminNext(search = '') {
+    const requested = new URLSearchParams(search).get('next');
+    return requested && ADMIN_DESTINATIONS.has(requested) ? requested : 'productores.php';
 }
 
 function setError(control, message) {
@@ -89,7 +95,7 @@ function initialize() {
                     if (error?.status === 409 && await isAdminAccount()) {
                         writeAdminBrowserSession(email);
                         status.textContent = 'Acceso administrativo confirmado. Abriendo TinderCows…';
-                        window.location.assign('explorar.php');
+                        window.location.assign(resolveAdminNext(window.location.search));
                         return;
                     }
                     if (error?.status === 409) {
@@ -105,6 +111,17 @@ function initialize() {
                 // sesión válida de Supabase para que el usuario pueda reintentar
                 // sin crear otra sesión remota.
                 status.textContent = error?.message || 'La sesión se inició, pero no pudimos cargar tu perfil. Intenta nuevamente.';
+                return;
+            }
+
+            if (new URLSearchParams(window.location.search).get('area') === 'admin') {
+                if (!await isAdminAccount()) {
+                    status.textContent = 'La cuenta inició sesión, pero no tiene autorización administrativa.';
+                    return;
+                }
+                writeAdminBrowserSession(email);
+                status.textContent = 'Acceso administrativo confirmado. Abriendo TinderCows…';
+                window.location.assign(resolveAdminNext(window.location.search));
                 return;
             }
 

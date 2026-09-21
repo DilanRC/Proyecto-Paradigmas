@@ -1,8 +1,8 @@
 export const BUSINESS_CAPABILITIES = Object.freeze({
     COMPRADOR: Object.freeze({
         id: 'COMPRADOR',
-        label: 'Comprar ganado',
-        description: 'Explorar, guardar oportunidades y participar en compras o pujas.',
+        label: 'Explorar como comprador',
+        description: 'Explorar y guardar oportunidades de ganado.',
         requiredSections: [],
     }),
     PRODUCTOR: Object.freeze({

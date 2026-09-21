@@ -28,7 +28,7 @@ export const CONTEXTOS_INSCRIPCION = [
         clave: 'comprador',
         etiqueta: 'Comprador',
         accionNatural: 'comprar',
-        descripcion: 'Regístrese para comprar ganado y participar en subastas.',
+        descripcion: 'Regístrese para explorar y guardar oportunidades de ganado.',
     },
     {
         clave: 'productor',

@@ -45,7 +45,7 @@
                     <h1 id="publish-title">Prepara una publicación sin salir del flujo.</h1>
                     <p>Si todavía no participas como productor, TinderCows te pedirá únicamente los datos que faltan y luego volverá aquí.</p>
                 </div>
-                <span class="flow-status-chip"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Frontend conectado a reglas actuales</span>
+                <span class="flow-status-chip"><i class="fa-solid fa-database" aria-hidden="true"></i> Guardado persistente al publicar</span>
             </section>
 
             <section class="flow-card" id="publish-gate" hidden aria-live="polite"></section>
@@ -83,7 +83,7 @@
                     <div class="flow-feedback" id="publish-status" role="status" aria-live="polite" hidden></div>
                     <div class="flow-actions">
                         <a class="flow-button" href="mi-actividad.php">Mi actividad</a>
-                        <button class="flow-button flow-button--primary" id="publish-submit" type="submit">Preparar publicación</button>
+                    <button class="flow-button flow-button--primary" id="publish-submit" type="submit">Publicar ganado</button>
                     </div>
                 </form>
             </section>

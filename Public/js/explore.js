@@ -137,6 +137,14 @@ function specEntry(icono, etiqueta, valor) {
  */
 export function buildCard(publicacion) {
     const article = element('article', 'explore-card');
+    const publicacionId = Number(publicacion?.publicacionId);
+    const animalId = Number(publicacion?.animalId);
+    if (Number.isInteger(publicacionId) && publicacionId > 0) {
+        article.dataset.publicacionId = String(publicacionId);
+    }
+    if (Number.isInteger(animalId) && animalId > 0) {
+        article.dataset.animalId = String(animalId);
+    }
 
     const visual = element('div', 'explore-card__visual explore-card__visual--green');
     visual.setAttribute('aria-hidden', 'true');
@@ -269,20 +277,21 @@ function render() {
     deck.hidden = state.cargando || state.error !== null || items.length === 0;
 
     deck.replaceChildren(...items.map(buildCard));
-    for (const boton of deck.querySelectorAll('[data-explore-action]')) {
-        boton.addEventListener('click', () => {
-            const accion = boton.dataset.exploreAction;
-            showToast(`${accion}: acción visual. Se conectará al servicio correspondiente.`);
-            if (accion === 'Pasar' && items.length > 1) {
-                state.index = (state.index + 1) % items.length;
-                scrollToCurrent();
-            }
-        });
-    }
 
     document.querySelector('.explore-deck__navigation')
         ?.toggleAttribute('hidden', items.length === 0);
     updatePosition(items.length);
+}
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('explore:interaction-saved', (event) => {
+        if (event.detail?.type !== 'PASAR') return;
+        const total = visibleItems().length;
+        if (total > 1) {
+            state.index = (state.index + 1) % total;
+            scrollToCurrent();
+        }
+    });
 }
 
 async function load() {

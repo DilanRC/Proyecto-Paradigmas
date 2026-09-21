@@ -221,6 +221,16 @@ CREATE TABLE IF NOT EXISTS public.tbanimalinteraccion (
     tbanimalinteraccionorigen VARCHAR(100) NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbanimalpublicacioninteraccion (
+    tbanimalpublicacioninteraccionid INTEGER NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
+    tbanimalpublicacionid INTEGER NOT NULL,
+    tbanimalpublicacioninteracciontipo VARCHAR(30) NOT NULL,
+    tbanimalpublicacioninteraccionaccion VARCHAR(30) NOT NULL,
+    tbanimalpublicacioninteraccionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbanimalpublicacioninteraccionorigen VARCHAR(100) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbcarrito (
     tbcarritoid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
@@ -330,6 +340,7 @@ ALTER TABLE public.tbanimalpublicacion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcompra ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbventa ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalinteraccion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimalpublicacioninteraccion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcarrito ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcarritoanimal ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistaestadoperiodo ENABLE ROW LEVEL SECURITY;

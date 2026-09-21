@@ -1,3 +1,5 @@
+import { getAccessToken } from './shared/supabase-auth.js';
+
 const PROFILE_KEY = 'tindercows:profile';
 const SESSION_KEY = 'tindercows:login';
 const DRAFT_KEY = 'tindercows:publish-draft';
@@ -105,6 +107,29 @@ function validate(form) {
     return false;
 }
 
+async function crearPublicacion(draft) {
+    const token = await getAccessToken();
+    if (!token) throw new Error('La sesión expiró. Entra de nuevo para publicar.');
+    const response = await fetch('api/publicaciones.php', {
+        method: 'POST',
+        headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(draft),
+    });
+    let payload = null;
+    try { payload = await response.json(); } catch { /* El estado se comunica abajo. */ }
+    if (!response.ok || payload?.success !== true) {
+        const error = new Error(payload?.message || 'No fue posible guardar la publicación.');
+        error.fieldErrors = payload?.errors ?? {};
+        error.status = response.status;
+        throw error;
+    }
+    return payload.data;
+}
+
 function initialize() {
     const form = document.querySelector('#publish-form');
     const submit = document.querySelector('#publish-submit');
@@ -160,7 +185,7 @@ function initialize() {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(serialize(form)));
     });
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!validate(form) || submit.disabled) return;
         submit.disabled = true;
@@ -169,11 +194,12 @@ function initialize() {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
 
         try {
-            setStatus(
-                'warning',
-                'Publicación preparada',
-                'El frontend ya reunió los datos y preservó el borrador en esta sesión. No se envió a MySQL porque el backend actual expone publicaciones solo por GET y todavía no existe un contrato HTTP aprobado para crear una publicación.',
-            );
+            const resultado = await crearPublicacion(draft);
+            sessionStorage.removeItem(DRAFT_KEY);
+            setStatus('success', 'Publicación guardada',
+                `Tu publicación quedó activa. Código de publicación: ${resultado.publicacionId}.`);
+        } catch (error) {
+            setStatus('error', 'No se guardó la publicación', error.message);
         } finally {
             form.setAttribute('aria-busy', 'false');
             submit.disabled = false;

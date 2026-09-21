@@ -134,6 +134,29 @@ final class Productor
         return $fila === false ? null : $fila;
     }
 
+    public function buscarPorPersonaId(int $personaId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            "SELECT p.*, {$this->sqlEstadoVigente('p')} AS tbproductorestado,
+                    pe.tbpersonaestado, pe.tbpersonaid,
+                    pe.tbpersonaidentificacionnumero
+             FROM tbproductor p
+             INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
+             WHERE p.tbpersonaid = :personaId
+             ORDER BY p.tbproductorid"
+        );
+        $sentencia->execute(['personaId' => $personaId]);
+        $filas = $sentencia->fetchAll();
+        if ($filas === []) {
+            return null;
+        }
+        if (count($filas) > 1) {
+            throw new \RuntimeException('La Persona está vinculada a más de un productor.');
+        }
+
+        return $filas[0];
+    }
+
     public function bloquear(string $identificacionNumero): ?array
     {
         $sentencia = $this->conexion->prepare(

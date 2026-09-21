@@ -52,7 +52,7 @@ try {
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
-    if ($metodo !== 'GET') AdminAuthorization::require($actor);
+    AdminAuthorization::require($actor);
     $controlador = new TransportistaController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,

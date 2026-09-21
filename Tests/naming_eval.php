@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('treinta_y_dos_tablas', $manifest['table_count'] === 32,
-    'SQL crea exactamente treinta y dos tablas, incluida identidad e históricos de teléfono');
+$evaluate('treinta_y_tres_tablas', $manifest['table_count'] === 33,
+    'SQL crea exactamente treinta y tres tablas, incluida identidad e históricos de teléfono');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -77,7 +77,7 @@ $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !st
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbanimal',
     'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
-    'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito',
+    'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbbitacora', 'tbcarrito',
     'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
     'tbcompradorpersonatelefonohistorico',
     'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',

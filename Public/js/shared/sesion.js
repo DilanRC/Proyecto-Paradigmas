@@ -1,4 +1,4 @@
-// Superficie del navegador: autenticado (escritura) frente a público (solo lectura).
+// Superficie del navegador: sesión autenticada para escrituras frente a acceso público.
 //
 // El backend no implementa login propio (DEC-30): resuelve el actor desde el
 // encabezado Authorization Bearer y la superficie de identidad
@@ -8,8 +8,8 @@
 //      navegador (si lo hay) — nunca inventa credenciales.
 //   2. Conserva actor + bearer en sessionStorage únicamente cuando el
 //      proveedor realmente devolvió una persona (flujo autenticado).
-//   3. Deja el demo local sin bearer en modo público de solo lectura, tal como
-//      documentan DEC-30 y DEC-33.
+//   3. Deja el acceso público sin bearer y reserva las escrituras para APIs que
+//      validan el token del proveedor.
 //
 // La identidad vive en tbpersona: Productor, Comprador y Transportista son
 // contextos de la misma persona (DEC-28/29), nunca roles administrativos.

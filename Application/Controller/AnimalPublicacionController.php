@@ -9,9 +9,14 @@ namespace Application\Controller;
 require_once dirname(__DIR__) . '/Service/PublicacionCercaniaService.php';
 
 use Application\HttpException;
+use Application\Auth\ActorContext;
 use Application\Model\AnimalComercial;
+use Application\Model\Bitacora;
+use Application\Model\Productor;
+use Application\Model\ProductorFinca;
 use Application\Service\PublicacionCercaniaService;
 use PDO;
+use Throwable;
 
 /** Lectura de publicaciones para la vista Explorar. */
 final class AnimalPublicacionController
@@ -20,11 +25,22 @@ final class AnimalPublicacionController
 
     private readonly AnimalComercial $animales;
     private readonly PublicacionCercaniaService $cercania;
+    private readonly ?ActorContext $actor;
+    private readonly Productor $productor;
+    private readonly Bitacora $bitacora;
+    private readonly string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null)
+    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null,
+        ?ActorContext $actor = null)
     {
         $this->animales = new AnimalComercial($conexion);
         $this->cercania = new PublicacionCercaniaService($conexion);
+        $this->actor = $actor;
+        $this->solicitudId = is_string($solicitudId) && trim($solicitudId) !== ''
+            ? trim($solicitudId)
+            : bin2hex(random_bytes(16));
+        $this->productor = new Productor($conexion, new ProductorFinca($conexion));
+        $this->bitacora = new Bitacora($conexion, $actor);
     }
 
     public function procesar(string $metodo, array $consulta, array $cuerpo): array
@@ -32,6 +48,7 @@ final class AnimalPublicacionController
         try {
             return match ($metodo) {
                 'GET' => $this->consultar($consulta),
+                'POST' => $this->crear($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
         } catch (HttpException $excepcion) {
@@ -43,6 +60,146 @@ final class AnimalPublicacionController
                 $excepcion->errores
             );
         }
+    }
+
+    private function crear(array $cuerpo): array
+    {
+        $actor = $this->actor;
+        if (!$actor?->tienePersona()) {
+            throw new HttpException('Debe iniciar sesión para publicar ganado.', 401);
+        }
+
+        $productor = $this->productor->buscarPorPersonaId((int) $actor->personaId);
+        if ($productor === null) {
+            throw new HttpException('La cuenta no tiene una actividad Productor configurada.', 409);
+        }
+        if ((int) ($productor['tbproductorestado'] ?? 0) !== 1
+            || (int) ($productor['tbpersonaestado'] ?? 0) !== 1) {
+            throw new HttpException('La actividad Productor está inactiva.', 409);
+        }
+
+        $datos = $this->validarPublicacion($cuerpo);
+        $finca = $this->fincaActiva((int) $productor['tbproductorid'], $datos['fincaNombre']);
+        if ($finca === null) {
+            throw new HttpException('La finca seleccionada no está activa para este Productor.', 422, null, [
+                'fincaNombre' => 'Seleccione una finca activa de su perfil.',
+            ]);
+        }
+
+        $this->conexion->beginTransaction();
+        try {
+            $resultado = $this->animales->ejecutarConBloqueoAlta(
+                'tbanimal',
+                fn (): array => $this->crearPublicacionCompleta(
+                    (int) $productor['tbproductorid'],
+                    (int) $finca['tbfincaid'],
+                    $datos,
+                ),
+            );
+            $this->bitacora->registrar(
+                'CREAR',
+                'PUBLICACION:' . $resultado['publicacionId'],
+                null,
+                $resultado,
+                $this->solicitudId,
+                entidad: 'PUBLICACION',
+                origen: 'API_PUBLICACIONES',
+            );
+            $this->conexion->commit();
+        } catch (Throwable $error) {
+            if ($this->conexion->inTransaction()) {
+                $this->conexion->rollBack();
+            }
+            throw $error;
+        }
+
+        return $this->respuesta(true, 'Publicación creada correctamente.', $resultado, 201);
+    }
+
+    private function crearPublicacionCompleta(int $productorId, int $fincaId, array $datos): array
+    {
+        $animalId = $this->animales->crearAnimal(
+            $datos['animalIdentificacion'],
+            $datos['sexo'],
+            $datos['raza'],
+            'PUBLIC_API',
+        );
+        $this->animales->ejecutarConBloqueoAlta(
+            'tbanimalproduccionsalud',
+            fn (): int => $this->animales->registrarObservacion($animalId, [
+                'origen' => 'PUBLIC_API',
+                'edadMeses' => $datos['edadMeses'],
+                'peso' => $datos['peso'],
+                'proposito' => $datos['proposito'],
+            ]),
+        );
+        $publicacionId = $this->animales->ejecutarConBloqueoAlta(
+            'tbanimalpublicacion',
+            fn (): int => $this->animales->publicarAnimal($animalId, $productorId, $fincaId, [
+                'origen' => 'PUBLIC_API',
+                'estado' => 'ACTIVO',
+                'titulo' => $datos['titulo'],
+                'descripcion' => $datos['descripcion'],
+                'precio' => $datos['precio'],
+            ]),
+        );
+
+        return ['animalId' => $animalId, 'publicacionId' => $publicacionId];
+    }
+
+    private function fincaActiva(int $productorId, string $nombre): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbfincaid, tbfincanombre FROM tbfinca
+             WHERE tbproductorid = :productorId AND tbfincanombre = :nombre AND tbfincaestado = 1'
+        );
+        $sentencia->execute(['productorId' => $productorId, 'nombre' => $nombre]);
+        $filas = $sentencia->fetchAll();
+        if (count($filas) > 1) {
+            throw new HttpException('La finca está duplicada para este Productor.', 409);
+        }
+
+        return $filas[0] ?? null;
+    }
+
+    private function validarPublicacion(array $cuerpo): array
+    {
+        $texto = static function (mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string {
+            if ($valor === null || trim((string) $valor) === '') {
+                if ($obligatorio) {
+                    throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Este campo es obligatorio.']);
+                }
+                return null;
+            }
+            $valor = trim((string) $valor);
+            if (mb_strlen($valor) > $maximo) {
+                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => "No puede superar {$maximo} caracteres."]);
+            }
+            return $valor;
+        };
+        $numero = static function (mixed $valor, string $campo, bool $entero = false): ?float {
+            if ($valor === null || $valor === '') return null;
+            if (!is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {
+                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número no negativo.']);
+            }
+            if ($entero && floor((float) $valor) !== (float) $valor) {
+                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un entero no negativo.']);
+            }
+            return (float) $valor;
+        };
+
+        return [
+            'fincaNombre' => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
+            'animalIdentificacion' => $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100),
+            'raza' => $texto($cuerpo['raza'] ?? null, 'raza', 120),
+            'sexo' => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
+            'proposito' => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
+            'edadMeses' => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
+            'peso' => $numero($cuerpo['peso'] ?? null, 'peso'),
+            'titulo' => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
+            'descripcion' => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
+            'precio' => $numero($cuerpo['precio'] ?? null, 'precio'),
+        ];
     }
 
     private function consultar(array $consulta): array

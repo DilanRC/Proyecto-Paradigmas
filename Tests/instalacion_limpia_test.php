@@ -22,14 +22,14 @@ use Application\Controller\IdentidadController;
 $db = test_db();
 
 // -----------------------------------------------
-// 1. Las 32 tablas canónicas del manifest existen en la base.
+// 1. Las 33 tablas canónicas del manifest existen en la base.
 // -----------------------------------------------
 $manifest = schema_manifest();
 $existentes = $db->query('SELECT TABLE_NAME FROM information_schema.TABLES
     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE "tb%"')->fetchAll(PDO::FETCH_COLUMN);
 sort($existentes, SORT_STRING);
 test_same($manifest['tables_sorted'], $existentes,
-    'La base viva contiene exactamente las 32 tablas canónicas del SQL (puerta de esquema OK).');
+    'La base viva contiene exactamente las 33 tablas canónicas del SQL (puerta de esquema OK).');
 
 // -----------------------------------------------
 // 2. Semilla maestra idempotente: dos corridas consecutivas, mismos conteos.
@@ -194,5 +194,5 @@ $asignacion = $db->prepare('SELECT COUNT(*) FROM tbtransportistavehiculo tv
 $asignacion->execute(['placa' => 'ABC-148']);
 test_same(1, (int) $asignacion->fetchColumn(), 'El vehículo de la semilla está asignado al transportista.');
 
-echo "OK instalacion_limpia_test: semilla maestra idempotente, 32 tablas vivas, sin huérfanos ni IDs "
+echo "OK instalacion_limpia_test: semilla maestra idempotente, 33 tablas vivas, sin huérfanos ni IDs "
     . "duplicados, superficie pública y resolución de identidad operando sobre instalación sembrada.\n";

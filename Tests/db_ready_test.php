@@ -15,7 +15,7 @@ $der = file_get_contents("{$root}/Documentation/DER.md");
 $manifest = schema_manifest();
 
 test_same('bdmercadoganadero', $manifest['database'], 'La base activa debe ser bdmercadoganadero');
-test_same(32, $manifest['table_count'], 'La capa DB ready debe contener 32 tablas');
+test_same(33, $manifest['table_count'], 'La capa DB ready debe contener 33 tablas');
 
 foreach (['tbproductorclasificacionperiodo', 'tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
     'tbanimalpublicacionestadoperiodo', 'tbcompra', 'tbventa', 'tbanimalinteraccion',

@@ -8,12 +8,12 @@ $pages = [
     'about' => [
         'title' => 'Sobre TinderCows',
         'kicker' => 'Una experiencia para descubrir y conectar',
-        'lead' => 'TinderCows reúne publicaciones de ganado, cercanía, subastas y contacto en un recorrido simple para encontrar oportunidades relevantes.',
+        'lead' => 'TinderCows reúne publicaciones de ganado, cercanía y acciones de interés en un recorrido simple para encontrar oportunidades relevantes.',
     ],
     'guide' => [
         'title' => 'Cómo usar TinderCows',
         'kicker' => 'Ayuda de uso',
-        'lead' => 'Explora publicaciones, usa la búsqueda cuando necesites precisión y abre contacto o puja desde la oportunidad que te interese.',
+        'lead' => 'Explora publicaciones, usa la búsqueda cuando necesites precisión y registra tus acciones desde la oportunidad que te interese.',
     ],
     'privacy' => [
         'title' => 'Política de privacidad',
@@ -69,7 +69,7 @@ $page = $pages[$pageKey] ?? $pages['about'];
             <div class="public-header__actions">
                 <form class="public-search" action="explorar.php" method="get" role="search" data-public-search data-open="false">
                     <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Abrir búsqueda"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span></button>
-                    <div class="public-search__field"><label class="screen-reader-only" for="busqueda-publica-info">Buscar publicaciones</label><input id="busqueda-publica-info" name="q" type="search" autocomplete="off" placeholder="Ganado, subastas, zona…"><button type="submit" aria-label="Buscar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
+                    <div class="public-search__field"><label class="screen-reader-only" for="busqueda-publica-info">Buscar publicaciones</label><input id="busqueda-publica-info" name="q" type="search" autocomplete="off" placeholder="Ganado, zona…"><button type="submit" aria-label="Buscar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
                 </form>
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
                 <a class="public-header__login" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
@@ -85,25 +85,25 @@ $page = $pages[$pageKey] ?? $pages['about'];
 
             <div class="info-content">
                 <?php if ($pageKey === 'about'): ?>
-                    <section><h2>Qué ofrece</h2><div class="info-copy"><p>TinderCows está pensado para descubrir ganado y oportunidades sin obligar a recorrer catálogos interminables. La experiencia prioriza publicaciones relevantes, cercanía y acciones claras desde la misma tarjeta.</p><p>El producto combina exploración visual, búsqueda puntual, favoritos, contacto y participación en subastas cuando una publicación lo permita.</p></div></section>
+                    <section><h2>Qué ofrece</h2><div class="info-copy"><p>TinderCows está pensado para descubrir ganado y oportunidades sin obligar a recorrer catálogos interminables. La experiencia prioriza publicaciones relevantes, cercanía y acciones claras desde la misma tarjeta.</p><p>El producto combina exploración visual, búsqueda puntual, interés, pasar y contacto sobre publicaciones activas.</p></div></section>
                     <section><h2>Cómo se siente</h2><div class="info-copy"><p>La interfaz está diseñada para reconocer rápidamente qué está viendo, dónde se encuentra la publicación y qué puede hacer después. Los controles mantienen icono y texto, los estados son visibles y las acciones principales aparecen cerca del contenido que afectan.</p><p>El modo claro y oscuro conserva la misma identidad verde, naranja y crema de TinderCows.</p></div></section>
-                    <section><h2>Qué sigue</h2><div class="info-copy"><p>La experiencia pública ya define la navegación y los patrones de exploración. Las publicaciones reales, subastas y acciones transaccionales deben conectarse a sus servicios correspondientes antes de considerarse operativas.</p></div></section>
+                    <section><h2>Qué sigue</h2><div class="info-copy"><p>La experiencia pública ya define la navegación y los patrones de exploración. Las publicaciones reales y las acciones que todavía no formen parte del alcance deben conectarse a sus servicios correspondientes antes de considerarse operativas.</p></div></section>
                 <?php elseif ($pageKey === 'guide'): ?>
-                    <section><h2>Explorar</h2><div class="info-copy"><ol><li>Abra <strong>Explorar</strong> para recorrer tarjetas de ganado y subastas.</li><li>Deslice entre publicaciones o use <strong>Anterior</strong> y <strong>Siguiente</strong>.</li><li>Use <strong>Buscar</strong> cuando quiera encontrar algo por nombre, zona o tipo de oportunidad.</li><li>Marque <strong>Me interesa</strong>, use <strong>Pasar</strong>, abra <strong>Contactar</strong> o <strong>Pujar</strong> cuando la publicación lo permita.</li></ol></div></section>
+                    <section><h2>Explorar</h2><div class="info-copy"><ol><li>Abra <strong>Explorar</strong> para recorrer publicaciones activas.</li><li>Deslice entre publicaciones o use <strong>Anterior</strong> y <strong>Siguiente</strong>.</li><li>Use <strong>Buscar</strong> cuando quiera encontrar algo por nombre, zona o tipo de oportunidad.</li><li>Las acciones de interés, pasar y contacto se guardan únicamente después de la confirmación de la API.</li></ol></div></section>
                     <section><h2>Búsqueda</h2><div class="info-copy"><p>La búsqueda permanece compacta en la barra superior para no competir con la navegación. Al activarla se abre el campo completo y puede cerrarse con Escape cuando está vacío.</p></div></section>
-                    <section><h2>Cuenta</h2><div class="info-copy"><p>El acceso actual mantiene una sesión local en el navegador. Mientras la autenticación de servidor esté pendiente, la interfaz no debe interpretarse como un control definitivo de identidad o permisos.</p></div></section>
+                    <section><h2>Cuenta</h2><div class="info-copy"><p>El acceso usa Supabase Auth para validar la cuenta y entrega un token temporal al navegador. Las APIs privadas vuelven a validar ese token y derivan la Persona vinculada antes de permitir cambios.</p></div></section>
                 <?php elseif ($pageKey === 'privacy'): ?>
-                    <section><h2>Datos de sesión</h2><div class="info-copy"><p>El acceso actual puede guardar en <code>sessionStorage</code> un indicador local de sesión, el correo escrito y la hora de inicio. Ese contenido permanece asociado a la pestaña del navegador y no constituye por sí mismo autenticación de servidor.</p></div></section>
-                    <section><h2>Publicaciones y contacto</h2><div class="info-copy"><p>Cuando las publicaciones, favoritos, contacto y subastas se conecten a servicios reales, deberá informarse qué datos se recopilan, para qué se usan, durante cuánto tiempo se conservan y cómo puede una persona ejercer sus derechos.</p></div></section>
+                    <section><h2>Datos de sesión</h2><div class="info-copy"><p>El navegador conserva temporalmente la sesión necesaria para continuar autenticado en la pestaña actual. El servidor valida el token antes de leer o cambiar datos del negocio; borrar la sesión local cierra el acceso de esa pestaña.</p></div></section>
+                    <section><h2>Publicaciones y contacto</h2><div class="info-copy"><p>Las publicaciones, interés, pasar y contacto que están dentro del alcance se guardan mediante sus APIs correspondientes. Debe informarse qué datos se recopilan, para qué se usan, durante cuánto tiempo se conservan y cómo puede una persona ejercer sus derechos.</p></div></section>
                     <section><h2>Retención</h2><div class="info-copy"><p class="info-note"><strong>Pendiente:</strong> TinderCows todavía no publica una política definitiva de retención, eliminación o exportación de datos para operación real. No debe inferirse un plazo ni una base jurídica que aún no hayan sido definidos.</p></div></section>
                 <?php elseif ($pageKey === 'terms'): ?>
                     <section><h2>Uso del sitio</h2><div class="info-copy"><p>TinderCows puede utilizarse para recorrer la interfaz, explorar contenido disponible y usar las funciones que estén activas en cada publicación.</p></div></section>
-                    <section><h2>Cuenta y acciones</h2><div class="info-copy"><p>El acceso actual mantiene una sesión local y todavía no valida credenciales contra un servidor. Las acciones de contacto, favoritos o puja solo deben considerarse efectivas cuando exista confirmación del servicio correspondiente.</p></div></section>
+                    <section><h2>Cuenta y acciones</h2><div class="info-copy"><p>El acceso valida credenciales contra Supabase Auth. Una acción de contacto, interés o pasar solo debe considerarse efectiva cuando la API devuelva confirmación de persistencia.</p></div></section>
                     <section><h2>Límites</h2><div class="info-copy"><ul><li>No asumir que una acción visual equivale a una transacción confirmada.</li><li>No usar información de muestra como si representara una publicación real.</li><li>No interpretar la visibilidad de una pantalla como prueba de autorización.</li></ul></div></section>
                 <?php elseif ($pageKey === 'legal'): ?>
                     <section><h2>Identidad</h2><div class="info-copy"><p>TinderCows utiliza sus logos verde/naranja y su favicon como identidad visual propia. La interfaz no utiliza el logotipo de Tinder ni presenta una relación oficial con esa marca.</p></div></section>
                     <section><h2>Servicios y terceros</h2><div class="info-copy"><p>Las dependencias, mapas, tipografías, iconos y otros servicios de terceros utilizados en una versión operativa deben mantener sus licencias y avisos correspondientes.</p></div></section>
-                    <section><h2>Pendientes antes de operación real</h2><div class="info-copy"><ul><li>Autenticación y autorización de servidor.</li><li>Política formal de privacidad, retención y ejercicio de derechos.</li><li>Definición de responsables y canales de contacto.</li><li>Confirmación transaccional para contacto, favoritos y pujas.</li><li>Procedimientos de respaldo, recuperación, incidentes y disponibilidad.</li></ul></div></section>
+                    <section><h2>Pendientes antes de operación real</h2><div class="info-copy"><ul><li>Política formal de privacidad, retención y ejercicio de derechos.</li><li>Definición de responsables y canales de contacto.</li><li>Procedimientos de respaldo, recuperación, incidentes y disponibilidad.</li></ul></div></section>
                 <?php endif; ?>
             </div>
         </main>

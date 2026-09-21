@@ -12,6 +12,7 @@ import test from 'node:test';
 import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
+const exploreSource = read('Public/js/explore.js');
 
 const {
     formatPrice, formatLocation, formatAge, formatWeight, formatText, formatSeller,
@@ -102,6 +103,11 @@ test('la tarjeta se arma con el DOM, nunca con innerHTML', () => {
         'explore.js no debe escribir markup crudo con contenido de la base');
     assert.match(js, /createElement/);
     assert.match(js, /textContent/);
+});
+
+test('la tarjeta conserva los identificadores necesarios para acciones persistentes', () => {
+    assert.match(exploreSource, /dataset\.publicacionId/);
+    assert.match(exploreSource, /dataset\.animalId/);
 });
 
 test('la vista ya no trae tarjetas de muestra escritas a mano', () => {

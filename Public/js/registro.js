@@ -193,7 +193,7 @@ function renderSummary(draft, extending) {
     if (!target) return;
     const summary = buildRegistrationSummary(draft);
     const capabilities = summary.capacidades.map((cap) => ({
-        COMPRADOR: 'Comprar ganado', PRODUCTOR: 'Vender o publicar', TRANSPORTISTA: 'Ofrecer fletes',
+        COMPRADOR: 'Explorar como comprador', PRODUCTOR: 'Vender o publicar', TRANSPORTISTA: 'Ofrecer fletes',
     }[cap] ?? cap));
     target.innerHTML = `
         <section><h3>${extending ? 'Identidad reutilizada' : 'Persona'}</h3><dl>

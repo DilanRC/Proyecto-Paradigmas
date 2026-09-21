@@ -283,6 +283,16 @@ CREATE TABLE IF NOT EXISTS tbanimalinteraccion (
     tbanimalinteraccionorigen VARCHAR(100) NULL
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS tbanimalpublicacioninteraccion (
+    tbanimalpublicacioninteraccionid INT NOT NULL,
+    tbpersonaid INT NOT NULL,
+    tbanimalpublicacionid INT NOT NULL,
+    tbanimalpublicacioninteracciontipo VARCHAR(30) NOT NULL,
+    tbanimalpublicacioninteraccionaccion VARCHAR(30) NOT NULL,
+    tbanimalpublicacioninteraccionfecha DATETIME NOT NULL,
+    tbanimalpublicacioninteraccionorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS tbcarrito (
     tbcarritoid INT NOT NULL,
     tbproductorid INT NOT NULL,

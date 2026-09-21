@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { resolveNext } from '../../Public/js/login.js';
+import { resolveAdminNext, resolveNext } from '../../Public/js/login.js';
 import {
     enforceBrowserSession,
     isPrivateRoute,
@@ -16,6 +16,10 @@ import {
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const home = read('../../Application/View/home/index.php');
 const explore = read('../../Application/View/explorar/index.php');
+const publicarJs = read('../../Public/js/publicar.js');
+const publicarApi = read('../../Public/api/publicaciones.php');
+const interactionJs = read('../../Public/js/explore-interactions.js');
+const interactionApi = read('../../Public/api/publicacion-interacciones.php');
 const login = read('../../Application/View/login/index.php');
 const info = read('../../Application/View/public/info.php');
 const publicCss = read('../../Public/css/public-auth.css');
@@ -24,7 +28,6 @@ const themeJs = read('../../Public/js/public-theme.js');
 const passwordToggleJs = read('../../Public/js/password-toggle.js');
 const publicUi = read('../../Public/js/public-ui.js');
 const registroJs = read('../../Public/js/registro.js');
-const commerceJs = read('../../Public/js/explore-actions.js');
 const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
 const authGate = read('../../Public/js/shared/auth-gate.js');
@@ -81,7 +84,8 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
     assert.ok(explore.includes('data-explore-prev'));
     assert.ok(explore.includes('data-explore-next'));
     // Las acciones viajan con la tarjeta, que ahora construye explore.js con lo
-    // que devuelve api/publicaciones.php; el PHP solo aporta el deck vacío.
+    // que devuelve api/publicaciones.php; la escritura requiere sesión y se
+    // realiza desde publicar.js con el bearer verificado.
     const moduloExplorar = read('../../Public/js/explore.js');
     for (const action of ['Pasar', 'Me interesa', 'Contactar']) {
         assert.ok(moduloExplorar.includes(`'${action}'`), `falta la acción ${action}`);
@@ -89,6 +93,25 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
     assert.ok(moduloExplorar.includes('api/publicaciones.php'),
         'el deck debe leer el catálogo real, no contenido de muestra');
     assert.equal(/EIF400|acad[eé]mic/i.test(explore), false);
+});
+
+test('publicar persiste mediante el endpoint autenticado y limpia el borrador solo al guardar', () => {
+    assert.ok(publicarJs.includes("import { getAccessToken } from './shared/supabase-auth.js';"));
+    assert.ok(publicarJs.includes("method: 'POST'"));
+    assert.ok(publicarJs.includes("fetch('api/publicaciones.php'"));
+    assert.ok(publicarJs.includes("sessionStorage.removeItem(DRAFT_KEY)"));
+    assert.ok(publicarApi.includes("['GET', 'POST']"));
+    assert.ok(publicarApi.includes('readJsonBody()'));
+});
+
+test('Explorar persiste Pasar, Me interesa y Contactar con la Persona autenticada', () => {
+    for (const type of ['ME_INTERESA', 'PASAR', 'CONTACTAR']) {
+        assert.ok(interactionJs.includes(`'${type}'`));
+    }
+    assert.ok(interactionJs.includes("fetch(API_URL"));
+    assert.ok(interactionJs.includes("method: 'POST'"));
+    assert.ok(interactionApi.includes('PublicacionInteraccionController'));
+    assert.ok(interactionApi.includes('SupabaseActorResolver'));
 });
 
 test('la paleta pública sale del logo y elimina la referencia cromática de Tinder', () => {
@@ -138,7 +161,7 @@ test('modo claro y oscuro comparten preferencia persistente e iconos reconocible
 test('el acceso público valida con Supabase y vuelve a Explorar por defecto', () => {
     assert.ok(login.includes('Entrar a TinderCows'));
     assert.match(login, /credenciales se validan con Supabase Auth/);
-    assert.match(login, /no concede acceso administrativo/);
+    assert.match(login, /verifica la autorizaci[oó]n de administrador en el servidor/);
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(login), false);
@@ -148,6 +171,9 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.equal(resolveNext('?next=https://example.com'), 'explorar.php');
     assert.equal(resolveNext('?next=//example.com'), 'explorar.php');
     assert.equal(resolveNext('?next=../login.php'), 'explorar.php');
+    assert.equal(resolveAdminNext('?next=productores.php'), 'productores.php');
+    assert.equal(resolveAdminNext('?next=https://example.com'), 'productores.php');
+    assert.ok(read('../../Public/js/login.js').includes("area') === 'admin"));
 });
 
 test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => {
@@ -207,10 +233,9 @@ test('la autorización admin verificada crea y limpia solo el marcador visual', 
     assert.equal(readBrowserSession(storage), null);
 });
 
-test('el comercio no inventa una intención persistida sin contrato backend', () => {
-    assert.equal(commerceJs.includes('purchase-intents'), false);
-    assert.equal(commerceJs.includes('persistence: \'frontend-prototype\''), false);
-    assert.match(commerceJs, /contrato que identifique al contexto Comprador/);
+test('las acciones fuera del alcance no aparecen como botones falsamente operativos', () => {
+    assert.doesNotMatch(publicUi, /explore-actions\.js/);
+    assert.doesNotMatch(explore, /Comprar \/ pujar|Pujar/);
 });
 
 test('una ruta privada sin sesión vuelve al login conservando destino local', () => {

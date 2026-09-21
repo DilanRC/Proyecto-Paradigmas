@@ -73,3 +73,11 @@ test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () =
     assert.ok(refinementsCss.includes('.admin-table-footer .pagination'));
     assert.ok(adminJs.includes("trigger.className = 'admin-account-menu__trigger'"));
 });
+
+test('registro limita aria-live al estado y publicar comunica persistencia real', () => {
+    const registro = read('Application/View/registro/index.php');
+    const publicar = read('Application/View/publicar/index.php');
+    assert.doesNotMatch(registro, /class="onboarding-card" aria-live=/);
+    assert.match(registro, /id="registro-status"[^>]*aria-live="polite"/);
+    assert.match(publicar, /Guardado persistente al publicar/);
+});

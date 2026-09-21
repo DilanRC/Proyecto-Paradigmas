@@ -3,37 +3,48 @@
 declare(strict_types=1);
 
 use Application\Controller\AnimalPublicacionController;
+use Application\Auth\SupabaseActorResolver;
 use Configuration\Database;
+use function Configuration\readJsonBody;
 use function Configuration\sendJsonResponse;
 
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
-foreach (['NamedLock', 'AnimalComercial'] as $modelo) {
+foreach (['NamedLock', 'AnimalComercial', 'Bitacora', 'Persona', 'ProductorFinca', 'Productor'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Service/PublicacionCercaniaService.php';
+require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 require_once $raiz . '/Application/Controller/AnimalPublicacionController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, OPTIONS');
+    header('Allow: GET, POST, OPTIONS');
     http_response_code(204);
     exit;
 }
-if ($metodo !== 'GET') {
-    header('Allow: GET, OPTIONS');
+if (!in_array($metodo, ['GET', 'POST'], true)) {
+    header('Allow: GET, POST, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
+}
+
+if ($metodo === 'POST' && strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0])) !== 'application/json') {
+    sendJsonResponse(['success' => false, 'message' => 'El cuerpo debe usar Content-Type: application/json.', 'data' => null], 415);
 }
 
 try {
     $conexion = Database::getConnection();
+    $actor = $metodo === 'POST' ? SupabaseActorResolver::fromGlobals($conexion) : null;
+    $cuerpo = $metodo === 'POST' ? readJsonBody() : [];
     $controlador = new AnimalPublicacionController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
+        $actor,
     );
-    $respuesta = $controlador->procesar($metodo, $_GET, []);
+    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
