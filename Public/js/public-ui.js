@@ -1,6 +1,7 @@
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
 import { readPublicProfile } from './shared/public-profile.js';
+import { clearAdminBrowserSession } from './shared/auth-gate.js';
 
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';
@@ -99,7 +100,10 @@ function createAccountMenu(actions, session, profile) {
         }
     });
     menu.querySelector('[data-public-logout]')?.addEventListener('click', async () => {
-        try { await signOut(); } finally { window.location.assign('explorar.php'); }
+        try { await signOut(); } finally {
+            clearAdminBrowserSession();
+            window.location.assign('explorar.php');
+        }
     });
     return menu;
 }

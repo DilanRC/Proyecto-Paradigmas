@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 30 tablas:
+La base `bdmercadoganadero` contiene exactamente 32 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -37,6 +37,8 @@ La base `bdmercadoganadero` contiene exactamente 30 tablas:
 28. `tbtransportistahorario`
 29. `tbtransportistaflete`
 30. `tbtransportistaresena`
+31. `tbcompradorpersonatelefonohistorico`
+32. `tbproductorpersonatelefonohistorico`
 
 `tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
 y `tbtransportista` son contextos de esa misma persona (DEC-28): cada perfil de
@@ -181,7 +183,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 30 tablas, incluida la identidad compartida en
+El migrador crea y valida las 32 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -382,7 +384,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 30 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 32 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
@@ -441,12 +443,17 @@ python3 Tools/generate-documentation-pdfs.py
 python3 Tests/documentation_test.py
 ```
 
-## Limitaciones
+## Limitaciones vigentes
 
-- No hay autenticación ni autorización.
+- El login y el registro usan Supabase Auth; las APIs administrativas validan
+  Bearer y allowlist server-side. La comprobación end-to-end en staging sigue
+  pendiente mientras el despliegue permanezca protegido por Vercel SSO.
 - El tipo es una columna controlada, no un catálogo.
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.
 - SQL directo puede crear huérfanos, duplicados y valores fuera del dominio.
 - `tbproductorid` no tiene garantía de unicidad en MySQL; el consecutivo solo se
   serializa dentro del flujo PHP.
+- Publicar, comprar, pujar, favoritos y contacto todavía no tienen un contrato
+  HTTP de escritura completo; la interfaz lo comunica como preparación o acción
+  no persistente y no anuncia una operación comercial falsa.

@@ -8,6 +8,8 @@ import {
     isPrivateRoute,
     loginTarget,
     readBrowserSession,
+    writeAdminBrowserSession,
+    clearAdminBrowserSession,
     SESSION_KEY,
 } from '../../Public/js/shared/auth-gate.js';
 
@@ -163,6 +165,21 @@ test('la puerta requiere un marcador de sesión estructurado', () => {
     assert.equal(readBrowserSession(makeStorage(valid))?.adminAuthorized, true);
 });
 
+test('la autorización admin verificada crea y limpia solo el marcador visual', () => {
+    const values = new Map();
+    const storage = {
+        setItem: (key, value) => values.set(key, value),
+        getItem: (key) => values.get(key) ?? null,
+        removeItem: (key) => values.delete(key),
+    };
+    writeAdminBrowserSession('ADMIN@EXAMPLE.TEST', storage);
+    const marker = readBrowserSession(storage);
+    assert.equal(marker?.email, 'admin@example.test');
+    assert.equal(marker?.adminAuthorized, true);
+    clearAdminBrowserSession(storage);
+    assert.equal(readBrowserSession(storage), null);
+});
+
 test('una ruta privada sin sesión vuelve al login conservando destino local', () => {
     let redirected = '';
     const location = { pathname: '/productores.php', replace: (target) => { redirected = target; } };
@@ -176,7 +193,7 @@ test('una ruta privada sin sesión vuelve al login conservando destino local', (
 test('el shell privado distingue volver al sitio público de cerrar sesión', () => {
     assert.ok(authGate.includes("publicLink.textContent = 'Sitio público'"));
     assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión administrativa'"));
-    assert.ok(authGate.includes('storage?.removeItem(SESSION_KEY)'));
+    assert.ok(authGate.includes('clearAdminBrowserSession(storage)'));
 });
 
 test('los paneles privados fallan cerrados y comparten bootstrap de API', () => {

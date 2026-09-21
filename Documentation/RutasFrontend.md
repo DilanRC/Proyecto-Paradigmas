@@ -70,7 +70,7 @@ la vista pública, siempre sujeto a la validación del servidor.
 ### Implementado
 
 - Formulario de acceso con validación de navegador.
-- Marcador de sesión local en `sessionStorage`.
+- Sesión Supabase en `sessionStorage`, con Bearer para las solicitudes JSON.
 - Redirección pública por defecto hacia `explorar.php`.
 - Redirección a `login.php?next=...` cuando una ruta administrativa no tiene marcador local válido.
 - Cierre de la sesión local desde el shell administrativo.
@@ -78,7 +78,9 @@ la vista pública, siempre sujeto a la validación del servidor.
 
 ### No implementado todavía
 
-- La marca visual de `sessionStorage` no es una credencial de servidor.
+- La marca `tindercows:admin-session` solo habilita el shell después de que
+  `api/admin-status.php` confirmó la allowlist; no es una credencial y nunca
+  sustituye el Bearer que valida el servidor.
 - La allowlist administrativa debe configurarse en el entorno del servidor.
 - Catálogo real de ganado/subastas conectado a la vista Explorar.
 - Persistencia real de favoritos, contacto y pujas.

@@ -9,6 +9,27 @@ import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
 
 export const SESSION_KEY = 'tindercows:admin-session';
 
+/**
+ * El marcador solo habilita la navegación del shell. La autorización real se
+ * vuelve a comprobar en cada API mediante el Bearer y la allowlist del
+ * servidor; por eso nunca contiene credenciales ni sustituye al JWT.
+ */
+export function writeAdminBrowserSession(email, storage = globalThis.sessionStorage) {
+    if (!storage?.setItem) return;
+    storage.setItem(SESSION_KEY, JSON.stringify({
+        authenticated: true,
+        version: 1,
+        adminAuthorized: true,
+        email: String(email ?? '').trim().toLowerCase(),
+        startedAt: new Date().toISOString(),
+        mode: 'admin-server-session',
+    }));
+}
+
+export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
+    storage?.removeItem?.(SESSION_KEY);
+}
+
 const PRIVATE_ROUTES = new Set([
     'productores.php',
     'compradores.php',
@@ -77,7 +98,7 @@ function wirePrivateShell(storage) {
     logoutLink.setAttribute('aria-label', 'Cerrar sesión administrativa');
     logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
-        try { storage?.removeItem(SESSION_KEY); }
+        try { clearAdminBrowserSession(storage); }
         finally { window.location.assign('login.php?area=admin'); }
     });
 }

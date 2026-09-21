@@ -1,6 +1,7 @@
 import { request } from './shared/api.js';
 import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js';
 
 const PUBLIC_DESTINATIONS = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
 
@@ -76,6 +77,7 @@ function initialize() {
 
         try {
             clearAuthSession();
+            clearAdminBrowserSession();
             await signInWithPassword(email, password);
             status.textContent = 'Credenciales válidas. Vinculando tu identidad de TinderCows…';
 
@@ -85,6 +87,7 @@ function initialize() {
             } catch (error) {
                 if (error?.status === 401 || error?.status === 409) {
                     if (error?.status === 409 && await isAdminAccount()) {
+                        writeAdminBrowserSession(email);
                         status.textContent = 'Acceso administrativo confirmado. Abriendo TinderCows…';
                         window.location.assign('explorar.php');
                         return;
