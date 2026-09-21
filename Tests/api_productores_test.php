@@ -5,7 +5,7 @@ require __DIR__ . '/bootstrap.php';
 
 $ids = [];
 try {
-    $visible = 'AB-00-' . strtoupper(bin2hex(random_bytes(4)));
+    $visible = 'AB' . strtoupper(bin2hex(random_bytes(3)));
     $direccionFincaUno = array_replace(
         test_direccion_payload(['provincia' => 'Guanacaste', 'canton' => 'Liberia']),
         ['latitud' => '10.6345960', 'longitud' => '-85.4406740'],

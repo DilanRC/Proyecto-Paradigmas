@@ -55,7 +55,7 @@ try {
     // ============================================================
     // Alta y consulta
     // ============================================================
-    $visible = 'TR-00-' . strtoupper(bin2hex(random_bytes(4)));
+    $visible = 'TR' . strtoupper(bin2hex(random_bytes(3)));
     $creado = test_create_transportista([], $visible);
     $ids[] = $creado['identificacionNumero'];
     test_same(str_replace('-', '', $visible), $creado['identificacionNumero'], 'La identificación debe almacenarse canónica');
@@ -93,8 +93,8 @@ try {
     test_same(422, test_transportista_controller()->procesar('PUT', [], $identificacionModificada)['status'],
         'PUT debe rechazar cambios de identificación');
 
-    $putNoExiste = test_transportista_payload('NOEXISTE999');
-    $putNoExiste['identificacionNumeroOriginal'] = 'NOEXISTE999';
+    $putNoExiste = test_transportista_payload('NOEXISTE');
+    $putNoExiste['identificacionNumeroOriginal'] = 'NOEXISTE';
     test_same(404, test_transportista_controller()->procesar('PUT', [], $putNoExiste)['status'],
         'PUT de transportista inexistente debe responder 404');
 

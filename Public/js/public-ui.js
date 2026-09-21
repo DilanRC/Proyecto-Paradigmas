@@ -27,8 +27,11 @@ function setSearchOpen(root, open) {
     root.dataset.open = String(safeOpen);
     const toggle = root.querySelector('[data-public-search-toggle]');
     const input = root.querySelector('input[type="search"]');
+    const label = safeOpen ? 'Cerrar búsqueda' : 'Buscar';
     toggle?.setAttribute('aria-expanded', String(safeOpen));
-    toggle?.setAttribute('aria-label', safeOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda');
+    toggle?.setAttribute('aria-label', label);
+    const visibleLabel = toggle?.querySelector('span');
+    if (visibleLabel) visibleLabel.textContent = label;
     if (safeOpen) requestAnimationFrame(() => input?.focus());
 }
 
@@ -70,12 +73,13 @@ function initializePublicCarousel() {
             index = (index + pages.length) % pages.length;
             track.style.transform = `translateX(-${index * 100}%)`;
             if (status) status.textContent = index === 0 ? 'Escenas 1–3 de 6' : 'Escenas 4–6 de 6';
-            dots.querySelectorAll('button').forEach((dot, dotIndex) => dot.setAttribute('aria-selected', String(dotIndex === index)));
+            dots.querySelectorAll('button').forEach((dot, dotIndex) => {
+                dot.setAttribute('aria-current', dotIndex === index ? 'page' : 'false');
+            });
         };
         pages.forEach((page, pageIndex) => {
             const dot = document.createElement('button');
             dot.type = 'button';
-            dot.role = 'tab';
             dot.ariaLabel = `Ver página ${pageIndex + 1} de escenas`;
             dot.addEventListener('click', () => { index = pageIndex; render(); });
             dots.append(dot);
@@ -103,6 +107,13 @@ function addNavLink(nav, href, icon, label) {
     const link = document.createElement('a');
     link.href = href;
     link.innerHTML = `<i class="fa-solid ${icon}" aria-hidden="true"></i><span>${label}</span>`;
+    if (href === 'publicar') {
+        const fletes = nav.querySelector('a[href="fletes"]');
+        if (fletes) {
+            fletes.before(link);
+            return;
+        }
+    }
     nav.append(link);
 }
 
@@ -125,7 +136,7 @@ function createAccountMenu(actions, session, profile) {
             <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
             <a href="mi-actividad"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi perfil y actividad</span></a>
             <a href="registro" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
-            <a href="admin/productores" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
+            <a href="admin/dashboard" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
             <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
         </div>`;
 

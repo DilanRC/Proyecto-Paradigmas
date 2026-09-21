@@ -8,6 +8,12 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonaestado SMALLINT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbadministrador (
+    tbadministradorid INTEGER NOT NULL,
+    tbadministradorcorreoelectronico VARCHAR(150) NOT NULL,
+    tbadministradorestado SMALLINT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbproductor (
     tbproductorid INTEGER NOT NULL,
     tbpersonaid INTEGER NOT NULL
@@ -317,6 +323,7 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistahorario (
 );
 
 ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbadministrador ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductordireccion ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductorestadoperiodo ENABLE ROW LEVEL SECURITY;

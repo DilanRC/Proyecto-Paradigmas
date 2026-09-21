@@ -14,7 +14,7 @@ export function resolveNext(search = '', hasProfile = false) {
 
 export function resolveAdminNext(search = '') {
     const requested = new URLSearchParams(search).get('next');
-    return requested && ADMIN_DESTINATIONS.has(requested) ? requested : 'admin/productores';
+    return requested && ADMIN_DESTINATIONS.has(requested) ? requested : 'admin/dashboard';
 }
 
 function setError(control, message) {

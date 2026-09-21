@@ -22,7 +22,7 @@ function initialize() {
     }
 
     if (state === 'ACTIVO') {
-        stateBox.innerHTML = '<i class="fa-solid fa-circle-check" aria-hidden="true"></i><p>Actualmente ofreces fletes. Puedes administrar o desactivar esta actividad desde Mi actividad.</p>';
+        stateBox.innerHTML = '<i class="fa-solid fa-circle-check" aria-hidden="true"></i><p>Tu servicio de fletes está activo. Puedes actualizarlo desde Mi actividad.</p>';
         primary.href = 'mi-actividad';
         primary.textContent = 'Administrar mi servicio';
         return;
@@ -35,7 +35,7 @@ function initialize() {
         return;
     }
 
-    stateBox.innerHTML = '<i class="fa-solid fa-circle-info" aria-hidden="true"></i><p>Aún no ofreces fletes. Podemos configurar esta actividad sin volver a registrar tu identidad.</p>';
+    stateBox.innerHTML = '<i class="fa-solid fa-circle-info" aria-hidden="true"></i><p>Aún no ofreces fletes. Completa esta actividad y conserva los datos que ya registraste.</p>';
     primary.href = 'registro/transportista';
     primary.textContent = 'Quiero ofrecer fletes';
 }

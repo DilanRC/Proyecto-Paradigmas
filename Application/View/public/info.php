@@ -54,7 +54,7 @@ $page = $pages[$pageKey] ?? $pages['about'];
 <body class="public-info-page">
     <div class="public-shell">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
+            <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
@@ -69,7 +69,7 @@ $page = $pages[$pageKey] ?? $pages['about'];
             </nav>
             <div class="public-header__actions">
                 <form class="public-search" action="explorar" method="get" role="search" data-public-search data-open="false">
-                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Abrir búsqueda"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span></button>
+                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span></button>
                     <div class="public-search__field"><label class="screen-reader-only" for="busqueda-publica-info">Buscar publicaciones</label><input id="busqueda-publica-info" name="q" type="search" autocomplete="off" placeholder="Ganado, zona…"><button type="submit" aria-label="Buscar"><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button></div>
                 </form>
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>

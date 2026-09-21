@@ -28,7 +28,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
+            <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
@@ -45,7 +45,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 
             <div class="public-header__actions">
                 <form class="public-search" action="explorar" method="get" role="search" data-public-search data-open="<?= $query !== '' ? 'true' : 'false' ?>">
-                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="<?= $query !== '' ? 'true' : 'false' ?>" aria-label="Abrir búsqueda">
+                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="<?= $query !== '' ? 'true' : 'false' ?>" aria-label="Buscar">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span>
                     </button>
                     <div class="public-search__field">
@@ -104,8 +104,8 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
             <section class="inscripcion" aria-labelledby="inscripcion-title">
                 <div class="inscripcion__intro">
                     <p class="section-kicker">Tu participación</p>
-                    <h2 id="inscripcion-title">Participa sin dominar el modelo de datos</h2>
-                    <p>¿Quieres explorar, vender o fletear? Regístrate desde aquí: el sistema reconoce a la misma persona en cualquiera de sus contextos y no le pide entender tablas ni roles.</p>
+                    <h2 id="inscripcion-title">Elige cómo quieres participar</h2>
+                    <p>¿Quieres explorar, vender u ofrecer transporte? Elige lo que necesitas y completa solo los datos necesarios para empezar.</p>
                 </div>
                 <div class="inscripcion__contextos" data-inscripcion-contextos aria-live="polite"></div>
             </section>

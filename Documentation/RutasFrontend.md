@@ -29,7 +29,7 @@ La navegación primaria pública expone Inicio, Explorar, Nosotros y Cómo funci
 
 ## Administración interna
 
-Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate controla la navegación visual, pero no sustituye la autorización de servidor. Las escrituras de las APIs administrativas exigen un JWT Supabase válido y un correo incluido en `SUPABASE_ADMIN_EMAILS`.
+Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate controla la navegación visual, pero no sustituye la autorización de servidor. Las escrituras de las APIs administrativas exigen un JWT Supabase válido y una cuenta activa en `tbadministrador`, verificada por PHP con una consulta preparada.
 
 | Ruta | Módulo |
 |---|---|

@@ -103,6 +103,7 @@ docker compose up --build -d
 ```text
 Database/SqlScripts/000instalacioncompleta.sql
 Database/SeedData/101initialpagometodo.sql
+Database/SeedData/102administrador.sql
 Database/SeedData/103exampleproductores.sql
 Database/Migrations/001normalizadireccionproductor.sql
 Database/Tests/comprobacionestructura.sql
@@ -116,8 +117,10 @@ Database/Tests/diagnostico.sql
 TABLE` usa `IF NOT EXISTS`, así que volver a ejecutarlo contra una base que ya
 tiene algunas de esas tablas no falla: solo crea las que falten.
 
-La semilla usa datos ficticios y correos `example.test`. `101initialpagometodo`
-registra el único método de pago del alcance vigente. `Database/Migrations/`
+Las semillas de demostración usan datos ficticios y correos `example.test`.
+`101initialpagometodo` registra el único método de pago del alcance vigente y
+`102administrador` registra la cuenta técnica autorizada por el responsable del
+proyecto; su contraseña vive únicamente en Supabase Auth. `Database/Migrations/`
 solo se aplica a bases creadas antes del avance y `Database/Tests/` contiene
 comprobaciones SQL, descritas en `Database/Tests/README.md`.
 
@@ -217,7 +220,7 @@ Si una instalación heredada rechazara personas sin alias, aplique después
 `Database/Migrations/010normalizapersonaalias.sql`; solo ajusta la nulabilidad
 de `tbpersonaalias` y conserva los valores existentes.
 
-En Vercel, el arranque ejecuta la migración v3 contra Supabase, recarga la caché
+En Vercel, el arranque ejecuta la migración v9 contra Supabase, recarga la caché
 de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
 con columnas incompatibles.
 
@@ -235,6 +238,8 @@ docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQ
   < Database/Migrations/001normalizadireccionproductor.sql
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
   < Database/SeedData/101initialpagometodo.sql
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/SeedData/102administrador.sql
 docker compose exec -T app php Tests/schema_test.php
 ```
 

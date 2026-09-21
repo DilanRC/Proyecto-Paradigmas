@@ -39,7 +39,7 @@ $checks = [
         && str_contains($readme, 'phpMyAdmin: <http://localhost:8081>'),
     'auth_publica_en_app' => str_contains($compose, 'SUPABASE_URL: ${SUPABASE_URL}')
         && str_contains($compose, 'SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}')
-        && str_contains($compose, 'SUPABASE_ADMIN_EMAILS: ${SUPABASE_ADMIN_EMAILS:-}'),
+        && str_contains($compose, '102administrador.sql'),
     'nombre_db_mercado_ganadero' => str_contains($environmentExample, 'DB_NAME=bdmercadoganadero')
         && str_contains($databaseConfiguration, "'bdmercadoganadero'")
         && str_contains($readme, 'Base MySQL: `bdmercadoganadero`')

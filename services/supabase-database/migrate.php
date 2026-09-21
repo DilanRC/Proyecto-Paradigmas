@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 const EXPECTED_COLUMNS = [
+    'tbadministrador' => [
+        'tbadministradorid', 'tbadministradorcorreoelectronico', 'tbadministradorestado',
+    ],
     'tbpersona' => [
         'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
         'tbpersonanombre', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
@@ -237,7 +240,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 33 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 34 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -423,6 +426,14 @@ function seedInitialData(PDO $connection): void
             tbpagometodoid, tbpagometodonombre, tbpagometododescripcion, tbpagometodoactivo)
         SELECT 1, 'Efectivo', 'Pago realizado en efectivo', 1
         WHERE NOT EXISTS (SELECT 1 FROM public.tbpagometodo WHERE tbpagometodoid = 1)");
+
+    $connection->exec("INSERT INTO public.tbadministrador (
+            tbadministradorid, tbadministradorcorreoelectronico, tbadministradorestado)
+        SELECT 1, 'cortesdila2023@gmail.com', 1
+        WHERE NOT EXISTS (
+            SELECT 1 FROM public.tbadministrador
+            WHERE LOWER(tbadministradorcorreoelectronico) = LOWER('cortesdila2023@gmail.com')
+        )");
 }
 
 try {
@@ -432,7 +443,7 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v8'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v9'))");
     $connection->exec($schema);
     normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
@@ -442,7 +453,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=33 migration=v8\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=34 migration=v9\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

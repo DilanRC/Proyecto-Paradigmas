@@ -27,7 +27,9 @@ const productCss = read('../../Public/css/public-product.css');
 const themeJs = read('../../Public/js/public-theme.js');
 const passwordToggleJs = read('../../Public/js/password-toggle.js');
 const publicUi = read('../../Public/js/public-ui.js');
+const publicV3 = read('../../Public/css/public-v3.css');
 const registroJs = read('../../Public/js/registro.js');
+const fletes = read('../../Application/View/fletes/index.php');
 const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
 const authGate = read('../../Public/js/shared/auth-gate.js');
@@ -78,7 +80,8 @@ test('la búsqueda pública permanece compacta y se expande bajo demanda', () =>
     assert.ok(home.includes('data-public-search-toggle'));
     assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
     assert.ok(publicUi.includes('root.dataset.open = String(safeOpen)'));
-    assert.ok(publicUi.includes("safeOpen ? 'Cerrar búsqueda' : 'Abrir búsqueda'"));
+    assert.ok(publicUi.includes("safeOpen ? 'Cerrar búsqueda' : 'Buscar'"));
+    assert.ok(publicUi.includes('visibleLabel.textContent = label'));
     assert.ok(publicUi.includes("event.key === 'Escape'"));
 });
 
@@ -99,6 +102,33 @@ test('la portada muestra las seis escenas ganaderas en un carrusel navegable', (
     assert.equal((home.match(/public-carousel__slide/g) || []).length, 6);
     assert.equal(home.includes('card-3d'), false);
     assert.equal((home.match(/public-carousel__page/g) || []).length, 2);
+    assert.match(publicV3, /public-carousel__dots button \{[^}]*width:28px; height:28px/);
+    assert.match(publicV3, /touch-action:manipulation/);
+    assert.ok(publicV3.includes("button[aria-current='page']::before"));
+    assert.ok(home.includes('role="group" aria-label="Páginas de escenas del campo"'));
+    assert.ok(publicUi.includes("setAttribute('aria-current'"));
+    assert.equal(publicUi.includes("dot.role = 'tab'"), false);
+});
+
+test('Fletes comparte el shell público y no expone lenguaje técnico', () => {
+    for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona', 'Fletes']) {
+        assert.ok(fletes.includes(`<span>${label}</span>`), `Fletes debe conservar ${label} en su navegación`);
+    }
+    assert.ok(fletes.includes('js/public-ui.js'));
+    assert.ok(fletes.includes('css/public-product.css'));
+    for (const copy of ['CRUD', 'Regla aplicada', 'panel administrativo', 'roles administrativos']) {
+        assert.equal(fletes.includes(copy), false, `Fletes no debe exponer ${copy}`);
+    }
+});
+
+test('la navegación accesible usa el mismo texto visible que anuncia', () => {
+    for (const view of [home, explore, fletes, info]) {
+        assert.equal(view.includes('aria-label="Ganado Cerca, inicio"'), false);
+        assert.equal(view.includes('aria-label="Abrir búsqueda"'), false);
+    }
+    assert.ok(publicUi.includes("safeOpen ? 'Cerrar búsqueda' : 'Buscar'"));
+    assert.ok(publicUi.includes('visibleLabel.textContent = label'));
+    assert.ok(publicUi.includes('href="admin/dashboard" data-admin-link'));
 });
 
 test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
@@ -204,7 +234,7 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.equal(resolveNext('?next=//example.com'), 'explorar');
     assert.equal(resolveNext('?next=../entrar'), 'explorar');
     assert.equal(resolveAdminNext('?next=admin/productores'), 'admin/productores');
-    assert.equal(resolveAdminNext('?next=https://example.com'), 'admin/productores');
+    assert.equal(resolveAdminNext('?next=https://example.com'), 'admin/dashboard');
     assert.ok(read('../../Public/js/login.js').includes("area') === 'admin"));
 });
 

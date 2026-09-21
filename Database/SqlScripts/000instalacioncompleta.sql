@@ -23,6 +23,14 @@ CREATE TABLE IF NOT EXISTS tbpersona (
     tbpersonaestado TINYINT(1) NOT NULL
 ) ENGINE=InnoDB;
 
+-- Política técnica de acceso administrativo. No es un rol de negocio ni se
+-- recibe desde el navegador: PHP la consulta después de validar el JWT.
+CREATE TABLE IF NOT EXISTS tbadministrador (
+    tbadministradorid INT NOT NULL,
+    tbadministradorcorreoelectronico VARCHAR(150) NOT NULL,
+    tbadministradorestado TINYINT(1) NOT NULL
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS tbproductor (
     tbproductorid INT NOT NULL,
     tbpersonaid INT NOT NULL

@@ -43,6 +43,9 @@ test_same(0, (int) $automaticColumns->fetchColumn(),
     'Ninguna columna debe tener DEFAULT, AUTO_INCREMENT ni expresión generada');
 
 $expectedColumns = [
+    'tbadministrador' => [
+        'tbadministradorid', 'tbadministradorcorreoelectronico', 'tbadministradorestado',
+    ],
     'tbpersona' => [
         'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
         'tbpersonanombre', 'tbpersonaalias', 'tbpersonatelefono',

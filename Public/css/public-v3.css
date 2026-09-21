@@ -70,7 +70,7 @@ html {
 }
 
 .public-header__login {
-    color:#fff;
+    color:#151a18;
     background:var(--tc-primary);
 }
 
@@ -105,7 +105,7 @@ html {
 
 .public-hero__actions .public-cta,
 .public-section--cta .public-cta {
-    color:#fff;
+    color:#151a18;
     background:linear-gradient(120deg,var(--tc-primary),var(--tc-primary-strong));
     box-shadow:0 16px 38px var(--tc-glow);
 }
@@ -187,9 +187,11 @@ html {
 .public-carousel__arrow--next { right:10px; }
 .public-carousel__footer { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-top:14px; }
 .public-carousel__footer p { margin:0; color:var(--tc-muted); font-size:12px; }
-.public-carousel__dots { display:flex; gap:7px; }
-.public-carousel__dots button { width:9px; height:9px; padding:0; border:1px solid var(--tc-line-strong); border-radius:50%; background:transparent; cursor:pointer; }
-.public-carousel__dots button[aria-selected='true'] { border-color:var(--tc-primary); background:var(--tc-primary); }
+.public-carousel__dots { display:flex; gap:2px; }
+.public-carousel__dots button { display:grid; width:28px; height:28px; padding:0; place-items:center; border:0; border-radius:50%; background:transparent; cursor:pointer; touch-action:manipulation; }
+.public-carousel__dots button::before { width:9px; height:9px; border:1px solid var(--tc-line-strong); border-radius:50%; background:transparent; content:''; }
+.public-carousel__dots button[aria-current='page']::before { border-color:var(--tc-primary); background:var(--tc-primary); }
+.public-carousel__dots button:focus-visible { outline:3px solid color-mix(in srgb,var(--tc-primary) 62%,transparent); outline-offset:2px; }
 
 .public-visual--brand .public-logo-stage {
     position:relative;

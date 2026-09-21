@@ -15,5 +15,5 @@
 13. **¿Qué valida MySQL?** Tipos y nulabilidad; no aplica PK, FK, UNIQUE ni CHECK.
 14. **¿Qué riesgo queda?** SQL directo puede insertar duplicados, huérfanos y dominio inválido.
 15. **¿Cómo se audita?** La bitácora permanece dentro de la transacción y registra las cuatro acciones.
-16. **¿Cómo se protege la administración?** El frontend solo controla la navegación. Las escrituras exigen Bearer validado por Supabase y correo incluido en `SUPABASE_ADMIN_EMAILS`.
+16. **¿Cómo se protege la administración?** El frontend solo controla la navegación. Las escrituras exigen un Bearer validado por Supabase y una cuenta activa en `tbadministrador`, comprobada por PHP con una consulta preparada.
 17. **¿Cómo se comprobó?** `information_schema`, pruebas PHP/Node/PDF, semillas repetidas y dos restauraciones comparadas.

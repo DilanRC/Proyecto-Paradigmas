@@ -21,7 +21,7 @@
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./" aria-label="Ganado Cerca, inicio">
+            <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">

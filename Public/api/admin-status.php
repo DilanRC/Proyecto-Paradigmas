@@ -30,7 +30,7 @@ if ($metodo !== 'GET') {
 try {
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
-    AdminAuthorization::require($actor);
+    AdminAuthorization::require($actor, $conexion);
     sendJsonResponse([
         'success' => true,
         'message' => 'Cuenta autorizada para administración.',

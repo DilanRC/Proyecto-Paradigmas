@@ -53,7 +53,7 @@ try {
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
     if ($metodo !== 'GET') {
-        AdminAuthorization::require($actor);
+        AdminAuthorization::require($actor, $conexion);
     }
     $controlador = new ProductorUbicacionController(
         $conexion,

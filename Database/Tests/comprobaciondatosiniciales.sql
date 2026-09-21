@@ -18,3 +18,7 @@ WHERE tbpagometodonombre = 'Efectivo' AND tbpagometodoactivo = 1;
 SELECT tbpagometodoid, tbpagometodonombre
 FROM tbpagometodo
 WHERE tbpagometodonombre <> 'Efectivo';
+
+-- Esperado: una sola autorización activa para la cuenta técnica inicial.
+SELECT tbadministradorcorreoelectronico, tbadministradorestado
+FROM tbadministrador;

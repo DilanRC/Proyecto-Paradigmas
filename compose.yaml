@@ -15,7 +15,6 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
       SUPABASE_AUTH_VERIFY_URL: http://supabase-server:3000/v1/auth/verify
-      SUPABASE_ADMIN_EMAILS: ${SUPABASE_ADMIN_EMAILS:-}
     depends_on:
       db:
         condition: service_healthy
@@ -36,6 +35,7 @@ services:
       - mysql_data:/var/lib/mysql
       - ./Database/SqlScripts/000instalacioncompleta.sql:/docker-entrypoint-initdb.d/000instalacioncompleta.sql:ro
       - ./Database/SeedData/101initialpagometodo.sql:/docker-entrypoint-initdb.d/101initialpagometodo.sql:ro
+      - ./Database/SeedData/102administrador.sql:/docker-entrypoint-initdb.d/102administrador.sql:ro
       - ./Database/SeedData/103exampleproductores.sql:/docker-entrypoint-initdb.d/103exampleproductores.sql:ro
     healthcheck:
       # TCP no está disponible en el servidor temporal de inicialización. Esto

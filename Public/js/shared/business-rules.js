@@ -132,7 +132,7 @@ export function buildRegistrationSummary(draft) {
             telefono: String(draft.persona?.telefono ?? '').trim(),
             correoElectronico: String(draft.persona?.correoElectronico ?? '').trim(),
         },
-        capacidades,
+        capacidades: capabilities,
         fincas: capabilities.includes('PRODUCTOR') ? (draft.fincas ?? []) : [],
         reglasAplicadas: {
             identidadUnica: true,

@@ -55,7 +55,7 @@ try {
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
-    AdminAuthorization::require($actor);
+    AdminAuthorization::require($actor, $conexion);
     $controlador = new ProductorController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,

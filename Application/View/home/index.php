@@ -19,7 +19,7 @@
 <body class="public-home">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="#inicio" aria-label="Ganado Cerca, inicio">
+            <a class="public-brand" href="#inicio">
                 <span class="public-brand__logo" aria-hidden="true">
                     <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
                     <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
@@ -36,7 +36,7 @@
 
             <div class="public-header__actions">
                 <form class="public-search" action="explorar" method="get" role="search" data-public-search data-open="false">
-                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Abrir búsqueda">
+                    <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Buscar">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span>
                     </button>
                     <div class="public-search__field">
@@ -99,7 +99,7 @@
                     </div>
                     <button class="public-carousel__arrow public-carousel__arrow--next" type="button" data-carousel-next aria-label="Escenas siguientes"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
                 </div>
-                <div class="public-carousel__footer"><p data-carousel-status aria-live="polite">Escenas 1–3 de 6</p><div class="public-carousel__dots" role="tablist" aria-label="Páginas de escenas del campo"></div></div>
+                <div class="public-carousel__footer"><p data-carousel-status aria-live="polite">Escenas 1–3 de 6</p><div class="public-carousel__dots" role="group" aria-label="Páginas de escenas del campo"></div></div>
             </section>
 
             <section class="public-section public-section--about" id="nosotros" aria-labelledby="about-title">

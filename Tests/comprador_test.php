@@ -67,7 +67,7 @@ try {
     // ============================================================
     // Inscripción (POST)
     // ============================================================
-    $uno = 'CP-00-' . strtoupper(bin2hex(random_bytes(4)));
+    $uno = 'CP' . strtoupper(bin2hex(random_bytes(3)));
     $documento = str_replace('-', '', $uno);
     $ids[] = $documento;
     $creado = test_create_comprador([], $uno);
@@ -147,7 +147,7 @@ try {
     // ============================================================
     // Persona inactiva: 409 en toda escritura
     // ============================================================
-    $inactivo = 'CP-01-' . strtoupper(bin2hex(random_bytes(4)));
+    $inactivo = 'CP01' . strtoupper(bin2hex(random_bytes(2)));
     $inactivoDoc = str_replace('-', '', $inactivo);
     $ids[] = $inactivoDoc;
     $fila = test_create_comprador([], $inactivo);
@@ -169,7 +169,7 @@ try {
     // ============================================================
     // Listado con filtro de estado
     // ============================================================
-    $dos = 'CP-02-' . strtoupper(bin2hex(random_bytes(4)));
+    $dos = 'CP02' . strtoupper(bin2hex(random_bytes(2)));
     $dosDoc = str_replace('-', '', $dos);
     $ids[] = $dosDoc;
     test_create_comprador([], $dos);
@@ -217,7 +217,7 @@ try {
     // ============================================================
     // Coexistencia de contextos sobre la misma Persona (DEC-28)
     // ============================================================
-    $multi = 'CP-03-' . strtoupper(bin2hex(random_bytes(4)));
+    $multi = 'CP03' . strtoupper(bin2hex(random_bytes(2)));
     $multiDoc = str_replace('-', '', $multi);
     $ids[] = $multiDoc;
     $productor = test_create([], $multi);
