@@ -31,6 +31,7 @@ export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
 }
 
 const PRIVATE_ROUTES = new Set([
+    'admin/dashboard',
     'admin/productores',
     'admin/compradores',
     'admin/transportistas',

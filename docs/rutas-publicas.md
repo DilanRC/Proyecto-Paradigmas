@@ -25,6 +25,7 @@ servidor.
 | `/terminos` | Legal | Términos de uso |
 | `/legal` | Legal | Información legal |
 | `/admin/entrar` | Privada | Entrada administrativa |
+| `/admin/dashboard` | Administrativa | Resumen central e indicadores |
 | `/admin/productores` | Administrativa | Productores |
 | `/admin/compradores` | Administrativa | Compradores |
 | `/admin/transportistas` | Administrativa | Transportistas |

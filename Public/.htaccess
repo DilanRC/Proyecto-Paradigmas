@@ -71,6 +71,7 @@ RewriteRule ^legal/?$ legal.php [END]
 # Superficie administrativa. El panel sigue siendo PHP internamente, pero
 # nunca se presenta como tal al navegador.
 RewriteRule ^admin/entrar/?$ login.php?area=admin [END,QSA]
+RewriteRule ^admin/dashboard/?$ dashboard.php [END]
 RewriteRule ^admin/productores/?$ productores.php [END]
 RewriteRule ^admin/compradores/?$ compradores.php [END]
 RewriteRule ^admin/transportistas/?$ transportistas.php [END]

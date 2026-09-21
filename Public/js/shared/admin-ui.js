@@ -7,6 +7,11 @@ const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-4';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
+    'admin/dashboard': {
+        icon: 'fa-gauge-high',
+        search: 'Buscar en administración',
+        hint: 'Resumen general de la red ganadera.',
+    },
     'admin/productores': {
         icon: 'fa-cow',
         search: 'Nombre, identificación, correo',

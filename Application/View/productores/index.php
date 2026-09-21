@@ -26,6 +26,7 @@
         <nav class="rural-panel__nav" aria-label="Administración">
             <p class="rural-panel__nav-label">Administración</p>
             <div class="rural-panel__nav-list">
+                <a class="rural-panel__nav-item" href="admin/dashboard">Dashboard</a>
                 <a class="rural-panel__nav-item rural-panel__nav-item--active" href="admin/productores">Productores<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
                 <a class="rural-panel__nav-item" href="admin/compradores">Compradores</a>
                 <a class="rural-panel__nav-item" href="admin/transportistas">Transportistas</a>

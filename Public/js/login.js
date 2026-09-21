@@ -4,7 +4,7 @@ import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js
 import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js';
 
 const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar']);
-const ADMIN_DESTINATIONS = new Set(['admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago']);
+const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago']);
 
 export function resolveNext(search = '', hasProfile = false) {
     const requested = new URLSearchParams(search).get('next');
