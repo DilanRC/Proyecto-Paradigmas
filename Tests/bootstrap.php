@@ -3,12 +3,13 @@
 declare(strict_types=1);
 
 use Application\Controller\AnimalPublicacionController;
+use Application\Controller\CompradorController;
 use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
 use Application\Controller\ProductorUbicacionController;
 use Application\Controller\IdentidadController;
-use Application\Controller\MiActividadController;
 use Application\Model\Bitacora;
+use Application\Model\Comprador;
 use Application\Model\ProductorFinca;
 use Application\Model\ProductorUbicacion;
 use Configuration\Database;
@@ -19,19 +20,18 @@ require_once $testRoot . '/Configuration/Database.php';
 require_once $testRoot . '/Application/HttpException.php';
 require_once $testRoot . '/Application/Auth/ActorContext.php';
 require_once $testRoot . '/Application/Auth/SupabaseActorResolver.php';
-foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaVehiculo', 'Transportista', 'Comprador', 'TransportistaHistorico'] as $testModel) {
+foreach (['NamedLock', 'Persona', 'Comprador', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'FincaDireccion', 'Bitacora', 'Productor', 'ProductorUbicacion', 'ProductorEstadoPeriodo', 'ProductorClasificacionPeriodo', 'AnimalComercial', 'TransportistaHistorico'] as $testModel) {
     require_once $testRoot . "/Application/Model/{$testModel}.php";
 }
-foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService', 'CompradorClasificacionService'] as $testServicio) {
+foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService', 'CompradorClasificacionService', 'AuthGuard'] as $testServicio) {
     require_once $testRoot . "/Application/Service/{$testServicio}.php";
 }
 require_once $testRoot . '/Application/Controller/ProductorController.php';
-require_once $testRoot . '/Application/Controller/TransportistaController.php';
+require_once $testRoot . '/Application/Controller/CompradorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
 require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
 require_once $testRoot . '/Application/Controller/IdentidadController.php';
 require_once $testRoot . '/Application/Controller/AnimalPublicacionController.php';
-require_once $testRoot . '/Application/Controller/MiActividadController.php';
 
 function test_assert(bool $condition, string $message): void
 {
@@ -93,6 +93,35 @@ function test_ubicacion_controller(?string $requestId = null): ProductorUbicacio
         new Bitacora($db),
         $requestId ?? test_token('request'),
     );
+}
+
+function test_comprador_controller(?string $requestId = null): CompradorController
+{
+    return new CompradorController(test_db(), $requestId ?? test_token('comprador'));
+}
+
+/**
+ * Retira bitácora, contexto Comprador y persona de prueba; el contexto se
+ * desactiva pero nunca se borra, así que esta limpieza es la única forma de no
+ * dejar basura entre corridas. La persona se elimina junto con su contexto.
+ */
+function test_cleanup_compradores(array $identificaciones): void
+{
+    $ids = array_values(array_unique(array_filter(array_map('strval', $identificaciones))));
+    if ($ids === []) return;
+    $db = test_db();
+    $marcadores = implode(',', array_fill(0, count($ids), '?'));
+    $db->beginTransaction();
+    try {
+        $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE c FROM tbcomprador c INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+            WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->commit();
+    } catch (Throwable $exception) {
+        if ($db->inTransaction()) $db->rollBack();
+        throw $exception;
+    }
 }
 
 /**
@@ -181,6 +210,7 @@ function test_http_json(
     ?string $body = null,
     string $contentType = 'application/json',
     string $url = 'http://127.0.0.1/api/productores.php',
+    array $additionalHeaders = [],
 ): array {
     $baseUrl = getenv('TEST_BASE_URL');
     if (is_string($baseUrl) && $baseUrl !== '') {
@@ -194,6 +224,9 @@ function test_http_json(
     $headers = ['Accept: application/json'];
     if ($body !== null) {
         $headers[] = "Content-Type: {$contentType}";
+    }
+    foreach ($additionalHeaders as $header) {
+        $headers[] = $header;
     }
     $context = stream_context_create(['http' => [
         'method' => $method,
@@ -216,10 +249,11 @@ function test_http_json(
 }
 
 /**
- * Limpia productor, fincas, enlaces de dirección (productor y finca), bitácora
- * y las filas de tbdireccion que quedaron huérfanas por la prueba. Las acciones
- * de FINCA usan registro "IDENTIFICACION:nombre", por eso se elimina tanto la
- * identificación exacta como ese prefijo antes de retirar Persona/Productor.
+ * Limpia productor, fincas, enlaces de dirección (productor y finca) y las
+ * filas de tbdireccion que quedaron huérfanas por la prueba. Con el esquema
+ * normalizado (DEC-13) tbdireccion es independiente y nadie más la borra
+ * automáticamente, así que esta limpieza es la única forma de no dejar
+ * basura acumulándose entre corridas de test.
  */
 function test_cleanup_productores(array $identificaciones): void
 {
@@ -233,18 +267,7 @@ function test_cleanup_productores(array $identificaciones): void
             WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})");
         $buscarProductorIds->execute($ids);
         $productorIds = array_map('intval', $buscarProductorIds->fetchAll(PDO::FETCH_COLUMN));
-
-        $borrarBitacora = $db->prepare(
-            'DELETE FROM tbbitacora
-             WHERE tbbitacoraregistroidentificacionnumero = :identificacion
-                OR tbbitacoraregistroidentificacionnumero LIKE :prefijo'
-        );
-        foreach ($ids as $identificacion) {
-            $borrarBitacora->execute([
-                'identificacion' => $identificacion,
-                'prefijo' => $identificacion . ':%',
-            ]);
-        }
+        $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero IN ({$marcadores})")->execute($ids);
 
         if ($productorIds !== []) {
             $marcadoresProductor = implode(',', array_fill(0, count($productorIds), '?'));

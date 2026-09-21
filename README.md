@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 32 tablas:
+La base `bdmercadoganadero` contiene exactamente 30 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -37,17 +37,21 @@ La base `bdmercadoganadero` contiene exactamente 32 tablas:
 28. `tbtransportistahorario`
 29. `tbtransportistaflete`
 30. `tbtransportistaresena`
-31. `tbproductorpersonatelefonohistorico`
-32. `tbcompradorpersonatelefonohistorico`
 
-`tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador` y
-`tbtransportista` son contextos de negocio independientes de la misma Persona.
-Comprador no tiene CRUD administrativo manual: su contexto se crea desde un
-proceso de negocio aprobado. Productor y Vendedor son conceptos distintos;
-VENDEDOR se conserva como clasificación histórica del Productor. Animal, publicación, compra,
-venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
-Backend implemente comportamiento después. La ubicación física vive **únicamente** en
-`tbdireccion`: `tbproductordireccion` y
+`tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
+y `tbtransportista` son contextos de esa misma persona (DEC-28): cada perfil de
+negocio tiene su propio estado y audita sus operaciones en `tbbitacora`.
+Inscribir un comprador reutiliza la persona por identificación o la crea si no
+existe; los datos personales son únicos a través de los contextos y la ficha
+consulta la misma identidad en un perfil u otro con
+`Public/js/shared/capacidades.js`. `tbproductorclasificacionperiodo`
+(`tipo = COMPRADOR` o `VENDEDOR`) queda como registro analítico del periodo en
+que la persona fue comprador; la migración histórica se audita y ejecuta con
+`php Tools/backfill-clasificacion-comprador.php --check` (audita) y `--apply`
+(migra), y ya no es fuente de verdad del contexto (DEC-29). Animal, publicación,
+compra, venta, funnel, carrito, fletes y reseñas quedan preparados en base para
+que Backend implemente comportamiento después. La ubicación física vive
+**únicamente** en `tbdireccion`: `tbproductordireccion` y
 `tbfincadireccion` solo guardan el enlace `tbdireccionid`, de modo que productor
 y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
 `Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
@@ -133,9 +137,7 @@ Las APIs PHP usan ese contrato cuando reciben `Authorization: Bearer <jwt>`.
 El `email` verificado debe coincidir de forma única con
 `tbpersona.tbpersonacorreoelectronico`; si no existe vínculo, la escritura falla
 con 409 y no inventa usuario. Sin encabezado `Authorization` se conserva el modo
-local `NO_AUTENTICADO` para lecturas compatibles. Las escrituras administrativas
-además requieren que el correo verificado esté en `SUPABASE_ADMIN_EMAILS`; la
-allowlist no se acepta desde el navegador.
+local `NO_AUTENTICADO`.
 
 ## Despliegue
 
@@ -179,7 +181,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 32 tablas, incluida la identidad compartida en
+El migrador crea y valida las 30 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -236,6 +238,23 @@ adapte, el CRUD de productores falla con `Unknown column
 'tbproductordireccionprovincia'`.
 
 ## API JSON
+
+### Superficies y autenticación (DEC-30)
+
+La API se divide en dos superficies:
+
+- **Administración** (exige `Authorization: Bearer <jwt>` en **todas** sus
+  lecturas y escrituras; sin sesión responde 401
+  `errors['auth'] = 'SIN_SESION'`): `productores`, `productores-direccion`,
+  `transportistas`, `vehiculos`, `pagometodos`, `compradores`,
+  `fincas-direccion` y `transportistas-vehiculos`.
+- **Pública** (solo lectura, no exige sesión): `publicaciones`, `identidad` y
+  `productores-ubicacion`.
+
+En local, sin sidecar de autenticación configurado, el modo demo navega en la
+superficie pública; un Bearer cualquiera responde 503 (`SERVICE_NOT_CONFIGURED`)
+hasta que se configure `SUPABASE_SECRET_KEY`. El orden de chequeos se conserva:
+405/415/400 y OPTIONS (preflight) no exigen sesión.
 
 Endpoint: `/api/productores.php`
 
@@ -315,6 +334,34 @@ bloqueos en orden inverso después del commit o rollback. Las actualizaciones
 que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
+### Contexto Comprador
+
+Endpoint: `/api/compradores.php`
+
+| Método | Operación |
+|---|---|
+| GET | Listar, buscar, filtrar o consultar por `identificacionNumero`, con las capacidades propias de la misma persona |
+| POST | Inscribir el contexto (201); 200 si la persona ya es comprador activo |
+| DELETE | Desactivar por `identificacionNumero` |
+| PATCH | Reactivar por `identificacionNumero` |
+
+```json
+{
+  "identificacion": {"tipoCodigo": "CEDULA_FISICA", "numero": "1-1111-1111"},
+  "nombre": "Persona de ejemplo",
+  "telefono": "88888888",
+  "correoElectronico": "contacto@example.test"
+}
+```
+
+Inscribir reutiliza la persona por identificación o la crea si no existe y
+después abre el contexto. Reinscribir a una persona que ya es comprador activo
+responde 200 sin tocar nada; si la persona ya existía con datos personales
+distintos, la API responde 409 con `errors['identificacion.numero']`. `DELETE`
+desactiva solo el contexto y `PATCH` reactiva la misma fila; ninguno puede
+operar si `tbpersonaestado` está inactivo (409). Ningún endpoint ejecuta
+`DELETE FROM`.
+
 ### Ubicaciones GPS del productor
 
 Endpoint: `/api/productores-ubicacion.php`
@@ -335,7 +382,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 32 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 30 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
@@ -396,7 +443,7 @@ python3 Tests/documentation_test.py
 
 ## Limitaciones
 
-- La navegación administrativa tiene un gate visual; las escrituras administrativas exigen Bearer verificado y allowlist server-side.
+- No hay autenticación ni autorización.
 - El tipo es una columna controlada, no un catálogo.
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.

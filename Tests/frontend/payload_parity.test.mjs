@@ -167,26 +167,25 @@ test('cada panel conserva su endpoint', async () => {
 });
 
 // --- compradores -------------------------------------------------------------
-// El panel de compradores ya no envia ningun cuerpo: el CRUD legacy se retiro
-// y la vista quedo de solo lectura, porque Comprador es un contexto de Persona.
-// La paridad que se prueba ahora es la contraria: que no haya vuelto a aparecer
-// un constructor de payload ni una escritura desde ese panel.
-
+// Comprador es un contexto de Persona (DEC-28/29): la API vuelve a inscribir
+// (POST), desactivar (DELETE) y reactivar (PATCH), pero el panel conserva su
+// vista de solo lectura y no construye cuerpos de escritura. La paridad que se
+// prueba no es un payload, sino el contraste: panel sin constructor ni verbos.
 test('el panel de compradores no construye cuerpos de escritura', async () => {
     const { readFile } = await import('node:fs/promises');
     const fuente = await readFile(
         new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
-    assert.equal(/buildCompradorPayload/.test(fuente), false, 'reaparecio el constructor de payload');
+    assert.equal(/buildCompradorPayload/.test(fuente), false, 'el panel no debe construir cuerpos');
     for (const metodo of ['POST', 'PUT', 'DELETE', 'PATCH']) {
-        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel volvio a emitir ${metodo}`);
+        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel no debe emitir ${metodo}`);
     }
 });
 
-test('la vista de compradores conserva lectura y detalle de capacidades', async () => {
+test('el panel conserva su endpoint y consulta las capacidades de la persona', async () => {
     const { readFile } = await import('node:fs/promises');
     const fuente = await readFile(
         new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
-    assert.match(fuente, /api\/compradores\.php/);
-    assert.match(fuente, /consultarCapacidades/);
-    assert.match(fuente, /comprador es un contexto/i);
+    assert.match(fuente, /const API_URL = 'api\/compradores\.php';/);
+    assert.equal(fuente.includes('consultarCapacidades'), true,
+        'la ficha debe consultar las relaciones de la misma Persona');
 });

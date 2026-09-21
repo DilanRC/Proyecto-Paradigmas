@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 /**
- * Backfill del paso (b) del retiro de la tabla legacy de comprador
- * (DEC-DBREADY-005/007): expandir -> migrar -> cortar.
+ * Backfill analítico heredado del retiro de la tabla legacy de comprador
+ * (DEC-DBREADY-005/007 y DEC-29). Tras DEC-28/29 el contexto Comprador vive en
+ * `tbcomprador` y `tbproductorclasificacionperiodo` queda como registro
+ * analítico del periodo en que la persona fue comprador.
  *
  * Precheck primero, backfill después. Nunca al revés: si primero se cambiara la
  * lectura del panel, los compradores legacy aparecerían como falso porque sus
