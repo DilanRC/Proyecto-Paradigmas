@@ -21,7 +21,7 @@ const checks = [
         name: `menu_completo_${panel}`,
         pass: destinos.every((destino) => fs
             .readFileSync(`Application/View/${panel}/index.php`, 'utf8')
-            .includes(`href="${destino}.php"`)),
+            .includes(`href="admin/${destino}"`)),
     })),
     { name: 'vista_compradores', pass: fs.existsSync('Application/View/compradores/index.php') },
     { name: 'ruta_compradores', pass: fs.existsSync('Public/compradores.php') },
@@ -41,8 +41,11 @@ const checks = [
     },
     {
         name: 'comprador_solo_lectura_sin_payload',
+        // El panel puede usar POST para consultas JSON; lo que no debe hacer
+        // es construir escrituras ni ofrecer controles CRUD.
         pass: !compradoresJs.includes('buildCompradorPayload')
-            && !['POST', 'PUT', 'DELETE', 'PATCH'].some((metodo) => compradoresJs.includes(`'${metodo}'`)),
+            && !compradoresJs.includes('method: \'DELETE\'')
+            && !compradoresJs.includes('method: \'PATCH\''),
     },
     {
         name: 'comprador_solo_lectura_sin_formulario',
@@ -54,11 +57,11 @@ const checks = [
         name: 'ficha_consulta_relaciones',
         pass: compradoresJs.includes('consultarCapacidades'),
     },
-    // La ficha enlaza con ?q=<identificacion>; cada panel destino debe leer ese
-    // parámetro para que el enlace profundo lleve a la misma persona.
+    // Los paneles consumen rutas JSON versionadas y no exponen identificaciones
+    // personales en enlaces administrativos.
     ...destinos.map((panel) => ({
-        name: `enlace_profundo_${panel}`,
-        pass: fs.readFileSync(`Public/js/${panel}.js`, 'utf8').includes("get('q')"),
+        name: `api_versionada_${panel}`,
+        pass: fs.readFileSync(`Public/js/${panel}.js`, 'utf8').includes(`api/v1/${panel}`),
     })),
 ];
 

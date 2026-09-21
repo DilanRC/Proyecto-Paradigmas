@@ -17,14 +17,8 @@ test('dashboard centraliza indicadores de APIs reales sin exponer identificacion
     const view = read('Application/View/dashboard/index.php');
     const js = read('Public/js/dashboard.js');
     assert.ok(view.includes('id="dashboard-metrics"'));
-    for (const asset of [
-        'finca-camino-costa-rica.png',
-        'finca-potrero-costa-rica.png',
-        'finca-bebedero-costa-rica.png',
-        'subasta-pasarela-costa-rica.png',
-        'subasta-corrales-costa-rica.png',
-        'subasta-rematador-costa-rica.png',
-    ]) assert.ok(view.includes(asset), `falta la escena ${asset}`);
+    assert.doesNotMatch(view, /<img\b/i, 'El dashboard administrativo no debe renderizar imágenes.');
+    assert.doesNotMatch(view, /dashboard-gallery|dashboard-hero__image|dashboard-card__image/, 'El dashboard no debe conservar contenedores de imágenes.');
     for (const endpoint of ['api/v1/productores', 'api/v1/compradores', 'api/v1/transportistas', 'api/v1/vehiculos']) {
         assert.ok(js.includes(endpoint), `falta el indicador ${endpoint}`);
     }
@@ -32,13 +26,8 @@ test('dashboard centraliza indicadores de APIs reales sin exponer identificacion
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
 });
 
-test('los assets del dashboard son locales y no placeholders vacíos', () => {
-    for (const path of [
-        'Public/assets/dashboard/finca-camino-costa-rica.png',
-        'Public/assets/dashboard/finca-potrero-costa-rica.png',
-        'Public/assets/dashboard/finca-bebedero-costa-rica.png',
-        'Public/assets/dashboard/subasta-pasarela-costa-rica.png',
-        'Public/assets/dashboard/subasta-corrales-costa-rica.png',
-        'Public/assets/dashboard/subasta-rematador-costa-rica.png',
-    ]) assert.ok(statSync(new URL(`../../${path}`, import.meta.url)).size > 10000, path);
+test('los assets ganaderos pueden seguir siendo usados por el sitio público, pero no por el dashboard', () => {
+    const path = 'Public/assets/dashboard/subasta-pasarela-costa-rica.png';
+    assert.ok(statSync(new URL(`../../${path}`, import.meta.url)).size > 10000, path);
+    assert.doesNotMatch(read('Application/View/dashboard/index.php'), /subasta-pasarela-costa-rica\.png/);
 });

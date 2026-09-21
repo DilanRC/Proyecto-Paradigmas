@@ -34,7 +34,14 @@ foreach ([
 ] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
-foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'EstadoService'] as $servicio) {
+foreach ([
+    'ProductorDireccionService',
+    'ProductorEstadoService',
+    'ValidacionService',
+    'EstadoService',
+    'CompradorClasificacionService',
+    'CapacidadService',
+] as $servicio) {
     require_once $raiz . "/Application/Service/{$servicio}.php";
 }
 require_once $raiz . '/Application/Controller/ProductorController.php';

@@ -89,10 +89,28 @@ try {
         'contexto' => 'COMPRADOR',
         'activo' => true,
     ]);
-    test_same(409, $comprador['status'],
-        'Comprador no debe recibir un escritor genérico mientras su proceso de negocio esté pendiente');
-    test_same(false, $comprador['body']['data']['escrituraDisponible'],
-        'El contrato debe declarar explícitamente que Comprador sigue solo lectura');
+    test_same(200, $comprador['status'],
+        'La Persona debe poder inscribirse como Comprador desde Mi actividad');
+    test_same('ACTIVO', $comprador['body']['data']['estado'],
+        'La inscripción de Comprador debe activar el contexto en la misma Persona');
+
+    $compradorDesactivado = $controlador->procesar('PATCH', [
+        'contexto' => 'COMPRADOR',
+        'activo' => false,
+    ]);
+    test_same(200, $compradorDesactivado['status'],
+        'La Persona debe poder abandonar Comprador sin borrar su identidad');
+    test_same('INACTIVO', $compradorDesactivado['body']['data']['estado'],
+        'Abandonar Comprador debe conservar el contexto como inactivo');
+
+    $compradorReactivado = $controlador->procesar('PATCH', [
+        'contexto' => 'COMPRADOR',
+        'activo' => true,
+    ]);
+    test_same(200, $compradorReactivado['status'],
+        'La Persona debe poder reactivar Comprador desde Mi actividad');
+    test_same('ACTIVO', $compradorReactivado['body']['data']['estado'],
+        'Reactivar Comprador no debe crear una segunda Persona ni contexto');
 
     $transportista = $controlador->procesar('PATCH', [
         'contexto' => 'TRANSPORTISTA',
@@ -103,6 +121,13 @@ try {
     test_same('NO_CONFIGURADO', $transportista['body']['data']['estado'],
         'El servidor debe pedir primero el proceso de configuración correspondiente');
 } finally {
+    if ($ids !== []) {
+        $marcadores = implode(',', array_fill(0, count($ids), '?'));
+        test_db()->prepare(
+            "DELETE c FROM tbcomprador c INNER JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+             WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})"
+        )->execute($ids);
+    }
     test_cleanup_productores($ids);
 }
 

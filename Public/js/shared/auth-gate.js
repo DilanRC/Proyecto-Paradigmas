@@ -6,6 +6,7 @@
 // gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
 import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
+import { readAuthSession } from './supabase-auth.js';
 
 export const SESSION_KEY = 'tindercows:admin-session';
 
@@ -110,7 +111,11 @@ function revealPrivateUi() {
 
 if (typeof window !== 'undefined') {
     const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
-    if (allowed && typeof document !== 'undefined') {
+    const hasVerifiedAuthSession = readAuthSession(window.sessionStorage) !== null;
+    if (allowed && !hasVerifiedAuthSession) {
+        clearAdminBrowserSession(window.sessionStorage);
+        window.location.replace(loginTarget(window.location.pathname));
+    } else if (allowed && typeof document !== 'undefined') {
         revealPrivateUi();
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {

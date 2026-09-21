@@ -1,6 +1,6 @@
 # Guía de defensa
 
-1. **¿Cuántas tablas hay?** La instalación MySQL vigente tiene 32 tablas, y el espejo PostgreSQL/Supabase conserva las mismas 32 tablas.
+1. **¿Cuántas tablas hay?** La instalación MySQL vigente tiene 34 tablas, y el espejo PostgreSQL/Supabase conserva las mismas 34 tablas.
 2. **¿Hay PRIMARY KEY?** No, el esquema tiene cero PK.
 3. **¿Hay FOREIGN KEY?** No, las asociaciones son lógicas.
 4. **¿Hay CHECK o UNIQUE?** No existe ninguna de esas restricciones.

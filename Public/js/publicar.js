@@ -1,7 +1,6 @@
-import { getAccessToken } from './shared/supabase-auth.js';
+import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
+import { request } from './shared/api.js';
 
-const PROFILE_KEY = 'tindercows:profile';
-const SESSION_KEY = 'tindercows:login';
 const DRAFT_KEY = 'tindercows:publish-draft';
 
 function readStored(key) {
@@ -9,11 +8,7 @@ function readStored(key) {
 }
 
 function isAuthenticated() {
-    return readStored(SESSION_KEY)?.authenticated === true;
-}
-
-function capabilityState(profile, capability) {
-    return profile?.capacidadesEstado?.[capability] ?? 'NO_CONFIGURADO';
+    return readAuthSession() !== null;
 }
 
 function setGate(title, message, actions = []) {
@@ -130,12 +125,11 @@ async function crearPublicacion(draft) {
     return payload.data;
 }
 
-function initialize() {
+async function initialize() {
     const form = document.querySelector('#publish-form');
     const submit = document.querySelector('#publish-submit');
     if (!(form instanceof HTMLFormElement) || !submit) return;
 
-    const profile = readStored(PROFILE_KEY);
     if (!isAuthenticated()) {
         setGate(
             'Entra para publicar',
@@ -148,7 +142,19 @@ function initialize() {
         return;
     }
 
-    if (!profile?.persona) {
+    let activity;
+    try {
+        activity = (await request('api/v1/actividad')).data;
+    } catch (error) {
+        setGate(
+            'No pudimos comprobar tu actividad',
+            error?.message || 'No fue posible consultar el estado del productor. Inténtalo nuevamente desde Mi actividad.',
+            [{ label: 'Ir a Mi actividad', href: 'mi-actividad', primary: true }],
+        );
+        return;
+    }
+
+    if (!activity?.persona) {
         setGate(
             'Completa tu cuenta antes de publicar',
             'Todavía no existe una Persona registrada en este prototipo. El registro reutilizará esa identidad para todas las actividades futuras.',
@@ -157,7 +163,8 @@ function initialize() {
         return;
     }
 
-    const state = capabilityState(profile, 'PRODUCTOR');
+    const capacidades = activity.capacidades ?? {};
+    const state = capacidades.PRODUCTOR?.estado ?? 'NO_CONFIGURADO';
     if (state === 'NO_CONFIGURADO') {
         setGate(
             'Activa tu participación como productor',
@@ -175,7 +182,10 @@ function initialize() {
         return;
     }
 
-    showWorkspace(profile);
+    showWorkspace({
+        persona: activity.persona,
+        fincas: capacidades.PRODUCTOR?.fincas ?? [],
+    });
     restoreDraft(form);
 
     form.addEventListener('input', () => {

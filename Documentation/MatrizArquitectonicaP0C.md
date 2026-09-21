@@ -58,7 +58,7 @@ conserva el historial analítico (DEC-29) y el backfill heredado sigue disponibl
 con `Tools/backfill-clasificacion-comprador.php --check/--apply` para la
 evidencia previa.
 
-La capa DB mantiene 32 tablas en
+La capa DB mantiene 34 tablas en
 `Database/Migrations/006estructuracomercialhistorica.sql` porque las tablas
 nuevas representan hechos y periodos confirmados sin política automática. T4b,
 T7, T8, T9, T10 y T11 solo pueden implementar comportamiento cuyo evento o

@@ -44,7 +44,7 @@ expresa.
 
 ## DEC-PER-005 - Tablas sin objetos de integridad
 
-El modelo final de base preparada tiene exactamente 32 tablas y mantiene cero PK, FK, UNIQUE,
+El modelo final de base preparada tiene exactamente 34 tablas y mantiene cero PK, FK, UNIQUE,
 CHECK, índices, ENUM, defaults, triggers y objetos programables.
 
 ## DEC-C04-001 - Instrucción docente vigente
@@ -248,7 +248,7 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-mediante migraciones versionadas: 32 tablas, `tbpersona` como identidad única,
+mediante migraciones versionadas: 34 tablas, `tbpersona` como identidad única,
 `tbproductordireccion` normalizada, estructura comercial histórica y el mismo
 criterio de cero llaves, restricciones, índices y valores automáticos. El
 espejo sigue a MySQL; nunca al revés. Aplicar el cambio remoto requiere
@@ -541,7 +541,7 @@ ampliar alcance. Ocho divergencias corregidas:
    `tbpagometodoactivo` no cambian: son disponibilidad técnica, no estado de
    negocio.
 
-El esquema queda en 32 tablas. La migración 006 sigue siendo solo
+El esquema queda en 34 tablas. La migración 006 sigue siendo solo
 `CREATE TABLE IF NOT EXISTS`, así que un entorno que ya la había corrido con la
 versión anterior debe reinstalarse limpio: la corrección renombra y retira
 columnas y una migración aditiva no puede hacerlo sin perder o duplicar datos.
@@ -822,7 +822,7 @@ tramo 13.
 
 Ese cierre queda como antecedente histórico. El contrato vigente sí crea tablas
 nuevas en DEC-DBREADY-001 y `Database/Tests/comprobacionestructura.sql` ahora
-espera 32 tablas.
+espera 34 tablas.
 
 ## DEC-21 - Fin del UPDATE destructivo de dirección
 
@@ -1028,7 +1028,7 @@ porque `Tests/pagometodo_test.php` la asume (`--check` queda COMPLETA sin
 pagometodos extra).
 
 La instalación limpia es verificable de punta a punta con
-`Tests/instalacion_limpia_test.php`: `schema_manifest()` reporta las 32 tablas
+`Tests/instalacion_limpia_test.php`: `schema_manifest()` reporta las 34 tablas
 canónicas vivas en `information_schema`, la semilla es idempotente (dos
 ejecuciones producen los mismos conteos), las tablas madres cumplen sus mínimos
 de filas, no hay IDs duplicados ni huérfanos por foreign keys, la superficie
@@ -1104,7 +1104,7 @@ Las instalaciones creadas antes de la versión canónica pueden conservar
 Persona obligatorio o no tener todavía las coordenadas opcionales de
 `tbdireccion`. Las migraciones `009normalizahistoricocomprador.sql`,
 `010normalizapersonaalias.sql` y `008coordenadasdireccionfinca.sql` alinean
-esas instalaciones con las 32 tablas canónicas.
+esas instalaciones con las 34 tablas canónicas.
 
 La migración 009 hace preflight y aborta ante una colisión de nombres o un
 teléfono que pudiera truncarse; la 010 solo vuelve opcional `tbpersonaalias` y

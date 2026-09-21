@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-1">
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-2">
     <script type="module" src="js/dashboard.js"></script>
 </head>
 <body class="rural-panel admin-dashboard">
@@ -53,7 +53,6 @@
                     <p>Revise el pulso de TinderCows, encuentre accesos rápidos y mantenga la operación cerca de lo importante.</p>
                     <div class="dashboard-hero__actions"><a class="button button--primary" href="admin/productores"><i class="fa-solid fa-users" aria-hidden="true"></i>Revisar productores</a><a class="button button--secondary" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i>Ver sitio público</a></div>
                 </div>
-                <div class="dashboard-hero__image"><img src="assets/dashboard/finca-camino-costa-rica.png" alt="Ganado recorriendo un camino empedrado y húmedo entre potreros de Costa Rica"></div>
             </section>
 
             <section class="dashboard-section" aria-labelledby="summary-title">
@@ -68,18 +67,8 @@
             </section>
 
             <section class="dashboard-grid">
-                <article class="dashboard-card dashboard-card--feature"><div class="dashboard-card__image"><img src="assets/dashboard/subasta-pasarela-costa-rica.png" alt="Pasarela elevada sobre corrales de un remate ganadero costarricense"></div><div class="dashboard-card__body"><span class="label">Contexto ganadero</span><h2>Preparados para conectar oportunidades reales.</h2><p>La administración reúne personas, fincas, transporte y publicaciones para que cada operación tenga un lugar claro.</p><a class="text-link" href="admin/transportistas">Revisar logística <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div></article>
+                <article class="dashboard-card dashboard-card--feature"><div class="dashboard-card__body"><span class="label">Contexto ganadero</span><h2>Preparados para conectar oportunidades reales.</h2><p>La administración reúne personas, fincas, transporte y publicaciones para que cada operación tenga un lugar claro.</p><a class="text-link" href="admin/transportistas">Revisar logística <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div></article>
                 <article class="dashboard-card dashboard-card--links"><span class="label">Accesos rápidos</span><h2>Ir directo al trabajo</h2><div class="dashboard-quick-links"><a href="admin/compradores"><i class="fa-solid fa-handshake" aria-hidden="true"></i><span><strong>Compradores</strong><small>Consultar actividad</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><a href="admin/vehiculos"><i class="fa-solid fa-truck-pickup" aria-hidden="true"></i><span><strong>Vehículos</strong><small>Revisar disponibilidad</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><a href="admin/metodos-pago"><i class="fa-solid fa-wallet" aria-hidden="true"></i><span><strong>Métodos de pago</strong><small>Gestionar catálogo</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div></article>
-            </section>
-
-            <section class="dashboard-gallery" aria-labelledby="gallery-title">
-                <div class="dashboard-section__heading"><div><span class="label">Trabajo de campo</span><h2 id="gallery-title">La red también ocurre fuera del panel</h2></div></div>
-                <div class="dashboard-gallery__grid">
-                    <figure><img src="assets/dashboard/finca-potrero-costa-rica.png" alt="Ganado mixto en un potrero verde y húmedo de Costa Rica"><figcaption>Potreros y animales</figcaption></figure>
-                    <figure><img src="assets/dashboard/finca-bebedero-costa-rica.png" alt="Ganado reunido junto a un bebedero de concreto en una finca"><figcaption>Agua y manejo diario</figcaption></figure>
-                    <figure><img src="assets/dashboard/subasta-corrales-costa-rica.png" alt="Ganaderos observando el ganado desde un pasillo de corrales"><figcaption>Recorrido por corrales</figcaption></figure>
-                    <figure><img src="assets/dashboard/subasta-rematador-costa-rica.png" alt="Público participando en un remate junto al puesto del rematador"><figcaption>El momento del remate</figcaption></figure>
-                </div>
             </section>
 
             <p class="rural-panel__footnote">Dashboard administrativo · Los indicadores provienen de las APIs de TinderCows</p>

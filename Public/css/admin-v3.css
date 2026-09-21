@@ -730,10 +730,35 @@ html[data-theme='light'] .rural-panel th {
 }
 
 .rural-panel .modal {
+    display:flex !important;
+    flex-direction:column !important;
     border:1px solid var(--admin-line-strong) !important;
     color:var(--admin-text) !important;
     background:var(--admin-surface) !important;
     box-shadow:0 28px 90px rgba(0,0,0,.42) !important;
+    max-height:calc(100dvh - 32px) !important;
+    overflow:hidden !important;
+}
+
+.rural-panel .modal > form {
+    display:flex;
+    min-height:0;
+    max-height:inherit;
+    flex:1 1 auto;
+    flex-direction:column;
+}
+
+.rural-panel .modal__content {
+    min-height:0;
+    flex:1 1 auto;
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-gutter:stable;
+}
+
+.rural-panel .modal__header,
+.rural-panel .modal__actions {
+    flex:0 0 auto;
 }
 
 .rural-panel .modal::backdrop {
@@ -778,6 +803,99 @@ html[data-theme='light'] .rural-panel th {
 
 .rural-panel .field__error {
     color:#f28b83 !important;
+}
+
+/* Filas repetibles de fincas dentro del formulario de Productores. */
+.rural-panel .finca-fila {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto auto;
+    gap:8px;
+    align-items:center;
+    margin-top:10px;
+    padding:10px;
+    border:1px solid var(--admin-line-strong);
+    border-radius:12px;
+    background:var(--admin-surface-2);
+}
+
+.rural-panel .finca-fila__nombre,
+.rural-panel .finca-fila__campo,
+.rural-panel .finca-fila__direccion select,
+.rural-panel .finca-fila__direccion textarea {
+    width:100%;
+    min-height:40px;
+    padding:9px 11px;
+    border:1px solid var(--admin-line-strong);
+    border-radius:9px;
+    color:var(--admin-text);
+    background:var(--admin-surface);
+}
+
+.rural-panel .finca-fila__nombre:focus,
+.rural-panel .finca-fila__campo:focus,
+.rural-panel .finca-fila__direccion select:focus,
+.rural-panel .finca-fila__direccion textarea:focus {
+    border-color:var(--admin-primary);
+    outline:2px solid color-mix(in srgb,var(--admin-primary) 32%,transparent);
+    outline-offset:1px;
+}
+
+.rural-panel .finca-fila__toggle,
+.rural-panel .finca-fila__quitar {
+    min-height:40px;
+    padding:9px 12px;
+    border:1px solid var(--admin-line-strong);
+    border-radius:9px;
+    color:var(--admin-text-soft);
+    background:var(--admin-surface-3);
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.rural-panel .finca-fila__toggle:hover,
+.rural-panel .finca-fila__quitar:hover {
+    border-color:var(--admin-primary);
+    color:var(--admin-text);
+}
+
+.rural-panel .finca-fila__quitar {
+    color:#f28b83;
+}
+
+.rural-panel .finca-fila__direccion {
+    grid-column:1 / -1;
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    padding-top:4px;
+}
+
+.rural-panel .finca-fila__direccion[hidden] {
+    display:none;
+}
+
+.rural-panel .finca-fila__direccion textarea {
+    grid-column:1 / -1;
+    resize:vertical;
+}
+
+@media (max-width:640px) {
+    .rural-panel .finca-fila {
+        grid-template-columns:minmax(0,1fr) auto;
+    }
+
+    .rural-panel .finca-fila__nombre {
+        grid-column:1 / -1;
+    }
+
+    .rural-panel .finca-fila__toggle,
+    .rural-panel .finca-fila__quitar {
+        width:100%;
+    }
+
+    .rural-panel .finca-fila__direccion {
+        grid-template-columns:1fr;
+    }
 }
 
 @media (max-width:1050px) {

@@ -12,6 +12,7 @@ use Application\Model\Productor;
 use Application\Model\ProductorFinca;
 use Application\Model\Transportista;
 use Application\Model\TransportistaVehiculo;
+use Application\Service\CapacidadService;
 use PDO;
 
 /**
@@ -23,10 +24,9 @@ use PDO;
  * por correo con tbpersona. Esto evita una autorización por identificador
  * manipulable (IDOR/BOLA).
  *
- * Productor y Transportista ya tienen una transición de estado aprobada y se
- * reutilizan sus controladores para no duplicar reglas, históricos o bitácora.
- * Comprador permanece solo lectura en Avance 2: su alta/baja debe provenir del
- * proceso de compra cuando ese contrato sea aprobado.
+ * Cada transición reutiliza el servicio dueño del contexto para no duplicar
+ * reglas, históricos ni bitácora. Comprar no depende de una compra futura:
+ * Comprador es una capacidad que la Persona puede activar desde este flujo.
  */
 final class MiActividadController
 {
@@ -34,6 +34,7 @@ final class MiActividadController
     private Productor $productor;
     private Transportista $transportista;
     private Comprador $comprador;
+    private CapacidadService $capacidades;
     private string $solicitudId;
 
     public function __construct(
@@ -46,6 +47,7 @@ final class MiActividadController
         $this->transportista = new Transportista($conexion, new TransportistaVehiculo($conexion));
         $this->comprador = new Comprador($conexion);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
+        $this->capacidades = new CapacidadService($conexion, $this->solicitudId, $actor);
     }
 
     public function procesar(string $metodo, array $cuerpo = []): array
@@ -116,19 +118,16 @@ final class MiActividadController
         $activo = $cuerpo['activo'];
         $actual = $this->capacidades($identificacion)[$contexto];
 
-        if ($contexto === 'COMPRADOR') {
-            throw new HttpException(
-                'Comprador todavía no tiene una transición pública aprobada; su estado debe provenir del proceso de compra.',
-                409,
-                [
-                    'contexto' => 'COMPRADOR',
-                    'estado' => $actual['estado'],
-                    'escrituraDisponible' => false,
-                ],
-            );
-        }
-
         if ($actual['estado'] === 'NO_CONFIGURADO') {
+            if ($contexto === 'COMPRADOR' && $activo) {
+                $resultado = $this->capacidades->inscribir('COMPRADOR', $identificacion);
+                return $this->respuesta(true, 'Actividad reactivada correctamente.', [
+                    'contexto' => $contexto,
+                    'estado' => 'ACTIVO',
+                    'capacidades' => $this->capacidades($identificacion),
+                    'resultado' => $resultado,
+                ]);
+            }
             throw new HttpException(
                 "La actividad {$contexto} todavía no está configurada para esta Persona.",
                 409,
@@ -138,6 +137,23 @@ final class MiActividadController
                     'siguientePaso' => $contexto === 'PRODUCTOR'
                         ? 'registro/productor?next=mi-actividad'
                         : 'registro/transportista?next=mi-actividad',
+                ],
+            );
+        }
+
+        if ($contexto === 'COMPRADOR') {
+            $resultado = $activo
+                ? $this->capacidades->reactivar('COMPRADOR', $identificacion)
+                : $this->capacidades->abandonar('COMPRADOR', $identificacion);
+            $capacidades = $this->capacidades($identificacion);
+            return $this->respuesta(
+                true,
+                $activo ? 'Actividad reactivada correctamente.' : 'Actividad desactivada correctamente.',
+                [
+                    'contexto' => $contexto,
+                    'estado' => $capacidades[$contexto]['estado'],
+                    'capacidades' => $capacidades,
+                    'resultado' => $resultado,
                 ],
             );
         }
@@ -199,10 +215,9 @@ final class MiActividadController
             ),
             'COMPRADOR' => $this->capacidad(
                 $comprador,
-                false,
+                true,
                 'explorar',
                 'registro/comprador?next=mi-actividad',
-                'La transición de Comprador debe provenir del proceso de compra aprobado.',
             ),
             'TRANSPORTISTA' => $this->capacidad(
                 $transportista,

@@ -74,10 +74,6 @@ function setupAction(id, detail) {
         return `<button class="activity-button${primary}" type="button" data-toggle-capability="${escapeHtml(id)}" data-next-active="${nextActive}">${escapeHtml(toggleLabel(id, state))}</button>${businessLink(id, detail)}`;
     }
 
-    if (id === 'COMPRADOR') {
-        return `<p class="activity-note">La compra se habilitará desde el proceso de compra; no existe un CRUD público para crear Comprador.</p><a class="activity-button activity-button--primary" href="explorar">Explorar ganado</a>`;
-    }
-
     const rutasRegistro = {
         PRODUCTOR: 'registro/productor',
         COMPRADOR: 'registro/comprador',
