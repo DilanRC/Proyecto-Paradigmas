@@ -49,10 +49,10 @@ test_same(true, $vercelConfiguration['git']['deploymentEnabled']['main'] ?? null
     'Vercel debe conservar los despliegues de producción desde main');
 test_assert(!array_key_exists('*', $vercelConfiguration['git']['deploymentEnabled'] ?? []),
     'deploymentEnabled no admite comodines: "*" no bloquea nada y deja construir cualquier rama');
-test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['ignoreCommand'] ?? null,
-    'ignoreCommand debe ser global: dentro de services Vercel no lo ejecuta y toda rama empuja imagen');
-test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration['services']['app'] ?? []),
-    'El servicio no debe declarar ignoreCommand propio');
+test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['services']['app']['ignoreCommand'] ?? null,
+    'ignoreCommand debe pertenecer al servicio que posee el entrypoint');
+test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration),
+    'ignoreCommand no debe quedar en la raíz cuando existe services');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_ENV:-}" == "production"'),
     'La política debe conservar los despliegues de producción');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_GIT_COMMIT_REF:-}" == "dev"'),

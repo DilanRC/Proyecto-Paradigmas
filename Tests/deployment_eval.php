@@ -25,8 +25,8 @@ $checks = [
     'servicio_vercel_explicito' => ($vercelConfiguration['services']['app']['entrypoint'] ?? null) === 'Dockerfile.vercel',
     'preview_solo_dev' => ($vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null) === true
         && ($vercelConfiguration['git']['deploymentEnabled']['main'] ?? null) === true
-        && ($vercelConfiguration['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
-        && !array_key_exists('ignoreCommand', $vercelConfiguration['services']['app'] ?? [])
+        && ($vercelConfiguration['services']['app']['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
+        && !array_key_exists('ignoreCommand', $vercelConfiguration)
         && str_contains($vercelIgnoreBuild, 'VERCEL_GIT_COMMIT_REF:-}" == "dev"')
         && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"'),
     'registro_con_poda' => is_file("{$root}/Tools/vercel-prune-registry.sh")

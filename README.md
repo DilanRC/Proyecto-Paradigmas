@@ -148,11 +148,11 @@ para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
 declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
 
-`ignoreCommand` es una propiedad de nivel raíz y ejecuta
-`Tools/vercel-ignore-build.sh`: conserva `main` para producción, permite
-previews automáticos únicamente desde `dev` y omite la construcción en
-cualquier otra rama. Declararlo dentro de `services` no sirve, Vercel no lo lee
-ahí y toda rama termina construyendo. `git.deploymentEnabled` solo acepta
+`services.app.ignoreCommand` ejecuta `Tools/vercel-ignore-build.sh`: conserva
+`main` para producción, permite previews automáticos únicamente desde `dev` y
+omite la construcción en cualquier otra rama. Como el entrypoint pertenece al
+servicio `app`, Vercel exige que esta propiedad viva dentro de ese servicio.
+`git.deploymentEnabled` solo acepta
 nombres de rama; no admite comodines, así que un `"*": false` no bloquea nada.
 
 Cada commit a `main` o `dev` empuja una imagen al Container Registry, que tiene
