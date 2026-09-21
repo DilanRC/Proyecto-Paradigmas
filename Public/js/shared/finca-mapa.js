@@ -5,7 +5,7 @@ function asegurarEstilos() {
     if (typeof document === 'undefined' || document.querySelector('link[data-tc-map-ui]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/mapa.css?v=mapas-2';
+    link.href = 'css/mapa.css?v=mapas-3';
     link.dataset.tcMapUi = 'true';
     document.head.append(link);
 }

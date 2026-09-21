@@ -103,7 +103,7 @@
     <article class="finca-card" data-finca>
         <div class="finca-card__heading"><strong>Finca</strong><button type="button" data-remove-finca aria-label="Eliminar finca"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></div>
         <label class="auth-field"><span>Nombre de la finca *</span><input type="text" data-finca-nombre maxlength="150" required placeholder="Ej. Finca El Roble"></label>
-        <details class="finca-address" open><summary>Dirección de la finca <span>opcional</span></summary><p>Escribe la provincia, cantón, distrito y señas, o marca el punto exacto en el mapa. Puedes dejarlo para después.</p></details>
+        <details class="finca-address"><summary><span class="finca-address__title">Agregar dirección</span><span class="finca-address__meta">Opcional · puedes hacerlo ahora o después</span></summary><p>Escribe la ubicación de la finca o marca un punto de referencia en el mapa.</p></details>
     </article>
 </template>
 </body>

@@ -57,7 +57,7 @@ function montarDireccionFinca(card, direccionInicial = null) {
     const numero = ++secuenciaFinca;
     const listaId = `registro-pueblos-finca-${numero}`;
     details.innerHTML = `
-        <summary>Dirección de la finca <span>opcional</span></summary>
+        <summary><span class="finca-address__title">Agregar dirección</span><span class="finca-address__meta">Opcional · puedes hacerlo ahora o después</span></summary>
         <div class="farm-address-editor">
             <p class="fieldset-help">Puede escribir la dirección o marcar el punto exacto en el mapa. No es obligatorio completarlo ahora.</p>
             <div class="farm-address-editor__grid">
