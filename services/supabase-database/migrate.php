@@ -54,6 +54,14 @@ const EXPECTED_COLUMNS = [
     'tbcomprador' => [
         'tbcompradorid', 'tbpersonaid', 'tbcompradorestado',
     ],
+    'tbproductorpersonatelefonohistorico' => [
+        'tbproductorpersonatelefonohistoricoid', 'tbproductorid',
+        'tbproductorpersonatelefonohistoriconuevo', 'tbproductorpersonatelefonohistoricofecha',
+    ],
+    'tbcompradorpersonatelefonohistorico' => [
+        'tbcompradorpersonatelefonohistoricoid', 'tbcompradorid',
+        'tbcompradorpersonatelefonohistoriconuevo', 'tbcompradorpersonatelefonohistoricofecha',
+    ],
     'tbproductorclasificacionperiodo' => [
         'tbproductorclasificacionperiodoid', 'tbproductorid', 'tbproductorclasificacionperiodotipo',
         'tbproductorclasificacionperiodofechainicio', 'tbproductorclasificacionperiodofechafin',
@@ -224,7 +232,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 30 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 32 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -419,7 +427,7 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v6'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v7'))");
     $connection->exec($schema);
     normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
@@ -429,7 +437,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=30 migration=v6\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=32 migration=v7\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

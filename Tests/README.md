@@ -4,6 +4,7 @@ Ejecutar sobre una base limpia inicializada con Docker:
 
 ```bash
 docker compose exec -T app php Tests/naming_gate.php
+docker compose exec -T app php Tests/admin_authorization_test.php
 docker compose exec -T app php Tests/comprador_retiro_gate.php
 docker compose exec -T app php Tests/db_ready_test.php
 docker compose exec -T app php Tests/backend_db_ready_test.php
@@ -65,10 +66,9 @@ php services/supabase-database/evals/schema_eval.php
 Las pruebas generan identificaciones aleatorias y limpian únicamente sus filas.
 
 `comprador_retiro_gate.php` es el gate estático de DEC-DBREADY-008: exige que
-modelo/controlador legacy sigan retirados, que el endpoint y la vista sean de
-solo lectura, que Comprador permanezca marcado como clasificación derivada, que
-Productor no vuelva a ser alias de Vendedor y que `tbcomprador` no se elimine
-antes del paso (e).
+el controlador CRUD legacy siga retirado, que el endpoint y la vista sean de
+solo lectura manual, que Comprador permanezca como contexto de Persona, que
+Productor no vuelva a ser alias de Vendedor y que `tbcomprador` no se elimine.
 
 `comprador_consulta_test.php` fija el contrato dinámico del paso (d):
 `/api/compradores.php` es de solo lectura, la fuente es el periodo `COMPRADOR`

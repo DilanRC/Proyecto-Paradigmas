@@ -82,10 +82,15 @@ foreach (['tbpersonaalias', 'registrarCambio', "gmdate('Y-m-d H:i:s')"] as $frag
     }
 }
 foreach (['tbproductorpersonatelefonohistorico', 'tbcompradorpersonatelefonohistorico',
-    '->prepare(', 'MAX(tbproductorpersonatelefonohistoricoid)',
-    'MAX(tbcompradorpersonatelefonohistoricoid)'] as $fragment) {
+    '->prepare(', 'COALESCE(MAX({$columna}), 0) + 1'] as $fragment) {
     if (!str_contains($historico, $fragment)) {
         throw new RuntimeException("El modelo histórico no aplica el contrato: falta {$fragment}");
+    }
+}
+foreach (['tbproductorpersonatelefonohistorico' => 'tbproductorpersonatelefonohistoricoid',
+    'tbcompradorpersonatelefonohistorico' => 'tbcompradorpersonatelefonohistoricoid'] as $tabla => $columna) {
+    if (!str_contains($historico, "'{$tabla}' => '{$columna}'")) {
+        throw new RuntimeException("El modelo histórico no protege la columna de {$tabla}");
     }
 }
 if (str_contains($historico, '->query(') || str_contains($historico, '->exec(')) {

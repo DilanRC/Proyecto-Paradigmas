@@ -27,7 +27,7 @@ html[data-tc-sidebar='collapsed'] {
     padding:0 12px;
     border:1px solid rgba(238,219,202,.11);
     border-radius:10px;
-    color:rgba(247,238,229,.68);
+    color:#e9d9ca;
     background:rgba(69,99,79,.12);
     font:inherit;
     font-size:11px;
