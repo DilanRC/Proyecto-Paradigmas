@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/public-v3.css?v=public-4">
     <link rel="stylesheet" href="css/public-product.css?v=product-1">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/public-ui.js?v=public-1"></script>
+    <script type="module" src="js/public-ui.js?v=public-2"></script>
 </head>
 <body class="public-home">
     <div class="public-shell" id="inicio">

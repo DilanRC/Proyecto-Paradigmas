@@ -9,10 +9,12 @@ import {
 import { conectarDireccion } from './shared/direccion.js';
 import { crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
+import { request } from './shared/api.js';
+import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
+import { syncPublicProfile } from './shared/public-profile.js';
 
 const DRAFT_KEY = 'tindercows:registration-draft';
 const PROFILE_KEY = 'tindercows:profile';
-const SESSION_KEY = 'tindercows:login';
 const SAFE_NEXT = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
 const editoresFinca = new WeakMap();
 let secuenciaFinca = 0;
@@ -224,8 +226,24 @@ function initialize() {
 
     inicializarUbicacionAutomatica();
 
+    const authSession = readAuthSession();
     const existingProfile = readStored(PROFILE_KEY);
-    const extending = Boolean(existingProfile?.persona);
+    const extending = Boolean(existingProfile?.persona && authSession);
+    if (authSession && !existingProfile?.persona) {
+        const email = form.elements.namedItem('correoElectronico');
+        const password = form.elements.namedItem('password');
+        const confirmation = form.elements.namedItem('passwordConfirmacion');
+        if (email instanceof HTMLInputElement) {
+            email.value = authSession.email;
+            email.readOnly = true;
+        }
+        for (const control of [password, confirmation]) {
+            if (control instanceof HTMLInputElement) {
+                control.required = false;
+                control.closest('label')?.setAttribute('hidden', '');
+            }
+        }
+    }
     restoreDraft(form, existingProfile);
     if (!document.querySelector('[data-finca]')) addFinca();
 
@@ -264,7 +282,9 @@ function initialize() {
     const validateCurrent = () => {
         const active = steps[stepIndex];
         let errors = {};
-        if (active === 'persona') errors = validatePersonaDraft(formPersona(form));
+        if (active === 'persona') {
+            errors = validatePersonaDraft(formPersona(form), { requirePassword: !readAuthSession() });
+        }
         if (active === 'intereses') errors = validateCapabilities(selectedCapabilities(form));
         if (active === 'fincas') {
             const fincas = readFincas();
@@ -292,35 +312,50 @@ function initialize() {
     form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });
     form.addEventListener('change', () => { persistDraft(form, existingProfile); });
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!validateCurrent()) return;
+        if (!validateCurrent() || finishButton.disabled) return;
         const draft = persistDraft(form, existingProfile);
         form.setAttribute('aria-busy', 'true');
         finishButton.disabled = true;
 
         const summary = buildRegistrationSummary(draft);
-        const previousStates = existingProfile?.capacidadesEstado ?? {};
-        const profile = {
-            ...(existingProfile ?? {}),
-            ...summary,
-            capacidadesEstado: Object.fromEntries(summary.capacidades.map((cap) => [cap, previousStates[cap] ?? 'ACTIVO'])),
-            onboardingCompletedAt: existingProfile?.onboardingCompletedAt ?? new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            persistence: 'frontend-prototype',
-        };
-        sessionStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-            authenticated: true,
-            version: 2,
-            email: profile.persona.correoElectronico,
-            startedAt: new Date().toISOString(),
-            mode: 'frontend-prototype',
-        }));
-        sessionStorage.removeItem(DRAFT_KEY);
-        status.textContent = extending ? 'Actividad actualizada. Volviendo al flujo anterior…' : 'Registro completado. Preparando tu espacio…';
-        const fallback = extending ? 'mi-actividad.php?actualizado=1' : 'mi-actividad.php?bienvenida=1';
-        window.location.assign(resolveNext(fallback));
+        try {
+            if (!readAuthSession()) {
+                const auth = await signUpWithPassword(summary.persona.correoElectronico, draft.persona.password);
+                if (!auth.session) {
+                    status.textContent = 'Cuenta creada. Confirma tu correo y luego entra para completar el registro.';
+                    finishButton.disabled = false;
+                    return;
+                }
+            }
+
+            status.textContent = 'Guardando tu identidad y actividades…';
+            await request('api/registro.php', {
+                method: 'POST',
+                body: JSON.stringify({
+                    persona: summary.persona,
+                    capacidades: summary.capacidades,
+                    fincas: summary.fincas,
+                }),
+            });
+
+            const activity = await request('api/mi-actividad.php');
+            syncPublicProfile(activity.data);
+            sessionStorage.removeItem(DRAFT_KEY);
+            status.textContent = extending
+                ? 'Actividad actualizada. Volviendo a tu perfil…'
+                : 'Registro completado. Preparando tu perfil…';
+            const fallback = extending ? 'mi-actividad.php?actualizado=1' : 'mi-actividad.php?bienvenida=1';
+            window.location.assign(resolveNext(fallback));
+        } catch (error) {
+            const fieldErrors = error?.errors ?? {};
+            if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors);
+            status.textContent = error?.message || 'No fue posible completar el registro. Intenta nuevamente.';
+            finishButton.disabled = false;
+        } finally {
+            form.setAttribute('aria-busy', 'false');
+        }
     });
 
     sync();

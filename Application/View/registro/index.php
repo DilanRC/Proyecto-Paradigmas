@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
     <link rel="stylesheet" href="css/onboarding.css?v=front-2">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/registro.js?v=front-2"></script>
+    <script type="module" src="js/registro.js?v=front-4"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -81,7 +81,7 @@
             <section class="onboarding-step" data-step="revision" hidden>
                 <div class="step-heading"><span class="step-number">04</span><div><h2>Revisa antes de continuar</h2><p>Te mostramos qué información se guardaría y por qué se pidió.</p></div></div>
                 <div id="registro-resumen" class="registration-summary"></div>
-                <div class="business-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><p>La interfaz ya respeta el modelo de identidad única. La persistencia definitiva de cuenta y autenticación todavía requiere el endpoint de servidor correspondiente.</p></div>
+                <div class="business-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><p>Tu cuenta se valida con Supabase y esta revisión se guarda en el servidor en una sola operación. Si eliges vender o publicar, tus fincas quedan ligadas a la misma identidad.</p></div>
             </section>
 
             <p id="registro-status" class="auth-status" role="status" aria-live="polite"></p>

@@ -34,6 +34,95 @@
     gap:8px;
 }
 
+.public-account-menu {
+    position: relative;
+    z-index: 80;
+}
+
+.public-account-menu__trigger {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 5px;
+    border: 1px solid var(--tc-line-strong);
+    border-radius: 999px;
+    color: var(--tc-text);
+    background: color-mix(in srgb, var(--tc-surface) 90%, transparent);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.public-account-menu__trigger:hover,
+.public-account-menu__trigger[aria-expanded='true'],
+.public-account-menu__trigger:focus-visible {
+    border-color: var(--tc-primary);
+}
+
+.public-account-menu__avatar {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--tc-primary);
+}
+
+.public-account-menu__panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    display: grid;
+    min-width: 230px;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid var(--tc-line-strong);
+    border-radius: 16px;
+    background: var(--tc-bg-elevated);
+    box-shadow: var(--tc-shadow-soft);
+}
+
+.public-account-menu__panel[hidden] { display: none; }
+
+.public-account-menu__identity {
+    display: grid;
+    gap: 3px;
+    padding: 10px;
+    border-bottom: 1px solid var(--tc-line);
+}
+
+.public-account-menu__identity small { color: var(--tc-text-soft); overflow-wrap: anywhere; }
+
+.public-account-menu__panel a,
+.public-account-menu__panel button {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--tc-text);
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.public-account-menu__panel a:hover,
+.public-account-menu__panel button:hover,
+.public-account-menu__panel a:focus-visible,
+.public-account-menu__panel button:focus-visible {
+    background: color-mix(in srgb, var(--tc-secondary) 28%, transparent);
+    outline: none;
+}
+
 .public-search {
     position:relative;
     display:flex;
