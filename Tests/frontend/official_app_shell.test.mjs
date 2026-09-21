@@ -48,7 +48,7 @@ test('navbar y búsqueda pública conservan icono más texto sin meter legal en 
     assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
 });
 
-test('login existe como entrada navegable, no guarda contraseña y vuelve a Explorar', () => {
+test('login existe como entrada navegable, usa Supabase Auth y vuelve a Explorar', () => {
     const home = read('Application/View/home/index.php');
     const login = read('Application/View/login/index.php');
     const js = read('Public/js/login.js');
@@ -56,9 +56,9 @@ test('login existe como entrada navegable, no guarda contraseña y vuelve a Expl
     assert.match(home, /href="login\.php"/);
     assert.match(login, /id="formulario-login"/);
     assert.match(login, /type="password"/);
-    assert.match(js, /sessionStorage\.setItem\(SESSION_KEY/);
-    assert.match(js, /: 'explorar\.php';/);
+    assert.match(js, /signInWithPassword/);
     assert.doesNotMatch(js, /password[^;]*sessionStorage\.setItem/s);
+    assert.match(js, /: 'explorar\.php';/);
 });
 
 test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () => {

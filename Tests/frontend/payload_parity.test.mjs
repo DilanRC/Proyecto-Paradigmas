@@ -171,7 +171,7 @@ test('la direccion de finca conserva su envoltura direccionFinca', () => {
         nombreFinca: 'Finca El Roble',
         direccionFinca: {
             provincia: 'Alajuela', canton: 'San Carlos', distrito: 'Quesada',
-            pueblo: 'Centro', senas: null,
+            pueblo: 'Centro', senas: null, latitud: null, longitud: null,
         },
     });
 });

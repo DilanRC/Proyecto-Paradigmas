@@ -7,17 +7,18 @@ require_once dirname(__DIR__) . '/Tools/schema-manifest.php';
 $manifest = schema_manifest();
 $expectedTables = ['tbanimal', 'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
     'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito', 'tbcarritoanimal',
-    'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador', 'tbcompradorpersonatelefonohistorico',
-    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
+    'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador', 'tbdireccion',
+    'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
     'tbproductoractividad', 'tbproductorclasificacionperiodo', 'tbproductordireccion',
-    'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico', 'tbproductorubicacion',
-    'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
-    'tbtransportistahorario', 'tbtransportistaresena', 'tbtransportistavehiculo',
-    'tbvehiculo', 'tbventa'];
+    'tbproductorestadoperiodo', 'tbproductorubicacion', 'tbtransportista',
+    'tbtransportistaestadoperiodo', 'tbtransportistaflete', 'tbtransportistahorario',
+    'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvehiculo', 'tbventa',
+    'tbcompradorpersonatelefonohistorico', 'tbproductorpersonatelefonohistorico'];
 
 if ($manifest['database'] !== 'bdmercadoganadero') {
     throw new RuntimeException('El manifest debe leer bdmercadoganadero como base canónica.');
 }
+sort($expectedTables);
 if ($manifest['table_count'] !== 32 || $manifest['tables_sorted'] !== $expectedTables) {
     throw new RuntimeException('El manifest debe derivar las 32 tablas canónicas desde el SQL.');
 }

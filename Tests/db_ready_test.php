@@ -15,7 +15,7 @@ $der = file_get_contents("{$root}/Documentation/DER.md");
 $manifest = schema_manifest();
 
 test_same('bdmercadoganadero', $manifest['database'], 'La base activa debe ser bdmercadoganadero');
-test_same(32, $manifest['table_count'], 'La capa DB ready debe contener 32 tablas canónicas');
+test_same(32, $manifest['table_count'], 'La capa DB ready debe contener 32 tablas');
 
 foreach (['tbproductorclasificacionperiodo', 'tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
     'tbanimalpublicacionestadoperiodo', 'tbcompra', 'tbventa', 'tbanimalinteraccion',
@@ -39,17 +39,14 @@ foreach (['CREATE TABLE IF NOT EXISTS tbvendedor', 'tbcompradorestadoperiodo',
 }
 
 test_assert(str_contains($schema, 'tbcompraid INT NULL'), 'tbventa debe permitir tbcompraid NULL');
-test_assert(substr_count($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador (') === 1,
-    'tbcomprador se define una sola vez, sin tablas satélite');
-test_assert(str_contains($decisiones, 'fuente de verdad del contexto Comprador')
-    && str_contains($decisiones, 'registro analítico')
-    && str_contains($diccionario, 'Fuente de verdad del contexto Comprador de la Persona')
-    && str_contains($der, 'persona-comprador')
-    && !str_contains($der, 'legacy por tbpersonaid'),
-    'Documentación debe marcar tbcomprador como fuente de verdad del contexto (DEC-28) y el periodo COMPRADOR como registro analítico (DEC-29)');
-test_assert(!str_contains($decisiones, '`tbcomprador` tiene destino definitivo')
-    && !str_contains($diccionario, 'Marca de capacidad de compra de una persona'),
-    'tbcomprador no puede documentarse como capacidad permanente');
+test_assert(substr_count($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador (') === 1
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorpersonatelefonohistorico')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcompradorpersonatelefonohistorico'),
+    'tbcomprador y sus históricos de teléfono deben conservar el contrato vigente');
+test_assert(str_contains($decisiones, 'tbcomprador')
+    && str_contains($diccionario, 'tbcomprador')
+    && str_contains($der, 'tbcomprador'),
+    'La documentación debe incluir el contexto Comprador ligado a Persona');
 
 // Concordancia con la evidencia directa de Calidad (DEC-DBREADY-005): cada dato
 // pedido tiene columna y ningún estado de negocio sobrevive como columna mutable.

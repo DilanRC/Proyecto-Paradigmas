@@ -1,6 +1,6 @@
 # DER - Persona, contextos de negocio e históricos
 
-> Estado vigente de `dev` para Avance 2. Las relaciones mostradas son conceptuales: MySQL no declara PK, FK, UNIQUE, CHECK, AUTO_INCREMENT, índices ni lógica programable. PHP valida relaciones, genera IDs y controla transacciones.
+> Estado vigente de `feat/Front-2.0` para Avance 2. Las relaciones mostradas son conceptuales: MySQL y PostgreSQL no declaran PK, FK, UNIQUE, CHECK, AUTO_INCREMENT, índices ni lógica programable. La base conserva cero claves y restricciones, índices ni AUTO_INCREMENT; PHP valida relaciones, genera IDs y controla transacciones.
 
 ```mermaid
 erDiagram

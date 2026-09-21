@@ -20,7 +20,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/public-product.css?v=product-1">
     <link rel="stylesheet" href="css/explore.css?v=explore-1">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/public-ui.js?v=public-1"></script>
+    <script type="module" src="js/public-ui.js?v=public-2"></script>
     <script type="module" src="js/explore.js?v=explore-1"></script>
 </head>
 <body class="public-home explore-page">

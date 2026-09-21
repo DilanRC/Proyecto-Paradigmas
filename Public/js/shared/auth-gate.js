@@ -1,15 +1,13 @@
-// Puerta de navegación del frontend privado.
+// Puerta del frontend administrativo.
 //
-// La sesión existente de este sprint vive en sessionStorage. Esta capa no la
-// convierte en autenticación de servidor: únicamente impide abrir los paneles
-// web sin pasar primero por login.php y conserva un destino local seguro.
-// La autorización real de API sigue perteneciendo al mecanismo Bearer/Supabase.
+// IMPORTANTE: una sesión pública Supabase identifica a una Persona, pero NO
+// demuestra que esa Persona sea administradora. Calidad pidió separar sesión
+// pública y administrativa; mientras la política admin no esté aprobada, este
+// gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
-import { capturarEnInicioDeSesion } from './ubicacion-sesion.js';
-import { request, setBearer } from './api.js';
-import { guardarActor, guardarBearer, leerActor, leerBearer, resolverSuperficie } from './sesion.js';
+import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
 
-export const SESSION_KEY = 'tindercows:login';
+export const SESSION_KEY = 'tindercows:admin-session';
 
 const PRIVATE_ROUTES = new Set([
     'productores.php',
@@ -19,6 +17,10 @@ const PRIVATE_ROUTES = new Set([
     'pagometodos.php',
 ]);
 
+/**
+ * Contrato reservado para una futura sesión administrativa emitida/verificada
+ * por servidor. Ningún flujo público actual escribe esta clave.
+ */
 export function readBrowserSession(storage) {
     try {
         const raw = storage?.getItem(SESSION_KEY);
@@ -26,15 +28,12 @@ export function readBrowserSession(storage) {
         const session = JSON.parse(raw);
         if (
             session?.authenticated !== true
+            || session?.adminAuthorized !== true
             || session?.version !== 1
-            || session?.mode !== 'local-browser-session'
-            || typeof session?.email !== 'string'
-            || session.email.trim() === ''
+            || session?.mode !== 'admin-server-session'
             || typeof session?.startedAt !== 'string'
             || Number.isNaN(Date.parse(session.startedAt))
-        ) {
-            return null;
-        }
+        ) return null;
         return session;
     } catch {
         return null;
@@ -53,7 +52,7 @@ export function isPrivateRoute(pathname = '') {
 export function loginTarget(pathname = '') {
     const route = routeName(pathname);
     return PRIVATE_ROUTES.has(route)
-        ? `login.php?next=${encodeURIComponent(route)}`
+        ? `login.php?area=admin&next=${encodeURIComponent(route)}`
         : 'login.php';
 }
 
@@ -74,74 +73,31 @@ function wirePrivateShell(storage) {
 
     const logoutLink = document.querySelector('.rural-panel__admin-link[href="login.php"]');
     if (!logoutLink) return;
-    logoutLink.textContent = 'Cerrar sesión';
-    logoutLink.setAttribute('aria-label', 'Cerrar sesión de demostración');
+    logoutLink.textContent = 'Cerrar sesión administrativa';
+    logoutLink.setAttribute('aria-label', 'Cerrar sesión administrativa');
     logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
-        try {
-            storage?.removeItem(SESSION_KEY);
-        } finally {
-            window.location.assign('login.php');
-        }
+        try { storage?.removeItem(SESSION_KEY); }
+        finally { window.location.assign('login.php?area=admin'); }
     });
 }
 
 function revealPrivateUi() {
-    if (typeof document !== 'undefined') {
-        document.documentElement.dataset.tcAuth = 'ready';
-    }
-}
-
-// Tramo A: si el navegador porta un Bearer del proveedor, se adjunta a las
-// peticiones (api.js) y se resuelve la superficie de identidad para conservar
-// el actor. Sin Bearer no se fabrica sesión: el modo local sigue en público.
-async function enriquecerSuperficie(storage, requestImpl = request) {
-    try {
-        setBearer(leerBearer(storage));
-        const resuelto = await resolverSuperficie({ requestImpl, storage });
-        if (resuelto.autenticado && resuelto.actor) {
-            guardarActor(storage, resuelto.actor, leerBearer(storage));
-        }
-    } catch {
-        // Sin sesión verificable: el shell conserva el modo público.
-    }
+    if (typeof document !== 'undefined') document.documentElement.dataset.tcAuth = 'ready';
 }
 
 if (typeof window !== 'undefined') {
-    const allowed = enforceBrowserSession({
-        location: window.location,
-        storage: window.sessionStorage,
-    });
+    const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
     if (allowed && typeof document !== 'undefined') {
         revealPrivateUi();
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => wirePrivateShell(window.sessionStorage), { once: true });
+            document.addEventListener('DOMContentLoaded', () => {
+                wirePrivateShell(window.sessionStorage);
+                inicializarUbicacionAutomatica();
+            }, { once: true });
         } else {
             wirePrivateShell(window.sessionStorage);
-        }
-
-        // Tramo A: resolución no bloqueante de la superficie autenticada.
-        enriquecerSuperficie(window.sessionStorage);
-
-        // Captura de ubicación en background: una por inicio de sesión.
-        const sesion = readBrowserSession(window.sessionStorage);
-        const emailSesion = sesion?.email ?? null;
-        if (emailSesion) {
-            capturarEnInicioDeSesion({
-                storage: window.sessionStorage,
-                requestFn: request,
-                resolverIdentificacion: async (email) => {
-                    try {
-                        const resp = await request('api/identidad.php');
-                        if (resp?.data?.esProductor) {
-                            return { identificacionNumero: resp.data.identificacionNumero, productorId: resp.data.productorId };
-                        }
-                        return null;
-                    } catch {
-                        return null;
-                    }
-                },
-            });
+            inicializarUbicacionAutomatica();
         }
     }
 }

@@ -25,7 +25,7 @@ $evaluate = static function (string $criterio, bool $cumple, string $evidencia) 
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
 $evaluate('treinta_y_dos_tablas', $manifest['table_count'] === 32,
-    'SQL crea exactamente treinta y dos tablas, incluida la identidad compartida tbpersona y los históricos telefónicos');
+    'SQL crea exactamente treinta y dos tablas, incluida identidad e históricos de teléfono');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -79,11 +79,11 @@ $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbanimal',
     'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
     'tbanimalpublicacionestadoperiodo', 'tbbitacora', 'tbcarrito',
     'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
-    'tbcompradorpersonatelefonohistorico', 'tbdireccion', 'tbfinca',
-    'tbfincadireccion', 'tbpagometodo', 'tbpersona', 'tbproductor',
-    'tbproductoractividad', 'tbproductorclasificacionperiodo',
-    'tbproductordireccion', 'tbproductorestadoperiodo',
-    'tbproductorpersonatelefonohistorico', 'tbproductorubicacion',
+    'tbcompradorpersonatelefonohistorico',
+    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
+    'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
+    'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
+    'tbproductorubicacion',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
     'tbtransportistahorario', 'tbtransportistaresena', 'tbtransportistavehiculo',
     'tbvehiculo', 'tbventa'],
@@ -121,15 +121,14 @@ $evaluate('restauracion_legacy_sin_mutar_respaldo', str_contains($restoreTool, "
     && !str_contains($restoreTool, 'mv -- "$manifest_temp" "$manifest_file"')
     && !str_contains($restoreTool, 'mv -- "$manifest_pending" "$manifest_file"'),
     'El restore acepta respaldos legados sin reescribir MANIFEST ni SHA256SUMS');
-$evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, '`tbproductor` es la entidad de')
+$evaluate('p0c_clasificacion_productor', str_contains($matrizP0C, 'tbproductor` es la entidad de')
+    && str_contains($matrizP0C, 'negocio núcleo')
     && str_contains($matrizP0C, '`tbvendedor` no existe')
-    && str_contains($matrizP0C, '`tipo = COMPRADOR`')
-    && str_contains($matrizP0C, 'registro analítico')
-    && str_contains($matrizP0C, 'contexto Comprador')
+    && str_contains($matrizP0C, 'Comprador es un contexto de la Persona')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo')
     && !str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbvendedor')
     && !str_contains($schema, 'tbcompradorestadoperiodo'),
-    'P0-C cierra Productor como núcleo y Comprador como contexto vigente (DEC-28) con clasificación analítica (DEC-29)');
+    'P0-C cierra Persona/Productor/Comprador sin duplicar identidad y conserva históricos legados');
 $evaluate('comercio_historico_preparado', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimal')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalpublicacion')

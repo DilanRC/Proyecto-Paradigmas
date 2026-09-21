@@ -19,7 +19,7 @@
     padding:6px 8px;
     border:0;
     border-radius:11px;
-    color:var(--wheat-text-muted);
+    color:#f7eee5;
     background:transparent;
     text-align:left;
 }
@@ -57,7 +57,7 @@
 
 .admin-account-menu__chevron {
     justify-self:end;
-    color:var(--wheat-text-soft);
+    color:#e6d4c3;
     font-size:10px;
 }
 
@@ -91,7 +91,7 @@
     padding:0 10px !important;
     border:0 !important;
     border-radius:9px !important;
-    color:var(--wheat-text-muted) !important;
+    color:#f0e4d7 !important;
     background:transparent !important;
     box-shadow:none !important;
     font-size:11px !important;
@@ -177,83 +177,4 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
         justify-content:flex-start;
         flex-wrap:nowrap !important;
     }
-}
-
-/* Tramo C: fincas repetibles — lista editable con dirección por finca. */
-.finca-fila {
-    display:grid;
-    grid-template-columns:minmax(160px,1fr) auto auto;
-    gap:8px;
-    align-items:center;
-    padding:10px;
-    margin-bottom:8px;
-    border:1px solid var(--border);
-    border-radius:var(--small-radius);
-    background:var(--surface);
-}
-
-.finca-fila__nombre {
-    min-width:0;
-    padding:8px 10px;
-    border:1px solid var(--border);
-    border-radius:var(--small-radius);
-    font:inherit;
-    color:var(--text);
-    background:var(--surface);
-}
-
-.finca-fila__nombre:focus-visible {
-    outline:2px solid var(--primary);
-    outline-offset:1px;
-}
-
-.finca-fila__toggle,
-.finca-fila__quitar {
-    padding:6px 12px;
-    border:1px solid var(--border);
-    border-radius:999px;
-    background:var(--surface);
-    color:var(--muted);
-    font:600 13px var(--font-sans);
-    cursor:pointer;
-    white-space:nowrap;
-}
-
-.finca-fila__toggle[aria-expanded='true'] {
-    color:var(--primary-dark);
-    border-color:var(--primary);
-    background:var(--primary-soft);
-}
-
-.finca-fila__toggle:hover,
-.finca-fila__toggle:focus-visible,
-.finca-fila__quitar:hover,
-.finca-fila__quitar:focus-visible {
-    border-color:var(--primary);
-    color:var(--primary-dark);
-    outline:2px solid var(--primary);
-    outline-offset:1px;
-}
-
-.finca-fila__direccion {
-    grid-column:1 / -1;
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:8px;
-    padding-top:4px;
-}
-
-.finca-fila__campo {
-    min-width:0;
-    padding:8px 10px;
-    border:1px solid var(--border);
-    border-radius:var(--small-radius);
-    font:inherit;
-    color:var(--text);
-    background:var(--surface);
-}
-
-.finca-fila__senas {
-    grid-column:1 / -1;
-    resize:vertical;
 }

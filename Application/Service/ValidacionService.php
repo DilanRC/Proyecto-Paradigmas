@@ -70,7 +70,7 @@ final class ValidacionService
         if ($actualizacion && $direccion === null) {
             $errores['direccionPrincipal'] = 'La dirección es obligatoria.';
         }
-        $fincas = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
+        $fincasDetalle = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
 
         $original = null;
         if ($actualizacion) {
@@ -96,7 +96,14 @@ final class ValidacionService
                 'telefono' => $telefono,
                 'correoElectronico' => $correo,
                 'direccion' => $direccion,
-                'fincas' => $fincas,
+                // ProductorFinca conserva el contrato de nombres. El detalle se
+                // mantiene aparte para que ProductorController pueda persistir
+                // cada dirección de finca dentro de la MISMA transacción.
+                'fincas' => array_map(
+                    static fn (array $finca): string => $finca['nombre'],
+                    $fincasDetalle,
+                ),
+                'fincasDetalle' => $fincasDetalle,
             ],
             'errores' => [],
         ];
@@ -199,6 +206,29 @@ final class ValidacionService
         ];
     }
 
+    /**
+     * Dirección de finca: comparte los campos manuales de Dirección y agrega un
+     * punto geográfico opcional. La base solo almacena tipos/atributos; paridad
+     * y rangos de coordenadas son política de PHP.
+     */
+    public function validarDireccionFincaEnCampo(mixed $valor, string $campo, array &$errores): array
+    {
+        if (!is_array($valor) || array_is_list($valor)) {
+            $errores[$campo] = 'La dirección debe ser un objeto.';
+            return [
+                'provincia' => '', 'canton' => '', 'distrito' => '',
+                'pueblo' => null, 'senas' => null, 'latitud' => null, 'longitud' => null,
+            ];
+        }
+
+        $base = $valor;
+        unset($base['latitud'], $base['longitud']);
+        $direccion = $this->validarDireccionEnCampo($base, $campo, $errores);
+        $punto = $this->validarPuntoDireccion($valor, $campo, $errores);
+
+        return [...$direccion, ...$punto];
+    }
+
     public function validarIdentificacion(mixed $valor, array &$errores): array
     {
         if (!is_array($valor) || array_is_list($valor)) {
@@ -239,30 +269,102 @@ final class ValidacionService
         return $correo;
     }
 
+    /**
+     * Valida fincas como objetos independientes. La dirección es opcional, pero
+     * cuando se envía debe ser completa y su punto geográfico debe venir en par.
+     * La política actual de nombre único se conserva porque ProductorFinca aún
+     * usa (productor, nombre) para resolver una finca; cambiarla requiere otra
+     * decisión de identidad, no solo relajar este validador.
+     *
+     * @return array<int,array{nombre:string,direccion?:array<string,mixed>}>
+     */
     public function validarFincas(mixed $valor, array &$errores): array
     {
         if (!is_array($valor) || !array_is_list($valor)) {
             $errores['fincas'] = 'Las fincas deben ser una lista.';
             return [];
         }
-        $nombres = [];
+
+        $fincas = [];
         foreach ($valor as $indice => $finca) {
-            if (!is_array($finca) || array_keys($finca) !== ['nombre']) {
-                $errores["fincas.{$indice}"] = 'Cada finca debe contener únicamente nombre.';
+            if (!is_array($finca) || array_is_list($finca)) {
+                $errores["fincas.{$indice}"] = 'Cada finca debe ser un objeto.';
                 continue;
             }
-            $nombre = trim((string) $finca['nombre']);
+            $desconocidos = array_diff(array_keys($finca), ['nombre', 'direccion']);
+            if ($desconocidos !== []) {
+                foreach ($desconocidos as $campo) {
+                    $errores["fincas.{$indice}.{$campo}"] = 'Campo no permitido.';
+                }
+            }
+
+            $nombre = trim((string) ($finca['nombre'] ?? ''));
             if ($nombre === '' || mb_strlen($nombre) > 150) {
                 $errores["fincas.{$indice}.nombre"] = 'El nombre debe contener entre 1 y 150 caracteres.';
                 continue;
             }
+
             $clave = mb_strtoupper($nombre, 'UTF-8');
-            if (isset($nombres[$clave])) {
+            if (isset($fincas[$clave])) {
                 $errores['fincas'] = 'No repita la misma finca.';
+                continue;
             }
-            $nombres[$clave] = $nombre;
+
+            $validada = ['nombre' => $nombre];
+            if (array_key_exists('direccion', $finca)) {
+                $validada['direccion'] = $this->validarDireccionFincaEnCampo(
+                    $finca['direccion'],
+                    "fincas.{$indice}.direccion",
+                    $errores,
+                );
+            }
+            $fincas[$clave] = $validada;
         }
-        return array_values($nombres);
+
+        return array_values($fincas);
+    }
+
+    private function validarPuntoDireccion(array $direccion, string $campo, array &$errores): array
+    {
+        $latitudCruda = $direccion['latitud'] ?? null;
+        $longitudCruda = $direccion['longitud'] ?? null;
+        $latitudVacia = $latitudCruda === null || (is_string($latitudCruda) && trim($latitudCruda) === '');
+        $longitudVacia = $longitudCruda === null || (is_string($longitudCruda) && trim($longitudCruda) === '');
+
+        if ($latitudVacia && $longitudVacia) {
+            return ['latitud' => null, 'longitud' => null];
+        }
+        if ($latitudVacia || $longitudVacia) {
+            $mensaje = 'Latitud y longitud deben enviarse juntas o ambas quedar vacías.';
+            $errores[$campo . '.latitud'] = $mensaje;
+            $errores[$campo . '.longitud'] = $mensaje;
+            return ['latitud' => null, 'longitud' => null];
+        }
+        if (!is_numeric($latitudCruda) || !is_numeric($longitudCruda)) {
+            $errores[$campo . '.latitud'] = 'La latitud debe ser numérica.';
+            $errores[$campo . '.longitud'] = 'La longitud debe ser numérica.';
+            return ['latitud' => null, 'longitud' => null];
+        }
+
+        $latitud = (float) $latitudCruda;
+        $longitud = (float) $longitudCruda;
+        $valido = true;
+        if (!is_finite($latitud) || $latitud < -90 || $latitud > 90) {
+            $errores[$campo . '.latitud'] = 'La latitud debe estar entre -90 y 90.';
+            $valido = false;
+        }
+        if (!is_finite($longitud) || $longitud < -180 || $longitud > 180) {
+            $errores[$campo . '.longitud'] = 'La longitud debe estar entre -180 y 180.';
+            $valido = false;
+        }
+        if (!$valido) {
+            return ['latitud' => null, 'longitud' => null];
+        }
+
+        return [
+            'latitud' => number_format($latitud, 7, '.', ''),
+            'longitud' => number_format($longitud, 7, '.', ''),
+        ];
     }
 
     public function normalizarIdentificacion(string $valor): string

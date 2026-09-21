@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-2">
     <script type="module" src="js/public-theme.js?v=brand-3"></script>
-    <script type="module" src="js/login.js?v=public-login-2"></script>
+    <script type="module" src="js/login.js?v=front-3"></script>
 </head>
 <body class="auth-page">
     <main class="auth-stage" aria-labelledby="login-title">
@@ -37,7 +37,7 @@
                 </span>
                 <p class="section-kicker">Tu red ganadera</p>
                 <h2>Vuelve a lo que te interesa.</h2>
-                <p>Una cuenta te permite mantener el contexto de tus publicaciones favoritas, contactos y oportunidades mientras recorres TinderCows.</p>
+                <p>Una cuenta te permite mantener una sola identidad y participar como comprador, productor, transportista o en varias actividades a la vez.</p>
             </section>
 
             <section class="auth-card">
@@ -48,8 +48,8 @@
                     </span>
                     <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a TinderCows</h1></div>
                 </div>
-                <p class="auth-card__copy">Continúa para volver a Explorar y mantener tus oportunidades en un solo recorrido.</p>
-                <p class="auth-demo-banner"><strong>Estado actual:</strong> este acceso guarda una sesión local en el navegador y todavía no valida credenciales contra un servidor.</p>
+                <p class="auth-card__copy">Continúa para volver a Explorar o administrar tus actividades.</p>
+                <p class="auth-demo-banner"><strong>Cuenta pública:</strong> las credenciales se validan con Supabase Auth y, antes de entrar, el servidor comprueba que el correo esté vinculado a una Persona de TinderCows. Esta sesión no concede acceso administrativo.</p>
 
                 <form class="auth-form" id="formulario-login" novalidate>
                     <label class="auth-field">
@@ -66,6 +66,7 @@
                     <button class="auth-submit" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar a TinderCows</span></button>
                 </form>
 
+                <p class="auth-card__copy">¿Primera vez aquí? <a href="registro.php"><strong>Crear cuenta con registro guiado</strong></a></p>
                 <p class="auth-card__legal">Al continuar acepta los <a href="terminos.php">Términos</a> y puede consultar la <a href="privacidad.php">Política de privacidad</a>.</p>
             </section>
         </div>

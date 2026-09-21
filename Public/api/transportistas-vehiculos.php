@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 use Application\Controller\TransportistaVehiculoController;
+use Application\Auth\AdminAuthorization;
 use Application\Auth\SupabaseActorResolver;
 use Configuration\Database;
 use function Configuration\readJsonBody;
@@ -14,6 +15,7 @@ require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
 require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/AdminAuthorization.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Persona', 'TransportistaVehiculo', 'Transportista', 'Vehiculo', 'Bitacora'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
@@ -46,8 +48,9 @@ if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'applicatio
 try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $conexion = Database::getConnection();
-    $actor = SupabaseActorResolver::fromGlobals($conexion);
+    $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
+    if ($metodo !== 'GET') AdminAuthorization::require($actor);
     $controlador = new TransportistaVehiculoController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,

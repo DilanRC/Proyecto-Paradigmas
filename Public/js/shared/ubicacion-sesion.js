@@ -1,139 +1,120 @@
-// Orquestador "una captura por inicio de sesión".
-//
-// Dispara la captura GPS y su persistencia en tbproductorubicacion
-// una sola vez por sesión (sessionStorage marca la captura). Requiere
-// que auth-gate.js ya haya revelado la UI privada y el email de sesión
-// sea válido.
-//
-// Nunca lanza: absorbe todos los fallos para no bloquear la UI.
+import { capturar, esSoportado } from './geo.js';
 
-import { esSoportado as esSoportadoDefault, capturar as capturarDefault } from './geo.js';
+export const UBICACION_USUARIO_KEY = 'tindercows:ubicacion-usuario';
+export const UBICACION_USUARIO_EVENT = 'tindercows:ubicacion-usuario';
+export const UBICACION_USUARIO_ERROR_EVENT = 'tindercows:ubicacion-error';
+export const UBICACION_USUARIO_MAX_EDAD_MS = 15 * 60 * 1000;
 
-const UBICACION_SESSION_KEY = 'tindercows:ubicacion-sesion';
+let capturaEnCurso = null;
 
-function marcar(storage, estado, startedAt) {
-    storage.setItem(UBICACION_SESSION_KEY, JSON.stringify({
-        estado,
-        startedAt,
-        en: new Date().toISOString(),
-    }));
+function storagePredeterminado() {
+    return typeof sessionStorage !== 'undefined' ? sessionStorage : null;
 }
 
-function leido(storage, startedAt) {
+function ahoraPredeterminado() {
+    return Date.now();
+}
+
+function numeroEnRango(valor, minimo, maximo) {
+    const numero = Number(valor);
+    return Number.isFinite(numero) && numero >= minimo && numero <= maximo ? numero : null;
+}
+
+function normalizarGuardada(valor) {
+    if (!valor || typeof valor !== 'object') return null;
+    const latitud = numeroEnRango(valor.latitud, -90, 90);
+    const longitud = numeroEnRango(valor.longitud, -180, 180);
+    const capturadaEnMs = Date.parse(String(valor.capturadaEn ?? ''));
+    if (latitud === null || longitud === null || Number.isNaN(capturadaEnMs)) return null;
+    const precision = valor.precisionMetros === null || valor.precisionMetros === undefined
+        ? null : Number(valor.precisionMetros);
+    return {
+        latitud: latitud.toFixed(7),
+        longitud: longitud.toFixed(7),
+        precisionMetros: Number.isFinite(precision) && precision >= 0 ? precision : null,
+        origen: 'NAVEGADOR',
+        capturadaEn: new Date(capturadaEnMs).toISOString(),
+    };
+}
+
+export function leerUbicacionUsuario(
+    storage = storagePredeterminado(),
+    { ahoraFn = ahoraPredeterminado, maxEdadMs = UBICACION_USUARIO_MAX_EDAD_MS } = {},
+) {
     try {
-        const raw = storage.getItem(UBICACION_SESSION_KEY);
-        if (!raw) return false;
-        const dato = JSON.parse(raw);
-        return dato?.startedAt === startedAt && typeof dato?.estado === 'string';
+        const normalizada = normalizarGuardada(JSON.parse(storage?.getItem(UBICACION_USUARIO_KEY) ?? 'null'));
+        if (!normalizada) return null;
+        if (maxEdadMs >= 0 && ahoraFn() - Date.parse(normalizada.capturadaEn) > maxEdadMs) return null;
+        return normalizada;
     } catch {
-        return false;
+        return null;
     }
 }
 
-function toast(mensaje) {
-    if (typeof document === 'undefined') return;
-    const region = document.querySelector('[aria-live="polite"]')
-        ?? document.querySelector('[aria-live="assertive"]');
-    if (region) region.textContent = mensaje;
-}
-
-/**
- * Captura la ubicación del navegador y la persiste una vez por sesión.
- *
- * @param {object} [opts]
- * @param {string} [opts.apiUrl] Endpoint POST de ubicaciones.
- * @param {Storage} [opts.storage] sessionStorage por defecto.
- * @param {(email:string)=>Promise<{identificacionNumero:string}|null>} [opts.resolverIdentificacion]
- *   Función que resuelve la identificación del productor a partir del email.
- *   Se inyecta para que las pruebas no dependan del backend.
- * @param {() => number} [opts.ahora] Generador de timestamp (inyectable).
- * @returns {Promise<void>} Nunca lanza.
- */
-export async function capturarEnInicioDeSesion({
-    apiUrl = 'api/productores-ubicacion.php',
-    storage = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
-    resolverIdentificacion = null,
-    requestFn = null,
-    esSoportadoFn = esSoportadoDefault,
-    capturarFn = capturarDefault,
-    ahora = () => Date.now(),
-} = {}) {
-    if (!storage) return;
-
-    // 1. Marcador de sesión: clave separada para no mezclar con auth-gate.
-    const startedAt = storage.getItem('tindercows:login')
-        ? (() => { try { return JSON.parse(storage.getItem('tindercows:login'))?.startedAt; } catch { return null; } })()
-        : null;
-    if (!startedAt) return;
-
-    if (leido(storage, startedAt)) return;
-
-    // 2. Soporte del navegador.
+async function ejecutarCaptura({ storage, capturarFn, esSoportadoFn, ahoraFn }) {
     if (!esSoportadoFn()) {
-        marcar(storage, 'omitida', startedAt);
-        return;
+        const error = new Error('Este navegador no ofrece geolocalización.');
+        error.kind = 'unsupported';
+        throw error;
     }
 
-    // 3. Resolver identificación del productor.
-    const email = (() => { try { return JSON.parse(storage.getItem('tindercows:login'))?.email; } catch { return null; } })();
-    if (!email || typeof resolverIdentificacion !== 'function') {
-        marcar(storage, 'omitida', startedAt);
-        return;
+    const capturada = await capturarFn({ altaPrecision: false, timeoutMs: 8000 });
+    const ubicacion = normalizarGuardada({
+        ...capturada,
+        capturadaEn: new Date(ahoraFn()).toISOString(),
+    });
+    if (!ubicacion) {
+        const error = new Error('La ubicación devuelta por el navegador no es válida.');
+        error.kind = 'invalid';
+        throw error;
+    }
+    storage?.setItem(UBICACION_USUARIO_KEY, JSON.stringify(ubicacion));
+    return { ubicacion, reutilizada: false };
+}
+
+export async function capturarUbicacionAutomatica({
+    storage = storagePredeterminado(),
+    capturarFn = capturar,
+    esSoportadoFn = esSoportado,
+    ahoraFn = ahoraPredeterminado,
+    maxEdadMs = UBICACION_USUARIO_MAX_EDAD_MS,
+    forzar = false,
+} = {}) {
+    if (!forzar) {
+        const existente = leerUbicacionUsuario(storage, { ahoraFn, maxEdadMs });
+        if (existente) return { ubicacion: existente, reutilizada: true };
+        if (capturaEnCurso) return capturaEnCurso;
     }
 
-    let identidad;
+    const promesa = ejecutarCaptura({ storage, capturarFn, esSoportadoFn, ahoraFn });
+    if (!forzar) capturaEnCurso = promesa;
     try {
-        identidad = await resolverIdentificacion(email);
-    } catch {
-        // Fallo de red/compatibilidad: sin marcar (reintenta en próxima carga).
-        return;
+        return await promesa;
+    } finally {
+        if (!forzar && capturaEnCurso === promesa) capturaEnCurso = null;
     }
-    if (!identidad?.identificacionNumero) {
-        marcar(storage, 'omitida', startedAt);
-        return;
-    }
+}
 
-    // 4. Capturar coordenadas.
-    let coordenadas;
+function emitir(windowRef, nombre, detail) {
+    if (!windowRef?.dispatchEvent) return;
+    const EventCtor = windowRef.CustomEvent ?? (typeof CustomEvent !== 'undefined' ? CustomEvent : null);
+    if (!EventCtor) return;
+    windowRef.dispatchEvent(new EventCtor(nombre, { detail }));
+}
+
+export async function inicializarUbicacionAutomatica({
+    windowRef = typeof window !== 'undefined' ? window : null,
+    ...opciones
+} = {}) {
     try {
-        coordenadas = await capturarFn();
+        const resultado = await capturarUbicacionAutomatica(opciones);
+        emitir(windowRef, UBICACION_USUARIO_EVENT, resultado.ubicacion);
+        return resultado;
     } catch (error) {
-        if (error?.kind === 'unavailable' || error?.kind === 'timeout' || error?.kind === 'network') {
-            // Sin marcar: reintenta en la próxima carga de la página.
-            return;
-        }
-        // denied / unsupported: marcar para no reintentar esta sesión.
-        marcar(storage, 'omitida', startedAt);
-        toast(error?.message ?? 'No se pudo obtener la ubicación.');
-        return;
-    }
-
-    // 5. POST al endpoint.
-    let respuesta;
-    try {
-        respuesta = await requestFn(apiUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-                productorId: identidad.productorId,
-                latitud: coordenadas.latitud,
-                longitud: coordenadas.longitud,
-                precisionMetros: coordenadas.precisionMetros,
-                origen: coordenadas.origen,
-            }),
+        emitir(windowRef, UBICACION_USUARIO_ERROR_EVENT, {
+            kind: error?.kind ?? 'unknown',
+            message: error?.message ?? 'No fue posible obtener la ubicación.',
         });
-    } catch (error) {
-        const retryable = error?.retryable === true;
-        if (retryable) {
-            // Sin marcar: reintenta en la próxima carga.
-            return;
-        }
-        // 422 / 404 / otros definitivos: marcar.
-        marcar(storage, 'omitida', startedAt);
-        return;
-    }
-
-    // 6. Éxito: 201.
-    if (respuesta?.success) {
-        marcar(storage, 'capturada', startedAt);
+        return { ubicacion: null, reutilizada: false, error };
     }
 }

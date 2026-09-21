@@ -1,5 +1,6 @@
 import './auth-gate.js';
 import './admin-ui.js';
+import { getAccessToken, readAuthSession } from './supabase-auth.js';
 
 // Token Bearer vigente en esta pestaña (Supabase/proveedor de identidad).
 // Se adjunta a las peticiones para que la API resuelva al actor y las
@@ -22,13 +23,14 @@ export function getBearer() {
 //   type: 'http'      hubo respuesta del servidor -> status es un numero real
 //   type: 'network'   no hubo respuesta          -> status es null
 //
-// Antes, al rechazarse fetch() el codigo mostraba el texto crudo del navegador
-// ("Failed to fetch") y no habia ningun status, de modo que cualquier
-// comprobacion tipo `error.status === 500` se evaluaba sobre un TypeError.
+// Cuando existe una sesión Supabase real, esta capa adjunta su JWT como Bearer.
+// Los endpoints PHP siguen verificando identidad por SupabaseActorResolver; el
+// navegador nunca convierte el correo/cédula guardados localmente en autoridad.
 
 /** Mensaje por defecto cuando el servidor no envia uno propio. */
 const MENSAJE_HTTP = {
     400: 'La solicitud no se pudo interpretar.',
+    401: 'Debe iniciar sesión para completar esta operación.',
     404: 'El registro no existe o fue retirado.',
     405: 'La operacion no esta permitida sobre este recurso.',
     409: 'El registro entra en conflicto con uno existente.',
@@ -40,7 +42,7 @@ const MENSAJE_HTTP = {
 export function httpKind(status) {
     if (status >= 500) return 'server';
     return {
-        400: 'bad-request', 404: 'not-found', 405: 'method',
+        400: 'bad-request', 401: 'authentication', 404: 'not-found', 405: 'method',
         409: 'conflict', 415: 'unsupported-media', 422: 'validation',
     }[status] ?? 'unknown';
 }
@@ -54,11 +56,8 @@ export function describeHttpFailure(status, payload = {}) {
         status,
         kind,
         message: payload.message || MENSAJE_HTTP[status] || 'No fue posible completar la operacion.',
-        // 422 los usa para pintar error por campo.
         errors: payload.errors ?? null,
-        // 409 lo usa para ofrecer la reactivacion: data.reactivacion.identificacionNumero.
         data: payload.data ?? null,
-        // Reintentar sirve ante un fallo del servidor; ante un 422 no cambia nada.
         retryable: kind === 'server',
     };
 }
@@ -98,12 +97,23 @@ export function toError(failure) {
     return Object.assign(error, failure);
 }
 
-/**
- * Ejecuta la peticion y devuelve el cuerpo JSON ya validado.
- * Lanza un Error enriquecido con la descripcion del fallo.
- * `fetchImpl` se inyecta en las pruebas; en el navegador usa el global.
- */
-export async function request(url, options = {}, { fetchImpl = globalThis.fetch } = {}) {
+function hasAuthorizationHeader(headers = {}) {
+    return Object.keys(headers).some((name) => name.toLowerCase() === 'authorization');
+}
+
+async function bearerForRequest(options) {
+    if (hasAuthorizationHeader(options.headers ?? {})) return null;
+    try {
+        return await getAccessToken();
+    } catch {
+        // Una sesión expirada no debe romper las rutas públicas. El helper de
+        // Auth elimina la sesión únicamente cuando Supabase la rechaza; la API
+        // PHP decidirá si el recurso concreto admite acceso anónimo.
+        return null;
+    }
+}
+
+async function executeJsonRequest(url, options, fetchImpl, bearer) {
     let response;
     try {
         response = await fetchImpl(url, {
@@ -111,6 +121,7 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
             headers: {
                 Accept: 'application/json',
                 ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+                ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
                 ...(options.headers ?? {}),
                 // El bearer del proveedor viaja adjunto cuando existe; los
                 // headers explícitos del llamador tienen la última palabra.
@@ -120,8 +131,6 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
             },
         });
     } catch (error) {
-        // La cancelacion no es un fallo: se propaga tal cual para que el
-        // llamador la distinga por error.name y no pinte un estado de error.
         if (error?.name === 'AbortError') throw error;
         throw toError(describeNetworkFailure(error));
     }
@@ -131,6 +140,37 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
         payload = await response.json();
     } catch {
         throw toError(describeInvalidResponse(response.status));
+    }
+
+    return { response, payload };
+}
+
+/**
+ * Ejecuta la peticion y devuelve el cuerpo JSON ya validado.
+ *
+ * Si un PHP responde 401 y había una sesión Supabase real, renueva el JWT una
+ * sola vez y repite la misma solicitud. Nunca repite otros estados ni entra en
+ * bucle; una autorización de negocio 409/422 se devuelve tal como la decidió PHP.
+ */
+export async function request(url, options = {}, { fetchImpl = globalThis.fetch } = {}) {
+    const bearer = await bearerForRequest(options);
+    let { response, payload } = await executeJsonRequest(url, options, fetchImpl, bearer);
+
+    if (
+        response.status === 401
+        && bearer
+        && readAuthSession()
+        && !hasAuthorizationHeader(options.headers ?? {})
+    ) {
+        try {
+            const refreshedBearer = await getAccessToken({ forceRefresh: true });
+            if (refreshedBearer) {
+                ({ response, payload } = await executeJsonRequest(url, options, fetchImpl, refreshedBearer));
+            }
+        } catch {
+            // Conservamos la respuesta 401 original. La UI puede redirigir al
+            // login; no disfrazamos una sesión inválida como error de red.
+        }
     }
 
     if (!response.ok || payload.success !== true) {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Application\Controller\ProductorUbicacionController;
+use Application\Auth\AdminAuthorization;
 use Application\Auth\SupabaseActorResolver;
 use Application\Model\Bitacora;
 use Application\Model\Productor;
@@ -17,6 +18,7 @@ require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
 require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/AdminAuthorization.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Productor', 'Bitacora', 'ProductorUbicacion'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
@@ -50,6 +52,9 @@ try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
+    if ($metodo !== 'GET') {
+        AdminAuthorization::require($actor);
+    }
     $controlador = new ProductorUbicacionController(
         $conexion,
         new Productor($conexion, new ProductorFinca($conexion)),

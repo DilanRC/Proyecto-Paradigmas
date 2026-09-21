@@ -1,11 +1,24 @@
+import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
+import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
+import { readPublicProfile } from './shared/public-profile.js';
+
+const SESSION_KEY = 'tindercows:login';
+const PROFILE_KEY = 'tindercows:profile';
+
 function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-1';
+    link.href = 'css/public-product.css?v=product-2';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
+
+function readStorage(key) {
+    try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
+}
+
+function readSession() { return readAuthSession(); }
 
 function setSearchOpen(root, open) {
     if (!root) return;
@@ -25,11 +38,7 @@ function initializePublicSearch() {
         const input = root.querySelector('input[type="search"]');
         if (!toggle || !input) continue;
 
-        toggle.addEventListener('click', () => {
-            const open = root.dataset.open === 'true';
-            setSearchOpen(root, !open);
-        });
-
+        toggle.addEventListener('click', () => setSearchOpen(root, root.dataset.open !== 'true'));
         input.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
                 event.preventDefault();
@@ -38,18 +47,157 @@ function initializePublicSearch() {
                 toggle.focus();
             }
         });
-
         document.addEventListener('click', (event) => {
             if (!root.contains(event.target) && input.value.trim() === '') setSearchOpen(root, false);
         });
     }
 }
 
+function addNavLink(nav, href, icon, label) {
+    if (!nav || nav.querySelector(`a[href="${href}"]`)) return;
+    const link = document.createElement('a');
+    link.href = href;
+    link.innerHTML = `<i class="fa-solid ${icon}" aria-hidden="true"></i><span>${label}</span>`;
+    nav.append(link);
+}
+
+function createAccountMenu(actions, session, profile) {
+    const login = actions.querySelector('.public-header__login');
+    if (!login || actions.querySelector('[data-public-account]')) return null;
+
+    const menu = document.createElement('div');
+    menu.className = 'public-account-menu';
+    menu.dataset.publicAccount = 'true';
+    const name = profile?.persona?.nombre || session.email || 'Mi cuenta';
+    const initial = String(name).trim().charAt(0).toUpperCase() || 'U';
+    menu.innerHTML = `
+        <button class="public-account-menu__trigger" type="button" aria-expanded="false" aria-controls="public-account-panel">
+            <span class="public-account-menu__avatar" aria-hidden="true">${initial}</span>
+            <span class="public-account-menu__label">Mi perfil</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="public-account-menu__panel" id="public-account-panel" hidden>
+            <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
+            <a href="mi-actividad.php"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi perfil y actividad</span></a>
+            <a href="registro.php" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
+            <a href="productores.php" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
+            <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
+        </div>`;
+
+    login.replaceWith(menu);
+    const trigger = menu.querySelector('.public-account-menu__trigger');
+    const panel = menu.querySelector('.public-account-menu__panel');
+    trigger.addEventListener('click', () => {
+        const open = trigger.getAttribute('aria-expanded') === 'true';
+        trigger.setAttribute('aria-expanded', String(!open));
+        panel.hidden = open;
+    });
+    document.addEventListener('click', (event) => {
+        if (!menu.contains(event.target)) {
+            trigger.setAttribute('aria-expanded', 'false');
+            panel.hidden = true;
+        }
+    });
+    menu.querySelector('[data-public-logout]')?.addEventListener('click', async () => {
+        try { await signOut(); } finally { window.location.assign('explorar.php'); }
+    });
+    return menu;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+}
+
+async function resolveAdminLink(menu) {
+    const adminLink = menu?.querySelector('[data-admin-link]');
+    if (!adminLink) return;
+    try {
+        const token = await getAccessToken();
+        if (!token) return;
+        const response = await fetch('api/admin-status.php', {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+        });
+        if (response.ok) adminLink.hidden = false;
+    } catch {
+        // El menú de perfil sigue disponible; el acceso admin falla cerrado.
+    }
+}
+
+function enhancePublicNavigation() {
+    const nav = document.querySelector('.public-nav--primary');
+    addNavLink(nav, 'publicar.php', 'fa-circle-plus', 'Publicar');
+    addNavLink(nav, 'fletes.php', 'fa-truck', 'Fletes');
+
+    const actions = document.querySelector('.public-header__actions');
+    const login = actions?.querySelector('.public-header__login');
+    if (!actions || !login) return;
+
+    const session = readSession();
+    if (session?.authenticated === true) {
+        const menu = createAccountMenu(actions, session, readPublicProfile());
+        void resolveAdminLink(menu);
+        return;
+    }
+
+    if (!actions.querySelector('[data-register-link]')) {
+        const register = document.createElement('a');
+        register.className = 'public-header__login';
+        register.href = 'registro.php';
+        register.dataset.registerLink = 'true';
+        register.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Crear cuenta</span>';
+        actions.insertBefore(register, login);
+    }
+}
+
+function initializeBusinessActionGate() {
+    document.addEventListener('click', (event) => {
+        const button = event.target instanceof Element ? event.target.closest('[data-explore-action]') : null;
+        if (!(button instanceof HTMLButtonElement)) return;
+        const action = button.dataset.exploreAction;
+        if (!['Me interesa', 'Contactar'].includes(action)) return;
+
+        const session = readStorage(SESSION_KEY);
+        const profile = readStorage(PROFILE_KEY);
+        const buyerState = profile?.capacidadesEstado?.COMPRADOR ?? 'NO_CONFIGURADO';
+        let destination = null;
+
+        if (!session?.authenticated) {
+            destination = profile ? 'login.php?next=explorar.php' : 'registro.php?capacidad=COMPRADOR&next=explorar.php';
+        } else if (!profile) {
+            destination = 'registro.php?capacidad=COMPRADOR&next=explorar.php';
+        } else if (buyerState === 'NO_CONFIGURADO') {
+            destination = 'registro.php?capacidad=COMPRADOR&next=explorar.php';
+        } else if (buyerState === 'INACTIVO') {
+            destination = 'mi-actividad.php';
+        }
+
+        if (!destination) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        window.location.assign(destination);
+    }, true);
+}
+
+function initializeExploreCommerce() {
+    if (!document.body.classList.contains('explore-page')) return;
+    import('./explore-actions.js').catch((error) => {
+        console.error('No se pudo inicializar el flujo Comprar / pujar.', error);
+    });
+}
+
+function initialize() {
+    initializePublicSearch();
+    enhancePublicNavigation();
+    initializeBusinessActionGate();
+    initializeExploreCommerce();
+    // Explorar coordina su propia recarga al recibir la ubicación. El resto del
+    // sitio público inicia la captura aquí para que la sesión ya conozca la zona.
+    if (!document.body.classList.contains('explore-page')) inicializarUbicacionAutomatica();
+}
+
 if (typeof document !== 'undefined') {
     ensureProductStyles();
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initializePublicSearch, { once: true });
-    } else {
-        initializePublicSearch();
-    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    else initialize();
 }

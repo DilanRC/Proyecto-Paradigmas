@@ -6,6 +6,12 @@
 
 import { request } from './shared/api.js';
 import { montarInscripcion } from './shared/inscripcion.js';
+import {
+    inicializarUbicacionAutomatica,
+    leerUbicacionUsuario,
+    UBICACION_USUARIO_ERROR_EVENT,
+    UBICACION_USUARIO_EVENT,
+} from './shared/ubicacion-sesion.js';
 
 const API_URL = 'api/publicaciones.php';
 const TAMANO_PAGINA = 25;
@@ -287,6 +293,11 @@ async function load() {
     const parametros = new URLSearchParams({
         estado: 'ACTIVO', pagina: '1', tamanoPagina: String(TAMANO_PAGINA),
     });
+    const ubicacion = leerUbicacionUsuario();
+    if (ubicacion) {
+        parametros.set('latitud', ubicacion.latitud);
+        parametros.set('longitud', ubicacion.longitud);
+    }
     if (state.query !== '') parametros.set('q', state.query);
 
     try {
@@ -339,6 +350,16 @@ function initialize() {
     });
     document.querySelector('[data-explore-retry]')?.addEventListener('click', load);
 
+    window.addEventListener(UBICACION_USUARIO_EVENT, () => {
+        leerUbicacionUsuario();
+        load();
+    });
+    window.addEventListener(UBICACION_USUARIO_ERROR_EVENT, (event) => {
+        const kind = event.detail?.kind;
+        if (kind === 'denied') showToast('Ubicación denegada: mostramos publicaciones recientes en lugar de cercanas.');
+        else if (kind !== 'unsupported') showToast('No pudimos actualizar tu ubicación; Explorar sigue disponible.');
+    });
+
     // Tramo B: la vista pública permite inscribirse/abandonar/reactivar
     // contextos sin entrar al CRUD administrativo.
     const inscripcion = document.querySelector('[data-inscripcion-contextos]');
@@ -347,6 +368,7 @@ function initialize() {
     }
 
     load();
+    inicializarUbicacionAutomatica();
 }
 
 if (typeof document !== 'undefined') {
