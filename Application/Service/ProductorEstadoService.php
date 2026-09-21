@@ -33,7 +33,14 @@ final class ProductorEstadoService
      *
      * @return bool true si hubo transición real; false si ya estaba en ese estado.
      */
-    public function transicionar(int $productorId, int $nuevoEstado, string $motivo, string $identificacion): bool
+    public function transicionar(
+        int $productorId,
+        int $nuevoEstado,
+        string $motivo,
+        string $identificacion,
+        string $entidad = 'PRODUCTOR',
+        string $origen = 'API_PRODUCTORES',
+    ): bool
     {
         $anterior = $this->productor->buscarPorId($productorId);
 
@@ -61,6 +68,8 @@ final class ProductorEstadoService
                 $anterior,
                 $nuevo,
                 $this->solicitudId,
+                entidad: $entidad,
+                origen: $origen,
             );
         }
 

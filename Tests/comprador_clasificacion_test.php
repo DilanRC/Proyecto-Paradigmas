@@ -3,17 +3,21 @@
 declare(strict_types=1);
 
 /**
- * Paso (a) del retiro de tbcomprador (DEC-DBREADY-005): la pregunta
- * "¿este productor es comprador?" se responde desde
- * tbproductorclasificacionperiodo y no desde tbcomprador.tbcompradorestado.
+ * Verifica la mecánica del modelo analítico ProductorClasificacionPeriodo
+ * (DEC-28/29): pregunta y respuesta por periodo, apertura y cierre
+ * independientes por tipo y conservación del histórico. Es usada en
+ * Tools/backfill-clasificacion-comprador.php.
  *
- * Los cuatro casos que fija Calidad:
+ * La pregunta "¿este productor es comprador?" ya NO rige el negocio: el
+ * contexto Comprador se lee de tbcomprador + tbpersona. La clasificación
+ * COMPRADOR queda como señal analítica del Productor y este test valida que
+ * esa señal sigue calculable y cerrable sin romper el histórico.
+ *
+ * Los cuatro casos que fija Calidad para la señal:
  *   sin periodo COMPRADOR            -> false
  *   periodo COMPRADOR abierto        -> true
  *   periodo COMPRADOR cerrado        -> false
  *   COMPRADOR + VENDEDOR abiertos    -> true
- *
- * Esta prueba NO toca escrituras del CRUD legacy: ese es el paso (b).
  */
 
 require __DIR__ . '/bootstrap.php';
@@ -94,8 +98,9 @@ try {
     test_same(2, count($clasificacion->listarAbiertas($productorId)),
         'Ambas clasificaciones quedan abiertas simultáneamente.');
 
-    // La respuesta no depende del CRUD legacy: este productor nunca tuvo fila
-    // en tbcomprador y aun así el sistema lo reconoce como comprador.
+    // La señal analítica vive fuera del contexto: este productor nunca se
+    // inscribió como comprador (no tiene fila en tbcomprador) y la señal aun
+    // así se calcula y se cierra de forma independiente.
     $legacy = $db->prepare(
         'SELECT COUNT(*) FROM tbcomprador c
          INNER JOIN tbproductor p ON p.tbpersonaid = c.tbpersonaid
@@ -103,7 +108,7 @@ try {
     );
     $legacy->execute(['id' => $productorId]);
     test_same(0, (int) $legacy->fetchColumn(),
-        'La lectura no depende de tbcomprador: no existe fila legacy para este productor.');
+        'La señal analítica no depende de tbcomprador: no existe fila para este productor.');
 
     // Y al revés: cerrar VENDEDOR tampoco altera comprador.
     $cerrar($productorId, 'VENDEDOR');
@@ -117,4 +122,4 @@ try {
     test_cleanup_productores([$documento]);
 }
 
-echo "OK comprador_clasificacion_test: \"es comprador\" se lee de tbproductorclasificacionperiodo (sin periodo, abierto, cerrado y COMPRADOR+VENDEDOR).\n";
+echo "OK comprador_clasificacion_test: la señal analítica COMPRADOR sobre el Productor sigue calculable (sin periodo, abierto, cerrado y COMPRADOR+VENDEDOR).\n";

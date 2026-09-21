@@ -7,27 +7,26 @@ Calidad y no autoriza SQL sobre puntos marcados como PENDIENTE.
 
 ## Regla base
 
-Productor es la entidad de negocio núcleo. Comprador es un contexto de negocio
-independiente de la misma Persona; Vendedor no es una entidad separada. Compra
-y Venta son hechos históricos propios.
-
-`tbvendedor` no debe existir. `tbcomprador` representa el contexto de negocio
-de una Persona y se consulta sin CRUD administrativo manual. Las clasificaciones
-históricas de Productor que aún existan se conservan en
-`tbproductorclasificacionperiodo`; no se usan para sustituir el contexto
-Comprador actual.
+`tbpersona` guarda la identidad compartida. `tbproductor` es la entidad de
+negocio núcleo; `tbcomprador` y `tbtransportista` son contextos de esa misma
+Persona (DEC-28): Comprador vuelve a ser administrable con su propio estado y
+la audición de sus operaciones en `tbbitacora`. Compra y Venta son hechos
+históricos propios. `tbvendedor` no existe.
+`tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`) queda como
+registro analítico del historial (DEC-29), no como fuente de verdad del
+contexto.
 
 ## Matriz
 
 | Tema | Estado | Decisión P0-C | Evidencia | Límite |
 |---|---|---|---|---|
-| Comprador | APROBACIÓN DIRECTA DE CALIDAD | Comprador es un contexto de negocio de `tbpersona`, consultado desde `tbcomprador` y sin CRUD administrativo manual. | Una Persona puede comprar sin ser Productor; la identidad no se duplica. | El contexto se crea desde un proceso de negocio aprobado, no desde el panel de mantenimiento. |
-| `tbcomprador` | DECISIÓN VIGENTE | La tabla conserva el contexto Comprador enlazado a `tbpersona`; el panel administrativo es de solo lectura mientras no exista un proceso de negocio de alta. | El modelo y la consulta vigente devuelven `tbcomprador + tbpersona`. | No agregar estados históricos de Comprador ni convertirlo en rol administrativo. |
+| Comprador | DECISIÓN VIGENTE (DEC-28) | Comprador es un contexto de la Persona; su fuente de verdad es `tbcomprador + tbpersona` y la API vuelve a inscribir (POST), desactivar (DELETE) y reactivar (PATCH). | DEC-28/29 superan la etapa de solo lectura de DEC-DBREADY-008. | No crear `tbcompradorestadoperiodo`; el estado es un bit del contexto y las transiciones viven en bitácora. |
+| `tbcomprador` | CONTEXTO VIGENTE (DEC-28) | Tabla de contexto de Persona con estado propio; el alta reutiliza la persona por identificación o la crea si no existe, y la audición de operaciones va a `tbbitacora`. | Dato personal único vía `tbpersona`; `tbproductorclasificacionperiodo` ya no la gobierna (DEC-29). | No ampliar con relaciones, claves, índices, defaults ni `AUTO_INCREMENT`. No hacer `DROP`. |
 | Vendedor | APROBACIÓN DIRECTA DE CALIDAD | No crear `tbvendedor`, `tbvendedorestadoperiodo` ni histórico de perfil vendedor. | Calidad indicó que Vendedor no es entidad. | Venta sí puede existir como hecho histórico. |
-| Clasificación histórica Productor/Vendedor | LEGACY / HISTÓRICO | Conservar periodos históricos existentes en `tbproductorclasificacionperiodo`, validados por PHP, sin usarlos como sustituto del contexto Comprador. | La migración debe preservar hechos ya registrados sin inventar nuevas transiciones. | No implementar criterios automáticos ni nuevas clasificaciones sin política aprobada. |
+| Clasificación Comprador/Vendedor | DECISIÓN VIGENTE (DEC-29) | `tbproductorclasificacionperiodo` queda como registro analítico del historial (tipo `COMPRADOR`/`VENDEDOR`); ya no gobierna el contexto Comprador, que tiene su propia tabla de contexto (DEC-28). | DEC-28/29: un periodo con `fechafin = NULL` no abre ni cierra el contexto, solo documenta el historial. | No implementar criterios automáticos sin cerrar la política de T10. |
 | Criterios y pesos | PENDIENTE DE CALIDAD/ARQUITECTURA | No guardar pesos en SQL. T10 debe iniciar en modo informe con política versionada fuera del esquema. | No hay pesos confirmados en la evidencia disponible. | Bloquea activación automática de transiciones. |
-| Eventos que otorgan/pierden/reactivan capacidad | PENDIENTE DE POLÍTICA | Me gusta, seguir, carrito, compra y venta son hechos/señales disponibles, pero la evidencia no fija por sí sola una transición automática de contexto. | Calidad confirmó el funnel y Compra/Venta como hechos; la política de altas y bajas no quedó fijada. | Sin regla aprobada no se abren/cierran contextos automáticamente. |
-| `tbpersonaestado` | DECISIÓN VIGENTE | Estado global de disponibilidad de la persona. Una Persona inactiva no opera, pero ese bit no borra ni cierra por sí solo un periodo COMPRADOR/VENDEDOR. | DEC-PER-003 y DEC-DBREADY-008. | Semántica global, no histórico de clasificación. |
+| Eventos que otorgan/pierden/reactivan clasificación | PENDIENTE DE POLÍTICA | Me gusta, seguir, carrito, compra y venta son hechos/señales disponibles, pero la evidencia no fija por sí sola cuál abre/cierra una clasificación ni con qué peso. | Calidad confirmó el funnel y Compra/Venta como hechos; la regla de clasificación no quedó fijada. | Sin umbrales ni regla aprobada no se abren/cierran periodos automáticamente. Entre DEC-DBREADY-008 y T10 solo se conservan clasificaciones existentes/backfill. |
+| `tbpersonaestado` | DECISIÓN VIGENTE | Estado global de disponibilidad de la persona. Una Persona inactiva no opera: los contextos Productor, Comprador y Transportista responden 409 si está inactiva. | DEC-PER-003 y DEC-28. | Semántica global, no histórico de clasificación. |
 | `tbfincaestado` | DECISIÓN VIGENTE | Estado lógico de la finca, aplicado por PHP. | Patrón vigente de CRUD y diagnóstico. | No define temporalidad histórica. |
 | `tbvehiculoestado` | PROPUESTA ACEPTADA PARA CRUD ACTUAL | Estado lógico del vehículo, aplicado por PHP. | Existe por patrón del CRUD actual; Calidad confirmó placa, VIN y modelo, no el estado. | No usar como prueba de horario, cobertura o asignación histórica. |
 | `tbpagometodoactivo` | DECISIÓN VIGENTE | Disponibilidad del método en catálogo. | Alcance vigente contiene efectivo y CRUD de métodos. | No implica método usado en compra/venta/flete. |
@@ -52,12 +51,14 @@ Comprador actual.
 
 ## Consecuencia operativa
 
-`tbcomprador` es un contexto de negocio de Persona y el CRUD administrativo
-manual ya no existe. DEC-DBREADY-008 conserva únicamente un panel/endpoint GET
-de lectura sobre `tbcomprador + tbpersona`; el contexto se crea desde un proceso
-de negocio aprobado y no desde una pantalla administrativa.
+`tbcomprador` es un contexto vigente (DEC-28): la API vuelve a inscribir,
+desactivar y reactivar con bloqueo nombrado `tindercows_persona_alta`, y el
+panel conserva su lectura sin construir cuerpos. `tbproductorclasificacionperiodo`
+conserva el historial analítico (DEC-29) y el backfill heredado sigue disponible
+con `Tools/backfill-clasificacion-comprador.php --check/--apply` para la
+evidencia previa.
 
-La capa DB mantiene 32 tablas en
+La capa DB mantiene 30 tablas en
 `Database/Migrations/006estructuracomercialhistorica.sql` porque las tablas
 nuevas representan hechos y periodos confirmados sin política automática. T4b,
 T7, T8, T9, T10 y T11 solo pueden implementar comportamiento cuyo evento o

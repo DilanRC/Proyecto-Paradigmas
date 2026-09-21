@@ -123,11 +123,11 @@ respaldo y etiqueta corresponden a Corrección 04.
 
 ## DEC-C04-008 - Compradores
 
-Estado: SUPERADA parcialmente por P0-C. `tbcomprador` se conserva por
-compatibilidad con el esquema y datos existentes, pero ya no es la entidad
-normativa para modelar el comportamiento comprador. La clasificación Comprador
-del negocio debe vivir como histórico del Productor, no como histórico propio
-de `tbcomprador`.
+Estado: SUPERADA por DEC-28/29. `tbcomprador` ya no es compatibilidad temporal
+ni insumo de retiro: vuelve a ser la fuente de verdad del contexto Comprador de
+la Persona, con su propio estado e historial en bitácora. La clasificación que
+modelaba el histórico del Productor queda en `tbproductorclasificacionperiodo`
+como registro analítico.
 
 No se agregan relaciones, claves, índices, defaults ni valores automáticos.
 No se crea `tbcompradorestadoperiodo`.
@@ -136,9 +136,11 @@ No se crea `tbcompradorestadoperiodo`.
 
 ## DEC-TRAMO-7 - Retiro frontend de Comprador
 
-En el tramo 7 se retira Comprador del frontend; Productor, Transportista,
-Vehículo y Métodos de pago se mantienen como paneles activos, no se toca el
-contrato `estado` y el retiro respeta el alcance secuencial del remodelado.
+Estado: SUPERADA por DEC-28/29. El retiro de Comprador del frontend quedó
+revertido: Comprador regresa como contexto de Persona con su panel, y el
+endpoint `/api/compradores.php` vuelve a inscribir (POST), desactivar (DELETE)
+y reactivar (PATCH). Productor, Comprador, Transportista, Vehículo y Métodos de
+pago se mantienen como paneles activos y no se toca el contrato `estado`.
 
 Este bloque solamente toca base de datos y documentación. Ninguna decisión se
 implementa con código de aplicación.
@@ -861,3 +863,79 @@ Sin sesión autenticada (demo local) la captura se omite por diseño (actor `NO_
 Los módulos nuevos son `Public/js/shared/geo.js` (captura pura de GPS, agnóstico de mapa) y
 `Public/js/shared/ubicacion-sesion.js` (orquestador background, nunca lanza). El enganche se realiza en
 `auth-gate.js` tras revelar la UI privada, sin tocar `login.js`.
+
+## DEC-28 - Comprador vuelve a ser un contexto de Persona con escritura
+
+Sustituye el corte de DEC-C04-008/DEC-TRAMO-7. `tbcomprador` deja de tratarse
+como tabla legacy que hay que retirar: es la fuente de verdad del contexto
+Comprador de la Persona, con su propio estado y la audición de sus operaciones
+en `tbbitacora`. `tbproductor`, `tbcomprador` y `tbtransportista` son tres
+contextos de la misma Persona; el objetivo de navegación de las fichas es
+consultar la misma identidad en un perfil u otro
+(`Public/js/shared/capacidades.js`), y la consulta puede devolver las
+capacidades propias de la persona.
+
+Contrato de aplicación:
+- `Application/Model/Comprador.php` (modelo de escritura), el controlador y
+  `Public/api/compradores.php` sustituyen al `CompradorConsultaController` de la
+  etapa read-only, que se elimina.
+- Concurrencia: bloqueo nombrado `tindercows_persona_alta`, el mismo del alta
+  de Persona; la inscripción reutiliza la persona por identificación o la crea
+  si no existe y luego abre el contexto.
+- POST inscribir → 201 (`INSCRIBIR`); persona inactiva reactivada → 201
+  (`REACTIVAR`); ya comprador activo → 200 sin tocar nada; persona existente con
+  datos personales distintos → 409 `errors['identificacion.numero']`.
+- DELETE desactiva solo el contexto, PATCH reactiva la misma fila; ambos 404 si
+  no existe el comprador y 409 si la persona está inactiva. Ningún endpoint
+  ejecuta `DELETE FROM`.
+- El panel conserva su vista de solo lectura: no construye cuerpos ni emite
+  verbos de escritura; la escritura ocurre contra la API.
+
+## DEC-29 - El periodo COMPRADOR queda como registro analítico
+
+`tbproductorclasificacionperiodo` (`tipo = COMPRADOR`) deja de ser fuente de
+verdad del contexto Comprador (DEC-28) y queda como registro analítico:
+permite responder cuándo y con qué evidencia una persona fue comprador, sin
+gobernar la operación del contexto. `Tools/backfill-clasificacion-comprador.php`
+conserva la migración histórica heredada (`--check` audita, `--apply` migra),
+ahora con propósito analítico y sin el plan de retirar `tbcomprador`. El
+periodo con `fechafin = NULL` no abre ni cierra el contexto: solo documenta el
+historial.
+
+## DEC-30 - Superficie autenticada vs superficie pública en la API
+
+La API se divide en dos superficies. La **superficie de administración** exige
+actor autenticado en **todos** sus verbos, lecturas y escrituras por igual: la
+aceptación del avance 2 "sin JWT no se crean entidades" se vuelve estricta y
+también impide leer con la API a un actor anónimo. La **superficie pública**
+responde datos de consulta sin exigir sesión.
+
+- Administración (guard en todos los verbos): `productores`,
+  `productores-direccion`, `transportistas`, `vehiculos`, `pagometodos`,
+  `compradores`, `fincas-direccion` y `transportistas-vehiculos`.
+- Pública (sin guard, solo lectura): `publicaciones` (GET), `identidad` (GET) y
+  `productores-ubicacion` (GET: histórico de ubicación). La telemetría de
+  ubicación sigue siendo abierta para no bloquear reportes al operar local.
+- "Inscribirse" (POST `compradores`) es alta de contexto y por tanto exige
+  sesión: sin sesión responde 401 igual que el resto de la superficie admin.
+
+`Application/Service/AuthGuard` resuelve al actor (`SupabaseActorResolver`) y
+rechaza:
+- sin sesión → 401 `errors['auth'] = 'SIN_SESION'`;
+- con sesión pero sin el rol técnico exigido → 403
+  `errors['auth'] = 'ROL_REQUERIDO'`;
+- un `Authorization` mal formado (no Bearer) → 401 desde el resolutor, sin
+  depender del sidecar.
+
+El JWT se verifica contra la clave pública de Supabase; el sidecar local no está
+configurado para firmar, así que una llamada con Bearer a cualquier superficie
+responde 503 (`SERVICE_NOT_CONFIGURED`) y el modo de desarrollo local sin
+sesión navega en modo público de solo lectura. La corrección de ese diagnóstico
+es operativa, no de código.
+
+El orden de precedencia en los endpoints admin se conserva para no romper los
+chequeos preexistentes: 405 (verbo prohibido), 415 (Content-Type) y 400 (cuerpo
+JSON malformado) ocurren antes de resolver la sesión, y OPTIONS responde 204 sin
+sesión porque es preflight de CORS. Los errores de `HttpException` se propagan
+con su `errors` en la respuesta del endpoint, para que el frontend presente
+`SIN_SESION` como "inicie sesión" sin depender del texto.

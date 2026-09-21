@@ -1,10 +1,11 @@
 <?php
 
+
 declare(strict_types=1);
 
-use Application\Controller\ProductorController;
-use Application\Auth\AdminAuthorization;
 use Application\Auth\SupabaseActorResolver;
+use Application\Controller\CapacidadController;
+use Application\Service\ValidacionException;
 use Configuration\Database;
 use function Configuration\readJsonBody;
 use function Configuration\sendJsonResponse;
@@ -14,31 +15,28 @@ require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
 require_once $raiz . '/Application/Auth/ActorContext.php';
-require_once $raiz . '/Application/Auth/AdminAuthorization.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
-foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'ProductorFinca', 'Direccion', 'ProductorDireccion', 'Bitacora', 'Productor', 'ProductorEstadoPeriodo'] as $modelo) {
+foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'Comprador', 'Bitacora', 'Transportista', 'TransportistaVehiculo', 'Productor', 'ProductorFinca', 'ProductorEstadoPeriodo'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
-foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'AuthGuard'] as $servicio) {
+foreach (['ValidacionService', 'CompradorClasificacionService', 'AuthGuard', 'ProductorEstadoService', 'EstadoService', 'CapacidadService'] as $servicio) {
     require_once $raiz . "/Application/Service/{$servicio}.php";
 }
-require_once $raiz . '/Application/Controller/ProductorController.php';
+require_once $raiz . '/Application/Controller/CapacidadController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-$permitidos = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    header('Allow: POST, OPTIONS');
     http_response_code(204);
     exit;
 }
-if (!in_array($metodo, $permitidos, true)) {
-    header('Allow: GET, POST, PUT, DELETE, PATCH, OPTIONS');
+if ($metodo !== 'POST') {
+    header('Allow: POST, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
 }
 
-$metodosConCuerpo = ['POST', 'PUT', 'DELETE', 'PATCH'];
 $tipoContenido = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
-if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'application/json') {
+if ($tipoContenido !== 'application/json') {
     sendJsonResponse([
         'success' => false,
         'message' => 'El cuerpo debe usar Content-Type: application/json.',
@@ -47,18 +45,28 @@ if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'applicatio
 }
 
 try {
-    $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
+    $cuerpo = readJsonBody();
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
-    if ($metodo !== 'GET') AdminAuthorization::require($actor);
-    $controlador = new ProductorController(
+    $controlador = new CapacidadController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
         $actor,
     );
-    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
+    $respuesta = $controlador->procesar($cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
+} catch (ValidacionException $excepcion) {
+    sendJsonResponse([
+        'success' => false,
+        'message' => $excepcion->getMessage(),
+        'data' => null,
+        'errors' => $excepcion->errores,
+    ], 400);
+} catch (\Application\Model\PersonaConflictException $excepcion) {
+    sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null, 'errors' => [
+        'identificacion.numero' => $excepcion->getMessage(),
+    ]], 409);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
 } catch (Application\HttpException $excepcion) {
