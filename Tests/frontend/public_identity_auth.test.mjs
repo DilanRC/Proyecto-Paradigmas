@@ -160,8 +160,7 @@ test('modo claro y oscuro comparten preferencia persistente e iconos reconocible
 
 test('el acceso público valida con Supabase y vuelve a Explorar por defecto', () => {
     assert.ok(login.includes('Entrar a TinderCows'));
-    assert.match(login, /credenciales se validan con Supabase Auth/);
-    assert.match(login, /verifica la autorizaci[oó]n de administrador en el servidor/);
+    assert.doesNotMatch(login, /Acceso seguro|credenciales se validan con Supabase Auth/);
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(login), false);

@@ -50,8 +50,6 @@
                     <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a TinderCows</h1></div>
                 </div>
                 <p class="auth-card__copy">Continúa para volver a Explorar o administrar tus actividades.</p>
-                <p class="auth-demo-banner"><strong>Acceso seguro:</strong> las credenciales se validan con Supabase Auth. Para entrar al sitio público, el servidor comprueba tu identidad de TinderCows; para una ruta administrativa, además verifica la autorización de administrador en el servidor.</p>
-
                 <form class="auth-form" id="formulario-login" novalidate>
                     <label class="auth-field">
                         <span>Correo electrónico</span>

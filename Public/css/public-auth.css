@@ -735,18 +735,6 @@ html[data-theme='light'] .brand-logo--dark {
     line-height:1.55;
 }
 
-.auth-demo-banner {
-    margin:22px 0 0;
-    padding:13px 14px;
-    border:1px solid var(--tc-line);
-    border-left:3px solid var(--tc-primary);
-    border-radius:12px;
-    color:var(--tc-text-soft);
-    background:var(--tc-surface);
-    font-size:12px;
-    line-height:1.5;
-}
-
 .auth-form {
     display:grid;
     gap:17px;

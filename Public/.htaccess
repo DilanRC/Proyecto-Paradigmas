@@ -1,6 +1,13 @@
 DirectoryIndex index.php
 Options -Indexes
 
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Apache puede ocultar Authorization antes de entregarlo a PHP. El
+    # backend resuelve la Persona únicamente desde este Bearer verificado.
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+</IfModule>
+
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"

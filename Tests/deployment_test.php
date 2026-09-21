@@ -13,6 +13,7 @@ $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
 $databaseConfiguration = file_get_contents("{$root}/Configuration/Database.php");
 $vercelIgnoreBuild = file_get_contents("{$root}/Tools/vercel-ignore-build.sh");
+$publicHtaccess = file_get_contents("{$root}/Public/.htaccess");
 $vercelConfiguration = json_decode(file_get_contents("{$root}/vercel.json"), true, 512, JSON_THROW_ON_ERROR);
 
 foreach ([$dockerfile, $vercelDockerfile] as $definition) {
@@ -35,6 +36,8 @@ test_assert(str_contains($entrypoint, '${PORT:-80}'), 'El contenedor debe respet
 test_assert(str_contains($entrypoint, 'exec apache2-foreground'), 'Apache debe quedar como proceso principal');
 test_assert(str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'El arranque debe validar el esquema Supabase');
+test_assert(str_contains($publicHtaccess, 'HTTP_AUTHORIZATION:%{HTTP:Authorization}'),
+    'Apache debe conservar el Bearer para que PHP resuelva la sesión');
 test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
     'El esquema debe crear tbfinca de forma idempotente');
 test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbcomprador'),
