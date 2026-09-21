@@ -59,26 +59,25 @@ function initializePublicCarousel() {
     for (const root of document.querySelectorAll('[data-public-carousel]')) {
         if (root.dataset.ready === 'true') continue;
         const track = root.querySelector('[data-carousel-track]');
-        const slides = [...root.querySelectorAll('.public-carousel__slide')];
+        const pages = [...root.querySelectorAll('.public-carousel__page')];
         const dots = root.querySelector('.public-carousel__dots');
         const status = root.querySelector('[data-carousel-status]');
-        if (!track || slides.length < 2 || !dots) continue;
+        if (!track || pages.length < 2 || !dots) continue;
         root.dataset.ready = 'true';
         let index = 0;
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const render = () => {
-            index = (index + slides.length) % slides.length;
-            track.style.setProperty('--carousel-angle', `${index * -60}deg`);
-            if (status) status.textContent = `Escena ${index + 1} de ${slides.length}`;
-            slides.forEach((slide, slideIndex) => slide.setAttribute('aria-hidden', String(slideIndex !== index)));
+            index = (index + pages.length) % pages.length;
+            track.style.transform = `translateX(-${index * 100}%)`;
+            if (status) status.textContent = index === 0 ? 'Escenas 1–3 de 6' : 'Escenas 4–6 de 6';
             dots.querySelectorAll('button').forEach((dot, dotIndex) => dot.setAttribute('aria-selected', String(dotIndex === index)));
         };
-        slides.forEach((slide, slideIndex) => {
+        pages.forEach((page, pageIndex) => {
             const dot = document.createElement('button');
             dot.type = 'button';
             dot.role = 'tab';
-            dot.ariaLabel = `Ver escena ${slideIndex + 1}`;
-            dot.addEventListener('click', () => { index = slideIndex; render(); });
+            dot.ariaLabel = `Ver página ${pageIndex + 1} de escenas`;
+            dot.addEventListener('click', () => { index = pageIndex; render(); });
             dots.append(dot);
         });
         root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => { index -= 1; render(); });
@@ -89,7 +88,7 @@ function initializePublicCarousel() {
         });
         let timer = null;
         const stop = () => { if (timer) { window.clearInterval(timer); timer = null; } };
-        const start = () => { if (!reducedMotion && !timer) timer = window.setInterval(() => { index += 1; render(); }, 6500); };
+        const start = () => { if (!reducedMotion && !timer) timer = window.setInterval(() => { index += 1; render(); }, 1000); };
         track.addEventListener('pointerenter', stop);
         track.addEventListener('pointerleave', start);
         track.addEventListener('focusin', stop);
