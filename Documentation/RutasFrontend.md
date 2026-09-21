@@ -84,6 +84,9 @@ la vista pública, siempre sujeto a la validación del servidor.
 - La allowlist administrativa debe configurarse en el entorno del servidor.
 - Catálogo real de ganado/subastas conectado a la vista Explorar.
 - Persistencia real de favoritos, contacto y pujas.
+- Publicar y comprar muestran el estado de preparación sin escribir en la base:
+  el contrato comercial histórico todavía liga comprador/interacción a
+  Productor y no permite implementar de forma segura un Comprador independiente.
 - Política definitiva de privacidad, retención y ejercicio de derechos.
 
 La autorización real de API continúa siendo un mecanismo separado del login visual: `SupabaseActorResolver` verifica el Bearer y `AdminAuthorization` aplica la allowlist para escrituras administrativas.

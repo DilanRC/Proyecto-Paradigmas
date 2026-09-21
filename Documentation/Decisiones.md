@@ -1083,3 +1083,16 @@ Consecuencia: "una persona con 2 fincas envía el form y quedan 2 fincas (o 1 si
 una ya existía); cada finca expone su dirección" se cumple respetando el
 contrato del backend y la verificación HTTP (fincas_direccion_http_test,
 api_productores_test).
+## DEC-COM-001 - Escrituras comerciales bloqueadas por el contrato de identidad
+
+Las pantallas de publicar, comprar, pujar, favoritos y contacto no deben
+inventar persistencia en `sessionStorage` ni escribir contra un modelo que
+identifique al Comprador como Productor. El esquema histórico usa
+`tbproductorcompradorid` en `tbcompra` y `tbproductorid` en
+`tbanimalinteraccion`/`tbcarrito`; eso contradice la regla de Calidad de que una
+Persona puede activar el contexto Comprador sin activar Productor.
+
+Hasta aprobar la representación de Persona/Comprador y su migración paralela
+MySQL/PostgreSQL, la interfaz solo consulta publicaciones, conserva borradores
+no sensibles y comunica que la operación comercial está pendiente. No se
+registran intenciones, compras o pujas falsas en el navegador.

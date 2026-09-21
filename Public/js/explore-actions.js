@@ -3,7 +3,6 @@ import { request } from './shared/api.js';
 const PROFILE_KEY = 'tindercows:profile';
 const SESSION_KEY = 'tindercows:login';
 const PENDING_KEY = 'tindercows:pending-commerce-action';
-const INTENT_KEY = 'tindercows:purchase-intents';
 const API_URL = 'api/publicaciones.php';
 
 let previousFocus = null;
@@ -253,52 +252,12 @@ function renderVerified() {
     cancel.className = 'flow-button';
     cancel.textContent = 'Cancelar';
     cancel.addEventListener('click', closeDialog);
-    const buy = document.createElement('button');
-    buy.type = 'button';
-    buy.className = 'flow-button flow-button--primary';
-    buy.textContent = 'Preparar intención de compra';
-    buy.addEventListener('click', () => preparePurchaseIntent(buy));
-    actions()?.append(cancel, buy);
-}
-
-function preparePurchaseIntent(button) {
-    if (!verifiedPublication || submitting) return;
-    submitting = true;
-    button.disabled = true;
-    const dialog = document.querySelector('#purchase-dialog');
-    dialog?.setAttribute('aria-busy', 'true');
-    try {
-        const intents = readStored(INTENT_KEY);
-        const list = Array.isArray(intents) ? intents : [];
-        list.push({
-            publicacionId: verifiedPublication.publicacionId,
-            animalId: verifiedPublication.animalId,
-            tipo: 'COMPRA',
-            createdAt: new Date().toISOString(),
-            persistence: 'frontend-prototype',
-        });
-        writeStored(INTENT_KEY, list);
-        clearDialog();
-        const result = document.createElement('div');
-        result.className = 'purchase-result';
-        result.setAttribute('role', 'status');
-        result.setAttribute('aria-live', 'polite');
-        const heading = document.createElement('h3');
-        heading.textContent = 'Intención preparada';
-        const copy = document.createElement('p');
-        copy.textContent = 'El frontend conservó esta intención en la sesión. No anunciamos una compra real: el controlador actual de publicaciones solo acepta GET y todavía no existe un contrato HTTP aprobado para registrar la compra.';
-        result.append(heading, copy);
-        body()?.append(result);
-        const close = document.createElement('button');
-        close.type = 'button';
-        close.className = 'flow-button flow-button--primary';
-        close.textContent = 'Entendido';
-        close.addEventListener('click', closeDialog);
-        actions()?.append(close);
-    } finally {
-        dialog?.setAttribute('aria-busy', 'false');
-        submitting = false;
-    }
+    const unavailable = document.createElement('p');
+    unavailable.className = 'purchase-unavailable';
+    unavailable.setAttribute('role', 'status');
+    unavailable.textContent = 'La compra permanece deshabilitada hasta que el backend tenga un contrato que identifique al contexto Comprador sin exigir Productor.';
+    actions()?.append(cancel);
+    target.append(unavailable);
 }
 
 function guardAndOpen(context) {

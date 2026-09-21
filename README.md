@@ -457,3 +457,7 @@ python3 Tests/documentation_test.py
 - Publicar, comprar, pujar, favoritos y contacto todavía no tienen un contrato
   HTTP de escritura completo; la interfaz lo comunica como preparación o acción
   no persistente y no anuncia una operación comercial falsa.
+- El modelo comercial histórico aún contiene `tbproductorcompradorid` y
+  `tbproductorid` en hechos que deben poder pertenecer a un Comprador sin ser
+  Productor. Ese contrato requiere decisión de Calidad y migración coordinada
+  antes de habilitar escrituras comerciales.
