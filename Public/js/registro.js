@@ -345,6 +345,7 @@ function initialize() {
         const summary = buildRegistrationSummary(draft);
         try {
             if (!readAuthSession()) {
+                status.textContent = 'Creando tu cuenta…';
                 const auth = await signUpWithPassword(summary.persona.correoElectronico, draft.persona.password);
                 if (!auth.session) {
                     status.textContent = 'Cuenta creada. Confirma tu correo y luego entra para completar el registro.';
@@ -363,13 +364,21 @@ function initialize() {
                 }),
             });
 
-            const activity = await request('api/mi-actividad.php');
-            syncPublicProfile(activity.data);
+            // El registro ya quedó persistido. El perfil es una actualización
+            // auxiliar; si su lectura falla, no debemos dejar a la persona
+            // atrapada en el botón ni hacerle repetir una operación exitosa.
             sessionStorage.removeItem(DRAFT_KEY);
-            status.textContent = extending
-                ? 'Actividad actualizada. Volviendo a tu perfil…'
-                : 'Registro completado. Preparando tu perfil…';
             const fallback = extending ? 'mi-actividad.php?actualizado=1' : 'mi-actividad.php?bienvenida=1';
+            status.textContent = extending
+                ? 'Actividad guardada. Abriendo tu perfil…'
+                : 'Registro completado. Abriendo tu perfil…';
+            try {
+                const activity = await request('api/mi-actividad.php', { timeoutMs: 10000 });
+                syncPublicProfile(activity.data);
+            } catch {
+                // mi-actividad.php vuelve a consultar el servidor al abrirse;
+                // no convertimos un fallo de lectura en un falso fallo de alta.
+            }
             window.location.assign(resolveNext(fallback));
         } catch (error) {
             const fieldErrors = error?.errors ?? {};

@@ -199,6 +199,12 @@ test('el registro guiado persiste mediante Supabase y la API, no mediante una se
     assert.doesNotMatch(registroJs, /frontend-prototype/);
 });
 
+test('el alta no queda bloqueada si falla la lectura auxiliar del perfil', () => {
+    assert.match(registroJs, /const activity = await request\('api\/mi-actividad\.php', \{ timeoutMs: 10000 \}\)/);
+    assert.match(registroJs, /mi-actividad\.php vuelve a consultar el servidor/);
+    assert.match(registroJs, /window\.location\.assign\(resolveNext\(fallback\)\)/);
+});
+
 test('las páginas públicas informativas no exponen rutas administrativas ni lenguaje académico', () => {
     for (const route of PUBLIC_ROUTES.slice(1)) {
         const wrapper = read(route);

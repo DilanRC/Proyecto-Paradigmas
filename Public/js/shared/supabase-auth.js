@@ -137,8 +137,10 @@ function sessionFromTokenResponse(payload, previous = null) {
     };
 }
 
-async function postAuth(path, body) {
+async function postAuth(path, body, { timeoutMs = 20000 } = {}) {
     const config = await authConfig();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), Math.max(1, Number(timeoutMs) || 20000));
     let response;
     try {
         response = await fetch(`${config.url}${path}`, {
@@ -149,9 +151,15 @@ async function postAuth(path, body) {
                 apikey: config.publishableKey,
             },
             body: JSON.stringify(body),
+            signal: controller.signal,
         });
-    } catch {
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            throw new AuthError('El servicio de autenticación tardó demasiado. Intenta nuevamente.');
+        }
         throw new AuthError('No fue posible contactar el servicio de autenticación.');
+    } finally {
+        clearTimeout(timeout);
     }
     const payload = await readJsonResponse(response);
     return { response, payload };
