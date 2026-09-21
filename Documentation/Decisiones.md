@@ -1030,3 +1030,51 @@ de filas, no hay IDs duplicados ni huérfanos por foreign keys, la superficie
 pública responde HTTP 200 con el sobre `{success,message,data}` intacto y la
 resolución de identidad (DEC-30) resuelve los contextos de las personas
 sembradas.
+
+## DEC-33 - Superficie del navegador: identidad resuelve autenticado vs público
+
+El backend no implementa login propio (DEC-30): el actor se resuelve desde el
+encabezado `Authorization: Bearer` y `GET api/identidad.php` devuelve los
+contextos de la persona (Productor/Comprador/Transportista). El frontend no
+inventa una sesión: el módulo `Public/js/shared/sesion.js` consulta la
+superficie de identidad y decide el modo del navegador.
+
+- **Con Bearer real** (proveedor de identidad): `identidad.php` devuelve
+  `persona` y `api.js` adjunta el token a todas las peticiones (`setBearer`),
+  así las superficies privadas dejan de responder 401 y el actor queda
+  conservado en `sessionStorage` (`tindercows:actor`).
+- **Sin Bearer** (demo local): el resultado es modo público de solo lectura.
+  El marcador local `tindercows:login` solo abre el shell privado para
+  inspección; cualquier escritura responde 401 `SIN_SESION` y la UI lo
+  traduce a "inicie sesión" (nunca a un error genérico).
+- `login.php` resuelve la superficie al enviar el formulario
+  (`flujoLogin` → `identidad.php` GET) y conserva actor + Bearer únicamente
+  cuando el proveedor devolvió una persona real.
+
+Consecuencia: la sesión real del navegador se logra con el proveedor de
+identidad, sin duplicar un login de servidor; `identidad.php` sigue siendo GET
+público (DEC-30) y el contrato `{success,message,data,errors}` no cambia.
+
+## DEC-34 - Fincas repetibles con dirección semántica (Tramo C)
+
+El formulario de productores captura fincas con el componente "Agregar finca"
+(`Public/js/shared/fincas-lista.js`): una lista editable donde cada finca tiene
+su nombre y su propia dirección (provincia → cantón → distrito → pueblo →
+señas), en lugar del campo agrupado por líneas.
+
+- El payload del alta/puesta al día sigue enviando `fincas` solo como
+  `[{nombre}]` porque `ValidacionService` exige "únicamente nombre"; la
+  dirección de cada finca se asocia con `fincas-direccion.php`
+  (201/422/404) después de guardar el productor — la dirección vive en la
+  finca, no en la persona (DEC-14).
+- Regla de acumuladores (DEC-31): un nombre repetido dentro del mismo
+  formulario no se agrega dos veces; un nombre repetido entre productores
+  distintos es legítimo y solo genera advertencia, nunca bloqueo.
+- La prueba de paridad (`Tests/frontend/payload_parity.test.mjs`) fija el
+  cuerpo exacto y `Tests/duplicados_test.php` demuestra la política sin tocar
+  esquema.
+
+Consecuencia: "una persona con 2 fincas envía el form y quedan 2 fincas (o 1 si
+una ya existía); cada finca expone su dirección" se cumple respetando el
+contrato del backend y la verificación HTTP (fincas_direccion_http_test,
+api_productores_test).

@@ -49,14 +49,13 @@ $conteosTablasMadre = static fn (): array => [
 $silencioso = static function (string $_mensaje): void {};
 $conteosDespuesPrimera = null;
 $conteosDespuesSegunda = null;
-$db->beginTransaction();
-try {
-    seed_maestra($db, $silencioso); // evita commits intermedios duplicados de la API
-    $db->commit();
-} catch (Throwable $error) {
-    if ($db->inTransaction()) $db->rollBack();
-    throw $error;
-}
+// La semilla es una secuencia de alzas por los mismos controladores de la API:
+// cada una transacciona por su cuenta (GET_LOCK + beginTransaction) tal como
+// sucede por HTTP. Aquí NO hay transacción madre: envolver en beginTransaction
+// anidaría una segunda transacción sobre la misma conexión y el alta interna
+// fallaría con "already an active transaction". La idempotencia se comprueba
+// comparando los conteos de dos corridas completas.
+seed_maestra($db, $silencioso);
 $conteosDespuesPrimera = $conteosTablasMadre();
 seed_maestra($db, $silencioso);
 $conteosDespuesSegunda = $conteosTablasMadre();

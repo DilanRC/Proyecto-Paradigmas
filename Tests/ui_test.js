@@ -42,7 +42,9 @@ assert(js.includes('showEmpty') && js.includes('showError'),
 assert(js.includes('identificacionNumero') && !js.includes('participanteId'), 'La UI debe usar la identificación de negocio.');
 assert(!js.includes('fincaId'), 'No debe existir ID artificial de finca.');
 assert(view.includes('id="identificacion-original"'), 'El formulario debe conservar la identificación original al editar.');
-assert(view.includes('id="fincas-nombres"'), 'Fincas deben capturarse por nombre.');
+assert(view.includes('id="fincas-lista"') && view.includes('id="agregar-finca"'),
+    'Fincas deben capturarse por nombre con el componente "Agregar finca" (Tramo C).');
+assert(view.includes('id="error-fincas"'), 'El error de fincas mantiene su espacio de mensaje.');
 assert(js.includes('aria-invalid') && view.includes('aria-live'), 'Debe conservar accesibilidad.');
 // El doble envio se evita con una guarda que levanta su bandera de forma
 // sincrona, antes de cualquier await, para que dos clics del mismo turno no

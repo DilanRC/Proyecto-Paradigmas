@@ -2,9 +2,9 @@
 //
 // El contrato PHP responde { message, errors: { campo: mensaje } } y las claves
 // pueden venir indexadas cuando el campo es una lista, por ejemplo
-// "fincas.0.nombre". El formulario de productores captura todas las fincas en un
-// unico textarea llamado "fincas", asi que esas claves deben colapsarse o el
-// error no se pinta en ningun sitio.
+// "fincas.0.nombre". El formulario de productores captura las fincas en la
+// lista editable del componente "Agregar finca" (Tramo C), así que esas claves
+// se colapsan sobre el campo "fincas" y el mensaje aparece en su espacio.
 
 /** Colapsa "fincas.0.nombre" -> "fincas" para los prefijos indicados. */
 export function normalizeFieldKey(key, { collapsePrefixes = [] } = {}) {

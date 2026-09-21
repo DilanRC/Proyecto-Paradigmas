@@ -20,6 +20,21 @@ for t in naming_gate schema_manifest_test backend_db_ready_test \
 done
 ```
 
+Verificación transversal del sprint de sesiones/capacidades/fincas (sección 3
+del plan):
+
+```bash
+for t in naming_gate schema_test instalacion_limpia_test capacidad_test \
+         comprador_clasificacion_test comprador_test duplicados_test \
+         transportista_test vehiculo_test pagometodo_test api_requires_test \
+         concurrency_test; do
+  docker compose exec -T app php Tests/$t.php
+done
+node Tests/frontend_capacidades_eval.js
+node Tests/frontend_contract_test.js
+node --test Tests/frontend/*.test.mjs
+```
+
 Gates y pruebas individuales disponibles:
 
 - **`naming_gate.php`** — gate estático de nomenclatura: exige que las tablas,
@@ -41,9 +56,13 @@ Gates y pruebas individuales disponibles:
 - **`capacidad_test.php`** — capacidades propias de una persona consultadas en
   un perfil u otro (`Public/js/shared/capacidades.js`).
 - **`duplicados_test.php`** — política de duplicados a nivel controlador
-  (DEC-31): alta repetida idempotente, 409 `identificacion.numero`/`placa`
-  cuando la identidad difiere, y advertencia informativa cuando el duplicado es
-  una observación histórica nueva del mismo actor.
+  (DEC-31), 4 reglas: persona duplicada (identificación + datos distintos) →
+  409 imposible; finca con nombre repetido entre productores distintos →
+  advertencia sin bloqueo; persona ya inscrita con datos idénticos → 201
+  compartiendo persona; y reenvío idempotente de la misma identificación → no
+  duplica filas (el alta administrativa responde 409 y la inscripción por
+  contexto en `capacidades.php` es la idempotente 200 ACTIVO, probada en
+  `capacidad_test.php`).
 - **`duplicados_api_http_test.php`** — contrato HTTP de la superficie admin
   (DEC-30/31): las 9 escrituras admin anónimas responden
   `401 errors['auth'] = 'SIN_SESION'` con cuerpos JSON bien formados (incluida
@@ -120,6 +139,23 @@ node Tests/frontend/official_app_shell.eval.mjs
 node Tests/frontend_contrast_test.mjs
 node --test Tests/frontend/*.test.mjs
 ```
+
+Pruebas nuevas del sprint de sesiones/capacidades/fincas:
+
+- **`Tests/frontend/sesion.test.mjs`** — superficie del navegador
+  (`Public/js/shared/sesion.js`, DEC-33): `identidad.php` distingue
+  autenticado de público; sin Bearer no se fabrica sesión; un 401 SIN_SESION no
+  se confunde con un fallo de red; `flujoLogin` conserva actor + Bearer solo
+  cuando el proveedor devolvió una persona.
+- **`Tests/frontend/inscripcion.test.mjs`** — flujo no-CRUD de inscripción
+  (`Public/js/shared/inscripcion.js`, Tramo B): los tres contextos se
+  presentan por su acción de negocio (comprar, vender, fletear); la acción
+  correcta se decide por el estado (abandonar/ reactivar / inscribir); el
+  cuerpo de `capacidades.php` es exacto y un 401 se traduce en "inicie sesión".
+- **`Tests/frontend/payload_parity.test.mjs`** — paridad del contrato: el alta
+  de productor envía `fincas` solo como `[{nombre}]` (la dirección de cada
+  finca viaja por `fincas-direccion.php`), recorta vacíos y no repite nombres
+  (Tramo C / DEC-34).
 
 Si el Node del host no puede arrancar o no se quiere depender de sus librerías
 compartidas, ejecutar el mismo contrato en un contenedor desechable. El `sh -lc`
