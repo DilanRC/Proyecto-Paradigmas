@@ -127,6 +127,7 @@ export async function crearMapa({
             });
         });
         loaded = true;
+        map.scrollZoom?.disable?.();
     } catch (error) {
         try { map.remove?.(); } catch {}
         onError(error);

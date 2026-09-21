@@ -1,5 +1,5 @@
 import { CENTRO_COSTA_RICA, crearMapa, normalizarCoordenadas } from './mapa.js';
-import { leerUbicacionUsuario } from './ubicacion-sesion.js';
+import { capturarUbicacionAutomatica, leerUbicacionUsuario } from './ubicacion-sesion.js';
 
 function asegurarEstilos() {
     if (typeof document === 'undefined' || document.querySelector('link[data-tc-map-ui]')) return;
@@ -38,6 +38,7 @@ export function crearSelectorPuntoFinca({
         </div>
         <div class="farm-map-picker__actions">
             <button type="button" class="button button--secondary" data-farm-map-open>Abrir mapa para ubicar finca</button>
+            <button type="button" class="button button--secondary" data-farm-map-location hidden>Usar mi ubicación</button>
             <button type="button" class="button button--secondary" data-farm-map-clear hidden>Quitar punto exacto</button>
         </div>
         <p class="farm-map-picker__status" data-farm-map-status role="status" aria-live="polite"></p>
@@ -53,6 +54,7 @@ export function crearSelectorPuntoFinca({
         </div>`;
 
     const openButton = mount.querySelector('[data-farm-map-open]');
+    const locationButton = mount.querySelector('[data-farm-map-location]');
     const clearButton = mount.querySelector('[data-farm-map-clear]');
     const status = mount.querySelector('[data-farm-map-status]');
     const coords = mount.querySelector('[data-farm-map-coords]');
@@ -65,6 +67,12 @@ export function crearSelectorPuntoFinca({
     let mapa = null;
     let token = 0;
     let destruido = false;
+
+    const bloquearRuedaSobreMapa = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    };
+    canvas.addEventListener('wheel', bloquearRuedaSobreMapa, { passive: false });
 
     const notificarCambio = () => {
         mount.dispatchEvent(new Event('change', { bubbles: true }));
@@ -97,6 +105,7 @@ export function crearSelectorPuntoFinca({
         fallback.hidden = true;
         canvas.replaceChildren();
         openButton.disabled = false;
+        locationButton.hidden = true;
     };
 
     const abrirMapa = async () => {
@@ -144,6 +153,7 @@ export function crearSelectorPuntoFinca({
                 return;
             }
             mapa = creado;
+            locationButton.hidden = false;
             status.textContent = punto
                 ? 'Mapa listo. Puede arrastrar el marcador o elegir otro punto.'
                 : 'Mapa listo. Haga clic en la ubicación exacta de la finca.';
@@ -158,6 +168,31 @@ export function crearSelectorPuntoFinca({
     };
 
     openButton.addEventListener('click', abrirMapa);
+    locationButton.addEventListener('click', async () => {
+        if (destruido || !mapa) return;
+        locationButton.disabled = true;
+        status.textContent = 'Buscando tu ubicación…';
+        try {
+            const resultado = await capturarUbicacionAutomatica({ storage });
+            const ubicacion = resultado.ubicacion;
+            establecer(ubicacion, { moverMapa: false });
+            mapa.establecerMarcador(ubicacion);
+            mapa.centrar(ubicacion, 15);
+            status.textContent = resultado.reutilizada
+                ? 'Usamos tu ubicación reciente. Puedes ajustar el punto en el mapa.'
+                : 'Ubicación encontrada. Puedes ajustar el punto en el mapa.';
+        } catch (error) {
+            const mensajes = {
+                denied: 'Permiso de ubicación denegado. Puedes marcar el punto o escribir la dirección.',
+                unsupported: 'Este navegador no ofrece ubicación automática. Puedes marcar el punto o escribir la dirección.',
+                timeout: 'La ubicación tardó demasiado. Puedes reintentarlo o marcar el punto manualmente.',
+                unavailable: 'No pudimos encontrar tu ubicación. Puedes marcar el punto o escribir la dirección.',
+            };
+            status.textContent = mensajes[error?.kind] ?? 'No pudimos encontrar tu ubicación. Puedes continuar manualmente.';
+        } finally {
+            if (!destruido) locationButton.disabled = false;
+        }
+    });
     clearButton.addEventListener('click', () => {
         punto = null;
         mapa?.quitarMarcador?.();
@@ -183,6 +218,7 @@ export function crearSelectorPuntoFinca({
         destruir() {
             destruido = true;
             cerrarMapa();
+            canvas.removeEventListener('wheel', bloquearRuedaSobreMapa);
             mount.replaceChildren();
         },
     });

@@ -36,6 +36,14 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('draggable: true'));
 });
 
+test('la finca puede centrar el mapa en la ubicación del usuario sin activar el rastreo automáticamente', () => {
+    assert.ok(farmMap.includes('data-farm-map-location'));
+    assert.ok(farmMap.includes('capturarUbicacionAutomatica'));
+    assert.ok(farmMap.includes('mapa.centrar(ubicacion, 15)'));
+    assert.ok(farmMap.includes('bloquearRuedaSobreMapa'));
+    assert.ok(map.includes('map.scrollZoom?.disable?.()'));
+});
+
 test('usuario y admin reutilizan el mismo selector de finca', () => {
     assert.ok(registration.includes("from './shared/finca-mapa.js'"));
     assert.ok(registration.includes('crearSelectorPuntoFinca'));
