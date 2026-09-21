@@ -457,7 +457,8 @@ python3 Tests/documentation_test.py
 
 - El login y el registro usan Supabase Auth; las APIs administrativas validan
   Bearer y allowlist server-side. La comprobación end-to-end en staging sigue
-  pendiente mientras el despliegue permanezca protegido por Vercel SSO.
+  pendiente: el dominio está protegido por Vercel SSO y el último check de
+  Vercel para `dev` terminó en fallo sin publicar una URL nueva.
 - El tipo es una columna controlada, no un catálogo.
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.
