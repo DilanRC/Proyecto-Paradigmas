@@ -15,7 +15,9 @@ $der = file_get_contents("{$root}/Documentation/DER.md");
 $manifest = schema_manifest();
 
 test_same('bdmercadoganadero', $manifest['database'], 'La base activa debe ser bdmercadoganadero');
-test_same(30, $manifest['table_count'], 'La capa DB ready debe contener 30 tablas');
+test_same(34, $manifest['table_count'], 'La capa DB ready debe contener 34 tablas');
+test_assert(in_array('tbadministrador', $manifest['tables_sorted'], true),
+    'La autorización técnica debe tener una tabla separada de los contextos de negocio');
 
 foreach (['tbproductorclasificacionperiodo', 'tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
     'tbanimalpublicacionestadoperiodo', 'tbcompra', 'tbventa', 'tbanimalinteraccion',
@@ -39,16 +41,14 @@ foreach (['CREATE TABLE IF NOT EXISTS tbvendedor', 'tbcompradorestadoperiodo',
 }
 
 test_assert(str_contains($schema, 'tbcompraid INT NULL'), 'tbventa debe permitir tbcompraid NULL');
-test_assert(substr_count($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador') === 1,
-    'tbcomprador se conserva legacy sin tablas satélite');
-test_assert(str_contains($decisiones, '`tbcomprador` se conserva solo como legacy')
-    && str_contains($decisiones, 'Trabajo de Backend que permite retirarla')
-    && str_contains($diccionario, 'Estructura legacy de compatibilidad temporal')
-    && str_contains($der, 'tbcomprador : "legacy por tbpersonaid"'),
-    'Documentación debe marcar tbcomprador como legacy temporal con plan de retiro');
-test_assert(!str_contains($decisiones, '`tbcomprador` tiene destino definitivo')
-    && !str_contains($diccionario, 'Marca de capacidad de compra de una persona'),
-    'tbcomprador no puede documentarse como capacidad permanente');
+test_assert(substr_count($schema, 'CREATE TABLE IF NOT EXISTS tbcomprador (') === 1
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbproductorpersonatelefonohistorico')
+    && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcompradorpersonatelefonohistorico'),
+    'tbcomprador y sus históricos de teléfono deben conservar el contrato vigente');
+test_assert(str_contains($decisiones, 'tbcomprador')
+    && str_contains($diccionario, 'tbcomprador')
+    && str_contains($der, 'tbcomprador'),
+    'La documentación debe incluir el contexto Comprador ligado a Persona');
 
 // Concordancia con la evidencia directa de Calidad (DEC-DBREADY-005): cada dato
 // pedido tiene columna y ningún estado de negocio sobrevive como columna mutable.

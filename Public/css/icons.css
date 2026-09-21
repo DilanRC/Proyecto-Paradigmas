@@ -94,11 +94,11 @@
     text-align:center;
 }
 
-.rural-panel__nav-item[href$='productores.php']::before { content:'\f6c8'; } /* cow */
-.rural-panel__nav-item[href$='compradores.php']::before { content:'\f2b5'; } /* handshake */
-.rural-panel__nav-item[href$='transportistas.php']::before { content:'\f48b'; } /* truck-fast */
-.rural-panel__nav-item[href$='vehiculos.php']::before { content:'\f63c'; } /* truck-pickup */
-.rural-panel__nav-item[href$='pagometodos.php']::before { content:'\f555'; } /* wallet */
+.rural-panel__nav-item[href$='admin/productores']::before { content:'\f6c8'; } /* cow */
+.rural-panel__nav-item[href$='admin/compradores']::before { content:'\f2b5'; } /* handshake */
+.rural-panel__nav-item[href$='admin/transportistas']::before { content:'\f48b'; } /* truck-fast */
+.rural-panel__nav-item[href$='admin/vehiculos']::before { content:'\f63c'; } /* truck-pickup */
+.rural-panel__nav-item[href$='admin/metodos-pago']::before { content:'\f555'; } /* wallet */
 
 .rural-panel__nav-dot {
     margin-left:auto;
@@ -112,7 +112,7 @@
 }
 
 .rural-panel__admin-link[href='./']::before { content:'\f015'; } /* house */
-.rural-panel__admin-link[href$='login.php']::before { content:'\f2f6'; } /* right-to-bracket */
+.rural-panel__admin-link[href$='admin/entrar']::before { content:'\f2f6'; } /* right-to-bracket */
 
 /* -------------------------------------------------------------------------- */
 /* Crear: la accion conserva texto y gana contexto segun la entidad            */

@@ -45,13 +45,13 @@ for (const [vista, campo] of [
 }
 
 // Productores: el formulario exige dirección y el POST debe aceptarla/persistirla.
-has('Public/js/productores.js', "const API_URL = 'api/productores.php';", 'endpoint de productores incorrecto');
+has('Public/js/productores.js', "const API_URL = 'api/v1/productores';", 'endpoint de productores incorrecto');
 has('Public/js/productores.js', 'direccionPrincipal: {', 'el payload debe incluir direccionPrincipal');
 has('Public/js/productores.js', 'identificacionNumeroOriginal', 'PUT debe conservar la identificación original');
 has(
     'Application/Service/ValidacionService.php',
-    /\$permitidos = \['identificacion', 'nombre', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'\];/,
-    'POST/PUT deben reconocer direccionPrincipal (contrato de validación unificado)'
+    /\$permitidos = \['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'\];/,
+    'POST/PUT deben reconocer dirección y alias (contrato de validación unificado)'
 );
 has(
     'Application/Controller/ProductorController.php',
@@ -59,50 +59,53 @@ has(
     'el alta debe persistir la dirección recibida'
 );
 
-// Compradores: vista de solo lectura desde el paso (d) (DEC-DBREADY-008).
-// Comprador se deriva del comportamiento del Productor; no existe CRUD manual.
+// Compradores: contexto de Persona con escritura idempotente (DEC-28/29).
+// El panel conserva su vista de solo lectura (no construye cuerpos); la
+// persistencia vuelve a la API con POST inscribir, DELETE desactivar y PATCH
+// reactivar.
 for (const panel of ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos']) {
-    has(`Application/View/${panel}/index.php`, 'compradores.php', 'el menú perdió el enlace a Compradores');
+    has(`Application/View/${panel}/index.php`, 'admin/compradores', 'el menú perdió el enlace a Compradores');
 }
-assert.equal(fs.existsSync('Application/Model/Comprador.php'), false,
-    'reapareció Application/Model/Comprador.php');
-assert.equal(fs.existsSync('Application/Controller/CompradorController.php'), false,
-    'reapareció Application/Controller/CompradorController.php');
-has('Application/Controller/CompradorConsultaController.php', 'listarClasificados',
-    'la consulta debe leer periodos de clasificación');
-has('Public/js/compradores.js', "const API_URL = 'api/compradores.php';", 'endpoint de compradores incorrecto');
-has('Public/js/compradores.js', 'clasificadoDesde', 'la lista debe mostrar desde cuándo está clasificado');
-has('Public/js/compradores.js', 'personaEstado', 'la lista debe separar clasificación de disponibilidad de Persona');
-hasNot('Public/js/compradores.js', 'buildCompradorPayload', 'el panel no debe volver a construir cuerpos');
+has('Application/Model/Comprador.php', 'tbcomprador', 'el modelo de contexto Comprador debe existir');
+has('Application/Controller/CompradorController.php', 'class CompradorController', 'el controlador de Comprador debe existir');
+assert.throws(
+    () => fs.readFileSync('Application/Controller/CompradorConsultaController.php', 'utf8'),
+    'no debe quedar el controlador de consulta de la etapa de solo lectura'
+);
 hasNot('Application/View/compradores/index.php', 'id="crear-comprador"',
-    'la vista no debe ofrecer alta de comprador');
+    'la vista no debe ofrecer alta manual de comprador');
 hasNot('Application/View/compradores/index.php', 'id="formulario-comprador"',
-    'la vista no debe tener formulario de comprador');
+    'la vista no debe tener formulario de comprador (solo lectura)');
 hasNot('Application/View/compradores/index.php', 'id="modal-desactivar"',
-    'la vista no debe ofrecer desactivar la clasificación');
-has('Public/api/compradores.php', "header('Allow: GET, OPTIONS');",
-    'el endpoint de compradores debe declararse de solo lectura');
-has('Public/api/compradores.php', "if ($metodo !== 'GET')",
-    'la API debe rechazar escrituras antes de abrir la base');
+    'la vista no debe ofrecer desactivar desde el panel');
+has('Public/js/compradores.js', "const API_URL = 'api/v1/compradores';", 'endpoint de compradores incorrecto');
+hasNot('Public/js/compradores.js', 'buildCompradorPayload', 'el panel conserva la lectura; no construye cuerpos');
 has('Public/js/compradores.js', 'consultarCapacidades',
     'la ficha debe consultar las relaciones de la misma Persona');
-for (const api of ['api/productores.php', 'api/compradores.php', 'api/transportistas.php']) {
+has('Public/api/compradores.php', "\$permitidos = ['GET', 'POST', 'DELETE', 'PATCH'];",
+    'la API debe permitir inscribir, desactivar y reactivar el contexto');
+has('Public/api/compradores.php', "header('Allow: GET, POST, DELETE, PATCH, OPTIONS');",
+    'el Allow debe declarar los verbos del contexto');
+has('Public/api/compradores.php', 'readJsonBody()',
+    'POST/DELETE/PATCH deben leer cuerpo JSON');
+has('Public/api/compradores.php', 'CompradorController',
+    'el endpoint debe delegar en el controlador del contexto');
+for (const api of ['api/v1/productores', 'api/v1/compradores', 'api/v1/transportistas']) {
     has('Public/js/shared/capacidades.js', api, `el catálogo de relaciones no apunta a ${api}`);
 }
-has('Public/js/shared/capacidades.js', 'derivada: true',
-    'Comprador debe estar marcado como clasificación derivada');
+has('Public/js/shared/capacidades.js', 'derivada: false',
+    'los tres contextos son capacidades registrables; ninguno es derivado');
+hasNot('Public/js/shared/capacidades.js', 'derivada: true',
+    'Comprador no puede revertirse a clasificación derivada');
 hasNot('Public/js/shared/capacidades.js', "alias: 'vendedor'",
     'Productor no puede volver a usarse como alias de Vendedor');
 
 // Transportistas y asignación de vehículos.
-has('Public/js/transportistas.js', "const API_URL = 'api/transportistas.php';", 'endpoint de transportistas incorrecto');
-has('Public/js/transportistas.js', "const ASIGNACION_URL = 'api/transportistas-vehiculos.php';", 'endpoint de asignación incorrecto');
+has('Public/js/transportistas.js', "const API_URL = 'api/v1/transportistas';", 'endpoint de transportistas incorrecto');
+has('Public/js/transportistas.js', "const ASIGNACION_URL = 'api/v1/transportistas/vehiculos';", 'endpoint de asignación incorrecto');
 has('Public/js/transportistas.js', 'identificacionNumeroOriginal', 'PUT debe enviar identificación original');
-has(
-    'Application/Service/ValidacionService.php',
-    "$permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico'];",
-    'contrato de campos de transportista cambió'
-);
+has('Application/Service/ValidacionService.php', 'public function validarPersona(',
+    'transportista debe reutilizar la validación común de Persona');
 has(
     'Application/Controller/TransportistaVehiculoController.php',
     "['identificacionNumero', 'vehiculoId']",
@@ -115,7 +118,7 @@ has(
 );
 
 // Vehículos.
-has('Public/js/vehiculos.js', "const API_URL = 'api/vehiculos.php';", 'endpoint de vehículos incorrecto');
+has('Public/js/vehiculos.js', "const API_URL = 'api/v1/vehiculos';", 'endpoint de vehículos incorrecto');
 has('Public/js/vehiculos.js', 'data.vehiculoId = Number(id);', 'PUT debe enviar vehiculoId');
 has(
     'Application/Controller/VehiculoController.php',
@@ -124,7 +127,7 @@ has(
 );
 
 // Métodos de pago.
-has('Public/js/pagometodos.js', "const API_URL = 'api/pagometodos.php';", 'endpoint de métodos de pago incorrecto');
+has('Public/js/pagometodos.js', "const API_URL = 'api/v1/metodos-pago';", 'endpoint de métodos de pago incorrecto');
 has('Public/js/pagometodos.js', 'activo: true', 'el alta debe declarar el estado inicial esperado por la API');
 has('Public/js/pagometodos.js', 'data.id = Number(id);', 'PUT debe enviar id');
 has(
@@ -134,7 +137,7 @@ has(
 );
 
 // Dirección de finca.
-has('Public/js/productores.js', "const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';", 'endpoint de dirección de finca incorrecto');
+has('Public/js/productores.js', "const FINCAS_DIRECCION_URL = 'api/v1/fincas/direccion';", 'endpoint de dirección de finca incorrecto');
 has('Public/js/productores.js', 'direccionFinca: {', 'el payload de finca debe incluir direccionFinca');
 has(
     'Application/Controller/FincaController.php',
@@ -147,4 +150,4 @@ has(
     'DELETE de dirección de finca debe identificar productor y finca'
 );
 
-console.log('OK frontend_contract_test: contratos UI/API alineados; borradores temporales activos y Comprador sigue read-only.');
+console.log('OK frontend_contract_test: contratos UI/API alineados; borradores temporales activos; capacidades de Persona y paneles administrativos coherentes.');

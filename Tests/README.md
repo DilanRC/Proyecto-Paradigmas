@@ -4,24 +4,24 @@ Ejecutar sobre una base limpia inicializada con Docker:
 
 ```bash
 docker compose exec -T app php Tests/naming_gate.php
-docker compose exec -T app php Tests/comprador_retiro_gate.php
+docker compose exec -T app php Tests/admin_authorization_test.php
 docker compose exec -T app php Tests/db_ready_test.php
 docker compose exec -T app php Tests/backend_db_ready_test.php
 docker compose exec -T app php Tests/comprador_clasificacion_test.php
-docker compose exec -T app php Tests/comprador_backfill_test.php
-docker compose exec -T app php Tests/comprador_consulta_test.php
-docker compose exec -T app php Tests/backend_db_ready_eval.php
 docker compose exec -T app php Tests/diagnostico_test.php
 docker compose exec -T app php Tests/deployment_test.php
 docker compose exec -T app php Tests/vercel_prune_registry_test.php
 docker compose exec -T app php Tests/postgres_compatibility_test.php
 docker compose exec -T app php Tests/schema_test.php
 docker compose exec -T app php Tests/api_productores_test.php
+docker compose exec -T app php Tests/api_publicaciones_test.php
 docker compose exec -T app php Tests/transaction_test.php
 docker compose exec -T app php Tests/address_policy_test.php
 docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
 docker compose exec -T app php Tests/concurrency_eval.php
+docker compose exec -T app php Tests/mi_actividad_test.php
+docker compose exec -T app php Tests/capacidad_test.php
 docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php
 docker compose exec -T app php Tests/postgres_compatibility_eval.php
@@ -64,10 +64,9 @@ php services/supabase-database/evals/schema_eval.php
 Las pruebas generan identificaciones aleatorias y limpian únicamente sus filas.
 
 `comprador_retiro_gate.php` es el gate estático de DEC-DBREADY-008: exige que
-modelo/controlador legacy sigan retirados, que el endpoint y la vista sean de
-solo lectura, que Comprador permanezca marcado como clasificación derivada, que
-Productor no vuelva a ser alias de Vendedor y que `tbcomprador` no se elimine
-antes del paso (e).
+el controlador CRUD legacy siga retirado, que el endpoint y la vista sean de
+solo lectura manual, que Comprador permanezca como contexto de Persona, que
+Productor no vuelva a ser alias de Vendedor y que `tbcomprador` no se elimine.
 
 `comprador_consulta_test.php` fija el contrato dinámico del paso (d):
 `/api/compradores.php` es de solo lectura, la fuente es el periodo `COMPRADOR`
@@ -78,6 +77,18 @@ abierto, una Persona inactiva sigue visible como clasificada pero no disponible,
 `deployment_test.php` valida que las imágenes contienen el código, respetan
 `PORT` y conservan la creación idempotente de `tbfinca`. `deployment_eval.php`
 exige que el artefacto y el procedimiento operativo estén completos.
+
+`api_publicaciones_test.php` cubre el listado que alimenta Explorar. Sus tres
+casos centrales no son de forma sino de verdad: que varias observaciones de un
+mismo animal no multipliquen la publicación, que edad, peso y propósito salgan
+todos de la observación más reciente (y no mezclados entre filas), y que una
+publicación sin periodo de estado abierto deje de aparecer como activa. Las tres
+se verificaron mutando la consulta: cada mutación rompe la prueba.
+
+`Tests/frontend/explore_card_content.test.mjs` cubre el lado del navegador: el
+formato de precio no depende del ICU del entorno, un campo sin observación se
+muestra vacío en vez de inventado, y la tarjeta se arma con `createElement` y
+`textContent` porque título y descripción vienen de la base.
 
 `frontend_contract_test.js` verifica contratos UI/API. En Compradores la
 propiedad es deliberadamente distinta a los CRUD: existe vista y endpoint de

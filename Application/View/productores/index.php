@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Administración de productores de TinderCows">
@@ -25,11 +26,12 @@
         <nav class="rural-panel__nav" aria-label="Administración">
             <p class="rural-panel__nav-label">Administración</p>
             <div class="rural-panel__nav-list">
-                <a class="rural-panel__nav-item rural-panel__nav-item--active" href="productores.php">Productores<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
-                <a class="rural-panel__nav-item" href="compradores.php">Compradores</a>
-                <a class="rural-panel__nav-item" href="transportistas.php">Transportistas</a>
-                <a class="rural-panel__nav-item" href="vehiculos.php">Vehículos</a>
-                <a class="rural-panel__nav-item" href="pagometodos.php">Métodos de pago</a>
+                <a class="rural-panel__nav-item" href="admin/dashboard">Dashboard</a>
+                <a class="rural-panel__nav-item rural-panel__nav-item--active" href="admin/productores">Productores<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
+                <a class="rural-panel__nav-item" href="admin/compradores">Compradores</a>
+                <a class="rural-panel__nav-item" href="admin/transportistas">Transportistas</a>
+                <a class="rural-panel__nav-item" href="admin/vehiculos">Vehículos</a>
+                <a class="rural-panel__nav-item" href="admin/metodos-pago">Métodos de pago</a>
             </div>
         </nav>
         <div class="rural-panel__sidebar-footer">
@@ -41,7 +43,7 @@
     <main class="rural-panel__main">
         <div class="rural-panel__glow" aria-hidden="true"></div>
         <div class="rural-panel__content">
-            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="login.php">Login</a></div>
+            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
             <section class="page-header" aria-labelledby="page-title">
                 <div><span class="label">Registro de productores</span><h1 id="page-title">Productores</h1><p>Administre productores identificados por su número, contacto, dirección y fincas.</p></div>
@@ -101,7 +103,7 @@
                     <label class="field"><span>Pueblo</span><input id="direccion-pueblo" name="direccionPrincipal.pueblo" maxlength="150" list="lista-pueblos" autocomplete="off" disabled placeholder="Escriba para buscar" aria-describedby="ayuda-direccion-pueblo error-direccion-pueblo"><small class="field__hint" id="ayuda-direccion-pueblo">Escriba las primeras letras y elija de la lista.</small><datalist id="lista-pueblos"></datalist><small class="field__error" id="error-direccion-pueblo" data-error-for="direccionPrincipal.pueblo"></small></label>
                     <label class="field field--full"><span>Señas</span><textarea id="direccion-senas" name="direccionPrincipal.senas" maxlength="500" rows="3" aria-describedby="error-direccion-senas"></textarea><small class="field__error" id="error-direccion-senas" data-error-for="direccionPrincipal.senas"></small></label>
                 </div></fieldset>
-                <fieldset><legend>Fincas del productor</legend><p class="fieldset-help" id="ayuda-fincas">Escriba una finca por línea. Puede dejar el campo vacío.</p><label class="field field--full"><span>Nombres de fincas</span><textarea id="fincas-nombres" name="fincas" maxlength="2000" rows="4" aria-describedby="ayuda-fincas error-fincas"></textarea><small class="field__error" id="error-fincas" data-error-for="fincas"></small></label></fieldset>
+                <fieldset><legend>Fincas del productor</legend><p class="fieldset-help" id="ayuda-fincas">Agregue cada finca por separado con su nombre. Puede dejar la lista vacía.</p><div id="fincas-lista" aria-describedby="ayuda-fincas error-fincas"></div><button class="button button--secondary" id="agregar-finca" type="button"><span aria-hidden="true">＋</span>Agregar finca</button><small class="field__error" id="error-fincas" data-error-for="fincas"></small></fieldset>
                 <p class="form-note"><b aria-hidden="true">*</b> Campos obligatorios</p>
             </div>
             <div class="modal__actions"><button class="button button--secondary" id="cancelar-formulario" type="button">Cancelar</button><button class="button button--reactivate" id="reactivar-existente" type="button" hidden>Reactivar registro existente</button><button class="button button--primary" id="guardar-productor" type="submit">Guardar productor</button></div>

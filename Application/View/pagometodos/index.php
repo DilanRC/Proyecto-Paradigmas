@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Administración de métodos de pago de TinderCows">
@@ -25,11 +26,12 @@
         <nav class="rural-panel__nav" aria-label="Administración">
             <p class="rural-panel__nav-label">Administración</p>
             <div class="rural-panel__nav-list">
-                <a class="rural-panel__nav-item" href="productores.php">Productores</a>
-                <a class="rural-panel__nav-item" href="compradores.php">Compradores</a>
-                <a class="rural-panel__nav-item" href="transportistas.php">Transportistas</a>
-                <a class="rural-panel__nav-item" href="vehiculos.php">Vehículos</a>
-                <a class="rural-panel__nav-item rural-panel__nav-item--active" href="pagometodos.php">Métodos de pago<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
+                <a class="rural-panel__nav-item" href="admin/dashboard">Dashboard</a>
+                <a class="rural-panel__nav-item" href="admin/productores">Productores</a>
+                <a class="rural-panel__nav-item" href="admin/compradores">Compradores</a>
+                <a class="rural-panel__nav-item" href="admin/transportistas">Transportistas</a>
+                <a class="rural-panel__nav-item" href="admin/vehiculos">Vehículos</a>
+                <a class="rural-panel__nav-item rural-panel__nav-item--active" href="admin/metodos-pago">Métodos de pago<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
             </div>
         </nav>
         <div class="rural-panel__sidebar-footer">
@@ -41,7 +43,7 @@
     <main class="rural-panel__main">
         <div class="rural-panel__glow" aria-hidden="true"></div>
         <div class="rural-panel__content">
-            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="login.php">Login</a></div>
+            <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
             <section class="page-header" aria-labelledby="page-title">
                 <div><span class="label">Configuración</span><h1 id="page-title">Métodos de pago</h1><p>Administre los métodos de pago disponibles para las transacciones.</p></div>

@@ -3,14 +3,15 @@ import { createDialogController } from './shared/dialog.js';
 import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 import { aplicarRestriccionTelefono } from './shared/telefono.js';
 import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
+import { crearFincasLista } from './shared/fincas-lista.js';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
 } from './shared/list-state.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { createToast } from './shared/toast.js';
 
-const API_URL = 'api/productores.php';
-const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';
+const API_URL = 'api/v1/productores';
+const FINCAS_DIRECCION_URL = 'api/v1/fincas/direccion';
 const ETIQUETAS = { singular: 'productor', plural: 'productores' };
 
 /** Cuerpo enviado a la API. Exportado para la prueba de paridad de contrato. */
@@ -30,7 +31,7 @@ export function buildProductorPayload({
             pueblo: nullable(pueblo),
             senas: nullable(senas),
         },
-        fincas: fincas.split(/\r?\n/).map((n) => n.trim()).filter(Boolean).map((n) => ({ nombre: n })),
+        fincas: normalizarFincas(fincas),
     };
     if (identificacionNumeroOriginal !== '') {
         data.identificacionNumeroOriginal = identificacionNumeroOriginal;
@@ -38,9 +39,32 @@ export function buildProductorPayload({
     return data;
 }
 
+/**
+ * Normaliza la lista de fincas del formulario (Tramo C). Cada fila es
+ * {nombre, direccion?}; el payload solo envía nombres porque el backend exige
+ * fincas únicamente como [{nombre}] y la dirección de cada finca se asocia con
+ * /api/v1/fincas/direccion. Un nombre repetido dentro del mismo formulario no
+ * se agrega dos veces (regla de acumuladores, DEC-31).
+ */
+export function normalizarFincas(fincas) {
+    if (!Array.isArray(fincas)) return [];
+    const vistos = new Set();
+    const resultado = [];
+    for (const finca of fincas) {
+        const nombre = String(finca?.nombre ?? '').trim();
+        if (nombre === '') continue;
+        const clave = nombre.toLocaleUpperCase('es');
+        if (vistos.has(clave)) continue;
+        vistos.add(clave);
+        resultado.push({ nombre });
+    }
+    return resultado;
+}
+
 /** Cuerpo de la direccion de finca. Tambien exportado para la paridad. */
 export function buildFincaDireccionPayload({
     identificacionNumero, nombreFinca, provincia, canton, distrito, pueblo, senas,
+    latitud = null, longitud = null,
 }) {
     return {
         identificacionNumero,
@@ -51,6 +75,8 @@ export function buildFincaDireccionPayload({
             distrito: distrito.trim(),
             pueblo: nullable(pueblo),
             senas: nullable(senas),
+            latitud,
+            longitud,
         },
     };
 }
@@ -89,7 +115,8 @@ function initialize() {
         modal: $('#modal-productor'), form: $('#formulario-productor'), modalTitle: $('#titulo-modal'),
         modalSubtitle: $('#subtitulo-modal'), close: $('#cerrar-modal'), cancel: $('#cancelar-formulario'),
         save: $('#guardar-productor'), reactivateExisting: $('#reactivar-existente'),
-        types: $('#identificacion-tipo'), idHint: $('#ayuda-identificacion-numero'), farms: $('#fincas-nombres'),
+        types: $('#identificacion-tipo'), idHint: $('#ayuda-identificacion-numero'),
+        fincasLista: $('#fincas-lista'), agregarFinca: $('#agregar-finca'),
         deactivateModal: $('#modal-desactivar'), deactivateMessage: $('#mensaje-desactivar'),
         cancelDeactivate: $('#cancelar-desactivacion'), confirmDeactivate: $('#confirmar-desactivacion'),
         detailModal: $('#modal-detalle'), detailTitle: $('#titulo-detalle'),
@@ -130,6 +157,13 @@ function initialize() {
         listaPueblos: $('#lista-pueblos-finca'),
     });
 
+    // Tramo C: fincas repetibles, cada una con su nombre y dirección opcional.
+    const listaFincas = crearFincasLista({
+        contenedor: elements.fincasLista,
+        agregarBoton: elements.agregarFinca,
+        onCambiar: () => errores.clearErrors(),
+    });
+
     const submit = createSubmitGuard();
     const statusChange = createSubmitGuard();
     const fincaSubmit = createSubmitGuard();
@@ -153,14 +187,12 @@ function initialize() {
         state = started.state;
         render();
 
-        const parameters = new URLSearchParams({
-            pagina: String(state.page), tamanoPagina: String(state.pageSize),
-        });
-        if (elements.search.value.trim()) parameters.set('q', elements.search.value.trim());
-        if (elements.status.value !== 'TODOS') parameters.set('estado', elements.status.value);
+        const consulta = { pagina: state.page, tamanoPagina: state.pageSize };
+        if (elements.search.value.trim()) consulta.q = elements.search.value.trim();
+        if (elements.status.value !== 'TODOS') consulta.estado = elements.status.value;
 
         try {
-            const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
+            const response = await request(API_URL, { method: 'POST', body: JSON.stringify({ consulta }), signal: listController.signal });
             tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion)
                 ? response.data.catalogos.tiposIdentificacion : [];
             const list = Array.isArray(response.data?.productores) ? response.data.productores : [];
@@ -363,9 +395,10 @@ function initialize() {
         dialogs.open(elements.fincaAddressModal, { focus: $('#finca-direccion-provincia') });
 
         try {
-            const response = await request(
-                `${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`,
-            );
+            const response = await request(FINCAS_DIRECCION_URL, {
+                method: 'POST',
+                body: JSON.stringify({ consulta: { identificacionNumero, nombreFinca } }),
+            });
             const direccion = response.data?.direccionFinca ?? {};
             direccionFinca.aplicar(direccion);
             $('#finca-direccion-senas').value = direccion.senas ?? '';
@@ -478,6 +511,7 @@ function initialize() {
         errores.clearErrors();
         renderTypeOptions();
         direccionPrincipal.aplicar({});
+        listaFincas.reiniciar();
         $('#identificacion-original').value = '';
         $('#identificacion-numero').readOnly = false;
         elements.reactivateExisting.hidden = true;
@@ -503,7 +537,7 @@ function initialize() {
         $('#correo-electronico').value = producer.correoElectronico ?? '';
         direccionPrincipal.aplicar(producer.direccionPrincipal ?? {});
         $('#direccion-senas').value = producer.direccionPrincipal?.senas ?? '';
-        elements.farms.value = (producer.fincas ?? []).map((farm) => farm.nombre).join('\n');
+        listaFincas.hidratar(producer.fincas ?? []);
         elements.modalTitle.textContent = 'Editar productor';
         elements.modalSubtitle.textContent = 'Actualizar registro';
         elements.save.textContent = 'Guardar cambios';
@@ -528,7 +562,7 @@ function initialize() {
                 distrito: $('#direccion-distrito').value,
                 pueblo: $('#direccion-pueblo').value,
                 senas: $('#direccion-senas').value,
-                fincas: elements.farms.value,
+                fincas: listaFincas.obtenerFincas(),
                 identificacionNumeroOriginal: original,
             });
             setSaving(elements.form, true, { submitButton: elements.save });
@@ -539,6 +573,9 @@ function initialize() {
                 });
                 dialogs.close(elements.modal);
                 toast.success(response.message);
+                // Tramo C: las direcciones capturadas por finca se asocian con
+                // /api/v1/fincas/direccion (el alta solo envía nombres).
+                await asociarDireccionesDeFincas(original !== '' ? original : $('#identificacion-numero').value.trim());
                 await listProducers();
             } catch (error) {
                 if (error.errors) errores.showErrors(error.errors);
@@ -556,6 +593,31 @@ function initialize() {
         elements.reactivateExisting.dataset.id = identificacion;
         elements.reactivateExisting.hidden = false;
         elements.reactivateExisting.focus();
+    }
+
+    /**
+     * Tramo C: después de guardar el productor, cada finca del formulario que
+     * capturó dirección se asocia con /api/v1/fincas/direccion. Una asociación
+     * que falle (409 u otra) no revierte el alta: se avisa y el usuario puede
+     * completarla desde la ficha con el botón "Dirección de la finca".
+     */
+    async function asociarDireccionesDeFincas(identificacionNumero) {
+        const fincas = listaFincas.obtenerFincas();
+        for (const finca of fincas) {
+            if (!finca.direccion) continue;
+            try {
+                await request(FINCAS_DIRECCION_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(buildFincaDireccionPayload({
+                        identificacionNumero,
+                        nombreFinca: finca.nombre,
+                        ...finca.direccion,
+                    })),
+                });
+            } catch (error) {
+                toast.error(`Finca "${finca.nombre}": ${error.message ?? 'no fue posible asociar la dirección.'}`);
+            }
+        }
     }
 
     function reactivateExistingProducer() {
@@ -656,10 +718,8 @@ function initialize() {
         });
 
 
-    // La busqueda puede venir en la URL desde el enlace "Abrir panel" de otra
-    // capacidad, para caer directamente sobre la misma persona.
-    const inicial = new URLSearchParams(window.location.search).get('q');
-    if (inicial) elements.search.value = inicial;
+    // Las identificaciones no se aceptan como parámetros de URL; el filtro
+    // vive únicamente en memoria mientras el panel permanece abierto.
     listProducers();
 }
 

@@ -12,6 +12,9 @@ DESCRIBE tbdireccion;
 SELECT '--- tbpersona' AS comprobacion;
 DESCRIBE tbpersona;
 
+SELECT '--- política administrativa' AS comprobacion;
+DESCRIBE tbadministrador;
+
 SELECT '--- perfiles de capacidad' AS comprobacion;
 DESCRIBE tbproductor;
 DESCRIBE tbcomprador;
@@ -96,7 +99,7 @@ SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATA
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
 
--- Comprobación 4: exactamente 30 tablas base.
-SELECT COUNT(*) AS tablas_esperadas_30
+-- Comprobación 4: exactamente 34 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_34
 FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

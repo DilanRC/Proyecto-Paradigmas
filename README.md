@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 30 tablas:
+La base `bdmercadoganadero` contiene exactamente 34 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -37,18 +37,23 @@ La base `bdmercadoganadero` contiene exactamente 30 tablas:
 28. `tbtransportistahorario`
 29. `tbtransportistaflete`
 30. `tbtransportistaresena`
+31. `tbcompradorpersonatelefonohistorico`
+32. `tbproductorpersonatelefonohistorico`
 
-`tbpersona` guarda una sola identidad y contacto. `tbproductor` es la entidad
-de negocio núcleo y `tbtransportista` es una capacidad operativa actual.
-`tbcomprador` es legacy de compatibilidad temporal: sobrevive mientras el CRUD
-actual dependa de ella y debe retirarse. Su migración se audita y ejecuta con
+`tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
+y `tbtransportista` son contextos de esa misma persona (DEC-28): cada perfil de
+negocio tiene su propio estado y audita sus operaciones en `tbbitacora`.
+Inscribir un comprador reutiliza la persona por identificación o la crea si no
+existe; los datos personales son únicos a través de los contextos y la ficha
+consulta la misma identidad en un perfil u otro con
+`Public/js/shared/capacidades.js`. `tbproductorclasificacionperiodo`
+(`tipo = COMPRADOR` o `VENDEDOR`) queda como registro analítico del periodo en
+que la persona fue comprador; la migración histórica se audita y ejecuta con
 `php Tools/backfill-clasificacion-comprador.php --check` (audita) y `--apply`
-(migra); el estado que muestran API y panel ya sale de la clasificación. Comprador y Vendedor son
-clasificaciones del Productor y su única fuente de verdad es
-`tbproductorclasificacionperiodo` (`tipo = COMPRADOR` o `VENDEDOR`). Animal, publicación, compra,
-venta, funnel, carrito, fletes y reseñas quedan preparados en base para que
-Backend implemente comportamiento después. La ubicación física vive **únicamente** en
-`tbdireccion`: `tbproductordireccion` y
+(migra), y ya no es fuente de verdad del contexto (DEC-29). Animal, publicación,
+compra, venta, funnel, carrito, fletes y reseñas quedan preparados en base para
+que Backend implemente comportamiento después. La ubicación física vive
+**únicamente** en `tbdireccion`: `tbproductordireccion` y
 `tbfincadireccion` solo guardan el enlace `tbdireccionid`, de modo que productor
 y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
 `Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
@@ -98,6 +103,7 @@ docker compose up --build -d
 ```text
 Database/SqlScripts/000instalacioncompleta.sql
 Database/SeedData/101initialpagometodo.sql
+Database/SeedData/102administrador.sql
 Database/SeedData/103exampleproductores.sql
 Database/Migrations/001normalizadireccionproductor.sql
 Database/Tests/comprobacionestructura.sql
@@ -111,8 +117,10 @@ Database/Tests/diagnostico.sql
 TABLE` usa `IF NOT EXISTS`, así que volver a ejecutarlo contra una base que ya
 tiene algunas de esas tablas no falla: solo crea las que falten.
 
-La semilla usa datos ficticios y correos `example.test`. `101initialpagometodo`
-registra el único método de pago del alcance vigente. `Database/Migrations/`
+Las semillas de demostración usan datos ficticios y correos `example.test`.
+`101initialpagometodo` registra el único método de pago del alcance vigente y
+`102administrador` registra la cuenta técnica autorizada por el responsable del
+proyecto; su contraseña vive únicamente en Supabase Auth. `Database/Migrations/`
 solo se aplica a bases creadas antes del avance y `Database/Tests/` contiene
 comprobaciones SQL, descritas en `Database/Tests/README.md`.
 
@@ -143,11 +151,11 @@ para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
 declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
 
-`ignoreCommand` es una propiedad de nivel raíz y ejecuta
-`Tools/vercel-ignore-build.sh`: conserva `main` para producción, permite
-previews automáticos únicamente desde `dev` y omite la construcción en
-cualquier otra rama. Declararlo dentro de `services` no sirve, Vercel no lo lee
-ahí y toda rama termina construyendo. `git.deploymentEnabled` solo acepta
+`services.app.ignoreCommand` ejecuta `Tools/vercel-ignore-build.sh`: conserva
+`main` para producción, permite previews automáticos únicamente desde `dev` y
+omite la construcción en cualquier otra rama. Como el entrypoint pertenece al
+servicio `app`, Vercel exige que esta propiedad viva dentro de ese servicio.
+`git.deploymentEnabled` solo acepta
 nombres de rama; no admite comodines, así que un `"*": false` no bloquea nada.
 
 Cada commit a `main` o `dev` empuja una imagen al Container Registry, que tiene
@@ -178,7 +186,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 30 tablas, incluida la identidad compartida en
+El migrador crea y valida las 34 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -202,7 +210,17 @@ docker compose exec -T app php Tests/schema_test.php
 Antes de usar `ALTER` o `DROP`, compare su estructura con
 `Tests/schema_test.php` y genere un respaldo.
 
-En Vercel, el arranque ejecuta la migración v3 contra Supabase, recarga la caché
+Para una instalación heredada que todavía tenga `tbcompradortelefonohistorico`,
+respalde primero y aplique
+`Database/Migrations/009normalizahistoricocomprador.sql`. La migración aborta
+si detecta simultáneamente el nombre legado y el canónico, o si un teléfono
+supera los 20 caracteres; una base que ya está normalizada no cambia.
+
+Si una instalación heredada rechazara personas sin alias, aplique después
+`Database/Migrations/010normalizapersonaalias.sql`; solo ajusta la nulabilidad
+de `tbpersonaalias` y conserva los valores existentes.
+
+En Vercel, el arranque ejecuta la migración v9 contra Supabase, recarga la caché
 de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
 con columnas incompatibles.
 
@@ -220,6 +238,8 @@ docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQ
   < Database/Migrations/001normalizadireccionproductor.sql
 docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
   < Database/SeedData/101initialpagometodo.sql
+docker compose exec -T db sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql -u"$MYSQL_USER" "$MYSQL_DATABASE"' \
+  < Database/SeedData/102administrador.sql
 docker compose exec -T app php Tests/schema_test.php
 ```
 
@@ -235,6 +255,23 @@ adapte, el CRUD de productores falla con `Unknown column
 'tbproductordireccionprovincia'`.
 
 ## API JSON
+
+### Superficies y autenticación (DEC-30)
+
+La API se divide en dos superficies:
+
+- **Administración** (exige `Authorization: Bearer <jwt>` en **todas** sus
+  lecturas y escrituras; sin sesión responde 401
+  `errors['auth'] = 'SIN_SESION'`): `productores`, `productores-direccion`,
+  `transportistas`, `vehiculos`, `pagometodos`, `compradores`,
+  `fincas-direccion` y `transportistas-vehiculos`.
+- **Pública** (solo lectura, no exige sesión): `publicaciones`, `identidad` y
+  `productores-ubicacion`.
+
+En local, sin sidecar de autenticación configurado, el modo demo navega en la
+superficie pública; un Bearer cualquiera responde 503 (`SERVICE_NOT_CONFIGURED`)
+hasta que se configure `SUPABASE_SECRET_KEY`. El orden de chequeos se conserva:
+405/415/400 y OPTIONS (preflight) no exigen sesión.
 
 Endpoint: `/api/productores.php`
 
@@ -314,6 +351,34 @@ bloqueos en orden inverso después del commit o rollback. Las actualizaciones
 que pueden crear fincas y la reparación de una dirección mantienen del mismo
 modo su bloqueo hasta que termina la transacción.
 
+### Contexto Comprador
+
+Endpoint: `/api/compradores.php`
+
+| Método | Operación |
+|---|---|
+| GET | Listar, buscar, filtrar o consultar por `identificacionNumero`, con las capacidades propias de la misma persona |
+| POST | Inscribir el contexto (201); 200 si la persona ya es comprador activo |
+| DELETE | Desactivar por `identificacionNumero` |
+| PATCH | Reactivar por `identificacionNumero` |
+
+```json
+{
+  "identificacion": {"tipoCodigo": "CEDULA_FISICA", "numero": "1-1111-1111"},
+  "nombre": "Persona de ejemplo",
+  "telefono": "88888888",
+  "correoElectronico": "contacto@example.test"
+}
+```
+
+Inscribir reutiliza la persona por identificación o la crea si no existe y
+después abre el contexto. Reinscribir a una persona que ya es comprador activo
+responde 200 sin tocar nada; si la persona ya existía con datos personales
+distintos, la API responde 409 con `errors['identificacion.numero']`. `DELETE`
+desactiva solo el contexto y `PATCH` reactiva la misma fila; ninguno puede
+operar si `tbpersonaestado` está inactivo (409). Ningún endpoint ejecuta
+`DELETE FROM`.
+
 ### Ubicaciones GPS del productor
 
 Endpoint: `/api/productores-ubicacion.php`
@@ -334,7 +399,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 30 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 34 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 
@@ -393,12 +458,24 @@ python3 Tools/generate-documentation-pdfs.py
 python3 Tests/documentation_test.py
 ```
 
-## Limitaciones
+## Limitaciones vigentes
 
-- No hay autenticación ni autorización.
+- El login y el registro usan Supabase Auth; las APIs administrativas validan
+  Bearer y allowlist server-side. La comprobación end-to-end en staging sigue
+  pendiente: el dominio está protegido por Vercel SSO y el último check de
+  Vercel para `dev` terminó en fallo sin publicar una URL nueva.
 - El tipo es una columna controlada, no un catálogo.
 - El nombre de finca se repite si corresponde a varios productores.
 - No se determina la relación jurídica con una finca.
 - SQL directo puede crear huérfanos, duplicados y valores fuera del dominio.
 - `tbproductorid` no tiene garantía de unicidad en MySQL; el consecutivo solo se
   serializa dentro del flujo PHP.
+- Publicar y las interacciones públicas (`Me interesa`, `Pasar` y `Contactar`)
+  tienen contrato HTTP de escritura y persistencia. Compra, subastas y pujas
+  quedan fuera del alcance de esta entrega, por indicación de Calidad; sus
+  tablas históricas se conservan en el modelo, pero no se ofrecen como acciones
+  operativas en la interfaz.
+- El modelo comercial histórico aún contiene `tbproductorcompradorid` y
+  `tbproductorid` en hechos que deben poder pertenecer a un Comprador sin ser
+  Productor. Ese contrato requiere decisión de Calidad y migración coordinada
+  antes de habilitar escrituras comerciales.

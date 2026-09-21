@@ -1,20 +1,49 @@
-// Puerta de navegación del frontend privado.
+// Puerta del frontend administrativo.
 //
-// La sesión existente de este sprint vive en sessionStorage. Esta capa no la
-// convierte en autenticación de servidor: únicamente impide abrir los paneles
-// web sin pasar primero por login.php y conserva un destino local seguro.
-// La autorización real de API sigue perteneciendo al mecanismo Bearer/Supabase.
+// IMPORTANTE: una sesión pública Supabase identifica a una Persona, pero NO
+// demuestra que esa Persona sea administradora. Calidad pidió separar sesión
+// pública y administrativa; mientras la política admin no esté aprobada, este
+// gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
-export const SESSION_KEY = 'tindercows:login';
+import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
+import { readAuthSession } from './supabase-auth.js';
+
+export const SESSION_KEY = 'tindercows:admin-session';
+
+/**
+ * El marcador solo habilita la navegación del shell. La autorización real se
+ * vuelve a comprobar en cada API mediante el Bearer y la allowlist del
+ * servidor; por eso nunca contiene credenciales ni sustituye al JWT.
+ */
+export function writeAdminBrowserSession(email, storage = globalThis.sessionStorage) {
+    if (!storage?.setItem) return;
+    storage.setItem(SESSION_KEY, JSON.stringify({
+        authenticated: true,
+        version: 1,
+        adminAuthorized: true,
+        email: String(email ?? '').trim().toLowerCase(),
+        startedAt: new Date().toISOString(),
+        mode: 'admin-server-session',
+    }));
+}
+
+export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
+    storage?.removeItem?.(SESSION_KEY);
+}
 
 const PRIVATE_ROUTES = new Set([
-    'productores.php',
-    'compradores.php',
-    'transportistas.php',
-    'vehiculos.php',
-    'pagometodos.php',
+    'admin/dashboard',
+    'admin/productores',
+    'admin/compradores',
+    'admin/transportistas',
+    'admin/vehiculos',
+    'admin/metodos-pago',
 ]);
 
+/**
+ * Contrato reservado para una futura sesión administrativa emitida/verificada
+ * por servidor. Ningún flujo público actual escribe esta clave.
+ */
 export function readBrowserSession(storage) {
     try {
         const raw = storage?.getItem(SESSION_KEY);
@@ -22,15 +51,12 @@ export function readBrowserSession(storage) {
         const session = JSON.parse(raw);
         if (
             session?.authenticated !== true
+            || session?.adminAuthorized !== true
             || session?.version !== 1
-            || session?.mode !== 'local-browser-session'
-            || typeof session?.email !== 'string'
-            || session.email.trim() === ''
+            || session?.mode !== 'admin-server-session'
             || typeof session?.startedAt !== 'string'
             || Number.isNaN(Date.parse(session.startedAt))
-        ) {
-            return null;
-        }
+        ) return null;
         return session;
     } catch {
         return null;
@@ -39,7 +65,7 @@ export function readBrowserSession(storage) {
 
 export function routeName(pathname = '') {
     const parts = String(pathname).split('/').filter(Boolean);
-    return parts.at(-1) || 'index.php';
+    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts.at(-1) || '';
 }
 
 export function isPrivateRoute(pathname = '') {
@@ -49,8 +75,8 @@ export function isPrivateRoute(pathname = '') {
 export function loginTarget(pathname = '') {
     const route = routeName(pathname);
     return PRIVATE_ROUTES.has(route)
-        ? `login.php?next=${encodeURIComponent(route)}`
-        : 'login.php';
+        ? `admin/entrar?next=${encodeURIComponent(route)}`
+        : 'entrar';
 }
 
 export function enforceBrowserSession({ location, storage } = {}) {
@@ -68,37 +94,37 @@ function wirePrivateShell(storage) {
         publicLink.title = 'Inicio público de TinderCows';
     }
 
-    const logoutLink = document.querySelector('.rural-panel__admin-link[href="login.php"]');
+    const logoutLink = document.querySelector('.rural-panel__admin-link[href="admin/entrar"]');
     if (!logoutLink) return;
-    logoutLink.textContent = 'Cerrar sesión';
-    logoutLink.setAttribute('aria-label', 'Cerrar sesión de demostración');
+    logoutLink.textContent = 'Cerrar sesión administrativa';
+    logoutLink.setAttribute('aria-label', 'Cerrar sesión administrativa');
     logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
-        try {
-            storage?.removeItem(SESSION_KEY);
-        } finally {
-            window.location.assign('login.php');
-        }
+        try { clearAdminBrowserSession(storage); }
+        finally { window.location.assign('admin/entrar'); }
     });
 }
 
 function revealPrivateUi() {
-    if (typeof document !== 'undefined') {
-        document.documentElement.dataset.tcAuth = 'ready';
-    }
+    if (typeof document !== 'undefined') document.documentElement.dataset.tcAuth = 'ready';
 }
 
 if (typeof window !== 'undefined') {
-    const allowed = enforceBrowserSession({
-        location: window.location,
-        storage: window.sessionStorage,
-    });
-    if (allowed && typeof document !== 'undefined') {
+    const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
+    const hasVerifiedAuthSession = readAuthSession(window.sessionStorage) !== null;
+    if (allowed && !hasVerifiedAuthSession) {
+        clearAdminBrowserSession(window.sessionStorage);
+        window.location.replace(loginTarget(window.location.pathname));
+    } else if (allowed && typeof document !== 'undefined') {
         revealPrivateUi();
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => wirePrivateShell(window.sessionStorage), { once: true });
+            document.addEventListener('DOMContentLoaded', () => {
+                wirePrivateShell(window.sessionStorage);
+                inicializarUbicacionAutomatica();
+            }, { once: true });
         } else {
             wirePrivateShell(window.sessionStorage);
+            inicializarUbicacionAutomatica();
         }
     }
 }

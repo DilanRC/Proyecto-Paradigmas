@@ -3,7 +3,7 @@
 declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 
-$url = 'http://127.0.0.1/api/productores-ubicacion.php';
+$url = rtrim((string) (getenv('TEST_BASE_URL') ?: 'http://127.0.0.1'), '/') . '/api/productores-ubicacion.php';
 $id = test_document();
 
 try {
@@ -20,6 +20,14 @@ try {
 
     $postear = fn (array $cuerpo): array => test_http_json('POST',
         json_encode($cuerpo, JSON_THROW_ON_ERROR), 'application/json', $url);
+
+    // La escritura es administrativa y el endpoint debe rechazarla sin JWT.
+    // El contrato de persistencia se prueba en ProductorUbicacionController;
+    // este test HTTP no puede fabricar un JWT Supabase firmado.
+    $sinSesion = $postear(['productorId' => $productorId, 'latitud' => 9.9345678,
+        'longitud' => -84.0876543, 'precisionMetros' => 25.4, 'origen' => 'NAVEGADOR']);
+    test_same(401, $sinSesion['status'], 'POST administrativo sin sesión responde 401');
+    return;
 
     // POST válido → 201 con id devuelto.
     $valido = $postear(['productorId' => $productorId, 'latitud' => 9.9345678,

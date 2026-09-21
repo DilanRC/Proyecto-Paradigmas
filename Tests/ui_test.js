@@ -4,16 +4,22 @@ const assert = require('node:assert');
 // El panel se reparte entre su archivo de entrada y los modulos compartidos que
 // importa; el control se busca sobre el grafo completo y no solo sobre la entrada.
 const sharedDir = 'Public/js/shared';
-const shared = fs.existsSync(sharedDir)
-    ? fs.readdirSync(sharedDir)
-        .filter((file) => file.endsWith('.js'))
-        .map((file) => fs.readFileSync(`${sharedDir}/${file}`, 'utf8'))
-        .join('\n')
-    : '';
+const sharedModules = fs.existsSync(sharedDir)
+    ? fs.readdirSync(sharedDir).filter((file) => file.endsWith('.js'))
+    : [];
+const leer = (file) => fs.readFileSync(`${sharedDir}/${file}`, 'utf8');
+const shared = sharedModules.map(leer).join('\n');
 const js = `${fs.readFileSync('Public/js/productores.js', 'utf8')}\n${shared}`;
 const view = fs.readFileSync('Application/View/productores/index.php', 'utf8');
 
 assert(js.includes('fetch('), 'La UI debe usar fetch.');
+// auth-gate.js es la puerta de navegación del shell privado: su contrato es
+// redirigir a login.php cuando no hay sesión y al cerrar sesión. Esa
+// navegación no es una fuga del CRUD; se excluye solo de la cláusula de
+// no-navegación, que sigue aplicando a productores.js y a los demás módulos.
+const sinPuerta = `${fs.readFileSync('Public/js/productores.js', 'utf8')}\n${
+    sharedModules.filter((file) => file !== 'auth-gate.js').map(leer).join('\n')
+}`;
 // Lo que se prohibe es navegar o recargar, no leer la URL: la ficha de un
 // comprador enlaza a la misma persona en otro panel con ?q=<identificacion>, y
 // ese panel debe poder leer el parametro. Prohibir `window.location` entero
@@ -23,7 +29,7 @@ const navega = [
     /location\.href\s*=[^=]/, /window\.location\s*=[^=]/,
 ];
 for (const patron of navega) {
-    assert(!patron.test(js), `El CRUD no debe recargar ni navegar la página: ${patron}`);
+    assert(!patron.test(sinPuerta), `El CRUD no debe recargar ni navegar la página: ${patron}`);
 }
 assert(js.includes('textContent'), 'Datos externos deben insertarse con textContent.');
 // La carrera de listados se evita cancelando la peticion anterior y descartando
@@ -36,7 +42,9 @@ assert(js.includes('showEmpty') && js.includes('showError'),
 assert(js.includes('identificacionNumero') && !js.includes('participanteId'), 'La UI debe usar la identificación de negocio.');
 assert(!js.includes('fincaId'), 'No debe existir ID artificial de finca.');
 assert(view.includes('id="identificacion-original"'), 'El formulario debe conservar la identificación original al editar.');
-assert(view.includes('id="fincas-nombres"'), 'Fincas deben capturarse por nombre.');
+assert(view.includes('id="fincas-lista"') && view.includes('id="agregar-finca"'),
+    'Fincas deben capturarse por nombre con el componente "Agregar finca" (Tramo C).');
+assert(view.includes('id="error-fincas"'), 'El error de fincas mantiene su espacio de mensaje.');
 assert(js.includes('aria-invalid') && view.includes('aria-live'), 'Debe conservar accesibilidad.');
 // El doble envio se evita con una guarda que levanta su bandera de forma
 // sincrona, antes de cualquier await, para que dos clics del mismo turno no

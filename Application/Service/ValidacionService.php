@@ -4,28 +4,14 @@ declare(strict_types=1);
 
 namespace Application\Service;
 
-/**
- * Excepción del contrato de validación unificado: lleva la lista de errores por
- * campo para responder 422 + errors. Es independiente del controlador para
- * poder ejecutar la validación sin el controlador gigante.
- */
 final class ValidacionException extends \RuntimeException
 {
-    /**
-     * @param array<string,string> $errores
-     */
     public function __construct(string $message, public readonly array $errores = [])
     {
         parent::__construct($message);
     }
 }
 
-/**
- * Contrato de validación unificado y reutilizable por toda la API. Identificación,
- * teléfono, correo, dirección y fincas se validan sobre el valor normalizado y
- * devuelven errores por campo con el mismo contrato 422 que usa toda la API. La
- * máscara visual es del frontend; este servicio trabaja con el valor normalizado.
- */
 final class ValidacionService
 {
     public const TIPOS_IDENTIFICACION = [
@@ -36,25 +22,38 @@ final class ValidacionService
         'PASAPORTE' => 'Pasaporte',
     ];
 
+    /**
+     * Duplicados imposibles (DEC-31): combinaciones que la regla de negocio
+     * declara únicas. La identificación normalizada de persona es la única
+     * imposible hoy (409); fincas con el mismo nombre son legítimas y solo se
+     * advierten.
+     */
+    public const DUPLICADOS_IMPOSIBLES = ['persona.identificacion'];
+
     public function tiposIdentificacion(): array
     {
         $resultado = [];
         foreach (self::TIPOS_IDENTIFICACION as $codigo => $nombre) {
             $resultado[] = ['codigo' => $codigo, 'nombre' => $nombre];
         }
-
         return $resultado;
     }
 
     /**
-     * Valida el payload completo de productor (POST/PUT) y devuelve los datos
-     * normalizados junto a los errores por campo.
+     * Advertencia por campo del contrato de duplicados (DEC-31): informa sin
+     * bloquear. La respuesta exitosa incorpora las advertencias; quien llama
+     * decide con la información.
      *
-     * @return array{datos: array, errores: array<string,string>}
+     * @return array{campo: string, mensaje: string}
      */
+    public function advertencia(string $campo, string $mensaje): array
+    {
+        return ['campo' => $campo, 'mensaje' => $mensaje];
+    }
+
     public function validarProductor(array $cuerpo, bool $actualizacion): array
     {
-        $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];
+        $permitidos = ['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico', 'direccionPrincipal', 'fincas'];
         if ($actualizacion) {
             $permitidos[] = 'identificacionNumeroOriginal';
         }
@@ -62,6 +61,7 @@ final class ValidacionService
 
         $identificacion = $this->validarIdentificacion($cuerpo['identificacion'] ?? null, $errores);
         $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
+        $alias = $this->textoOpcional($cuerpo['alias'] ?? null, 'alias', 150, $errores);
         $telefono = $this->validarTelefono($cuerpo['telefono'] ?? null, $errores);
         $correo = $this->validarCorreo($cuerpo['correoElectronico'] ?? null, $errores);
         $direccion = array_key_exists('direccionPrincipal', $cuerpo)
@@ -70,7 +70,7 @@ final class ValidacionService
         if ($actualizacion && $direccion === null) {
             $errores['direccionPrincipal'] = 'La dirección es obligatoria.';
         }
-        $fincas = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
+        $fincasDetalle = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
 
         $original = null;
         if ($actualizacion) {
@@ -92,31 +92,44 @@ final class ValidacionService
                 'identificacionNumeroOriginal' => $original,
                 'identificacionTipo' => $identificacion['tipoCodigo'],
                 'nombre' => $nombre,
+                'alias' => $alias,
                 'telefono' => $telefono,
                 'correoElectronico' => $correo,
                 'direccion' => $direccion,
-                'fincas' => $fincas,
+                // ProductorFinca conserva el contrato de nombres. El detalle se
+                // mantiene aparte para que ProductorController pueda persistir
+                // cada dirección de finca dentro de la MISMA transacción.
+                'fincas' => array_map(
+                    static fn (array $finca): string => $finca['nombre'],
+                    $fincasDetalle,
+                ),
+                'fincasDetalle' => $fincasDetalle,
             ],
             'errores' => [],
         ];
     }
 
-    /**
-     * Valida el payload de una persona con capacidades (Comprador/Transportista)
-     * que comparte el contrato de Productor sin dirección ni fincas.
-     *
-     * @return array{datos: array, errores: array<string,string>}
-     */
     public function validarPersona(array $cuerpo, bool $actualizacion): array
     {
-        $permitidos = ['identificacion', 'nombre', 'telefono', 'correoElectronico'];
+        $permitidos = ['identificacion', 'nombre', 'nombres', 'apellidos', 'alias', 'telefono', 'correoElectronico'];
         if ($actualizacion) {
             $permitidos[] = 'identificacionNumeroOriginal';
         }
         $errores = $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
 
         $identificacion = $this->validarIdentificacion($cuerpo['identificacion'] ?? null, $errores);
-        $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
+        $usaNombreSeparado = array_key_exists('nombres', $cuerpo) || array_key_exists('apellidos', $cuerpo);
+        if ($usaNombreSeparado) {
+            $nombres = $this->validarNombrePersona($cuerpo['nombres'] ?? null, 'nombres', $errores);
+            $apellidos = $this->validarNombrePersona($cuerpo['apellidos'] ?? null, 'apellidos', $errores);
+            $nombre = trim($nombres . ' ' . $apellidos);
+            if (mb_strlen($nombre) > 150) {
+                $errores['nombre'] = 'La combinación de nombres y apellidos no puede superar 150 caracteres.';
+            }
+        } else {
+            $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
+        }
+        $alias = $this->textoOpcional($cuerpo['alias'] ?? null, 'alias', 150, $errores);
         $telefono = $this->validarTelefono($cuerpo['telefono'] ?? null, $errores);
         $correo = $this->validarCorreo($cuerpo['correoElectronico'] ?? null, $errores);
 
@@ -140,6 +153,7 @@ final class ValidacionService
                 'identificacionNumeroOriginal' => $original,
                 'identificacionTipo' => $identificacion['tipoCodigo'],
                 'nombre' => $nombre,
+                'alias' => $alias,
                 'telefono' => $telefono,
                 'correoElectronico' => $correo,
             ],
@@ -147,11 +161,6 @@ final class ValidacionService
         ];
     }
 
-    /**
-     * Valida una identificación única de cuerpo (DELETE/PATCH).
-     *
-     * @throws ValidacionException
-     */
     public function validarIdentificacionUnica(array $cuerpo): string
     {
         $errores = $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero']);
@@ -163,16 +172,9 @@ final class ValidacionService
         if ($errores !== []) {
             throw new ValidacionException('Revise los campos indicados.', $errores);
         }
-
         return $identificacion;
     }
 
-    /**
-     * Valida una identificación + dirección (rutas de dirección del productor).
-     *
-     * @return array{identificacionNumero: string, direccion: array}
-     * @throws ValidacionException
-     */
     public function validarIdentificacionYDireccion(array $cuerpo, string $campoDireccion): array
     {
         $errores = $this->rechazarCamposDesconocidos($cuerpo, ['identificacionNumero', $campoDireccion]);
@@ -185,11 +187,9 @@ final class ValidacionService
         if ($errores !== []) {
             throw new ValidacionException('Revise los campos indicados.', $errores);
         }
-
         return ['identificacionNumero' => $identificacion, 'direccion' => $direccion];
     }
 
-    /** Valida la dirección de productor con el campo por defecto direccionPrincipal. */
     public function validarDireccion(mixed $valor, array &$errores): array
     {
         return $this->validarDireccionEnCampo($valor, 'direccionPrincipal', $errores);
@@ -199,7 +199,6 @@ final class ValidacionService
     {
         if (!is_array($valor) || array_is_list($valor)) {
             $errores[$campo] = 'La dirección debe ser un objeto.';
-
             return ['provincia' => '', 'canton' => '', 'distrito' => '', 'pueblo' => null, 'senas' => null];
         }
         $errores += $this->rechazarCamposDesconocidos(
@@ -217,11 +216,33 @@ final class ValidacionService
         ];
     }
 
+    /**
+     * Dirección de finca: comparte los campos manuales de Dirección y agrega un
+     * punto geográfico opcional. La base solo almacena tipos/atributos; paridad
+     * y rangos de coordenadas son política de PHP.
+     */
+    public function validarDireccionFincaEnCampo(mixed $valor, string $campo, array &$errores): array
+    {
+        if (!is_array($valor) || array_is_list($valor)) {
+            $errores[$campo] = 'La dirección debe ser un objeto.';
+            return [
+                'provincia' => '', 'canton' => '', 'distrito' => '',
+                'pueblo' => null, 'senas' => null, 'latitud' => null, 'longitud' => null,
+            ];
+        }
+
+        $base = $valor;
+        unset($base['latitud'], $base['longitud']);
+        $direccion = $this->validarDireccionEnCampo($base, $campo, $errores);
+        $punto = $this->validarPuntoDireccion($valor, $campo, $errores);
+
+        return [...$direccion, ...$punto];
+    }
+
     public function validarIdentificacion(mixed $valor, array &$errores): array
     {
         if (!is_array($valor) || array_is_list($valor)) {
             $errores['identificacion'] = 'La identificación debe ser un objeto.';
-
             return ['tipoCodigo' => '', 'numero' => ''];
         }
         $errores += $this->rechazarCamposDesconocidos($valor, ['tipoCodigo', 'numero'], 'identificacion.');
@@ -231,13 +252,20 @@ final class ValidacionService
             $errores['identificacion.tipoCodigo'] = 'Seleccione un tipo de identificación válido.';
         }
         $visible = $this->textoCampo($valor['numero'] ?? null, 'identificacion.numero', 250, $errores, 1, false);
-        $patron = in_array($tipo, ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'], true)
-            ? '/^[0-9][0-9 -]*$/' : '/^[A-Za-z0-9][A-Za-z0-9 -]*$/';
-        if ($visible !== '' && !preg_match($patron, $visible)) {
-            $errores['identificacion.numero'] = 'Use únicamente letras, dígitos, espacios o guiones según el tipo.';
+        $numero = in_array($tipo, ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'], true)
+            ? $this->normalizarIdentificacion($visible)
+            : mb_strtoupper(trim($visible), 'UTF-8');
+        $reglas = [
+            'CEDULA_FISICA' => ['patron' => '/^[1-9][0-9]{8}$/', 'mensaje' => 'La cédula física debe tener 9 dígitos y no iniciar con cero.'],
+            'CEDULA_JURIDICA' => ['patron' => '/^[1-9][0-9]{9}$/', 'mensaje' => 'La cédula jurídica debe tener 10 dígitos.'],
+            'DIMEX' => ['patron' => '/^[1-9][0-9]{10,11}$/', 'mensaje' => 'El DIMEX debe tener 11 o 12 dígitos y no iniciar con cero.'],
+            'NITE' => ['patron' => '/^[0-9]{10}$/', 'mensaje' => 'El NITE debe tener 10 dígitos.'],
+            'PASAPORTE' => ['patron' => '/^[A-Z0-9]{1,9}$/', 'mensaje' => 'El pasaporte debe tener hasta 9 caracteres alfanuméricos.'],
+        ];
+        if ($numero !== '' && isset($reglas[$tipo]) && !preg_match($reglas[$tipo]['patron'], $numero)) {
+            $errores['identificacion.numero'] = $reglas[$tipo]['mensaje'];
         }
-
-        return ['tipoCodigo' => $tipo, 'numero' => $this->normalizarIdentificacion($visible)];
+        return ['tipoCodigo' => $tipo, 'numero' => $numero];
     }
 
     public function validarTelefono(mixed $valor, array &$errores): string
@@ -247,7 +275,6 @@ final class ValidacionService
         if ($telefono !== '' && (!preg_match('/^\+?[0-9 ()-]+$/', $telefono) || strlen($digitos) < 8 || strlen($digitos) > 15)) {
             $errores['telefono'] = 'Use un prefijo opcional y entre 8 y 15 dígitos.';
         }
-
         return preg_replace('/[ ()-]+/', '', $telefono) ?? $telefono;
     }
 
@@ -257,36 +284,105 @@ final class ValidacionService
         if ($correo !== '' && filter_var($correo, FILTER_VALIDATE_EMAIL) === false) {
             $errores['correoElectronico'] = 'Ingrese un correo electrónico válido.';
         }
-
         return $correo;
     }
 
+    /**
+     * Valida fincas como objetos independientes. La dirección es opcional, pero
+     * cuando se envía debe ser completa y su punto geográfico debe venir en par.
+     * La política actual de nombre único se conserva porque ProductorFinca aún
+     * usa (productor, nombre) para resolver una finca; cambiarla requiere otra
+     * decisión de identidad, no solo relajar este validador.
+     *
+     * @return array<int,array{nombre:string,direccion?:array<string,mixed>}>
+     */
     public function validarFincas(mixed $valor, array &$errores): array
     {
         if (!is_array($valor) || !array_is_list($valor)) {
             $errores['fincas'] = 'Las fincas deben ser una lista.';
-
             return [];
         }
-        $nombres = [];
+
+        $fincas = [];
         foreach ($valor as $indice => $finca) {
-            if (!is_array($finca) || array_keys($finca) !== ['nombre']) {
-                $errores["fincas.{$indice}"] = 'Cada finca debe contener únicamente nombre.';
+            if (!is_array($finca) || array_is_list($finca)) {
+                $errores["fincas.{$indice}"] = 'Cada finca debe ser un objeto.';
                 continue;
             }
-            $nombre = trim((string) $finca['nombre']);
+            $desconocidos = array_diff(array_keys($finca), ['nombre', 'direccion']);
+            if ($desconocidos !== []) {
+                foreach ($desconocidos as $campo) {
+                    $errores["fincas.{$indice}.{$campo}"] = 'Campo no permitido.';
+                }
+            }
+
+            $nombre = trim((string) ($finca['nombre'] ?? ''));
             if ($nombre === '' || mb_strlen($nombre) > 150) {
                 $errores["fincas.{$indice}.nombre"] = 'El nombre debe contener entre 1 y 150 caracteres.';
                 continue;
             }
+
             $clave = mb_strtoupper($nombre, 'UTF-8');
-            if (isset($nombres[$clave])) {
+            if (isset($fincas[$clave])) {
                 $errores['fincas'] = 'No repita la misma finca.';
+                continue;
             }
-            $nombres[$clave] = $nombre;
+
+            $validada = ['nombre' => $nombre];
+            if (array_key_exists('direccion', $finca)) {
+                $validada['direccion'] = $this->validarDireccionFincaEnCampo(
+                    $finca['direccion'],
+                    "fincas.{$indice}.direccion",
+                    $errores,
+                );
+            }
+            $fincas[$clave] = $validada;
         }
 
-        return array_values($nombres);
+        return array_values($fincas);
+    }
+
+    private function validarPuntoDireccion(array $direccion, string $campo, array &$errores): array
+    {
+        $latitudCruda = $direccion['latitud'] ?? null;
+        $longitudCruda = $direccion['longitud'] ?? null;
+        $latitudVacia = $latitudCruda === null || (is_string($latitudCruda) && trim($latitudCruda) === '');
+        $longitudVacia = $longitudCruda === null || (is_string($longitudCruda) && trim($longitudCruda) === '');
+
+        if ($latitudVacia && $longitudVacia) {
+            return ['latitud' => null, 'longitud' => null];
+        }
+        if ($latitudVacia || $longitudVacia) {
+            $mensaje = 'Latitud y longitud deben enviarse juntas o ambas quedar vacías.';
+            $errores[$campo . '.latitud'] = $mensaje;
+            $errores[$campo . '.longitud'] = $mensaje;
+            return ['latitud' => null, 'longitud' => null];
+        }
+        if (!is_numeric($latitudCruda) || !is_numeric($longitudCruda)) {
+            $errores[$campo . '.latitud'] = 'La latitud debe ser numérica.';
+            $errores[$campo . '.longitud'] = 'La longitud debe ser numérica.';
+            return ['latitud' => null, 'longitud' => null];
+        }
+
+        $latitud = (float) $latitudCruda;
+        $longitud = (float) $longitudCruda;
+        $valido = true;
+        if (!is_finite($latitud) || $latitud < -90 || $latitud > 90) {
+            $errores[$campo . '.latitud'] = 'La latitud debe estar entre -90 y 90.';
+            $valido = false;
+        }
+        if (!is_finite($longitud) || $longitud < -180 || $longitud > 180) {
+            $errores[$campo . '.longitud'] = 'La longitud debe estar entre -180 y 180.';
+            $valido = false;
+        }
+        if (!$valido) {
+            return ['latitud' => null, 'longitud' => null];
+        }
+
+        return [
+            'latitud' => number_format($latitud, 7, '.', ''),
+            'longitud' => number_format($longitud, 7, '.', ''),
+        ];
     }
 
     public function normalizarIdentificacion(string $valor): string
@@ -294,9 +390,6 @@ final class ValidacionService
         return mb_strtoupper(preg_replace('/[ -]+/u', '', trim($valor)) ?? '', 'UTF-8');
     }
 
-    /**
-     * @return array<string,string> errores de campos no permitidos (vacía si todo está bien)
-     */
     public function rechazarCamposDesconocidos(array $datos, array $permitidos, string $prefijo = ''): array
     {
         $desconocidos = array_diff(array_keys($datos), $permitidos);
@@ -307,7 +400,6 @@ final class ValidacionService
         foreach ($desconocidos as $campo) {
             $errores[$prefijo . $campo] = 'Campo no permitido.';
         }
-
         return $errores;
     }
 
@@ -315,7 +407,6 @@ final class ValidacionService
     {
         if (!is_string($valor)) {
             $errores[$campo] = 'El campo es obligatorio.';
-
             return '';
         }
         $texto = trim($valor);
@@ -326,7 +417,6 @@ final class ValidacionService
         if ($longitud < $minimo || $longitud > $maximo) {
             $errores[$campo] = "Debe contener entre {$minimo} y {$maximo} caracteres.";
         }
-
         return $texto;
     }
 
@@ -337,10 +427,17 @@ final class ValidacionService
         }
         if (!is_string($valor) || mb_strlen(trim($valor)) > $maximo) {
             $errores[$campo] = "No puede superar {$maximo} caracteres.";
-
             return null;
         }
-
         return trim($valor);
+    }
+
+    private function validarNombrePersona(mixed $valor, string $campo, array &$errores): string
+    {
+        $nombre = $this->textoCampo($valor, $campo, 75, $errores, 2);
+        if ($nombre !== '' && !preg_match('/^[\p{L}\p{M}][\p{L}\p{M} .\'’\-]*$/u', $nombre)) {
+            $errores[$campo] = 'Use únicamente letras, espacios, puntos, apóstrofes o guiones.';
+        }
+        return $nombre;
     }
 }

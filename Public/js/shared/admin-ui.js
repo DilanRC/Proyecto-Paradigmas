@@ -1,33 +1,38 @@
 import { SESSION_KEY } from './auth-gate.js';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
-const ADMIN_CSS = 'css/admin-v3.css?v=admin-3';
+const ADMIN_CSS = 'css/admin-v3.css?v=admin-5';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
 const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-4';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
-    'productores.php': {
+    'admin/dashboard': {
+        icon: 'fa-gauge-high',
+        search: 'Buscar en administración',
+        hint: 'Resumen general de la red ganadera.',
+    },
+    'admin/productores': {
         icon: 'fa-cow',
         search: 'Nombre, identificación, correo',
         hint: 'Busca en nombre, correo e identificación.',
     },
-    'compradores.php': {
+    'admin/compradores': {
         icon: 'fa-handshake',
         search: 'Nombre o identificación',
         hint: 'Consulta las clasificaciones disponibles sin cambiar su política.',
     },
-    'transportistas.php': {
+    'admin/transportistas': {
         icon: 'fa-truck-fast',
         search: 'Nombre, identificación o correo',
         hint: 'Busca en nombre, correo e identificación.',
     },
-    'vehiculos.php': {
+    'admin/vehiculos': {
         icon: 'fa-truck-pickup',
         search: 'Placa, VIN o modelo',
         hint: 'Busca en placa, VIN y modelo.',
     },
-    'pagometodos.php': {
+    'admin/metodos-pago': {
         icon: 'fa-wallet',
         search: 'Nombre o descripción',
         hint: 'Busca en nombre y descripción.',
@@ -36,7 +41,7 @@ const MODULES = {
 
 function routeName(pathname = globalThis.location?.pathname ?? '') {
     const parts = String(pathname).split('/').filter(Boolean);
-    return parts.at(-1) || 'index.php';
+    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts.at(-1) || '';
 }
 
 function injectStylesheet(href, marker) {
@@ -209,7 +214,7 @@ function enhanceSidebarAccount() {
 
     const currentRow = document.querySelector('.rural-panel__admin-row');
     const siteLink = currentRow?.querySelector('a[href="./"]') ?? null;
-    const logoutLink = currentRow?.querySelector('a[href$="login.php"]') ?? null;
+    const logoutLink = currentRow?.querySelector('a[href$="entrar"]') ?? null;
     if (siteLink) siteLink.textContent = 'Ir al sitio';
     if (logoutLink && !/cerrar/i.test(logoutLink.textContent)) logoutLink.textContent = 'Cerrar sesión';
 

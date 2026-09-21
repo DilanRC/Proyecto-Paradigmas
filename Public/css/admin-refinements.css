@@ -19,7 +19,7 @@
     padding:6px 8px;
     border:0;
     border-radius:11px;
-    color:rgba(247,238,229,.82);
+    color:#f7eee5;
     background:transparent;
     text-align:left;
 }
@@ -57,7 +57,7 @@
 
 .admin-account-menu__chevron {
     justify-self:end;
-    color:rgba(247,238,229,.58);
+    color:#e6d4c3;
     font-size:10px;
 }
 
@@ -91,7 +91,7 @@
     padding:0 10px !important;
     border:0 !important;
     border-radius:9px !important;
-    color:rgba(247,238,229,.76) !important;
+    color:#f0e4d7 !important;
     background:transparent !important;
     box-shadow:none !important;
     font-size:11px !important;
@@ -106,7 +106,7 @@
     background:rgba(69,99,79,.34) !important;
 }
 
-.admin-account-menu__panel .rural-panel__admin-link[href$='login.php']::before {
+.admin-account-menu__panel .rural-panel__admin-link[href$='admin/entrar']::before {
     content:'\f2f5' !important;
 }
 

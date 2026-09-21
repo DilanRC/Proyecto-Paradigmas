@@ -1,6 +1,6 @@
 # Rutas de TinderCows
 
-Estado documentado: 2026-09-01, rama `dev`.
+Estado documentado: 2026-09-20, rama `feat/Front-2.0`.
 
 ## Ejecución local
 
@@ -29,7 +29,7 @@ La navegación primaria pública expone Inicio, Explorar, Nosotros y Cómo funci
 
 ## Administración interna
 
-Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate comprueba un marcador local de `sessionStorage`; **no es autenticación de servidor**.
+Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate controla la navegación visual, pero no sustituye la autorización de servidor. Las escrituras de las APIs administrativas exigen un JWT Supabase válido y una cuenta activa en `tbadministrador`, verificada por PHP con una consulta preparada.
 
 | Ruta | Módulo |
 |---|---|
@@ -54,16 +54,23 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 | `/api/transportistas-vehiculos.php` |
 | `/api/vehiculos.php` |
 | `/api/pagometodos.php` |
+| `/api/capacidades.php` |
+| `/api/identidad.php` |
 | `/api/metodo-no-permitido.php` |
 
 `/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
+
+`/api/identidad.php` resuelve la superficie del navegador: sin Bearer devuelve
+una respuesta pública y con Bearer devuelve los contextos de la persona.
+`/api/capacidades.php` permite inscribir, abandonar o reactivar contextos desde
+la vista pública, siempre sujeto a la validación del servidor.
 
 ## Estado de autenticación
 
 ### Implementado
 
 - Formulario de acceso con validación de navegador.
-- Marcador de sesión local en `sessionStorage`.
+- Sesión Supabase en `sessionStorage`, con Bearer para las solicitudes JSON.
 - Redirección pública por defecto hacia `explorar.php`.
 - Redirección a `login.php?next=...` cuando una ruta administrativa no tiene marcador local válido.
 - Cierre de la sesión local desde el shell administrativo.
@@ -71,10 +78,15 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 
 ### No implementado todavía
 
-- Validación real de credenciales contra backend.
-- Autorización de servidor basada en la sesión visual del frontend.
+- La marca `tindercows:admin-session` solo habilita el shell después de que
+  `api/admin-status.php` confirmó la allowlist; no es una credencial y nunca
+  sustituye el Bearer que valida el servidor.
+- La allowlist administrativa debe configurarse en el entorno del servidor.
 - Catálogo real de ganado/subastas conectado a la vista Explorar.
 - Persistencia real de favoritos, contacto y pujas.
+- Publicar y comprar muestran el estado de preparación sin escribir en la base:
+  el contrato comercial histórico todavía liga comprador/interacción a
+  Productor y no permite implementar de forma segura un Comprador independiente.
 - Política definitiva de privacidad, retención y ejercicio de derechos.
 
-La autorización real de API continúa siendo un mecanismo separado del login visual y debe comprobarse mediante la capa Bearer/Supabase correspondiente.
+La autorización real de API continúa siendo un mecanismo separado del login visual: `SupabaseActorResolver` verifica el Bearer y `AdminAuthorization` aplica la allowlist para escrituras administrativas.

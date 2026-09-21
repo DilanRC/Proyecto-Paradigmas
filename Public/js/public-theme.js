@@ -46,17 +46,25 @@ export function storeTheme(theme) {
     }
 }
 
+function wireThemeToggle() {
+    if (typeof document === 'undefined' || document.documentElement.dataset.themeToggleReady === 'true') return;
+    document.documentElement.dataset.themeToggleReady = 'true';
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        const button = target?.closest('[data-theme-toggle]');
+        if (!(button instanceof HTMLButtonElement)) return;
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        storeTheme(next);
+        applyTheme(next);
+    });
+}
+
 if (typeof document !== 'undefined') {
     applyTheme(preferredTheme());
-
-    document.addEventListener('DOMContentLoaded', () => {
+    const initialize = () => {
         applyTheme(preferredTheme());
-        document.addEventListener('click', (event) => {
-            const button = event.target.closest?.('[data-theme-toggle]');
-            if (!button) return;
-            const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-            storeTheme(next);
-            applyTheme(next);
-        });
-    });
+        wireThemeToggle();
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    else initialize();
 }

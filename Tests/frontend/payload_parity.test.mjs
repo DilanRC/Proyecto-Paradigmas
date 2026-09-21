@@ -46,7 +46,7 @@ test('el panel conserva su endpoint', async () => {
     const { readFile } = await import('node:fs/promises');
     const source = await readFile(new URL('../../Public/js/vehiculos.js', import.meta.url), 'utf8');
 
-    assert.match(source, /const API_URL = 'api\/vehiculos\.php';/);
+    assert.match(source, /const API_URL = 'api\/v1\/vehiculos';/);
 });
 
 // --- metodos de pago ---------------------------------------------------------
@@ -94,7 +94,7 @@ test('transportista editado: agrega identificacionNumeroOriginal', () => {
 });
 
 // --- productores -------------------------------------------------------------
-import { buildFincaDireccionPayload, buildProductorPayload } from '../../Public/js/productores.js';
+import { buildFincaDireccionPayload, buildProductorPayload, normalizarFincas } from '../../Public/js/productores.js';
 
 const productorBase = {
     tipoCodigo: 'CEDULA_FISICA', numero: ' 1-1111-1111 ', nombre: ' Maria Solano ',
@@ -127,15 +127,36 @@ test('REGRESION: los campos opcionales vacios viajan como null, no como cadena',
     assert.equal(payload.direccionPrincipal.senas, null);
 });
 
-test('las fincas se parten por linea, se recortan y se descartan las vacias', () => {
+test('las fincas se recortan, se descartan las vacías y no se repiten (Tramo C)', () => {
     const payload = buildProductorPayload({
-        ...productorBase, fincas: ' Finca El Roble \n\n  Finca Valle Verde\n   \n',
+        ...productorBase, fincas: [
+            { nombre: '  Finca El Roble ' },
+            { nombre: 'Finca Valle Verde', direccion: { provincia: 'Heredia' } },
+            { nombre: '   ' },
+            { nombre: ' finca el roble  ' },
+        ],
     });
 
+    // El alta solo envía nombres: la dirección de cada finca viaja aparte por
+    // /api/fincas-direccion.php (contrato "únicamente nombre").
     assert.deepEqual(payload.fincas, [
         { nombre: 'Finca El Roble' },
         { nombre: 'Finca Valle Verde' },
     ]);
+});
+
+test('normalizarFincas ignora entradas sin nombre y deduplica sin distinguir mayúsculas', () => {
+    assert.deepEqual(
+        normalizarFincas([
+            { nombre: 'La Esperanza' },
+            { nombre: ' la esperanza ' },
+            {},
+            { nombre: '   ' },
+            null,
+        ]),
+        [{ nombre: 'La Esperanza' }],
+    );
+    assert.deepEqual(normalizarFincas('no-es-una-lista'), []);
 });
 
 test('la direccion de finca conserva su envoltura direccionFinca', () => {
@@ -150,7 +171,7 @@ test('la direccion de finca conserva su envoltura direccionFinca', () => {
         nombreFinca: 'Finca El Roble',
         direccionFinca: {
             provincia: 'Alajuela', canton: 'San Carlos', distrito: 'Quesada',
-            pueblo: 'Centro', senas: null,
+            pueblo: 'Centro', senas: null, latitud: null, longitud: null,
         },
     });
 });
@@ -159,39 +180,34 @@ test('cada panel conserva su endpoint', async () => {
     const { readFile } = await import('node:fs/promises');
     const leer = (f) => readFile(new URL(`../../Public/js/${f}`, import.meta.url), 'utf8');
 
-    assert.match(await leer('pagometodos.js'), /const API_URL = 'api\/pagometodos\.php';/);
-    assert.match(await leer('transportistas.js'), /const API_URL = 'api\/transportistas\.php';/);
-    assert.match(await leer('transportistas.js'), /const ASIGNACION_URL = 'api\/transportistas-vehiculos\.php';/);
-    assert.match(await leer('productores.js'), /const API_URL = 'api\/productores\.php';/);
-    assert.match(await leer('productores.js'), /const FINCAS_DIRECCION_URL = 'api\/fincas-direccion\.php';/);
+    assert.match(await leer('pagometodos.js'), /const API_URL = 'api\/v1\/metodos-pago';/);
+    assert.match(await leer('transportistas.js'), /const API_URL = 'api\/v1\/transportistas';/);
+    assert.match(await leer('transportistas.js'), /const ASIGNACION_URL = 'api\/v1\/transportistas\/vehiculos';/);
+    assert.match(await leer('productores.js'), /const API_URL = 'api\/v1\/productores';/);
+    assert.match(await leer('productores.js'), /const FINCAS_DIRECCION_URL = 'api\/v1\/fincas\/direccion';/);
 });
 
 // --- compradores -------------------------------------------------------------
-// El panel de compradores ya no envia ningun cuerpo: el CRUD legacy se retiro
-// en el paso (d) (DEC-DBREADY-008) y la vista quedo de solo lectura, porque
-// Comprador es una clasificacion derivada del comportamiento del productor.
-// La paridad que se prueba ahora es la contraria: que no haya vuelto a aparecer
-// un constructor de payload ni una escritura desde ese panel.
-import { formatearClasificadoDesde, describirOrigen } from '../../Public/js/compradores.js';
-
+// Comprador es un contexto de Persona (DEC-28/29): la API vuelve a inscribir
+// (POST), desactivar (DELETE) y reactivar (PATCH), pero el panel conserva su
+// vista de solo lectura y no construye cuerpos de escritura. La paridad que se
+// prueba no es un payload, sino el contraste: panel sin constructor ni verbos.
 test('el panel de compradores no construye cuerpos de escritura', async () => {
     const { readFile } = await import('node:fs/promises');
     const fuente = await readFile(
         new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
-    assert.equal(/buildCompradorPayload/.test(fuente), false, 'reaparecio el constructor de payload');
-    for (const metodo of ['POST', 'PUT', 'DELETE', 'PATCH']) {
-        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel volvio a emitir ${metodo}`);
+    assert.equal(/buildCompradorPayload/.test(fuente), false, 'el panel no debe construir cuerpos');
+    assert.equal(fuente.includes("method: 'POST'"), true, 'las lecturas privadas usan POST con consulta JSON');
+    for (const metodo of ['PUT', 'DELETE', 'PATCH']) {
+        assert.equal(fuente.includes(`'${metodo}'`), false, `el panel no debe emitir ${metodo}`);
     }
 });
 
-test('la clasificacion se muestra con su fecha y el origen real del periodo', () => {
-    assert.equal(formatearClasificadoDesde(''), 'Sin fecha registrada');
-    assert.equal(formatearClasificadoDesde('no es fecha'), 'no es fecha');
-    assert.match(formatearClasificadoDesde('2026-09-01 10:15:00'), /2026/);
-    assert.equal(describirOrigen('MIGRACION_TBCOMPRADOR_LEGACY'), 'Migración del registro anterior');
-    assert.equal(describirOrigen('ALTA_CRUD_COMPRADOR'), 'Alta registrada antes del retiro del CRUD');
-    assert.equal(describirOrigen('REACTIVACION_CRUD_COMPRADOR'), 'Reactivación registrada antes del retiro del CRUD');
-    assert.equal(describirOrigen(''), 'Sin origen declarado');
-    assert.equal(describirOrigen('T10_REGLA_FUTURA'), 'T10_REGLA_FUTURA',
-        'un motivo futuro no se inventa ni se oculta');
+test('el panel conserva su endpoint y consulta las capacidades de la persona', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const fuente = await readFile(
+        new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
+    assert.match(fuente, /const API_URL = 'api\/v1\/compradores';/);
+    assert.equal(fuente.includes('consultarCapacidades'), true,
+        'la ficha debe consultar las relaciones de la misma Persona');
 });

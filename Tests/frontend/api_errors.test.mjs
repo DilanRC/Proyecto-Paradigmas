@@ -73,7 +73,7 @@ test('REGRESION: un 409 conserva data.reactivacion para poder reactivar', async 
         errors: { 'identificacion.numero': 'Debe reactivarse el productor existente.' },
     };
     await assert.rejects(
-        () => request('/api/productores.php', { method: 'POST', body: '{}' }, { fetchImpl: fakeFetch(409, payload) }),
+        () => request('/api/v1/productores', { method: 'POST', body: '{}' }, { fetchImpl: fakeFetch(409, payload) }),
         (error) => {
             assert.equal(error.status, 409);
             assert.equal(error.kind, 'conflict');

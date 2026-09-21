@@ -13,6 +13,7 @@ $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
 $databaseConfiguration = file_get_contents("{$root}/Configuration/Database.php");
 $vercelIgnoreBuild = file_get_contents("{$root}/Tools/vercel-ignore-build.sh");
+$publicHtaccess = file_get_contents("{$root}/Public/.htaccess");
 $vercelConfiguration = json_decode(file_get_contents("{$root}/vercel.json"), true, 512, JSON_THROW_ON_ERROR);
 
 foreach ([$dockerfile, $vercelDockerfile] as $definition) {
@@ -35,6 +36,8 @@ test_assert(str_contains($entrypoint, '${PORT:-80}'), 'El contenedor debe respet
 test_assert(str_contains($entrypoint, 'exec apache2-foreground'), 'Apache debe quedar como proceso principal');
 test_assert(str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'El arranque debe validar el esquema Supabase');
+test_assert(str_contains($publicHtaccess, 'HTTP_AUTHORIZATION:%{HTTP:Authorization}'),
+    'Apache debe conservar el Bearer para que PHP resuelva la sesión');
 test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
     'El esquema debe crear tbfinca de forma idempotente');
 test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbcomprador'),
@@ -49,10 +52,10 @@ test_same(true, $vercelConfiguration['git']['deploymentEnabled']['main'] ?? null
     'Vercel debe conservar los despliegues de producción desde main');
 test_assert(!array_key_exists('*', $vercelConfiguration['git']['deploymentEnabled'] ?? []),
     'deploymentEnabled no admite comodines: "*" no bloquea nada y deja construir cualquier rama');
-test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['ignoreCommand'] ?? null,
-    'ignoreCommand debe ser global: dentro de services Vercel no lo ejecuta y toda rama empuja imagen');
-test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration['services']['app'] ?? []),
-    'El servicio no debe declarar ignoreCommand propio');
+test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['services']['app']['ignoreCommand'] ?? null,
+    'ignoreCommand debe pertenecer al servicio que posee el entrypoint');
+test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration),
+    'ignoreCommand no debe quedar en la raíz cuando existe services');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_ENV:-}" == "production"'),
     'La política debe conservar los despliegues de producción');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_GIT_COMMIT_REF:-}" == "dev"'),

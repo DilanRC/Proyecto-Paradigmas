@@ -70,7 +70,7 @@ html {
 }
 
 .public-header__login {
-    color:#fff;
+    color:#151a18;
     background:var(--tc-primary);
 }
 
@@ -105,7 +105,7 @@ html {
 
 .public-hero__actions .public-cta,
 .public-section--cta .public-cta {
-    color:#fff;
+    color:#151a18;
     background:linear-gradient(120deg,var(--tc-primary),var(--tc-primary-strong));
     box-shadow:0 16px 38px var(--tc-glow);
 }
@@ -136,6 +136,62 @@ html {
     place-items:center;
     isolation:isolate;
 }
+
+.public-visual--hero-photo {
+    position:relative;
+    min-height:560px;
+    display:grid;
+    place-items:center;
+    isolation:isolate;
+}
+
+.public-hero-photo {
+    width:100%;
+    max-height:620px;
+    aspect-ratio:1.35;
+    object-fit:cover;
+    border:1px solid var(--tc-line-strong);
+    border-radius:28px;
+    box-shadow:var(--tc-shadow);
+}
+
+.public-hero-signature {
+    position:absolute;
+    right:24px;
+    bottom:24px;
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:8px 14px 8px 8px;
+    border:1px solid rgba(255,255,255,.25);
+    border-radius:999px;
+    color:#fff;
+    background:rgba(18,27,23,.8);
+    backdrop-filter:blur(10px);
+    font-size:13px;
+    font-weight:800;
+}
+
+.public-hero-signature img { width:34px; height:34px; border-radius:10px; }
+.public-hero-signature strong { color:var(--tc-primary); }
+
+.public-section--carousel { width:min(100% - 32px,1500px); padding:90px 0 20px; }
+.public-carousel__viewport { position:relative; margin-top:24px; overflow:hidden; }
+.public-carousel__track { display:flex; overflow:hidden; border-radius:18px; outline:none; transition:transform .45s ease; }
+.public-carousel__page { display:grid; flex:0 0 100%; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.public-carousel__slide { min-width:0; margin:0; overflow:hidden; border:1px solid var(--tc-line-strong); border-radius:18px; background:var(--tc-surface); }
+.public-carousel__slide img { display:block; width:100%; height:min(360px,24vw); object-fit:cover; }
+.public-carousel__arrow { position:absolute; top:50%; z-index:2; display:grid; width:38px; height:38px; place-items:center; border:1px solid color-mix(in srgb,var(--tc-line-strong) 80%,transparent); border-radius:50%; color:var(--tc-text); background:color-mix(in srgb,var(--tc-bg-elevated) 84%,transparent); box-shadow:0 8px 20px rgba(0,0,0,.22); cursor:pointer; opacity:.72; transform:translateY(-50%); transition:opacity .16s ease,background .16s ease,border-color .16s ease; }
+.public-carousel__arrow:hover,.public-carousel__arrow:focus-visible { opacity:1; border-color:var(--tc-primary); background:var(--tc-surface); outline:none; }
+.public-carousel__arrow--prev { left:10px; }
+.public-carousel__arrow--next { right:10px; }
+.public-carousel__footer { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-top:14px; }
+.public-carousel__footer p { margin:0; color:var(--tc-muted); font-size:12px; }
+.public-carousel__dots { display:flex; gap:2px; }
+.public-carousel__dots button { display:grid; width:28px; height:28px; padding:0; place-items:center; border:0; border-radius:50%; background:transparent; cursor:pointer; touch-action:manipulation; }
+.public-carousel__dots button::before { width:9px; height:9px; border:1px solid var(--tc-line-strong); border-radius:50%; background:transparent; content:''; }
+.public-carousel__dots button[aria-current='page']::before { border-color:var(--tc-primary); background:var(--tc-primary); }
+.public-carousel__dots button:focus-visible { outline:3px solid color-mix(in srgb,var(--tc-primary) 62%,transparent); outline-offset:2px; }
 
 .public-visual--brand .public-logo-stage {
     position:relative;
@@ -331,16 +387,23 @@ html {
     grid-template-columns:repeat(3,minmax(0,1fr));
 }
 
+/* El bloque tiene borde y fondo propios: necesita padding lateral, y el par
+   texto + boton se centra como grupo en vez de irse a los dos extremos. */
 .public-section--cta {
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap:28px;
+    justify-content:center;
+    gap:48px;
+    padding:72px 56px;
     border:1px solid var(--tc-line-strong);
     border-radius:28px;
     background:
         radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--tc-primary) 18%,transparent),transparent 28rem),
         var(--tc-bg-elevated);
+}
+
+.public-section--cta > div {
+    max-width:720px;
 }
 
 .public-section--cta h2 {
@@ -405,6 +468,7 @@ html {
     .public-visual--brand {
         min-height:450px;
     }
+    .public-visual--hero-photo { min-height:450px; }
     .about-grid--product,
     .use-steps--compact {
         grid-template-columns:1fr;
@@ -436,11 +500,19 @@ html {
     .public-visual--brand {
         min-height:360px;
     }
+    .public-visual--hero-photo { min-height:300px; }
+    .public-carousel__slide img { height:280px; }
+    .public-carousel__footer { align-items:flex-start; flex-direction:column; }
     .section-heading--split,
     .public-section--cta,
     .public-footer--complete {
         align-items:flex-start;
         flex-direction:column;
+    }
+    .public-section--cta {
+        justify-content:flex-start;
+        gap:28px;
+        padding:48px 26px;
     }
     .cattle-search-preview__toolbar {
         grid-template-columns:1fr;
@@ -460,4 +532,5 @@ html {
 
 @media (prefers-reduced-motion:reduce) {
     html { scroll-behavior:auto; }
+    .public-carousel__track { transition:none; }
 }

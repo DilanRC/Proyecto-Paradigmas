@@ -2,10 +2,11 @@
 
 .public-header--product {
     display:grid;
-    width:min(100% - 28px,1540px);
+    width:calc(100% - 32px);
+    max-width:none;
     grid-template-columns:auto minmax(0,1fr) auto;
     align-items:center;
-    gap:18px;
+    gap:12px;
     margin-inline:auto;
     padding:10px 0;
     overflow:visible;
@@ -18,8 +19,12 @@
 .public-header--product .public-nav--primary {
     min-width:0;
     justify-content:center;
-    overflow:visible;
+    overflow-x:auto;
+    scrollbar-width:none;
 }
+
+.public-header--product .public-nav--primary::-webkit-scrollbar { display:none; }
+.public-header--product .public-nav--primary a { flex:0 0 auto; white-space:nowrap; }
 
 .public-nav--primary a.is-active {
     color:var(--tc-text);
@@ -28,10 +33,129 @@
 
 .public-header__actions {
     display:flex;
-    min-width:max-content;
+    min-width:0;
+    flex-shrink:0;
     align-items:center;
     justify-content:flex-end;
     gap:8px;
+}
+
+@media (max-width:1280px) and (min-width:1051px) {
+    .public-header--product { grid-template-columns:auto minmax(0,1fr) auto; }
+    .public-header--product .public-nav--primary { justify-content:flex-start; }
+    .public-header--product .public-nav--primary a { padding-inline:8px; font-size:12px; }
+    .public-header--product .public-header__actions { gap:5px; }
+    .public-header--product .public-header__actions > .theme-toggle,
+    .public-header--product .public-header__actions > .public-search { display:none; }
+    .public-header--product .public-header__login { padding-inline:14px; }
+}
+
+@media (max-width:1050px) {
+    .public-header--product {
+        grid-template-columns:minmax(0,1fr) auto;
+        row-gap:10px;
+    }
+    .public-header--product .public-nav--primary {
+        grid-column:1 / -1;
+        grid-row:2;
+        justify-content:flex-start;
+        min-width:0;
+        padding-bottom:2px;
+    }
+    .public-header--product .public-header__actions {
+        grid-column:2;
+        grid-row:1;
+    }
+    .public-header--product .public-search { display:none; }
+}
+
+.public-account-menu {
+    position: relative;
+    z-index: 80;
+}
+
+.public-account-menu__trigger {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 10px 4px 5px;
+    border: 1px solid var(--tc-line-strong);
+    border-radius: 999px;
+    color: var(--tc-text);
+    background: color-mix(in srgb, var(--tc-surface) 90%, transparent);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.public-account-menu__trigger:hover,
+.public-account-menu__trigger[aria-expanded='true'],
+.public-account-menu__trigger:focus-visible {
+    border-color: var(--tc-primary);
+}
+
+.public-account-menu__avatar {
+    display: grid;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--tc-primary);
+}
+
+.public-account-menu__panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    display: grid;
+    min-width: 230px;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid var(--tc-line-strong);
+    border-radius: 16px;
+    background: var(--tc-bg-elevated);
+    box-shadow: var(--tc-shadow-soft);
+}
+
+.public-account-menu__panel[hidden] { display: none; }
+
+.public-account-menu__identity {
+    display: grid;
+    gap: 3px;
+    padding: 10px;
+    border-bottom: 1px solid var(--tc-line);
+}
+
+.public-account-menu__identity small { color: var(--tc-text-soft); overflow-wrap: anywhere; }
+
+.public-account-menu__panel a,
+.public-account-menu__panel button {
+    display: flex;
+    width: 100%;
+    min-height: 38px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    color: var(--tc-text);
+    background: transparent;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.public-account-menu__panel a:hover,
+.public-account-menu__panel button:hover,
+.public-account-menu__panel a:focus-visible,
+.public-account-menu__panel button:focus-visible {
+    background: color-mix(in srgb, var(--tc-secondary) 28%, transparent);
+    outline: none;
 }
 
 .public-search {

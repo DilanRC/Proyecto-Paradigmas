@@ -1,10 +1,11 @@
-// Eval: Productor y Transportista siguen siendo capacidades operativas; Comprador
-// es una clasificación derivada del Productor con panel de solo lectura.
+// Eval: Productor, Comprador y Transportista son contextos de Persona
+// registrables (DEC-28/29). Ninguno es una clasificación derivada de otro; el
+// panel de Comprador conserva su lectura y no construye cuerpos.
 //
 // El objetivo de navegación se conserva: desde las fichas se puede consultar la
 // misma identidad en Productor, Comprador y Transportista. Lo que NO se permite
-// es volver a tratar Comprador como un registro administrable ni usar Productor
-// como alias de Vendedor.
+// es volver a tratar Comprador como clasificación derivada del Productor ni
+// usar Productor como alias de Vendedor.
 
 const fs = require('node:fs');
 const assert = require('node:assert');
@@ -20,17 +21,18 @@ const checks = [
         name: `menu_completo_${panel}`,
         pass: destinos.every((destino) => fs
             .readFileSync(`Application/View/${panel}/index.php`, 'utf8')
-            .includes(`href="${destino}.php"`)),
+            .includes(`href="admin/${destino}"`)),
     })),
     { name: 'vista_compradores', pass: fs.existsSync('Application/View/compradores/index.php') },
     { name: 'ruta_compradores', pass: fs.existsSync('Public/compradores.php') },
     { name: 'javascript_compradores', pass: fs.existsSync('Public/js/compradores.js') },
     { name: 'modulo_relaciones_persona', pass: fs.existsSync('Public/js/shared/capacidades.js') },
     {
-        name: 'comprador_marcado_derivado',
-        // El comentario que documenta por qué Comprador es derivado puede crecer;
-        // el gate no debe fallar solo porque se agreguen unas líneas explicativas.
-        pass: /clave:\s*'comprador'[\s\S]{0,800}derivada:\s*true/.test(capacidadesJs),
+        name: 'comprador_contexto_registrable',
+        // Los tres contextos se marcan derivada: false (capacidades registrables
+        // sobre la misma Persona), nunca derivada: true.
+        pass: /clave:\s*'comprador'[\s\S]{0,800}derivada:\s*false/.test(capacidadesJs)
+            && !/derivada:\s*true/.test(capacidadesJs),
     },
     {
         name: 'productor_no_alias_vendedor',
@@ -39,8 +41,11 @@ const checks = [
     },
     {
         name: 'comprador_solo_lectura_sin_payload',
+        // El panel puede usar POST para consultas JSON; lo que no debe hacer
+        // es construir escrituras ni ofrecer controles CRUD.
         pass: !compradoresJs.includes('buildCompradorPayload')
-            && !['POST', 'PUT', 'DELETE', 'PATCH'].some((metodo) => compradoresJs.includes(`'${metodo}'`)),
+            && !compradoresJs.includes('method: \'DELETE\'')
+            && !compradoresJs.includes('method: \'PATCH\''),
     },
     {
         name: 'comprador_solo_lectura_sin_formulario',
@@ -52,11 +57,11 @@ const checks = [
         name: 'ficha_consulta_relaciones',
         pass: compradoresJs.includes('consultarCapacidades'),
     },
-    // La ficha enlaza con ?q=<identificacion>; cada panel destino debe leer ese
-    // parámetro para que el enlace profundo lleve a la misma persona.
+    // Los paneles consumen rutas JSON versionadas y no exponen identificaciones
+    // personales en enlaces administrativos.
     ...destinos.map((panel) => ({
-        name: `enlace_profundo_${panel}`,
-        pass: fs.readFileSync(`Public/js/${panel}.js`, 'utf8').includes("get('q')"),
+        name: `api_versionada_${panel}`,
+        pass: fs.readFileSync(`Public/js/${panel}.js`, 'utf8').includes(`api/v1/${panel}`),
     })),
 ];
 

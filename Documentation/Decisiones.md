@@ -44,7 +44,7 @@ expresa.
 
 ## DEC-PER-005 - Tablas sin objetos de integridad
 
-El modelo final de base preparada tiene exactamente 30 tablas y mantiene cero PK, FK, UNIQUE,
+El modelo final de base preparada tiene exactamente 34 tablas y mantiene cero PK, FK, UNIQUE,
 CHECK, índices, ENUM, defaults, triggers y objetos programables.
 
 ## DEC-C04-001 - Instrucción docente vigente
@@ -123,11 +123,11 @@ respaldo y etiqueta corresponden a Corrección 04.
 
 ## DEC-C04-008 - Compradores
 
-Estado: SUPERADA parcialmente por P0-C. `tbcomprador` se conserva por
-compatibilidad con el esquema y datos existentes, pero ya no es la entidad
-normativa para modelar el comportamiento comprador. La clasificación Comprador
-del negocio debe vivir como histórico del Productor, no como histórico propio
-de `tbcomprador`.
+Estado: SUPERADA por DEC-28/29. `tbcomprador` ya no es compatibilidad temporal
+ni insumo de retiro: vuelve a ser la fuente de verdad del contexto Comprador de
+la Persona, con su propio estado e historial en bitácora. La clasificación que
+modelaba el histórico del Productor queda en `tbproductorclasificacionperiodo`
+como registro analítico.
 
 No se agregan relaciones, claves, índices, defaults ni valores automáticos.
 No se crea `tbcompradorestadoperiodo`.
@@ -136,9 +136,11 @@ No se crea `tbcompradorestadoperiodo`.
 
 ## DEC-TRAMO-7 - Retiro frontend de Comprador
 
-En el tramo 7 se retira Comprador del frontend; Productor, Transportista,
-Vehículo y Métodos de pago se mantienen como paneles activos, no se toca el
-contrato `estado` y el retiro respeta el alcance secuencial del remodelado.
+Estado: SUPERADA por DEC-28/29. El retiro de Comprador del frontend quedó
+revertido: Comprador regresa como contexto de Persona con su panel, y el
+endpoint `/api/compradores.php` vuelve a inscribir (POST), desactivar (DELETE)
+y reactivar (PATCH). Productor, Comprador, Transportista, Vehículo y Métodos de
+pago se mantienen como paneles activos y no se toca el contrato `estado`.
 
 Este bloque solamente toca base de datos y documentación. Ninguna decisión se
 implementa con código de aplicación.
@@ -246,7 +248,7 @@ definida.
 
 `dbtindervacas` en MySQL es la base del curso y la que debe estar correcta. El
 espejo PostgreSQL de `services/supabase-database` se actualizó al mismo modelo
-mediante migraciones versionadas: 30 tablas, `tbpersona` como identidad única,
+mediante migraciones versionadas: 34 tablas, `tbpersona` como identidad única,
 `tbproductordireccion` normalizada, estructura comercial histórica y el mismo
 criterio de cero llaves, restricciones, índices y valores automáticos. El
 espejo sigue a MySQL; nunca al revés. Aplicar el cambio remoto requiere
@@ -424,16 +426,23 @@ prueba de que la política nueva ya esté implementada.
 
 ## DEC-P0C-001 - Matriz arquitectónica cerrada
 
-P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
-decisión vigente es: Productor es núcleo; Comprador y Vendedor son
-clasificaciones históricas derivadas del Productor; `tbvendedor` no existe;
-`tbcomprador` se conserva solo como legacy de compatibilidad temporal hasta que
-Backend deje de depender de ella; Compra y Venta son hechos históricos propios.
+Estado: SUPERADA por DEC-28/29. `tbcomprador` no es legacy por retirar: vuelve a
+ser la fuente de verdad del contexto Comprador, y
+`tbproductorclasificacionperiodo` (`tipo = COMPRADOR`) queda como registro
+analítico (lo dicho sobre vendedor se mantiene: `tbvendedor` no existe y
+VENDEDOR es clasificación del Productor).
 
-La representación vigente de base es `tbproductorclasificacionperiodo`, con
-`tbproductorclasificacionperiodotipo` validado por PHP como `COMPRADOR` o
-`VENDEDOR`. Un Productor puede tener ambos tipos abiertos simultáneamente. No
-se crean `tbvendedor`, `tbvendedorestadoperiodo`, `tbvendedoractividad` ni
+P0-C queda documentado en `Documentation/MatrizArquitectonicaP0C.md`. La
+decisión vigente es: Productor es núcleo; Comprador es un contexto de negocio
+enlazado a la misma Persona y se consulta sin CRUD administrativo; Vendedor no
+es una entidad separada; `tbvendedor` no existe; Compra y Venta son hechos
+históricos propios.
+
+La representación vigente del contexto es `tbcomprador` enlazado mediante
+`tbpersonaid`; su alta pertenece a un proceso de negocio aprobado. Los
+periodos de `tbproductorclasificacionperiodo` se conservan únicamente como
+histórico legado y se validan por PHP. No se crean `tbvendedor`,
+`tbvendedorestadoperiodo`, `tbvendedoractividad` ni
 `tbcompradorestadoperiodo`.
 
 La matriz también deja PENDIENTE lo que no tiene evidencia suficiente:
@@ -470,7 +479,15 @@ Transporte agrega `tbtransportistaestadoperiodo`, `tbtransportistaflete` y
 NULL si no existe evidencia; `fecharegistroensistema` solo prueba cuándo el
 sistema registró el periodo.
 
-## DEC-DBREADY-005 - Pasada de concordancia contra la evidencia directa de Calidad
+## DEC-DBREADY-005 - Pasada de concordancia contra la evidencia directa de Calidad (histórica)
+
+**Estado: SUPERADA para Comprador por DEC-P0C-001 y DEC-DBREADY-008.** Se
+conserva como trazabilidad del diagnóstico que llevó a retirar el CRUD manual;
+no describe la fuente vigente del contexto Comprador.
+
+Estado: SUPERADA por DEC-28/29. `tbcomprador` no es legacy por retirar: vuelve a
+ser la fuente de verdad del contexto Comprador, y `tbproductorclasificacionperiodo`
+(`tipo = COMPRADOR`) queda como registro analítico.
 
 Última revisión del esquema contra la evidencia directa, sin tocar Backend ni
 ampliar alcance. Ocho divergencias corregidas:
@@ -524,13 +541,17 @@ ampliar alcance. Ocho divergencias corregidas:
    `tbpagometodoactivo` no cambian: son disponibilidad técnica, no estado de
    negocio.
 
-El esquema queda en 30 tablas. La migración 006 sigue siendo solo
+El esquema queda en 34 tablas. La migración 006 sigue siendo solo
 `CREATE TABLE IF NOT EXISTS`, así que un entorno que ya la había corrido con la
 versión anterior debe reinstalarse limpio: la corrección renombra y retira
 columnas y una migración aditiva no puede hacerlo sin perder o duplicar datos.
 Ningún entorno con datos reales tiene esas tablas todavía.
 
 ## DEC-DBREADY-006 - Paso (a) del retiro de tbcomprador: la lectura
+
+Estado: SUPERADA por DEC-28/29. La lectura de `esComprador()` sigue siendo
+válida como consulta analítica del periodo `COMPRADOR`, pero ya no es la fuente
+de verdad del contexto: esa es `tbcomprador`.
 
 Primer paso, y solo el primero, del plan de retiro de DEC-DBREADY-005. La
 pregunta "¿este productor es comprador?" ya no se responde con
@@ -567,6 +588,12 @@ clasificación en el panel hoy los mostraría a todos como no compradores.
 El orden importa y por eso (b) va después, con su propia migración de datos.
 
 ## DEC-DBREADY-007 - Paso (b): backfill primero, escrituras después
+
+Estado: SUPERADA por DEC-28/29. El backfill conserva propósito analítico
+(`Tools/backfill-clasificacion-comprador.php --check/--apply` documenta el
+historial), pero las escrituras del contexto vuelven a `tbcomprador` y la
+prueba `Tests/comprador_backfill_test.php` ya no existe: su contrato quedó
+absorbido por `comprador_clasificacion_test.php` y `comprador_test.php`.
 
 Segundo paso del retiro de la tabla legacy de comprador, con estrategia
 expandir → migrar → cortar. El orden no es negociable: si primero se cambiara la
@@ -795,7 +822,7 @@ tramo 13.
 
 Ese cierre queda como antecedente histórico. El contrato vigente sí crea tablas
 nuevas en DEC-DBREADY-001 y `Database/Tests/comprobacionestructura.sql` ahora
-espera 30 tablas.
+espera 34 tablas.
 
 ## DEC-21 - Fin del UPDATE destructivo de dirección
 
@@ -836,3 +863,252 @@ contrato de errores por campo que consume toda la API (HTTP 422 + `errors`). El 
 `ProductorValidacionException` a `ProductorHttpException` para no cambiar la respuesta hacia el frontend.
 `ProductorController` deja de reimplementar `TIPOS_IDENTIFICACION`, `validarIdentificacion`, `validarDireccion`,
 `textoCampo`, `rechazarCamposDesconocidos`, etc.; la única fuente es el servicio.
+
+## DEC-27 - Captura automática de ubicación del navegador por inicio de sesión
+
+La ubicación del navegador se captura automáticamente en cada inicio de sesión del panel privado (una lectura
+puntual, `origen='NAVEGADOR'`). La fecha la define PHP con el reloj del servidor y el cliente no puede falsearla.
+El histórico en `tbproductorubicacion` es append-only y conserva todas las observaciones sin sobrescritura ni
+purga.
+
+La unicidad "una captura por sesión" se implementa en el cliente mediante un marcador en `sessionStorage`
+(clave `tindercows:ubicacion-sesion`), sin agregar índices, constraints ni columnas al esquema existente.
+Cada nuevo inicio de sesión suma una fila nueva; recargar la página no re-dispara la captura.
+
+El `productorId` del actor autenticado se resuelve por identidad mediante el endpoint `GET api/identidad.php`,
+que devuelve `{ esProductor, productorId, identificacionNumero }` a partir del `ActorContext` del Bearer token.
+Sin sesión autenticada (demo local) la captura se omite por diseño (actor `NO_AUTENTICADO` →
+`esProductor:false`). El esquema actual de `tbproductorubicacion` es suficiente y no se modifica.
+
+Los módulos nuevos son `Public/js/shared/geo.js` (captura pura de GPS, agnóstico de mapa) y
+`Public/js/shared/ubicacion-sesion.js` (orquestador background, nunca lanza). El enganche se realiza en
+`auth-gate.js` tras revelar la UI privada, sin tocar `login.js`.
+
+Nota (avance 3): la identidad descrita arriba es la superficie de consulta de DEC-30; desde el avance 3
+`GET api/identidad.php` también resuelve los contextos Comprador y Transportista de la Persona y expone
+`persona` con los datos personales, manteniendo `esProductor`/`productorId`/`identificacionNumero` para no
+romper `auth-gate.js`.
+
+## DEC-28 - Comprador vuelve a ser un contexto de Persona con escritura
+
+Sustituye el corte de DEC-C04-008/DEC-TRAMO-7. `tbcomprador` deja de tratarse
+como tabla legacy que hay que retirar: es la fuente de verdad del contexto
+Comprador de la Persona, con su propio estado y la audición de sus operaciones
+en `tbbitacora`. `tbproductor`, `tbcomprador` y `tbtransportista` son tres
+contextos de la misma Persona; el objetivo de navegación de las fichas es
+consultar la misma identidad en un perfil u otro
+(`Public/js/shared/capacidades.js`), y la consulta puede devolver las
+capacidades propias de la persona.
+
+Contrato de aplicación:
+- `Application/Model/Comprador.php` (modelo de escritura), el controlador y
+  `Public/api/compradores.php` sustituyen al `CompradorConsultaController` de la
+  etapa read-only, que se elimina.
+- Concurrencia: bloqueo nombrado `tindercows_persona_alta`, el mismo del alta
+  de Persona; la inscripción reutiliza la persona por identificación o la crea
+  si no existe y luego abre el contexto.
+- POST inscribir → 201 (`INSCRIBIR`); persona inactiva reactivada → 201
+  (`REACTIVAR`); ya comprador activo → 200 sin tocar nada; persona existente con
+  datos personales distintos → 409 `errors['identificacion.numero']`.
+- DELETE desactiva solo el contexto, PATCH reactiva la misma fila; ambos 404 si
+  no existe el comprador y 409 si la persona está inactiva. Ningún endpoint
+  ejecuta `DELETE FROM`.
+- El panel conserva su vista de solo lectura: no construye cuerpos ni emite
+  verbos de escritura; la escritura ocurre contra la API.
+
+## DEC-29 - El periodo COMPRADOR queda como registro analítico
+
+`tbproductorclasificacionperiodo` (`tipo = COMPRADOR`) deja de ser fuente de
+verdad del contexto Comprador (DEC-28) y queda como registro analítico:
+permite responder cuándo y con qué evidencia una persona fue comprador, sin
+gobernar la operación del contexto. `Tools/backfill-clasificacion-comprador.php`
+conserva la migración histórica heredada (`--check` audita, `--apply` migra),
+ahora con propósito analítico y sin el plan de retirar `tbcomprador`. El
+periodo con `fechafin = NULL` no abre ni cierra el contexto: solo documenta el
+historial.
+
+## DEC-30 - Superficie autenticada vs superficie pública en la API
+
+La API se divide en dos superficies. La **superficie de administración** exige
+actor autenticado en **todos** sus verbos, lecturas y escrituras por igual: la
+aceptación del avance 2 "sin JWT no se crean entidades" se vuelve estricta y
+también impide leer con la API a un actor anónimo. La **superficie pública**
+responde datos de consulta sin exigir sesión.
+
+- Administración (guard en todos los verbos): `productores`,
+  `productores-direccion`, `transportistas`, `vehiculos`, `pagometodos`,
+  `compradores`, `fincas-direccion` y `transportistas-vehiculos`.
+- Pública (sin guard, solo lectura): `publicaciones` (GET), `identidad` (GET) y
+  `productores-ubicacion` (GET: histórico de ubicación). La telemetría de
+  ubicación sigue siendo abierta para no bloquear reportes al operar local.
+- "Inscribirse" (POST `compradores`) es alta de contexto y por tanto exige
+  sesión: sin sesión responde 401 igual que el resto de la superficie admin.
+
+`Application/Service/AuthGuard` resuelve al actor (`SupabaseActorResolver`) y
+rechaza:
+- sin sesión → 401 `errors['auth'] = 'SIN_SESION'`;
+- con sesión pero sin el rol técnico exigido → 403
+  `errors['auth'] = 'ROL_REQUERIDO'`;
+- un `Authorization` mal formado (no Bearer) → 401 desde el resolutor, sin
+  depender del sidecar.
+
+El JWT se verifica contra la clave pública de Supabase; el sidecar local no está
+configurado para firmar, así que una llamada con Bearer a cualquier superficie
+responde 503 (`SERVICE_NOT_CONFIGURED`) y el modo de desarrollo local sin
+sesión navega en modo público de solo lectura. La corrección de ese diagnóstico
+es operativa, no de código.
+
+El orden de precedencia en los endpoints admin se conserva para no romper los
+chequeos preexistentes: 405 (verbo prohibido), 415 (Content-Type) y 400 (cuerpo
+JSON malformado) ocurren antes de resolver la sesión, y OPTIONS responde 204 sin
+sesión porque es preflight de CORS. Los errores de `HttpException` se propagan
+con su `errors` en la respuesta del endpoint, para que el frontend presente
+`SIN_SESION` como "inicie sesión" sin depender del texto.
+
+La superficie de identidad (GET `api/identidad.php`) se extiende en el avance 3
+para resolver los tres contextos de la Persona, público y autenticado
+(véase DEC-31 para la política de duplicados y DEC-32 para la semilla maestra):
+sin sesión responde `{ esProductor, esComprador, esTransportista }` en `false` y
+`persona:null`; con sesión resuelve `tbpersona`/`tbproductor`/`tbcomprador`/
+`tbtransportista` y devuelve la persona con los contextos activos. El dato
+`esProductor` que consume `auth-gate.js` se conserva, de modo que el frontend no
+cambia.
+
+## DEC-31 - Duplicados imposibles: tablas de unicidad como defensa en profundidad
+
+La unicidad de una Persona por número de identificación se defiende en dos
+capas. La primera es **estructural, demostrable por inspección del esquema**:
+índices PRE-`INSERT` en las tablas madres (`tbpersona.identificacionnumero`,
+`tbproductor.pasaporte`, `tbcomprador.pasaporte`, `tbtransportista.pasaporte` y
+`tbvehiculo.placa`, entre otras) hacen que un segundo INSERT con el mismo número
+falle con error de base de datos y revierta la transacción. En la superficie
+admin, cualquier respuesta de error de escritura sigue el sobre
+`{success,message,data,errors}` sin romper el contrato de la API.
+
+La segunda capa es **de aplicación**: los servicios de escritura detectan el
+duplicado antes de INSERTAR (consulta previa por el mismo identificador) y
+responden de forma idempotente o con 409 explícito:
+
+- Alta de Persona/Productor/Comprador/Transportista con número ya existente →
+  responde 409 `errors['identificacion.numero']` cuando la identidad difiere;
+  200 sin tocar nada cuando el número ya pertenece a la misma identidad y la
+  operación es un re-alta/inscripción repetida.
+- Alta de vehículo con placa repetida → 409 `errors['placa']`.
+- Cuando la operación admitida es guardar un **nuevo registro histórico de un
+  contexto existente** (ej. otra ubicación para el mismo actor), el duplicado no
+  se bloquea: se emite una advertencia informativa (`warnings`) o simplemente se
+  permite el registro, porque la unicidad aplica al actor, no a sus
+  observaciones. El histórico sigue siendo append-only (DEC-27).
+
+La política queda demostrada por contrato en `Tests/duplicados_test.php`
+(nivel controlador, 409/advertencia) y `Tests/duplicados_api_http_test.php`
+(nivel HTTP: todas las escrituras admin anónimas → 401 `SIN_SESION` y las
+lecturas públicas preservan el sobre de respuesta).
+
+## DEC-32 - Semilla maestra: instalación limpia verificable
+
+Los datos iniciales de instalación se siembran con un **tool PHP transaccional**
+(`Tools/seed-maestra.php`), nunca con SQL suelto ni IDs asignados a mano: el
+incremento de `MAX(id)+1` y las fechas las define el propio tool bajo bloqueo
+`tindercows_seed` para que dos ejecuciones simultáneas no colisionen. Es
+idempotente por diseño: si el dato ya existe (mismo identificador), la ejecución
+lo omite y no rompe nada; `--check` audita el estado de la instalación
+(COMPLETA/INCOMPLETA con código de salida 0/1) y `--limpiar` revierte todo en
+una transacción.
+
+Roles sembrados (IDs civiles fijos, no autoincrementales): dos productores
+(`104550123`, `3101556677`), un comprador (`3101333344`) y un transportista
+(`108550999`), con fincas `Finca La Primavera`/`Finca El Bosque`/`Finca Los
+Cerros` y vehículos con placas `ABC-148`/`ABC-901`. Se evitan los nombres de las
+fincas de los datos de demo del avance anterior (`Finca El Roble`,
+`Finca Valle Verde`, `Finca La Esperanza`, `Finca La Palma`) para que la semilla
+no colisione con la demo local de escritura. La semilla **no** agrega métodos de
+pago: `tbpagometodo` conserva exactamente 1 fila inicial de la siembra SQL 101
+porque `Tests/pagometodo_test.php` la asume (`--check` queda COMPLETA sin
+pagometodos extra).
+
+La instalación limpia es verificable de punta a punta con
+`Tests/instalacion_limpia_test.php`: `schema_manifest()` reporta las 34 tablas
+canónicas vivas en `information_schema`, la semilla es idempotente (dos
+ejecuciones producen los mismos conteos), las tablas madres cumplen sus mínimos
+de filas, no hay IDs duplicados ni huérfanos por foreign keys, la superficie
+pública responde HTTP 200 con el sobre `{success,message,data}` intacto y la
+resolución de identidad (DEC-30) resuelve los contextos de las personas
+sembradas.
+
+## DEC-33 - Superficie del navegador: identidad resuelve autenticado vs público
+
+El backend no implementa login propio (DEC-30): el actor se resuelve desde el
+encabezado `Authorization: Bearer` y `GET api/identidad.php` devuelve los
+contextos de la persona (Productor/Comprador/Transportista). El frontend no
+inventa una sesión: el módulo `Public/js/shared/sesion.js` consulta la
+superficie de identidad y decide el modo del navegador.
+
+- **Con Bearer real** (proveedor de identidad): `identidad.php` devuelve
+  `persona` y `api.js` adjunta el token a todas las peticiones (`setBearer`),
+  así las superficies privadas dejan de responder 401 y el actor queda
+  conservado en `sessionStorage` (`tindercows:actor`).
+- **Sin Bearer** (demo local): el resultado es modo público de solo lectura.
+  El marcador local `tindercows:login` solo abre el shell privado para
+  inspección; cualquier escritura responde 401 `SIN_SESION` y la UI lo
+  traduce a "inicie sesión" (nunca a un error genérico).
+- `login.php` resuelve la superficie al enviar el formulario
+  (`flujoLogin` → `identidad.php` GET) y conserva actor + Bearer únicamente
+  cuando el proveedor devolvió una persona real.
+
+Consecuencia: la sesión real del navegador se logra con el proveedor de
+identidad, sin duplicar un login de servidor; `identidad.php` sigue siendo GET
+público (DEC-30) y el contrato `{success,message,data,errors}` no cambia.
+
+## DEC-34 - Fincas repetibles con dirección semántica (Tramo C)
+
+El formulario de productores captura fincas con el componente "Agregar finca"
+(`Public/js/shared/fincas-lista.js`): una lista editable donde cada finca tiene
+su nombre y su propia dirección (provincia → cantón → distrito → pueblo →
+señas), en lugar del campo agrupado por líneas.
+
+- El payload del alta/puesta al día sigue enviando `fincas` solo como
+  `[{nombre}]` porque `ValidacionService` exige "únicamente nombre"; la
+  dirección de cada finca se asocia con `fincas-direccion.php`
+  (201/422/404) después de guardar el productor — la dirección vive en la
+  finca, no en la persona (DEC-14).
+- Regla de acumuladores (DEC-31): un nombre repetido dentro del mismo
+  formulario no se agrega dos veces; un nombre repetido entre productores
+  distintos es legítimo y solo genera advertencia, nunca bloqueo.
+- La prueba de paridad (`Tests/frontend/payload_parity.test.mjs`) fija el
+  cuerpo exacto y `Tests/duplicados_test.php` demuestra la política sin tocar
+  esquema.
+
+Consecuencia: "una persona con 2 fincas envía el form y quedan 2 fincas (o 1 si
+una ya existía); cada finca expone su dirección" se cumple respetando el
+contrato del backend y la verificación HTTP (fincas_direccion_http_test,
+api_productores_test).
+## DEC-COM-001 - Escrituras comerciales bloqueadas por el contrato de identidad
+
+Las pantallas de publicar, comprar, pujar, favoritos y contacto no deben
+inventar persistencia en `sessionStorage` ni escribir contra un modelo que
+identifique al Comprador como Productor. El esquema histórico usa
+`tbproductorcompradorid` en `tbcompra` y `tbproductorid` en
+`tbanimalinteraccion`/`tbcarrito`; eso contradice la regla de Calidad de que una
+Persona puede activar el contexto Comprador sin activar Productor.
+
+Hasta aprobar la representación de Persona/Comprador y su migración paralela
+MySQL/PostgreSQL, la interfaz solo consulta publicaciones, conserva borradores
+no sensibles y comunica que la operación comercial está pendiente. No se
+registran intenciones, compras o pujas falsas en el navegador.
+
+## DEC-DBREADY-009 - Normalización de volúmenes MySQL heredados
+
+Las instalaciones creadas antes de la versión canónica pueden conservar
+`tbcompradortelefonohistorico`, columnas con nombres antiguos, un alias de
+Persona obligatorio o no tener todavía las coordenadas opcionales de
+`tbdireccion`. Las migraciones `009normalizahistoricocomprador.sql`,
+`010normalizapersonaalias.sql` y `008coordenadasdireccionfinca.sql` alinean
+esas instalaciones con las 34 tablas canónicas.
+
+La migración 009 hace preflight y aborta ante una colisión de nombres o un
+teléfono que pudiera truncarse; la 010 solo vuelve opcional `tbpersonaalias` y
+conserva sus valores. Ninguna de ellas crea restricciones, índices, triggers,
+procedimientos ni datos históricos inventados. La base persistente debe
+respaldarse antes de aplicarlas y después verificarse con `schema_test.php` e
+`instalacion_limpia_test.php`.

@@ -6,7 +6,7 @@ import {
 } from './shared/list-state.js';
 import { createToast } from './shared/toast.js';
 
-const API_URL = 'api/vehiculos.php';
+const API_URL = 'api/v1/vehiculos';
 const ETIQUETAS = { singular: 'vehículo', plural: 'vehículos' };
 
 /**
@@ -67,14 +67,12 @@ function initialize() {
         state = started.state;
         render();
 
-        const parameters = new URLSearchParams({
-            pagina: String(state.page), tamanoPagina: String(state.pageSize),
-        });
-        if (elements.search.value.trim()) parameters.set('q', elements.search.value.trim());
-        if (elements.status.value !== 'TODOS') parameters.set('estado', elements.status.value);
+        const consulta = { pagina: state.page, tamanoPagina: state.pageSize };
+        if (elements.search.value.trim()) consulta.q = elements.search.value.trim();
+        if (elements.status.value !== 'TODOS') consulta.estado = elements.status.value;
 
         try {
-            const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
+            const response = await request(API_URL, { method: 'POST', body: JSON.stringify({ consulta }), signal: listController.signal });
             const list = Array.isArray(response.data?.vehiculos) ? response.data.vehiculos : [];
             vehiculos.clear();
             list.forEach((vehiculo) => vehiculos.set(String(vehiculo.vehiculoId), vehiculo));

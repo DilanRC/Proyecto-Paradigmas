@@ -25,8 +25,8 @@ $checks = [
     'servicio_vercel_explicito' => ($vercelConfiguration['services']['app']['entrypoint'] ?? null) === 'Dockerfile.vercel',
     'preview_solo_dev' => ($vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null) === true
         && ($vercelConfiguration['git']['deploymentEnabled']['main'] ?? null) === true
-        && ($vercelConfiguration['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
-        && !array_key_exists('ignoreCommand', $vercelConfiguration['services']['app'] ?? [])
+        && ($vercelConfiguration['services']['app']['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
+        && !array_key_exists('ignoreCommand', $vercelConfiguration)
         && str_contains($vercelIgnoreBuild, 'VERCEL_GIT_COMMIT_REF:-}" == "dev"')
         && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"'),
     'registro_con_poda' => is_file("{$root}/Tools/vercel-prune-registry.sh")
@@ -37,6 +37,9 @@ $checks = [
     'phpmyadmin_local' => str_contains($compose, 'phpmyadmin:5.2.2-apache')
         && str_contains($compose, 'PMA_HOST: db')
         && str_contains($readme, 'phpMyAdmin: <http://localhost:8081>'),
+    'auth_publica_en_app' => str_contains($compose, 'SUPABASE_URL: ${SUPABASE_URL}')
+        && str_contains($compose, 'SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}')
+        && str_contains($compose, '102administrador.sql'),
     'nombre_db_mercado_ganadero' => str_contains($environmentExample, 'DB_NAME=bdmercadoganadero')
         && str_contains($databaseConfiguration, "'bdmercadoganadero'")
         && str_contains($readme, 'Base MySQL: `bdmercadoganadero`')

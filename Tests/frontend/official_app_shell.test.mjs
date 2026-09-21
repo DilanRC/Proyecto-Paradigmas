@@ -28,11 +28,13 @@ test('la landing se comporta como producto y deriva la exploración a una ruta p
     const explore = read('Application/View/explorar/index.php');
 
     assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
-    assert.ok(home.includes('href="explorar.php"'));
+    assert.ok(home.includes('href="explorar"'));
     assert.equal(home.includes('id="modulos"'), false);
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false);
     assert.ok(explore.includes('data-explore-deck'));
-    assert.ok(explore.includes('data-explore-action="Pujar"'));
+    // Las tarjetas y sus acciones las construye explore.js desde
+    // api/publicaciones.php: en el PHP solo queda el contenedor del deck.
+    assert.ok(explore.includes('js/explore.js'));
 });
 
 test('navbar y búsqueda pública conservan icono más texto sin meter legal en navegación primaria', () => {
@@ -46,17 +48,17 @@ test('navbar y búsqueda pública conservan icono más texto sin meter legal en 
     assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
 });
 
-test('login existe como entrada navegable, no guarda contraseña y vuelve a Explorar', () => {
+test('login existe como entrada navegable, usa Supabase Auth y vuelve a Explorar', () => {
     const home = read('Application/View/home/index.php');
     const login = read('Application/View/login/index.php');
     const js = read('Public/js/login.js');
 
-    assert.match(home, /href="login\.php"/);
+    assert.match(home, /href="entrar"/);
     assert.match(login, /id="formulario-login"/);
     assert.match(login, /type="password"/);
-    assert.match(js, /sessionStorage\.setItem\(SESSION_KEY/);
-    assert.match(js, /: 'explorar\.php';/);
+    assert.match(js, /signInWithPassword/);
     assert.doesNotMatch(js, /password[^;]*sessionStorage\.setItem/s);
+    assert.match(js, /: 'explorar';/);
 });
 
 test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () => {
@@ -70,4 +72,12 @@ test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () =
     assert.ok(adminJs.includes("footer.className = 'admin-table-footer'"));
     assert.ok(refinementsCss.includes('.admin-table-footer .pagination'));
     assert.ok(adminJs.includes("trigger.className = 'admin-account-menu__trigger'"));
+});
+
+test('registro limita aria-live al estado y publicar comunica persistencia real', () => {
+    const registro = read('Application/View/registro/index.php');
+    const publicar = read('Application/View/publicar/index.php');
+    assert.doesNotMatch(registro, /class="onboarding-card" aria-live=/);
+    assert.match(registro, /id="registro-status"[^>]*aria-live="polite"/);
+    assert.match(publicar, /Guardado persistente al publicar/);
 });

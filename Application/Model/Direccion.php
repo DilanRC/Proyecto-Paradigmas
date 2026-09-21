@@ -13,15 +13,6 @@ final class Direccion
 
     public function __construct(private readonly PDO $conexion) {}
 
-    /**
-     * Envuelve la operación bajo el lock global de alta de direcciones.
-     * El llamador debe incluir dentro del callback toda la transacción que
-     * contiene el cálculo MAX(tbdireccionid)+1, el INSERT y su COMMIT/ROLLBACK.
-     *
-     * La profundidad se controla en PHP para no depender de funciones de
-     * inspección específicas de MySQL. NamedLock ya abstrae la adquisición y
-     * liberación para MySQL y PostgreSQL.
-     */
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         $this->adquirirBloqueoAlta();
@@ -34,12 +25,6 @@ final class Direccion
         }
     }
 
-    /**
-     * Crea una dirección de forma segura cuando no existe una transacción
-     * exterior. Si ya hay una transacción abierta, el lock no puede liberarse
-     * antes de su COMMIT/ROLLBACK, por lo que se obliga a usar
-     * ejecutarConBloqueoAlta() alrededor de la transacción completa.
-     */
     public function crearConBloqueo(array $direccion): int
     {
         if ($this->conexion->inTransaction()) {
@@ -52,12 +37,6 @@ final class Direccion
         return $this->ejecutarConBloqueoAlta(fn (): int => $this->crear($direccion));
     }
 
-    /**
-     * Crea usando el lock adquirido por esta misma instancia mediante
-     * ejecutarConBloqueoAlta(). ProductorDireccion y FincaDireccion comparten
-     * esta instancia y por eso pueden crear la fila sin consultar funciones
-     * específicas del motor de base de datos.
-     */
     public function crearConBloqueoExistente(array $direccion): int
     {
         if ($this->profundidadBloqueoAlta <= 0) {
@@ -75,10 +54,12 @@ final class Direccion
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbdireccion
              (tbdireccionid, tbdireccionprovincia, tbdireccioncanton,
-              tbdirecciondistrito, tbdireccionpueblo, tbdireccionsenas)
-             VALUES (:direccionId, :provincia, :canton, :distrito, :pueblo, :senas)'
+              tbdirecciondistrito, tbdireccionpueblo, tbdireccionsenas,
+              tbdireccionlatitud, tbdireccionlongitud)
+             VALUES (:direccionId, :provincia, :canton, :distrito, :pueblo, :senas,
+              :latitud, :longitud)'
         );
-        $sentencia->execute(['direccionId' => $direccionId, ...$direccion]);
+        $sentencia->execute($this->parametros($direccion, $direccionId));
 
         return $direccionId;
     }
@@ -91,10 +72,12 @@ final class Direccion
                  tbdireccioncanton = :canton,
                  tbdirecciondistrito = :distrito,
                  tbdireccionpueblo = :pueblo,
-                 tbdireccionsenas = :senas
+                 tbdireccionsenas = :senas,
+                 tbdireccionlatitud = :latitud,
+                 tbdireccionlongitud = :longitud
              WHERE tbdireccionid = :direccionId'
         );
-        $sentencia->execute(['direccionId' => $direccionId, ...$direccion]);
+        $sentencia->execute($this->parametros($direccion, $direccionId));
     }
 
     public function buscar(int $direccionId): ?array
@@ -104,7 +87,9 @@ final class Direccion
                     tbdireccioncanton AS canton,
                     tbdirecciondistrito AS distrito,
                     tbdireccionpueblo AS pueblo,
-                    tbdireccionsenas AS senas
+                    tbdireccionsenas AS senas,
+                    tbdireccionlatitud AS latitud,
+                    tbdireccionlongitud AS longitud
              FROM tbdireccion
              WHERE tbdireccionid = :direccionId'
         );
@@ -112,6 +97,20 @@ final class Direccion
         $fila = $sentencia->fetch();
 
         return $fila === false ? null : $fila;
+    }
+
+    private function parametros(array $direccion, int $direccionId): array
+    {
+        return [
+            'direccionId' => $direccionId,
+            'provincia' => $direccion['provincia'],
+            'canton' => $direccion['canton'],
+            'distrito' => $direccion['distrito'],
+            'pueblo' => $direccion['pueblo'] ?? null,
+            'senas' => $direccion['senas'] ?? null,
+            'latitud' => $direccion['latitud'] ?? null,
+            'longitud' => $direccion['longitud'] ?? null,
+        ];
     }
 
     private function siguienteId(): int

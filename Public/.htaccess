@@ -1,8 +1,102 @@
+RewriteEngine On
+
 DirectoryIndex index.php
 Options -Indexes
+
+# Apache puede ocultar Authorization antes de entregarlo a PHP. El backend
+# resuelve la Persona únicamente desde este Bearer verificado.
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
+
+# La URL pública no expone los wrappers PHP. Estas redirecciones solo se
+# activan cuando la persona pidió directamente el legado; las reescrituras
+# internas de abajo no vuelven a dispararlas.
+RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (^|&)capacidad=comprador(&|$) [NC]
+RewriteRule ^registro\.php$ /registro/comprador [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (^|&)capacidad=productor(&|$) [NC]
+RewriteRule ^registro\.php$ /registro/productor [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (^|&)capacidad=transportista(&|$) [NC]
+RewriteRule ^registro\.php$ /registro/transportista [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteRule ^registro\.php$ /registro [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s/+login\.php(?:[?\s]) [NC]
+RewriteCond %{QUERY_STRING} (^|&)area=admin(&|$) [NC]
+RewriteRule ^login\.php$ /admin/entrar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s/+login\.php(?:[?\s]) [NC]
+RewriteRule ^login\.php$ /entrar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s/+index\.php(?:[?\s]) [NC]
+RewriteRule ^index\.php$ / [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/explorar\.php(?:[?\s]) [NC]
+RewriteRule ^explorar\.php$ /explorar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/fletes\.php(?:[?\s]) [NC]
+RewriteRule ^fletes\.php$ /fletes [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/mi-actividad\.php(?:[?\s]) [NC]
+RewriteRule ^mi-actividad\.php$ /mi-actividad [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/publicar\.php(?:[?\s]) [NC]
+RewriteRule ^publicar\.php$ /publicar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/sobre-nosotros\.php(?:[?\s]) [NC]
+RewriteRule ^sobre-nosotros\.php$ /sobre-nosotros [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/como-usar\.php(?:[?\s]) [NC]
+RewriteRule ^como-usar\.php$ /como-usar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/privacidad\.php(?:[?\s]) [NC]
+RewriteRule ^privacidad\.php$ /privacidad [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/terminos\.php(?:[?\s]) [NC]
+RewriteRule ^terminos\.php$ /terminos [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s+/legal\.php(?:[?\s]) [NC]
+RewriteRule ^legal\.php$ /legal [R=301,L,NE,QSD]
+
+# Superficie pública.
+RewriteRule ^$ index.php [END]
+RewriteRule ^explorar/?$ explorar.php [END]
+RewriteRule ^entrar/?$ login.php [END]
+RewriteRule ^registro/?$ registro.php [END]
+RewriteRule ^registro/(comprador|productor|transportista)/?$ registro.php?capacidad=$1 [END,QSA]
+RewriteRule ^fletes/?$ fletes.php [END]
+RewriteRule ^mi-actividad/?$ mi-actividad.php [END]
+RewriteRule ^publicar/?$ publicar.php [END]
+RewriteRule ^sobre-nosotros/?$ sobre-nosotros.php [END]
+RewriteRule ^como-usar/?$ como-usar.php [END]
+RewriteRule ^privacidad/?$ privacidad.php [END]
+RewriteRule ^terminos/?$ terminos.php [END]
+RewriteRule ^legal/?$ legal.php [END]
+
+# Superficie administrativa. El panel sigue siendo PHP internamente, pero
+# nunca se presenta como tal al navegador.
+RewriteRule ^admin/entrar/?$ login.php?area=admin [END,QSA]
+RewriteRule ^admin/dashboard/?$ dashboard.php [END]
+RewriteRule ^admin/productores/?$ productores.php [END]
+RewriteRule ^admin/compradores/?$ compradores.php [END]
+RewriteRule ^admin/transportistas/?$ transportistas.php [END]
+RewriteRule ^admin/vehiculos/?$ vehiculos.php [END]
+RewriteRule ^admin/metodos-pago/?$ pagometodos.php [END]
+
+# API versionada. Los nombres de tablas y archivos son implementación; el
+# contrato público usa recursos semánticos y no filtra extensiones PHP.
+RewriteRule ^api/v1/auth/config/?$ api/auth-config.php [END]
+RewriteRule ^api/v1/admin/status/?$ api/admin-status.php [END]
+RewriteRule ^api/v1/actividad/?$ api/mi-actividad.php [END]
+RewriteRule ^api/v1/identidad/?$ api/identidad.php [END]
+RewriteRule ^api/v1/registro/?$ api/registro.php [END]
+RewriteRule ^api/v1/capacidades/?$ api/capacidades.php [END]
+RewriteRule ^api/v1/publicaciones/?$ api/publicaciones.php [END]
+RewriteRule ^api/v1/publicaciones/interacciones/?$ api/publicacion-interacciones.php [END]
+RewriteRule ^api/v1/productores/?$ api/productores.php [END]
+RewriteRule ^api/v1/productores/direccion/?$ api/productores-direccion.php [END]
+RewriteRule ^api/v1/productores/ubicacion/?$ api/productores-ubicacion.php [END]
+RewriteRule ^api/v1/compradores/?$ api/compradores.php [END]
+RewriteRule ^api/v1/transportistas/?$ api/transportistas.php [END]
+RewriteRule ^api/v1/transportistas/vehiculos/?$ api/transportistas-vehiculos.php [END]
+RewriteRule ^api/v1/vehiculos/?$ api/vehiculos.php [END]
+RewriteRule ^api/v1/metodos-pago/?$ api/pagometodos.php [END]
+RewriteRule ^api/v1/fincas/direccion/?$ api/fincas-direccion.php [END]
+
+# Compatibilidad: los clientes y pruebas antiguas que aún llaman /api/*.php
+# siguen funcionando durante la migración, pero la interfaz ya no los genera.

@@ -1,0 +1,30 @@
+.farm-map-picker{margin-top:1rem;padding:1rem;border:1px solid var(--color-border,#d7ddd9);border-radius:14px;background:var(--color-surface,#fff)}
+.farm-map-picker__copy strong{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}.farm-map-picker__copy p{margin:.35rem 0 0;max-width:72ch}
+.farm-map-picker__actions{display:flex;gap:.65rem;flex-wrap:wrap;margin:.9rem 0 .35rem}
+.farm-map-picker__status{min-height:1.4rem;margin:.5rem 0}.farm-map-picker__coords{font-weight:700;margin:.35rem 0}
+.map-shell[hidden],.map-shell__fallback[hidden],.farm-map-picker__coords[hidden]{display:none!important}
+.map-shell{margin-top:1rem}.map-shell__notice{margin:.4rem 0 .7rem;font-size:.92rem}
+.map-shell__canvas{min-height:280px;height:min(42vh,380px);border-radius:16px;overflow:hidden;border:1px solid var(--color-border,#d7ddd9);background:#eef2ef}
+.map-shell__canvas{touch-action:none;overscroll-behavior:contain}
+.map-shell__fallback{padding:1rem;border:1px dashed currentColor;border-radius:12px;margin-top:.75rem}
+.maplibregl-ctrl-attrib{font-size:11px!important}
+.farm-address-editor{display:grid;gap:1rem;padding:.9rem 0}.farm-address-editor__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.85rem}
+.farm-address-editor__grid .field--full{grid-column:1/-1}
+@media(max-width:720px){.farm-address-editor__grid{grid-template-columns:1fr}.farm-map-picker__actions .button{width:100%}.map-shell__canvas{height:300px;min-height:240px}}
+
+/* Registro: controles de dirección consistentes con el sistema visual público. */
+.farm-address-editor__grid{gap:1rem 1.1rem}
+.farm-address-editor__grid .field{display:grid;align-content:start;gap:.45rem;min-width:0}
+.farm-address-editor__grid .field>span{color:var(--tc-text-soft,#626b5d);font-size:.76rem;font-weight:780;letter-spacing:.01em}
+.farm-address-editor__grid input,.farm-address-editor__grid select,.farm-address-editor__grid textarea{width:100%;min-height:46px;padding:.7rem .8rem;border:1px solid var(--tc-line-strong,#d7ddd9);border-radius:11px;color:var(--tc-text,#26372b);background:var(--tc-bg-elevated,#fff);font:inherit;font-size:.9rem;line-height:1.35;box-sizing:border-box;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}
+.farm-address-editor__grid textarea{min-height:104px;resize:vertical}
+.farm-address-editor__grid input::placeholder,.farm-address-editor__grid textarea::placeholder{color:var(--tc-muted,#80796f);opacity:.9}
+.farm-address-editor__grid input:focus,.farm-address-editor__grid select:focus,.farm-address-editor__grid textarea:focus{outline:0;border-color:var(--tc-primary,#d15f3c);box-shadow:0 0 0 3px var(--tc-glow,rgba(209,95,60,.13))}
+.farm-address-editor__grid input:disabled,.farm-address-editor__grid select:disabled{cursor:not-allowed;opacity:.58}
+.finca-address__title{font-weight:780}.finca-address__meta{color:var(--tc-muted,#80796f);font-size:.78rem;font-weight:600}
+.finca-address>p{margin:.7rem 0 0;color:var(--tc-text-soft,#626b5d);font-size:.88rem;line-height:1.5}
+.farm-map-picker{border-color:var(--tc-line-strong,#d7ddd9);background:color-mix(in srgb,var(--tc-bg-elevated,#fff) 72%,transparent)}
+.farm-map-picker__copy strong{color:var(--tc-text,#26372b)}
+.farm-map-picker__copy p,.farm-map-picker__status{color:var(--tc-text-soft,#626b5d)}
+.button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:.65rem .9rem;border:1px solid var(--tc-line-strong,#d7ddd9);border-radius:999px;color:var(--tc-text,#26372b);background:var(--tc-bg-elevated,#fff);font:inherit;font-size:.82rem;font-weight:780;cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}
+.button:hover{transform:translateY(-1px);border-color:var(--tc-primary,#d15f3c);box-shadow:0 8px 18px var(--tc-glow,rgba(209,95,60,.13))}.button:focus-visible{outline:0;border-color:var(--tc-primary,#d15f3c);box-shadow:0 0 0 3px var(--tc-glow,rgba(209,95,60,.13))}

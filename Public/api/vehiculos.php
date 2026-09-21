@@ -4,6 +4,7 @@
 declare(strict_types=1);
 
 use Application\Controller\VehiculoController;
+use Application\Auth\AdminAuthorization;
 use Application\Auth\SupabaseActorResolver;
 use Configuration\Database;
 use function Configuration\readJsonBody;
@@ -14,11 +15,13 @@ require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
 require_once $raiz . '/Application/Auth/ActorContext.php';
+require_once $raiz . '/Application/Auth/AdminAuthorization.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 foreach (['NamedLock', 'Vehiculo', 'Bitacora'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Service/EstadoService.php';
+require_once $raiz . '/Application/Service/AuthGuard.php';
 require_once $raiz . '/Application/Controller/VehiculoController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
@@ -45,19 +48,33 @@ if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'applicatio
 
 try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
+    $esConsultaPrivada = $metodo === 'POST' && array_key_exists('consulta', $cuerpo);
+    if ($esConsultaPrivada && !is_array($cuerpo['consulta'])) {
+        sendJsonResponse(['success' => false, 'message' => 'La consulta debe ser un objeto JSON.', 'data' => null], 422);
+    }
     $conexion = Database::getConnection();
-    $actor = SupabaseActorResolver::fromGlobals($conexion);
+    $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
+    Application\Service\AuthGuard::requerirAutenticado($actor);
+    AdminAuthorization::require($actor, $conexion);
     $controlador = new VehiculoController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
         $actor,
     );
-    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
+    $respuesta = $controlador->procesar(
+        $esConsultaPrivada ? 'GET' : $metodo,
+        $esConsultaPrivada ? $cuerpo['consulta'] : $_GET,
+        $esConsultaPrivada ? [] : $cuerpo,
+    );
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
 } catch (Application\HttpException $excepcion) {
-    sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos], $excepcion->estadoHttp);
+    $cuerpoError = ['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos];
+    if ($excepcion->errores !== []) {
+        $cuerpoError['errors'] = $excepcion->errores;
+    }
+    sendJsonResponse($cuerpoError, $excepcion->estadoHttp);
 } catch (Throwable $excepcion) {
     error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(), $excepcion->getFile(), $excepcion->getLine()));
     sendJsonResponse([

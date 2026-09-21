@@ -35,6 +35,34 @@ $direccionValida = $validacion->validarIdentificacionYDireccion(
 test_assert(($direccionValida['identificacionNumero'] ?? '') !== '', 'La dirección válida debe devolver identificación.');
 test_same('Provincia Prueba', $direccionValida['direccion']['provincia'] ?? '', 'La dirección válida debe conservar la provincia.');
 
+foreach ([
+    ['CEDULA_FISICA', '1-1111-1111', true],
+    ['CEDULA_JURIDICA', '3-101-111111', true],
+    ['DIMEX', '11111111111', true],
+    ['DIMEX', '111111111111', true],
+    ['NITE', '1111111111', true],
+    ['PASAPORTE', 'AB1234567', true],
+    ['CEDULA_FISICA', '1234', false],
+    ['NITE', 'AB1234567', false],
+    ['PASAPORTE', 'AB-123456', false],
+] as [$tipo, $numero, $esperado]) {
+    $errores = [];
+    $validacion->validarIdentificacion(['tipoCodigo' => $tipo, 'numero' => $numero], $errores);
+    test_same($esperado, !isset($errores['identificacion.numero']),
+        "Validación específica para {$tipo} debe distinguir {$numero}");
+}
+
+$nombreErrores = [];
+$personaSeparada = $validacion->validarPersona([
+    'identificacion' => ['tipoCodigo' => 'CEDULA_FISICA', 'numero' => '1-1111-1111'],
+    'nombres' => 'María Fernanda',
+    'apellidos' => 'Solano Vargas',
+    'telefono' => '+506 87776655',
+    'correoElectronico' => 'nombres@example.test',
+], false);
+test_same('María Fernanda Solano Vargas', $personaSeparada['datos']['nombre'],
+    'Nombres y apellidos deben persistir como nombre canónico');
+
 try {
     $validacion->validarProductor(
         ['identificacion' => ['tipoCodigo' => 'XX', 'numero' => '1'], 'nombre' => 'A'],
@@ -55,7 +83,7 @@ try {
 
 // ---------------------------------------------------------------- Tramo 14 --
 // Transiciones de estado atómicas e idempotentes del servicio de estado.
-$creado = test_create([], 'SE' . test_document());
+$creado = test_create([], 'S' . substr(test_document(), 1));
 $creados[] = $creado['identificacionNumero'];
 
 $productor = (new Productor($db, new ProductorFinca($db)))->buscar($creado['identificacionNumero']);

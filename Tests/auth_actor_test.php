@@ -90,6 +90,21 @@ try {
     } catch (HttpException $error) {
         test_same(409, $error->estadoHttp, 'Token válido sin persona vinculada debe responder 409');
     }
+
+    putenv('SUPABASE_AUTH_VERIFY_URL=');
+    putenv('SUPABASE_URL=https://project.example.test');
+    $directo = new SupabaseActorResolver(function (string $url, string $authorization) use ($email): array {
+        test_same('https://project.example.test/auth/v1/user', $url,
+            'Vercel debe usar el endpoint directo de Supabase si no hay sidecar');
+        return [
+            'status' => 200,
+            'body' => '{"id":"supabase-user-direct","email":"' . $email . '","role":"authenticated"}',
+        ];
+    });
+    $actorDirecto = $directo->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer token-directo']);
+    test_same($personaId, $actorDirecto->personaId,
+        'El endpoint directo de Supabase debe conservar el vínculo con Persona');
+    putenv('SUPABASE_URL');
 } finally {
     $db->prepare('DELETE FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :registro')
         ->execute(['registro' => $registro]);
