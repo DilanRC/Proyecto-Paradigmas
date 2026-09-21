@@ -56,7 +56,7 @@ final class SupabaseActorResolver
             throw new HttpException('Authorization debe usar Bearer.', 401);
         }
 
-        $verifyUrl = getenv('SUPABASE_AUTH_VERIFY_URL') ?: self::DEFAULT_VERIFY_URL;
+        [$verifyUrl, $respuestaUsuarioSupabase] = $this->verificationTarget();
         try {
             $response = ($this->transport)($verifyUrl, $authorization);
         } catch (Throwable) {
@@ -71,6 +71,9 @@ final class SupabaseActorResolver
         $payload = json_decode($body, true);
         if (!is_array($payload)) {
             throw new HttpException('No fue posible validar la sesión.', 503);
+        }
+        if ($respuestaUsuarioSupabase) {
+            $payload = $this->normalizarUsuarioSupabase($payload);
         }
         if ($status === 401 || $status === 403) {
             throw new HttpException($payload['error']['message'] ?? 'Sesión inválida.', $status);
@@ -95,6 +98,41 @@ final class SupabaseActorResolver
         }
 
         return ActorContext::usuarioVerificado($personaId, $subject, $email, $role);
+    }
+
+    /**
+     * Compose tiene un sidecar interno; Vercel solo tiene el contenedor PHP.
+     * Cuando no se declara el verificador interno, Supabase Auth valida el JWT
+     * directamente mediante /auth/v1/user.
+     *
+     * @return array{0:string,1:bool}
+     */
+    private function verificationTarget(): array
+    {
+        $explicit = trim((string) (getenv('SUPABASE_AUTH_VERIFY_URL') ?: ''));
+        if ($explicit !== '') {
+            return [$explicit, false];
+        }
+
+        $supabaseUrl = rtrim(trim((string) (getenv('SUPABASE_URL') ?: '')), '/');
+        if ($supabaseUrl !== '' && filter_var($supabaseUrl, FILTER_VALIDATE_URL) !== false) {
+            return ["{$supabaseUrl}/auth/v1/user", true];
+        }
+
+        return [self::DEFAULT_VERIFY_URL, false];
+    }
+
+    /** @return array{success:bool,data:array<string,mixed>} */
+    private function normalizarUsuarioSupabase(array $payload): array
+    {
+        return [
+            'success' => isset($payload['id'], $payload['email']),
+            'data' => [
+                'id' => $payload['id'] ?? null,
+                'email' => $payload['email'] ?? null,
+                'role' => $payload['role'] ?? null,
+            ],
+        ];
     }
 
     private function authorizationHeader(array $server): ?string
@@ -128,10 +166,15 @@ final class SupabaseActorResolver
     /** @return array{status:int, body:string} */
     private function defaultTransport(string $url, string $authorization): array
     {
+        $publishableKey = trim((string) (getenv('SUPABASE_PUBLISHABLE_KEY') ?: ''));
+        $headers = "Authorization: {$authorization}\r\n";
+        if ($publishableKey !== '') {
+            $headers .= "apikey: {$publishableKey}\r\n";
+        }
         $context = stream_context_create([
             'http' => [
                 'method' => 'GET',
-                'header' => "Authorization: {$authorization}\r\n",
+                'header' => $headers,
                 'ignore_errors' => true,
                 'timeout' => 3,
             ],
