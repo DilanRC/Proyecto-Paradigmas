@@ -48,6 +48,10 @@ if (in_array($metodo, $metodosConCuerpo, true) && $tipoContenido !== 'applicatio
 
 try {
     $cuerpo = in_array($metodo, $metodosConCuerpo, true) ? readJsonBody() : [];
+    $esConsultaPrivada = $metodo === 'POST' && array_key_exists('consulta', $cuerpo);
+    if ($esConsultaPrivada && !is_array($cuerpo['consulta'])) {
+        sendJsonResponse(['success' => false, 'message' => 'La consulta debe ser un objeto JSON.', 'data' => null], 422);
+    }
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
@@ -57,7 +61,11 @@ try {
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
         $actor,
     );
-    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
+    $respuesta = $controlador->procesar(
+        $esConsultaPrivada ? 'GET' : $metodo,
+        $esConsultaPrivada ? $cuerpo['consulta'] : $_GET,
+        $esConsultaPrivada ? [] : $cuerpo,
+    );
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);

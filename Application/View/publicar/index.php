@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Prepara una publicación de ganado en TinderCows.">
@@ -29,12 +30,12 @@
             </a>
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
-                <a href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
-                <a class="is-active" href="publicar.php"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i><span>Publicar</span></a>
+                <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+                <a class="is-active" href="publicar"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i><span>Publicar</span></a>
             </nav>
             <div class="public-header__actions">
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
-                <a class="public-header__login" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
+                <a class="public-header__login" href="entrar"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
             </div>
         </header>
 
@@ -82,7 +83,7 @@
 
                     <div class="flow-feedback" id="publish-status" role="status" aria-live="polite" hidden></div>
                     <div class="flow-actions">
-                        <a class="flow-button" href="mi-actividad.php">Mi actividad</a>
+                        <a class="flow-button" href="mi-actividad">Mi actividad</a>
                     <button class="flow-button flow-button--primary" id="publish-submit" type="submit">Publicar ganado</button>
                     </div>
                 </form>

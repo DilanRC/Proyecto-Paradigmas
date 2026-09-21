@@ -7,6 +7,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Explora ganado y oportunidades cercanas en TinderCows.">
@@ -37,13 +38,13 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
-                <a class="is-active" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+                <a class="is-active" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
                 <a href="./#nosotros"><i class="fa-solid fa-people-group" aria-hidden="true"></i><span>Nosotros</span></a>
                 <a href="./#como-funciona"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Cómo funciona</span></a>
             </nav>
 
             <div class="public-header__actions">
-                <form class="public-search" action="explorar.php" method="get" role="search" data-public-search data-open="<?= $query !== '' ? 'true' : 'false' ?>">
+                <form class="public-search" action="explorar" method="get" role="search" data-public-search data-open="<?= $query !== '' ? 'true' : 'false' ?>">
                     <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="<?= $query !== '' ? 'true' : 'false' ?>" aria-label="Abrir búsqueda">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span>
                     </button>
@@ -56,7 +57,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true">
                     <i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span>
                 </button>
-                <a class="public-header__login" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
+                <a class="public-header__login" href="entrar"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
             </div>
         </header>
 
@@ -124,9 +125,9 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <p>Descubre ganado y oportunidades cerca de ti.</p>
             </div>
             <div class="public-footer__links">
-                <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar.php">Explorar</a><a href="./#nosotros">Nosotros</a><a href="./#como-funciona">Cómo funciona</a></div>
-                <div><strong>Cuenta</strong><a href="login.php">Entrar</a><a href="como-usar.php">Ayuda de uso</a><a href="sobre-nosotros.php">Sobre TinderCows</a></div>
-                <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad.php">Privacidad</a><a href="terminos.php">Términos</a><a href="legal.php">Información legal</a></div>
+                <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="./#nosotros">Nosotros</a><a href="./#como-funciona">Cómo funciona</a></div>
+                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre TinderCows</a></div>
+                <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div>
             </div>
         </footer>
     </div>

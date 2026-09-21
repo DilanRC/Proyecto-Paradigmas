@@ -3,18 +3,18 @@ import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from '.
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
 import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js';
 
-const PUBLIC_DESTINATIONS = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
-const ADMIN_DESTINATIONS = new Set(['productores.php', 'compradores.php', 'transportistas.php', 'vehiculos.php', 'pagometodos.php']);
+const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar']);
+const ADMIN_DESTINATIONS = new Set(['admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago']);
 
 export function resolveNext(search = '', hasProfile = false) {
     const requested = new URLSearchParams(search).get('next');
     if (requested && PUBLIC_DESTINATIONS.has(requested)) return requested;
-    return hasProfile ? 'mi-actividad.php' : 'explorar.php';
+    return hasProfile ? 'mi-actividad' : 'explorar';
 }
 
 export function resolveAdminNext(search = '') {
     const requested = new URLSearchParams(search).get('next');
-    return requested && ADMIN_DESTINATIONS.has(requested) ? requested : 'productores.php';
+    return requested && ADMIN_DESTINATIONS.has(requested) ? requested : 'admin/productores';
 }
 
 function setError(control, message) {
@@ -42,7 +42,7 @@ function setBusy(form, button, busy) {
 }
 
 async function loadBusinessProfile() {
-    const response = await request('api/mi-actividad.php');
+    const response = await request('api/v1/actividad');
     return syncPublicProfile(response.data);
 }
 
@@ -50,7 +50,7 @@ async function isAdminAccount() {
     try {
         const token = await getAccessToken();
         if (!token) return false;
-        const response = await fetch('api/admin-status.php', {
+        const response = await fetch('api/v1/admin/status', {
             headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
             cache: 'no-store',
         });
@@ -100,7 +100,7 @@ function initialize() {
                     }
                     if (error?.status === 409) {
                         status.textContent = 'La cuenta está validada. Completa ahora tu registro guiado para crear tu perfil.';
-                        window.location.assign(`registro.php?next=${encodeURIComponent(resolveNext(window.location.search))}`);
+                        window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
                         return;
                     }
                     try { await signOut(); } catch { clearAuthSession(); }

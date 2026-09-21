@@ -31,11 +31,11 @@ export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
 }
 
 const PRIVATE_ROUTES = new Set([
-    'productores.php',
-    'compradores.php',
-    'transportistas.php',
-    'vehiculos.php',
-    'pagometodos.php',
+    'admin/productores',
+    'admin/compradores',
+    'admin/transportistas',
+    'admin/vehiculos',
+    'admin/metodos-pago',
 ]);
 
 /**
@@ -63,7 +63,7 @@ export function readBrowserSession(storage) {
 
 export function routeName(pathname = '') {
     const parts = String(pathname).split('/').filter(Boolean);
-    return parts.at(-1) || 'index.php';
+    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts.at(-1) || '';
 }
 
 export function isPrivateRoute(pathname = '') {
@@ -73,8 +73,8 @@ export function isPrivateRoute(pathname = '') {
 export function loginTarget(pathname = '') {
     const route = routeName(pathname);
     return PRIVATE_ROUTES.has(route)
-        ? `login.php?area=admin&next=${encodeURIComponent(route)}`
-        : 'login.php';
+        ? `admin/entrar?next=${encodeURIComponent(route)}`
+        : 'entrar';
 }
 
 export function enforceBrowserSession({ location, storage } = {}) {
@@ -92,14 +92,14 @@ function wirePrivateShell(storage) {
         publicLink.title = 'Inicio público de TinderCows';
     }
 
-    const logoutLink = document.querySelector('.rural-panel__admin-link[href="login.php"]');
+    const logoutLink = document.querySelector('.rural-panel__admin-link[href="admin/entrar"]');
     if (!logoutLink) return;
     logoutLink.textContent = 'Cerrar sesión administrativa';
     logoutLink.setAttribute('aria-label', 'Cerrar sesión administrativa');
     logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
         try { clearAdminBrowserSession(storage); }
-        finally { window.location.assign('login.php?area=admin'); }
+        finally { window.location.assign('admin/entrar'); }
     });
 }
 

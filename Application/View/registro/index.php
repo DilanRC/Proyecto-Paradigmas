@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Crea tu cuenta de TinderCows y configura cómo deseas participar.">
@@ -27,7 +28,7 @@
         </a>
         <div class="auth-header__actions">
             <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
-            <a class="auth-back" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Ya tengo cuenta</span></a>
+            <a class="auth-back" href="entrar"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Ya tengo cuenta</span></a>
         </div>
     </header>
 

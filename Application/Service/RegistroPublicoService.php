@@ -327,7 +327,7 @@ final class RegistroPublicoService
             [
                 'contexto' => $capacidad,
                 'estado' => $estado,
-                'siguientePaso' => 'mi-actividad.php',
+                'siguientePaso' => 'mi-actividad',
             ],
         );
     }

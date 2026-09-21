@@ -3,7 +3,7 @@ import { BUSINESS_CAPABILITIES } from './shared/business-rules.js';
 import { readAuthSession, signOut } from './shared/supabase-auth.js';
 import { clearPublicProfile, syncPublicProfile } from './shared/public-profile.js';
 
-const API_URL = 'api/mi-actividad.php';
+const API_URL = 'api/v1/actividad';
 let activityData = null;
 const pendingChanges = new Set();
 
@@ -13,7 +13,7 @@ function escapeHtml(value) {
 
 function ensureSession() {
     if (readAuthSession()) return true;
-    window.location.assign('login.php?next=mi-actividad.php');
+    window.location.assign('entrar?next=mi-actividad');
     return false;
 }
 
@@ -75,10 +75,15 @@ function setupAction(id, detail) {
     }
 
     if (id === 'COMPRADOR') {
-        return `<p class="activity-note">La compra se habilitará desde el proceso de compra; no existe un CRUD público para crear Comprador.</p><a class="activity-button activity-button--primary" href="explorar.php">Explorar ganado</a>`;
+        return `<p class="activity-note">La compra se habilitará desde el proceso de compra; no existe un CRUD público para crear Comprador.</p><a class="activity-button activity-button--primary" href="explorar">Explorar ganado</a>`;
     }
 
-    const next = detail?.destinoConfiguracion || `registro.php?capacidad=${encodeURIComponent(id)}&next=mi-actividad.php`;
+    const rutasRegistro = {
+        PRODUCTOR: 'registro/productor',
+        COMPRADOR: 'registro/comprador',
+        TRANSPORTISTA: 'registro/transportista',
+    };
+    const next = detail?.destinoConfiguracion || `${rutasRegistro[id] ?? 'registro'}?next=mi-actividad`;
     return `<a class="activity-button activity-button--primary" href="${escapeHtml(next)}">Configurar</a>`;
 }
 
@@ -119,7 +124,7 @@ async function loadActivity({ quiet = false } = {}) {
         return response.data;
     } catch (error) {
         if (error?.status === 401) {
-            window.location.assign('login.php?next=mi-actividad.php');
+            window.location.assign('entrar?next=mi-actividad');
             return null;
         }
         setView('error', error?.message || 'No fue posible consultar tu actividad.');
@@ -152,7 +157,7 @@ async function changeCapability(button) {
         }
     } catch (error) {
         if (error?.status === 401) {
-            window.location.assign('login.php?next=mi-actividad.php');
+            window.location.assign('entrar?next=mi-actividad');
             return;
         }
         if (status) status.textContent = error?.message || 'No fue posible cambiar la actividad.';

@@ -10,7 +10,7 @@ import {
 } from './shared/list-state.js';
 import { createToast } from './shared/toast.js';
 
-const API_URL = 'api/compradores.php';
+const API_URL = 'api/v1/compradores';
 const ETIQUETAS = { singular: 'comprador', plural: 'compradores' };
 
 function getInitials(name = '') {
@@ -111,13 +111,9 @@ function initialize() {
         state = opened.state;
         render();
 
-        const parametros = new URLSearchParams({
-            q: elements.search.value.trim(),
-            pagina: String(state.page),
-            tamanoPagina: String(state.pageSize),
-        });
+        const consulta = { q: elements.search.value.trim(), pagina: state.page, tamanoPagina: state.pageSize };
         try {
-            const respuesta = await request(`${API_URL}?${parametros}`, { signal });
+            const respuesta = await request(API_URL, { method: 'POST', body: JSON.stringify({ consulta }), signal });
             const datos = respuesta.data ?? {};
             const items = Array.isArray(datos.compradores) ? datos.compradores : [];
             compradores.clear();
@@ -205,7 +201,7 @@ function initialize() {
         if (capacidad.situacion === 'registrado' && capacidad.clave !== 'comprador') {
             const enlace = document.createElement('a');
             enlace.className = 'capacidad__enlace';
-            enlace.href = `${capacidad.panel}?q=${encodeURIComponent(capacidad.identificacionNumero ?? '')}`;
+            enlace.href = capacidad.panel;
             enlace.textContent = 'Abrir panel';
             enlace.setAttribute('aria-label', `Abrir el panel de ${capacidad.etiqueta}`);
             item.appendChild(enlace);
@@ -240,8 +236,6 @@ function initialize() {
     elements.detailModal.addEventListener('click', dialogs.handleBackdropClick);
     elements.detailModal.addEventListener('close', dialogs.restoreFocus);
 
-    const consulta = new URLSearchParams(window.location.search).get('q');
-    if (consulta) elements.search.value = consulta;
     load({ page: 1 });
 }
 

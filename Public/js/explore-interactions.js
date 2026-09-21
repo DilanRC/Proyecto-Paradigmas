@@ -1,6 +1,6 @@
 import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
 
-const API_URL = 'api/publicacion-interacciones.php';
+const API_URL = 'api/v1/publicaciones/interacciones';
 const ACTION_TYPES = {
     'Me interesa': 'ME_INTERESA',
     Pasar: 'PASAR',
@@ -33,7 +33,7 @@ async function save(button, type) {
         return;
     }
     if (!session()) {
-        window.location.assign(`login.php?next=${encodeURIComponent('explorar.php')}`);
+        window.location.assign(`entrar?next=${encodeURIComponent('explorar')}`);
         return;
     }
 

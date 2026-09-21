@@ -10,8 +10,8 @@ import {
 import { conectarDireccion } from './shared/direccion.js';
 import { createToast } from './shared/toast.js';
 
-const API_URL = 'api/productores.php';
-const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';
+const API_URL = 'api/v1/productores';
+const FINCAS_DIRECCION_URL = 'api/v1/fincas/direccion';
 const ETIQUETAS = { singular: 'productor', plural: 'productores' };
 
 /** Cuerpo enviado a la API. Exportado para la prueba de paridad de contrato. */
@@ -43,7 +43,7 @@ export function buildProductorPayload({
  * Normaliza la lista de fincas del formulario (Tramo C). Cada fila es
  * {nombre, direccion?}; el payload solo envía nombres porque el backend exige
  * fincas únicamente como [{nombre}] y la dirección de cada finca se asocia con
- * /api/fincas-direccion.php. Un nombre repetido dentro del mismo formulario no
+ * /api/v1/fincas/direccion. Un nombre repetido dentro del mismo formulario no
  * se agrega dos veces (regla de acumuladores, DEC-31).
  */
 export function normalizarFincas(fincas) {
@@ -187,14 +187,12 @@ function initialize() {
         state = started.state;
         render();
 
-        const parameters = new URLSearchParams({
-            pagina: String(state.page), tamanoPagina: String(state.pageSize),
-        });
-        if (elements.search.value.trim()) parameters.set('q', elements.search.value.trim());
-        if (elements.status.value !== 'TODOS') parameters.set('estado', elements.status.value);
+        const consulta = { pagina: state.page, tamanoPagina: state.pageSize };
+        if (elements.search.value.trim()) consulta.q = elements.search.value.trim();
+        if (elements.status.value !== 'TODOS') consulta.estado = elements.status.value;
 
         try {
-            const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
+            const response = await request(API_URL, { method: 'POST', body: JSON.stringify({ consulta }), signal: listController.signal });
             tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion)
                 ? response.data.catalogos.tiposIdentificacion : [];
             const list = Array.isArray(response.data?.productores) ? response.data.productores : [];
@@ -397,9 +395,10 @@ function initialize() {
         dialogs.open(elements.fincaAddressModal, { focus: $('#finca-direccion-provincia') });
 
         try {
-            const response = await request(
-                `${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`,
-            );
+            const response = await request(FINCAS_DIRECCION_URL, {
+                method: 'POST',
+                body: JSON.stringify({ consulta: { identificacionNumero, nombreFinca } }),
+            });
             const direccion = response.data?.direccionFinca ?? {};
             direccionFinca.aplicar(direccion);
             $('#finca-direccion-senas').value = direccion.senas ?? '';
@@ -575,7 +574,7 @@ function initialize() {
                 dialogs.close(elements.modal);
                 toast.success(response.message);
                 // Tramo C: las direcciones capturadas por finca se asocian con
-                // /api/fincas-direccion.php (el alta solo envía nombres).
+                // /api/v1/fincas/direccion (el alta solo envía nombres).
                 await asociarDireccionesDeFincas(original !== '' ? original : $('#identificacion-numero').value.trim());
                 await listProducers();
             } catch (error) {
@@ -598,7 +597,7 @@ function initialize() {
 
     /**
      * Tramo C: después de guardar el productor, cada finca del formulario que
-     * capturó dirección se asocia con /api/fincas-direccion.php. Una asociación
+     * capturó dirección se asocia con /api/v1/fincas/direccion. Una asociación
      * que falle (409 u otra) no revierte el alta: se avisa y el usuario puede
      * completarla desde la ficha con el botón "Dirección de la finca".
      */
@@ -719,10 +718,8 @@ function initialize() {
         });
 
 
-    // La busqueda puede venir en la URL desde el enlace "Abrir panel" de otra
-    // capacidad, para caer directamente sobre la misma persona.
-    const inicial = new URLSearchParams(window.location.search).get('q');
-    if (inicial) elements.search.value = inicial;
+    // Las identificaciones no se aceptan como parámetros de URL; el filtro
+    // vive únicamente en memoria mientras el panel permanece abierto.
     listProducers();
 }
 

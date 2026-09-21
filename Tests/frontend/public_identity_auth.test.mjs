@@ -54,7 +54,7 @@ test('la portada usa identidad TinderCows y habla como producto', () => {
     assert.ok(home.includes('assets/logo_light.png'));
     assert.ok(home.includes('rel="icon" href="favicon.svg"'));
     assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
-    assert.ok(home.includes('explorar.php'));
+    assert.ok(home.includes('href="explorar"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false, 'la experiencia pública no debe hablar del curso ni de evaluación');
     assert.equal(home.includes('Productores</h3>'), false, 'la landing no debe explicar módulos administrativos');
     assert.equal(home.includes('api/productores.php'), false);
@@ -65,9 +65,9 @@ test('navbar público prioriza Inicio, Explorar, Nosotros y Cómo funciona; lega
     for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona']) assert.ok(nav.includes(label));
     for (const label of ['Privacidad', 'Términos', 'Legal']) assert.equal(nav.includes(label), false);
     assert.ok(home.includes('public-footer__legal'));
-    assert.ok(home.includes('privacidad.php'));
-    assert.ok(home.includes('terminos.php'));
-    assert.ok(home.includes('legal.php'));
+    assert.ok(home.includes('href="privacidad"'));
+    assert.ok(home.includes('href="terminos"'));
+    assert.ok(home.includes('href="legal"'));
 });
 
 test('la búsqueda pública permanece compacta y se expande bajo demanda', () => {
@@ -90,7 +90,7 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
     for (const action of ['Pasar', 'Me interesa', 'Contactar']) {
         assert.ok(moduloExplorar.includes(`'${action}'`), `falta la acción ${action}`);
     }
-    assert.ok(moduloExplorar.includes('api/publicaciones.php'),
+    assert.ok(moduloExplorar.includes('api/v1/publicaciones'),
         'el deck debe leer el catálogo real, no contenido de muestra');
     assert.equal(/EIF400|acad[eé]mic/i.test(explore), false);
 });
@@ -98,7 +98,7 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
 test('publicar persiste mediante el endpoint autenticado y limpia el borrador solo al guardar', () => {
     assert.ok(publicarJs.includes("import { getAccessToken } from './shared/supabase-auth.js';"));
     assert.ok(publicarJs.includes("method: 'POST'"));
-    assert.ok(publicarJs.includes("fetch('api/publicaciones.php'"));
+    assert.ok(publicarJs.includes("fetch('api/v1/publicaciones'"));
     assert.ok(publicarJs.includes("sessionStorage.removeItem(DRAFT_KEY)"));
     assert.ok(publicarApi.includes("['GET', 'POST']"));
     assert.ok(publicarApi.includes('readJsonBody()'));
@@ -173,14 +173,14 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.ok(login.includes('name="email"'));
     assert.ok(login.includes('name="password"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(login), false);
-    assert.equal(resolveNext(''), 'explorar.php');
-    assert.equal(resolveNext('?next=explorar.php'), 'explorar.php');
-    assert.equal(resolveNext('?next=vehiculos.php'), 'explorar.php');
-    assert.equal(resolveNext('?next=https://example.com'), 'explorar.php');
-    assert.equal(resolveNext('?next=//example.com'), 'explorar.php');
-    assert.equal(resolveNext('?next=../login.php'), 'explorar.php');
-    assert.equal(resolveAdminNext('?next=productores.php'), 'productores.php');
-    assert.equal(resolveAdminNext('?next=https://example.com'), 'productores.php');
+    assert.equal(resolveNext(''), 'explorar');
+    assert.equal(resolveNext('?next=explorar'), 'explorar');
+    assert.equal(resolveNext('?next=vehiculos'), 'explorar');
+    assert.equal(resolveNext('?next=https://example.com'), 'explorar');
+    assert.equal(resolveNext('?next=//example.com'), 'explorar');
+    assert.equal(resolveNext('?next=../entrar'), 'explorar');
+    assert.equal(resolveAdminNext('?next=admin/productores'), 'admin/productores');
+    assert.equal(resolveAdminNext('?next=https://example.com'), 'admin/productores');
     assert.ok(read('../../Public/js/login.js').includes("area') === 'admin"));
 });
 
@@ -188,20 +188,20 @@ test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => 
     assert.match(publicUi, /readAuthSession/);
     assert.match(publicUi, /createAccountMenu/);
     assert.match(publicUi, /Mi perfil y actividad/);
-    assert.match(publicUi, /api\/admin-status\.php/);
+    assert.match(publicUi, /api\/v1\/admin\/status/);
     assert.doesNotMatch(publicUi, /sessionStorage\.setItem\(SESSION_KEY/);
 });
 
 test('el registro guiado persiste mediante Supabase y la API, no mediante una sesión falsa', () => {
     assert.match(registroJs, /signUpWithPassword/);
-    assert.match(registroJs, /api\/registro\.php/);
+    assert.match(registroJs, /api\/v1\/registro/);
     assert.match(registroJs, /syncPublicProfile/);
     assert.doesNotMatch(registroJs, /frontend-prototype/);
 });
 
 test('el alta no queda bloqueada si falla la lectura auxiliar del perfil', () => {
-    assert.match(registroJs, /const activity = await request\('api\/mi-actividad\.php', \{ timeoutMs: 10000 \}\)/);
-    assert.match(registroJs, /mi-actividad\.php vuelve a consultar el servidor/);
+    assert.match(registroJs, /const activity = await request\('api\/v1\/actividad', \{ timeoutMs: 10000 \}\)/);
+    assert.match(registroJs, /mi-actividad vuelve a consultar el servidor/);
     assert.match(registroJs, /window\.location\.assign\(resolveNext\(fallback\)\)/);
 });
 
@@ -254,12 +254,12 @@ test('las acciones fuera del alcance no aparecen como botones falsamente operati
 
 test('una ruta privada sin sesión vuelve al login conservando destino local', () => {
     let redirected = '';
-    const location = { pathname: '/productores.php', replace: (target) => { redirected = target; } };
+    const location = { pathname: '/admin/productores', replace: (target) => { redirected = target; } };
     const storage = { getItem: () => null };
     assert.equal(isPrivateRoute(location.pathname), true);
-    assert.equal(loginTarget(location.pathname), 'login.php?area=admin&next=productores.php');
+    assert.equal(loginTarget(location.pathname), 'admin/entrar?next=admin%2Fproductores');
     assert.equal(enforceBrowserSession({ location, storage }), false);
-    assert.equal(redirected, 'login.php?area=admin&next=productores.php');
+    assert.equal(redirected, 'admin/entrar?next=admin%2Fproductores');
 });
 
 test('el shell privado distingue volver al sitio público de cerrar sesión', () => {

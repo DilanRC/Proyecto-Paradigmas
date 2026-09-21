@@ -39,11 +39,11 @@ test('Paradigmas usa Font Awesome Free 7.3.1 de forma global', () => {
 
 test('la navegacion usa iconos ganaderos diferenciados por modulo', () => {
     const expected = new Map([
-        ['productores.php', '\\f6c8'], // cow
-        ['compradores.php', '\\f2b5'], // handshake
-        ['transportistas.php', '\\f48b'], // truck-fast
-        ['vehiculos.php', '\\f63c'], // truck-pickup
-        ['pagometodos.php', '\\f555'], // wallet
+        ['admin/productores', '\\f6c8'], // cow
+        ['admin/compradores', '\\f2b5'], // handshake
+        ['admin/transportistas', '\\f48b'], // truck-fast
+        ['admin/vehiculos', '\\f63c'], // truck-pickup
+        ['admin/metodos-pago', '\\f555'], // wallet
     ]);
 
     for (const [href, glyph] of expected) {
@@ -77,7 +77,7 @@ test('crear y accesos privados usan iconos sin eliminar el texto', () => {
     assert.ok(iconsCss.includes('#crear-vehiculo > span::before'));
     assert.ok(iconsCss.includes('#crear-pagometodo > span::before'));
     assert.ok(iconsCss.includes(".rural-panel__admin-link[href='./']::before"));
-    assert.ok(iconsCss.includes(".rural-panel__admin-link[href$='login.php']::before"));
+    assert.ok(iconsCss.includes(".rural-panel__admin-link[href$='admin/entrar']::before"));
 });
 
 test('la identidad publica usa los colores de los logos y no replica Tinder', () => {

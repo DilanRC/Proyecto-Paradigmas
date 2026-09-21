@@ -41,7 +41,7 @@ test('la navegación y utilidades mantienen icono mas texto visible', () => {
 });
 
 test('los filtros usan solo capacidades reales y ofrecen limpiar sin reload', () => {
-    assert.ok(adminJs.includes("'productores.php':"));
+    assert.ok(adminJs.includes("'admin/productores':"));
     assert.ok(adminJs.includes("search: 'Nombre, identificación, correo'"));
     assert.ok(adminJs.includes("search: 'Placa, VIN o modelo'"));
     assert.ok(adminJs.includes("search: 'Nombre o descripción'"));

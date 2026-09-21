@@ -50,7 +50,7 @@ test('con persona el navegador queda en superficie autenticada', async () => {
     const resuelto = await resolverSuperficie({
         bearer: 'token-supabase-1',
         requestImpl: async (url, options) => {
-            assert.equal(url, 'api/identidad.php');
+            assert.equal(url, 'api/v1/identidad');
             autorizacionEnviada = options?.headers?.Authorization ?? null;
             return personaAutenticada;
         },

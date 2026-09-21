@@ -251,7 +251,7 @@ html[data-theme='light'] .rural-panel__sidebar {
     background:rgba(69,99,79,.32) !important;
 }
 
-.admin-account-card__actions .rural-panel__admin-link[href$='login.php']::before {
+.admin-account-card__actions .rural-panel__admin-link[href$='admin/entrar']::before {
     content:'\f2f5' !important; /* right-from-bracket */
 }
 

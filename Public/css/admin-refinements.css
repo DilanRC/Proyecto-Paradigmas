@@ -106,7 +106,7 @@
     background:rgba(69,99,79,.34) !important;
 }
 
-.admin-account-menu__panel .rural-panel__admin-link[href$='login.php']::before {
+.admin-account-menu__panel .rural-panel__admin-link[href$='admin/entrar']::before {
     content:'\f2f5' !important;
 }
 

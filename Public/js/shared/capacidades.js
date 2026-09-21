@@ -8,24 +8,24 @@ export const CAPACIDADES = [
         clave: 'productor',
         etiqueta: 'Productor',
         alias: null,
-        api: 'api/productores.php',
-        panel: 'productores.php',
+        api: 'api/v1/productores',
+        panel: 'admin/productores',
         derivada: false,
     },
     {
         clave: 'comprador',
         etiqueta: 'Comprador',
         alias: null,
-        api: 'api/compradores.php',
-        panel: 'compradores.php',
+        api: 'api/v1/compradores',
+        panel: 'admin/compradores',
         derivada: false,
     },
     {
         clave: 'transportista',
         etiqueta: 'Transportista',
         alias: null,
-        api: 'api/transportistas.php',
-        panel: 'transportistas.php',
+        api: 'api/v1/transportistas',
+        panel: 'admin/transportistas',
         derivada: false,
     },
 ];
@@ -56,11 +56,13 @@ export function describirCapacidad({ situacion, estado }) {
 
 /** Consulta los contextos de negocio de una misma Persona en paralelo. */
 export async function consultarCapacidades(identificacionNumero, { requestImpl }) {
-    const consulta = encodeURIComponent(identificacionNumero);
     return Promise.all(CAPACIDADES.map(async (capacidad) => {
         let desenlace;
         try {
-            const respuesta = await requestImpl(`${capacidad.api}?identificacionNumero=${consulta}`);
+            const respuesta = await requestImpl(capacidad.api, {
+                method: 'POST',
+                body: JSON.stringify({ consulta: { identificacionNumero } }),
+            });
             desenlace = { ok: true, data: respuesta.data };
         } catch (error) {
             desenlace = { ok: false, error };

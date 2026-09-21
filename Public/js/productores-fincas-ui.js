@@ -2,7 +2,7 @@ import { request } from './shared/api.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 
-const FINCAS_DIRECCION_URL = 'api/fincas-direccion.php';
+const FINCAS_DIRECCION_URL = 'api/v1/fincas/direccion';
 const modal = document.querySelector('#modal-productor');
 const hiddenField = document.querySelector('#fincas-nombres');
 const list = document.querySelector('#fincas-cards');
@@ -142,7 +142,10 @@ async function cargarDireccionPersistida(card, identificacionNumero, nombreFinca
     const state = card.querySelector('[data-farm-address-state]');
     if (state) state.textContent = 'Consultando dirección registrada…';
     try {
-        const response = await request(`${FINCAS_DIRECCION_URL}?${new URLSearchParams({ identificacionNumero, nombreFinca })}`);
+        const response = await request(FINCAS_DIRECCION_URL, {
+            method: 'POST',
+            body: JSON.stringify({ consulta: { identificacionNumero, nombreFinca } }),
+        });
         if (token !== renderToken || !card.isConnected) return;
         const direccion = response.data?.direccionFinca ?? null;
         if (direccion) {

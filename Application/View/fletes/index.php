@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Encuentra transporte ganadero u ofrece fletes en TinderCows.">
@@ -24,9 +25,9 @@
         </a>
         <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
             <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
-            <a href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
-            <a class="is-active" href="fletes.php"><i class="fa-solid fa-truck" aria-hidden="true"></i><span>Fletes</span></a>
-            <a href="mi-actividad.php"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi actividad</span></a>
+            <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+            <a class="is-active" href="fletes"><i class="fa-solid fa-truck" aria-hidden="true"></i><span>Fletes</span></a>
+            <a href="mi-actividad"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi actividad</span></a>
         </nav>
         <div class="public-header__actions"><button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button></div>
     </header>
@@ -42,8 +43,8 @@
             <div class="step-heading"><span class="step-number"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i></span><div><h2>¿Deseas ofrecer fletes?</h2><p>Solo pediremos los datos que todavía hagan falta. El vehículo puede asociarse después.</p></div></div>
             <div id="fletes-state" class="business-note" role="status" aria-live="polite"></div>
             <div class="activity-actions" style="justify-content:flex-start;margin-top:18px">
-                <a id="fletes-primary" class="activity-button activity-button--primary" href="registro.php?capacidad=TRANSPORTISTA">Quiero ofrecer fletes</a>
-                <a class="activity-button" href="mi-actividad.php">Ver mi actividad</a>
+                <a id="fletes-primary" class="activity-button activity-button--primary" href="registro/transportista">Quiero ofrecer fletes</a>
+                <a class="activity-button" href="mi-actividad">Ver mi actividad</a>
             </div>
         </section>
 

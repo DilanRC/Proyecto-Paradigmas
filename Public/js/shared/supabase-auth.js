@@ -83,7 +83,7 @@ function friendlySignupMessage(status, payload) {
 
 async function authConfig() {
     if (!configPromise) {
-        configPromise = fetch('api/auth-config.php', {
+        configPromise = fetch('api/v1/auth/config', {
             method: 'GET',
             headers: { Accept: 'application/json' },
             cache: 'no-store',

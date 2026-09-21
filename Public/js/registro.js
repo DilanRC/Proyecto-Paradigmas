@@ -16,7 +16,7 @@ import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 
 const DRAFT_KEY = 'tindercows:registration-draft';
 const PROFILE_KEY = 'tindercows:profile';
-const SAFE_NEXT = new Set(['explorar.php', 'mi-actividad.php', 'fletes.php', 'publicar.php']);
+const SAFE_NEXT = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar']);
 const editoresFinca = new WeakMap();
 let secuenciaFinca = 0;
 
@@ -355,7 +355,7 @@ function initialize() {
             }
 
             status.textContent = 'Guardando tu identidad y actividades…';
-            await request('api/registro.php', {
+            await request('api/v1/registro', {
                 method: 'POST',
                 body: JSON.stringify({
                     persona: summary.persona,
@@ -368,15 +368,15 @@ function initialize() {
             // auxiliar; si su lectura falla, no debemos dejar a la persona
             // atrapada en el botón ni hacerle repetir una operación exitosa.
             sessionStorage.removeItem(DRAFT_KEY);
-            const fallback = extending ? 'mi-actividad.php?actualizado=1' : 'mi-actividad.php?bienvenida=1';
+            const fallback = extending ? 'mi-actividad?actualizado=1' : 'mi-actividad?bienvenida=1';
             status.textContent = extending
                 ? 'Actividad guardada. Abriendo tu perfil…'
                 : 'Registro completado. Abriendo tu perfil…';
             try {
-                const activity = await request('api/mi-actividad.php', { timeoutMs: 10000 });
+                const activity = await request('api/v1/actividad', { timeoutMs: 10000 });
                 syncPublicProfile(activity.data);
             } catch {
-                // mi-actividad.php vuelve a consultar el servidor al abrirse;
+                // mi-actividad vuelve a consultar el servidor al abrirse;
                 // no convertimos un fallo de lectura en un falso fallo de alta.
             }
             window.location.assign(resolveNext(fallback));

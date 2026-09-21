@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="TinderCows te ayuda a descubrir ganado y oportunidades cerca de ti.">
@@ -28,13 +29,13 @@
 
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a class="is-active" href="#inicio"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
-                <a href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+                <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
                 <a href="#nosotros"><i class="fa-solid fa-people-group" aria-hidden="true"></i><span>Nosotros</span></a>
                 <a href="#como-funciona"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Cómo funciona</span></a>
             </nav>
 
             <div class="public-header__actions">
-                <form class="public-search" action="explorar.php" method="get" role="search" data-public-search data-open="false">
+                <form class="public-search" action="explorar" method="get" role="search" data-public-search data-open="false">
                     <button class="public-search__toggle" type="button" data-public-search-toggle aria-expanded="false" aria-label="Abrir búsqueda">
                         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Buscar</span>
                     </button>
@@ -48,7 +49,7 @@
                     <i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i>
                     <span class="theme-toggle__label">Claro</span>
                 </button>
-                <a class="public-header__login" href="login.php"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
+                <a class="public-header__login" href="entrar"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar</span></a>
             </div>
         </header>
 
@@ -59,7 +60,7 @@
                     <h1 id="public-title">El ganado que buscas, más cerca de ti.</h1>
                     <p class="public-hero__lead">Explora publicaciones cercanas, guarda lo que te interesa y conecta directamente con quienes están detrás de cada oportunidad.</p>
                     <div class="public-hero__actions">
-                        <a class="public-cta" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar publicaciones</span></a>
+                        <a class="public-cta" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar publicaciones</span></a>
                         <a class="public-secondary" href="#como-funciona"><i class="fa-solid fa-circle-play" aria-hidden="true"></i><span>Cómo funciona</span></a>
                     </div>
                     <div class="public-hero__signals" aria-label="Funciones principales">
@@ -109,7 +110,7 @@
                     <p class="section-kicker">Empieza a explorar</p>
                     <h2 id="cta-title">Tu próxima oportunidad puede estar a pocos kilómetros.</h2>
                 </div>
-                <a class="public-cta" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Ir a Explorar</span></a>
+                <a class="public-cta" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Ir a Explorar</span></a>
             </section>
         </main>
 
@@ -125,9 +126,9 @@
                 <p>Descubre ganado y oportunidades cerca de ti.</p>
             </div>
             <div class="public-footer__links">
-                <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar.php">Explorar</a><a href="#nosotros">Nosotros</a><a href="#como-funciona">Cómo funciona</a></div>
-                <div><strong>Cuenta</strong><a href="login.php">Entrar</a><a href="como-usar.php">Ayuda de uso</a><a href="sobre-nosotros.php">Sobre TinderCows</a></div>
-                <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad.php">Privacidad</a><a href="terminos.php">Términos</a><a href="legal.php">Información legal</a></div>
+                <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="#nosotros">Nosotros</a><a href="#como-funciona">Cómo funciona</a></div>
+                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre TinderCows</a></div>
+                <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div>
             </div>
         </footer>
     </div>

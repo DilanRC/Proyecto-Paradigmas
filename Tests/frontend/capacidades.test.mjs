@@ -61,8 +61,8 @@ test('Productor no es alias de Vendedor', () => {
 
 test('cada lectura apunta a su API y a su panel', () => {
     for (const capacidad of CAPACIDADES) {
-        assert.match(capacidad.api, /^api\/[a-z]+\.php$/, `${capacidad.clave}: API mal formada`);
-        assert.match(capacidad.panel, /^[a-z]+\.php$/, `${capacidad.clave}: panel mal formado`);
+        assert.match(capacidad.api, /^api\/v1\/[a-z-]+$/, `${capacidad.clave}: API mal formada`);
+        assert.match(capacidad.panel, /^admin\/[a-z-]+$/, `${capacidad.clave}: panel mal formado`);
     }
 });
 
@@ -103,15 +103,16 @@ test('una consulta que falla no arrastra a las demás', async () => {
     assert.equal(describirCapacidad(resultado.find((c) => c.clave === 'comprador')), 'Registrado y activo');
 });
 
-test('la identificación viaja escapada en la URL', async () => {
-    const urls = [];
+test('la identificación viaja en el cuerpo y nunca en la URL', async () => {
+    const solicitudes = [];
     await consultarCapacidades('AB 123/45&x=1', {
-        requestImpl: async (url) => { urls.push(url); return { data: { estado: 'ACTIVO' } }; },
+        requestImpl: async (url, options) => { solicitudes.push({ url, options }); return { data: { estado: 'ACTIVO' } }; },
     });
 
-    for (const url of urls) {
-        assert.ok(!url.includes('&x=1'), `parametro sin escapar: ${url}`);
-        assert.ok(url.includes('AB%20123%2F45%26x%3D1'), `identificacion mal escapada: ${url}`);
+    for (const { url, options } of solicitudes) {
+        assert.equal(url.includes('AB'), false, `identificacion expuesta en URL: ${url}`);
+        assert.equal(options.method, 'POST');
+        assert.deepEqual(JSON.parse(options.body), { consulta: { identificacionNumero: 'AB 123/45&x=1' } });
     }
 });
 

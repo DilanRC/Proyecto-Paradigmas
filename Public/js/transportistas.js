@@ -8,9 +8,9 @@ import {
 } from './shared/list-state.js';
 import { createToast } from './shared/toast.js';
 
-const API_URL = 'api/transportistas.php';
-const VEHICULOS_URL = 'api/vehiculos.php';
-const ASIGNACION_URL = 'api/transportistas-vehiculos.php';
+const API_URL = 'api/v1/transportistas';
+const VEHICULOS_URL = 'api/v1/vehiculos';
+const ASIGNACION_URL = 'api/v1/transportistas/vehiculos';
 const ETIQUETAS = { singular: 'transportista', plural: 'transportistas' };
 
 /** Cuerpo enviado a la API. Exportado para la prueba de paridad de contrato. */
@@ -90,14 +90,12 @@ function initialize() {
         state = started.state;
         render();
 
-        const parameters = new URLSearchParams({
-            pagina: String(state.page), tamanoPagina: String(state.pageSize),
-        });
-        if (elements.search.value.trim()) parameters.set('q', elements.search.value.trim());
-        if (elements.status.value !== 'TODOS') parameters.set('estado', elements.status.value);
+        const consulta = { pagina: state.page, tamanoPagina: state.pageSize };
+        if (elements.search.value.trim()) consulta.q = elements.search.value.trim();
+        if (elements.status.value !== 'TODOS') consulta.estado = elements.status.value;
 
         try {
-            const response = await request(`${API_URL}?${parameters}`, { signal: listController.signal });
+            const response = await request(API_URL, { method: 'POST', body: JSON.stringify({ consulta }), signal: listController.signal });
             tiposIdentificacion = Array.isArray(response.data?.catalogos?.tiposIdentificacion)
                 ? response.data.catalogos.tiposIdentificacion : [];
             const list = Array.isArray(response.data?.transportistas) ? response.data.transportistas : [];
@@ -293,9 +291,10 @@ function initialize() {
 
     async function loadActiveVehicles() {
         try {
-            const response = await request(
-                `${VEHICULOS_URL}?${new URLSearchParams({ estado: 'ACTIVO', tamanoPagina: '100' })}`,
-            );
+            const response = await request(VEHICULOS_URL, {
+                method: 'POST',
+                body: JSON.stringify({ consulta: { estado: 'ACTIVO', tamanoPagina: 100 } }),
+            });
             const list = Array.isArray(response.data?.vehiculos) ? response.data.vehiculos : [];
             const fragment = document.createDocumentFragment();
             const placeholder = document.createElement('option');
@@ -542,10 +541,6 @@ function initialize() {
         });
 
 
-    // La busqueda puede venir en la URL desde el enlace "Abrir panel" de otra
-    // capacidad, para caer directamente sobre la misma persona.
-    const inicial = new URLSearchParams(window.location.search).get('q');
-    if (inicial) elements.search.value = inicial;
     listCarriers();
 }
 

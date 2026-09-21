@@ -4,7 +4,7 @@
 //
 // El backend separa el contrato: el alta de productor acepta `fincas` solo como
 // [{nombre}] (ValidacionService exige "únicamente nombre") y la dirección de
-// cada finca se asocia con /api/fincas-direccion.php una vez creada. Este
+// cada finca se asocia con /api/v1/fincas/direccion una vez creada. Este
 // componente captura ambas cosas en el formulario y deja que el llamador envíe
 // la dirección con la API dedicada (201/422/404).
 //

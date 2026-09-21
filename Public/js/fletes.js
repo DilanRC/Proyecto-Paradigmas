@@ -16,27 +16,27 @@ function initialize() {
 
     if (!session?.authenticated) {
         stateBox.innerHTML = '<i class="fa-solid fa-circle-info" aria-hidden="true"></i><p>Inicia sesión o crea una cuenta para ofrecer fletes.</p>';
-        primary.href = profile ? 'login.php?next=fletes.php' : 'registro.php?capacidad=TRANSPORTISTA';
+        primary.href = profile ? 'entrar?next=fletes' : 'registro/transportista';
         primary.textContent = profile ? 'Entrar para continuar' : 'Crear cuenta y ofrecer fletes';
         return;
     }
 
     if (state === 'ACTIVO') {
         stateBox.innerHTML = '<i class="fa-solid fa-circle-check" aria-hidden="true"></i><p>Actualmente ofreces fletes. Puedes administrar o desactivar esta actividad desde Mi actividad.</p>';
-        primary.href = 'mi-actividad.php';
+        primary.href = 'mi-actividad';
         primary.textContent = 'Administrar mi servicio';
         return;
     }
 
     if (state === 'INACTIVO') {
         stateBox.innerHTML = '<i class="fa-solid fa-pause" aria-hidden="true"></i><p>Tu servicio de fletes está inactivo. Tu identidad y datos se conservan para poder reactivarlo.</p>';
-        primary.href = 'mi-actividad.php';
+        primary.href = 'mi-actividad';
         primary.textContent = 'Reactivar servicio';
         return;
     }
 
     stateBox.innerHTML = '<i class="fa-solid fa-circle-info" aria-hidden="true"></i><p>Aún no ofreces fletes. Podemos configurar esta actividad sin volver a registrar tu identidad.</p>';
-    primary.href = 'registro.php?capacidad=TRANSPORTISTA';
+    primary.href = 'registro/transportista';
     primary.textContent = 'Quiero ofrecer fletes';
 }
 

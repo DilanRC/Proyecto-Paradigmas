@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Administra cómo participas en TinderCows.">
@@ -26,8 +27,8 @@
             <span>Tinder<strong>Cows</strong></span>
         </a>
         <nav class="public-nav public-nav--primary" aria-label="Navegación de cuenta">
-            <a href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
-            <a class="is-active" href="mi-actividad.php"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi actividad</span></a>
+            <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+            <a class="is-active" href="mi-actividad"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi actividad</span></a>
         </nav>
         <div class="auth-header__actions">
             <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>

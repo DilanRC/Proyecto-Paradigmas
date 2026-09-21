@@ -46,7 +46,7 @@ test('el panel conserva su endpoint', async () => {
     const { readFile } = await import('node:fs/promises');
     const source = await readFile(new URL('../../Public/js/vehiculos.js', import.meta.url), 'utf8');
 
-    assert.match(source, /const API_URL = 'api\/vehiculos\.php';/);
+    assert.match(source, /const API_URL = 'api\/v1\/vehiculos';/);
 });
 
 // --- metodos de pago ---------------------------------------------------------
@@ -180,11 +180,11 @@ test('cada panel conserva su endpoint', async () => {
     const { readFile } = await import('node:fs/promises');
     const leer = (f) => readFile(new URL(`../../Public/js/${f}`, import.meta.url), 'utf8');
 
-    assert.match(await leer('pagometodos.js'), /const API_URL = 'api\/pagometodos\.php';/);
-    assert.match(await leer('transportistas.js'), /const API_URL = 'api\/transportistas\.php';/);
-    assert.match(await leer('transportistas.js'), /const ASIGNACION_URL = 'api\/transportistas-vehiculos\.php';/);
-    assert.match(await leer('productores.js'), /const API_URL = 'api\/productores\.php';/);
-    assert.match(await leer('productores.js'), /const FINCAS_DIRECCION_URL = 'api\/fincas-direccion\.php';/);
+    assert.match(await leer('pagometodos.js'), /const API_URL = 'api\/v1\/metodos-pago';/);
+    assert.match(await leer('transportistas.js'), /const API_URL = 'api\/v1\/transportistas';/);
+    assert.match(await leer('transportistas.js'), /const ASIGNACION_URL = 'api\/v1\/transportistas\/vehiculos';/);
+    assert.match(await leer('productores.js'), /const API_URL = 'api\/v1\/productores';/);
+    assert.match(await leer('productores.js'), /const FINCAS_DIRECCION_URL = 'api\/v1\/fincas\/direccion';/);
 });
 
 // --- compradores -------------------------------------------------------------
@@ -197,7 +197,8 @@ test('el panel de compradores no construye cuerpos de escritura', async () => {
     const fuente = await readFile(
         new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
     assert.equal(/buildCompradorPayload/.test(fuente), false, 'el panel no debe construir cuerpos');
-    for (const metodo of ['POST', 'PUT', 'DELETE', 'PATCH']) {
+    assert.equal(fuente.includes("method: 'POST'"), true, 'las lecturas privadas usan POST con consulta JSON');
+    for (const metodo of ['PUT', 'DELETE', 'PATCH']) {
         assert.equal(fuente.includes(`'${metodo}'`), false, `el panel no debe emitir ${metodo}`);
     }
 });
@@ -206,7 +207,7 @@ test('el panel conserva su endpoint y consulta las capacidades de la persona', a
     const { readFile } = await import('node:fs/promises');
     const fuente = await readFile(
         new URL('../../Public/js/compradores.js', import.meta.url), 'utf8');
-    assert.match(fuente, /const API_URL = 'api\/compradores\.php';/);
+    assert.match(fuente, /const API_URL = 'api\/v1\/compradores';/);
     assert.equal(fuente.includes('consultarCapacidades'), true,
         'la ficha debe consultar las relaciones de la misma Persona');
 });

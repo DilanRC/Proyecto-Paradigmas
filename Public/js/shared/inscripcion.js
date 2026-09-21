@@ -3,7 +3,7 @@
 // El sistema no obliga a entender el modelo de base de datos: una misma
 // Persona se inscribe, abandona o reactiva contextos (COMPRADOR, PRODUCTOR,
 // TRANSPORTISTA) desde la acción natural de la vista, reutilizando
-// /api/capacidades.php con el sobre {success,message,data,errors} de
+// /api/v1/capacidades con el sobre {success,message,data,errors} de
 // DEC-28/29. Este módulo:
 //
 //   1. Resuelve la superficie con identidad.php (publica) para no pintar
@@ -14,13 +14,13 @@
 //      en "inicie sesión", nunca en un error genérico.
 //
 // No hay navegación interna desde este módulo: el único destino que se ofrece
-// es el enlace explícito a login.php (contrato de la vista pública).
+// es el enlace explícito a entrar (contrato de la vista pública).
 
 import { request } from './api.js';
 import { consultarCapacidades } from './capacidades.js';
 import { resolverSuperficie } from './sesion.js';
 
-export const CAPACIDADES_URL = 'api/capacidades.php';
+export const CAPACIDADES_URL = 'api/v1/capacidades';
 
 /** Contextos registrables presentados por la acción de negocio. */
 export const CONTEXTOS_INSCRIPCION = [
@@ -67,7 +67,7 @@ export function accionParaContexto(capacidad) {
 }
 
 /**
- * Ejecuta una acción de inscripción contra /api/capacidades.php. Devuelve la
+ * Ejecuta una acción de inscripción contra /api/v1/capacidades. Devuelve la
  * respuesta del sobre o un desenlace {ok:false, requiereSesion:true} cuando el
  * backend responde 401/403 SIN_SESION (la vista lo convierte en "inicie
  * sesión").
@@ -103,7 +103,7 @@ export async function enviarAccionInscripcion({
 
 // ---------------------------------------------------------------------------
 // Render (navegador). Todo el texto externo entra por textContent; no hay
-// innerHTML y ninguna navegación fuera del enlace explícito a login.php.
+// innerHTML y ninguna navegación fuera del enlace explícito a entrar.
 // ---------------------------------------------------------------------------
 
 function elemento(tag, texto, clase) {
@@ -119,10 +119,10 @@ function crearMensaje(modo, texto) {
     return p;
 }
 
-/** Enlace explícito a login.php (la única navegación permitida de la vista). */
+/** Enlace explícito a entrar (la única navegación permitida de la vista). */
 function crearEnlaceLogin() {
     const enlace = document.createElement('a');
-    enlace.href = 'login.php?next=explorar.php';
+    enlace.href = 'entrar?next=explorar';
     enlace.className = 'inscripcion__login';
     const icono = document.createElement('i');
     icono.className = 'fa-solid fa-right-to-bracket';

@@ -1,6 +1,6 @@
 // Deck de Explorar contra el catálogo real de publicaciones.
 //
-// El orden y el filtrado los decide el backend (api/publicaciones.php). Aquí no
+// El orden y el filtrado los decide el backend (api/v1/publicaciones). Aquí no
 // hay recomendación ni ranking: este módulo formatea lo que llega y lo pinta.
 // Las funciones de formato se exportan puras para poder probarlas sin DOM.
 
@@ -13,7 +13,7 @@ import {
     UBICACION_USUARIO_EVENT,
 } from './shared/ubicacion-sesion.js';
 
-const API_URL = 'api/publicaciones.php';
+const API_URL = 'api/v1/publicaciones';
 const TAMANO_PAGINA = 25;
 
 const state = {
@@ -310,7 +310,10 @@ async function load() {
     if (state.query !== '') parametros.set('q', state.query);
 
     try {
-        const respuesta = await request(`${API_URL}?${parametros}`);
+        const respuesta = await request(API_URL, {
+            method: 'POST',
+            body: JSON.stringify({ consulta: Object.fromEntries(parametros) }),
+        });
         const lista = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
         state.items = lista;
         state.index = 0;

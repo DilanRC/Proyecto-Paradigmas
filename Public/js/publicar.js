@@ -63,8 +63,8 @@ function showWorkspace(profile) {
             'Falta una finca para publicar',
             'La actividad Productor está activa, pero este perfil no tiene una finca disponible. Completa esa información antes de preparar la publicación.',
             [
-                { label: 'Completar datos de productor', href: 'registro.php?capacidad=PRODUCTOR&next=publicar.php', primary: true },
-                { label: 'Volver a Mi actividad', href: 'mi-actividad.php' },
+                { label: 'Completar datos de productor', href: 'registro/productor&next=publicar', primary: true },
+                { label: 'Volver a Mi actividad', href: 'mi-actividad' },
             ],
         );
     }
@@ -110,7 +110,7 @@ function validate(form) {
 async function crearPublicacion(draft) {
     const token = await getAccessToken();
     if (!token) throw new Error('La sesión expiró. Entra de nuevo para publicar.');
-    const response = await fetch('api/publicaciones.php', {
+    const response = await fetch('api/v1/publicaciones', {
         method: 'POST',
         headers: {
             Accept: 'application/json',
@@ -141,8 +141,8 @@ function initialize() {
             'Entra para publicar',
             'Publicar ganado requiere una Persona autenticada para poder continuar con su contexto de productor.',
             [
-                { label: 'Entrar', href: 'login.php?next=publicar.php', primary: true },
-                { label: 'Crear cuenta', href: 'registro.php?capacidad=PRODUCTOR&next=publicar.php' },
+                { label: 'Entrar', href: 'entrar?next=publicar', primary: true },
+                { label: 'Crear cuenta', href: 'registro/productor&next=publicar' },
             ],
         );
         return;
@@ -152,7 +152,7 @@ function initialize() {
         setGate(
             'Completa tu cuenta antes de publicar',
             'Todavía no existe una Persona registrada en este prototipo. El registro reutilizará esa identidad para todas las actividades futuras.',
-            [{ label: 'Completar registro', href: 'registro.php?capacidad=PRODUCTOR&next=publicar.php', primary: true }],
+            [{ label: 'Completar registro', href: 'registro/productor&next=publicar', primary: true }],
         );
         return;
     }
@@ -162,7 +162,7 @@ function initialize() {
         setGate(
             'Activa tu participación como productor',
             'Solo faltan los datos propios de vender o publicar. No volveremos a pedir tu identidad personal.',
-            [{ label: 'Completar datos de productor', href: 'registro.php?capacidad=PRODUCTOR&next=publicar.php', primary: true }],
+            [{ label: 'Completar datos de productor', href: 'registro/productor&next=publicar', primary: true }],
         );
         return;
     }
@@ -170,7 +170,7 @@ function initialize() {
         setGate(
             'Tu actividad de productor está inactiva',
             'La identidad y las fincas se conservan. Reactiva la actividad desde Mi actividad antes de publicar de nuevo.',
-            [{ label: 'Ir a Mi actividad', href: 'mi-actividad.php', primary: true }],
+            [{ label: 'Ir a Mi actividad', href: 'mi-actividad', primary: true }],
         );
         return;
     }

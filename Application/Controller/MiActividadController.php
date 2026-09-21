@@ -136,8 +136,8 @@ final class MiActividadController
                     'contexto' => $contexto,
                     'estado' => 'NO_CONFIGURADO',
                     'siguientePaso' => $contexto === 'PRODUCTOR'
-                        ? 'registro.php?capacidad=PRODUCTOR&next=mi-actividad.php'
-                        : 'registro.php?capacidad=TRANSPORTISTA&next=mi-actividad.php',
+                        ? 'registro/productor?next=mi-actividad'
+                        : 'registro/transportista?next=mi-actividad',
                 ],
             );
         }
@@ -194,21 +194,21 @@ final class MiActividadController
             'PRODUCTOR' => $this->capacidad(
                 $productor,
                 true,
-                'publicar.php',
-                'registro.php?capacidad=PRODUCTOR&next=mi-actividad.php',
+                'publicar',
+                'registro/productor?next=mi-actividad',
             ),
             'COMPRADOR' => $this->capacidad(
                 $comprador,
                 false,
-                'explorar.php',
-                'registro.php?capacidad=COMPRADOR&next=mi-actividad.php',
+                'explorar',
+                'registro/comprador?next=mi-actividad',
                 'La transición de Comprador debe provenir del proceso de compra aprobado.',
             ),
             'TRANSPORTISTA' => $this->capacidad(
                 $transportista,
                 true,
-                'fletes.php',
-                'registro.php?capacidad=TRANSPORTISTA&next=mi-actividad.php',
+                'fletes',
+                'registro/transportista?next=mi-actividad',
             ),
         ];
         $capacidades['PRODUCTOR']['fincas'] = $productor['fincas'] ?? [];

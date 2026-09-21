@@ -37,14 +37,22 @@ if ($metodo === 'POST' && strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] 
 
 try {
     $conexion = Database::getConnection();
-    $actor = $metodo === 'POST' ? SupabaseActorResolver::fromGlobals($conexion) : null;
     $cuerpo = $metodo === 'POST' ? readJsonBody() : [];
+    $esConsultaPrivada = $metodo === 'POST' && array_key_exists('consulta', $cuerpo);
+    if ($esConsultaPrivada && !is_array($cuerpo['consulta'])) {
+        sendJsonResponse(['success' => false, 'message' => 'La consulta debe ser un objeto JSON.', 'data' => null], 400);
+    }
+    $actor = $metodo === 'POST' && !$esConsultaPrivada ? SupabaseActorResolver::fromGlobals($conexion) : null;
     $controlador = new AnimalPublicacionController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
         $actor,
     );
-    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
+    $respuesta = $controlador->procesar(
+        $esConsultaPrivada ? 'GET' : $metodo,
+        $esConsultaPrivada ? $cuerpo['consulta'] : $_GET,
+        $esConsultaPrivada ? [] : $cuerpo,
+    );
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);

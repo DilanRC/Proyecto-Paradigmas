@@ -2,7 +2,7 @@
 //
 // El backend no implementa login propio (DEC-30): resuelve el actor desde el
 // encabezado Authorization Bearer y la superficie de identidad
-// (GET api/identidad.php) devuelve los contextos de la persona. Este módulo:
+// (GET api/v1/identidad) devuelve los contextos de la persona. Este módulo:
 //
 //   1. Resuelve la superficie consultando identidad.php con el bearer del
 //      navegador (si lo hay) — nunca inventa credenciales.
@@ -16,7 +16,7 @@
 
 import { request } from './api.js';
 
-export const IDENTIDAD_URL = 'api/identidad.php';
+export const IDENTIDAD_URL = 'api/v1/identidad';
 export const SESSION_KEY = 'tindercows:login';
 export const ACTOR_KEY = 'tindercows:actor';
 export const BEARER_KEY = 'tindercows:bearer';

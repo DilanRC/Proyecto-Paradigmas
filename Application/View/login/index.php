@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
+    <base href="/">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Entra a TinderCows para explorar publicaciones y oportunidades ganaderas.">
@@ -26,7 +27,7 @@
             </a>
             <div class="auth-header__actions">
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
-                <a class="auth-back" href="explorar.php"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+                <a class="auth-back" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
             </div>
         </header>
 
@@ -65,8 +66,8 @@
                     <button class="auth-submit" type="submit"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>Entrar a TinderCows</span></button>
                 </form>
 
-                <p class="auth-card__copy">¿Primera vez aquí? <a href="registro.php"><strong>Crear cuenta con registro guiado</strong></a></p>
-                <p class="auth-card__legal">Al continuar acepta los <a href="terminos.php">Términos</a> y puede consultar la <a href="privacidad.php">Política de privacidad</a>.</p>
+                <p class="auth-card__copy">¿Primera vez aquí? <a href="registro"><strong>Crear cuenta con registro guiado</strong></a></p>
+                <p class="auth-card__legal">Al continuar acepta los <a href="terminos">Términos</a> y puede consultar la <a href="privacidad">Política de privacidad</a>.</p>
             </section>
         </div>
     </main>

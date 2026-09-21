@@ -79,9 +79,9 @@ function createAccountMenu(actions, session, profile) {
         </button>
         <div class="public-account-menu__panel" id="public-account-panel" hidden>
             <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
-            <a href="mi-actividad.php"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi perfil y actividad</span></a>
-            <a href="registro.php" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
-            <a href="productores.php" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
+            <a href="mi-actividad"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi perfil y actividad</span></a>
+            <a href="registro" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
+            <a href="admin/productores" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
             <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
         </div>`;
 
@@ -102,7 +102,7 @@ function createAccountMenu(actions, session, profile) {
     menu.querySelector('[data-public-logout]')?.addEventListener('click', async () => {
         try { await signOut(); } finally {
             clearAdminBrowserSession();
-            window.location.assign('explorar.php');
+            window.location.assign('explorar');
         }
     });
     return menu;
@@ -118,7 +118,7 @@ async function resolveAdminLink(menu) {
     try {
         const token = await getAccessToken();
         if (!token) return;
-        const response = await fetch('api/admin-status.php', {
+        const response = await fetch('api/v1/admin/status', {
             headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
             cache: 'no-store',
         });
@@ -130,8 +130,8 @@ async function resolveAdminLink(menu) {
 
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
-    addNavLink(nav, 'publicar.php', 'fa-circle-plus', 'Publicar');
-    addNavLink(nav, 'fletes.php', 'fa-truck', 'Fletes');
+    addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
+    addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
 
     const actions = document.querySelector('.public-header__actions');
     const login = actions?.querySelector('.public-header__login');
@@ -147,7 +147,7 @@ function enhancePublicNavigation() {
     if (!actions.querySelector('[data-register-link]')) {
         const register = document.createElement('a');
         register.className = 'public-header__login';
-        register.href = 'registro.php';
+        register.href = 'registro';
         register.dataset.registerLink = 'true';
         register.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Crear cuenta</span>';
         actions.insertBefore(register, login);
@@ -166,9 +166,9 @@ function initializeBusinessActionGate() {
         let destination = null;
 
         if (!session?.authenticated) {
-            destination = 'login.php?next=explorar.php';
+            destination = 'entrar?next=explorar';
         } else if (!profile?.persona) {
-            destination = 'registro.php?next=explorar.php';
+            destination = 'registro?next=explorar';
         }
 
         if (!destination) return;
