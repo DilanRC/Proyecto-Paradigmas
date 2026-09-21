@@ -26,6 +26,11 @@
 .dashboard-card { overflow:hidden; border:1px solid var(--admin-line); border-radius:20px; background:var(--admin-surface); }
 .dashboard-card--feature { display:grid; grid-template-columns:minmax(220px,.9fr) minmax(0,1.1fr); }.dashboard-card__image { min-height:300px; }.dashboard-card__body { padding:30px; }.dashboard-card p { color:var(--admin-text-soft); line-height:1.6; }.text-link { display:inline-flex; gap:9px; align-items:center; margin-top:13px; color:var(--admin-primary-strong); font-weight:700; text-decoration:none; }
 .dashboard-card--links { padding:30px; }.dashboard-quick-links { display:grid; gap:8px; margin-top:20px; }.dashboard-quick-links a { display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center; padding:13px 0; color:var(--admin-text); border-bottom:1px solid var(--admin-line); text-decoration:none; }.dashboard-quick-links a > i:first-child { color:var(--admin-primary); }.dashboard-quick-links a > i:last-child { color:var(--admin-muted); font-size:.8rem; }.dashboard-quick-links strong,.dashboard-quick-links small { display:block; }.dashboard-quick-links small { margin-top:3px; color:var(--admin-muted); }
+.dashboard-gallery { margin-top:40px; }
+.dashboard-gallery__grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.dashboard-gallery figure { min-width:0; margin:0; overflow:hidden; border:1px solid var(--admin-line); border-radius:16px; background:var(--admin-surface); }
+.dashboard-gallery img { display:block; width:100%; aspect-ratio:1.25; object-fit:cover; }
+.dashboard-gallery figcaption { padding:13px 15px 15px; color:var(--admin-text); font-size:.9rem; font-weight:700; }
 @keyframes dashboard-shimmer { from { background-position:200% 0; } to { background-position:-200% 0; } }
-@media (max-width:1000px) { .dashboard-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }.dashboard-grid { grid-template-columns:1fr; } }
+@media (max-width:1000px) { .dashboard-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }.dashboard-grid { grid-template-columns:1fr; }.dashboard-gallery__grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:700px) { .dashboard-hero { grid-template-columns:1fr; }.dashboard-hero__image { min-height:220px; max-height:280px; order:-1; }.dashboard-metrics { grid-template-columns:1fr; }.dashboard-section__heading { align-items:start; flex-direction:column; }.dashboard-card--feature { grid-template-columns:1fr; }.dashboard-card__image { min-height:220px; } }
