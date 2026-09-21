@@ -23,6 +23,7 @@ const productCss = read('../../Public/css/public-product.css');
 const themeJs = read('../../Public/js/public-theme.js');
 const publicUi = read('../../Public/js/public-ui.js');
 const registroJs = read('../../Public/js/registro.js');
+const commerceJs = read('../../Public/js/explore-actions.js');
 const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
 const authGate = read('../../Public/js/shared/auth-gate.js');
@@ -178,6 +179,12 @@ test('la autorización admin verificada crea y limpia solo el marcador visual', 
     assert.equal(marker?.adminAuthorized, true);
     clearAdminBrowserSession(storage);
     assert.equal(readBrowserSession(storage), null);
+});
+
+test('el comercio no inventa una intención persistida sin contrato backend', () => {
+    assert.equal(commerceJs.includes('purchase-intents'), false);
+    assert.equal(commerceJs.includes('persistence: \'frontend-prototype\''), false);
+    assert.match(commerceJs, /contrato que identifique al contexto Comprador/);
 });
 
 test('una ruta privada sin sesión vuelve al login conservando destino local', () => {
