@@ -111,14 +111,24 @@ final class ValidacionService
 
     public function validarPersona(array $cuerpo, bool $actualizacion): array
     {
-        $permitidos = ['identificacion', 'nombre', 'alias', 'telefono', 'correoElectronico'];
+        $permitidos = ['identificacion', 'nombre', 'nombres', 'apellidos', 'alias', 'telefono', 'correoElectronico'];
         if ($actualizacion) {
             $permitidos[] = 'identificacionNumeroOriginal';
         }
         $errores = $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
 
         $identificacion = $this->validarIdentificacion($cuerpo['identificacion'] ?? null, $errores);
-        $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
+        $usaNombreSeparado = array_key_exists('nombres', $cuerpo) || array_key_exists('apellidos', $cuerpo);
+        if ($usaNombreSeparado) {
+            $nombres = $this->validarNombrePersona($cuerpo['nombres'] ?? null, 'nombres', $errores);
+            $apellidos = $this->validarNombrePersona($cuerpo['apellidos'] ?? null, 'apellidos', $errores);
+            $nombre = trim($nombres . ' ' . $apellidos);
+            if (mb_strlen($nombre) > 150) {
+                $errores['nombre'] = 'La combinación de nombres y apellidos no puede superar 150 caracteres.';
+            }
+        } else {
+            $nombre = $this->textoCampo($cuerpo['nombre'] ?? null, 'nombre', 150, $errores, 3);
+        }
         $alias = $this->textoOpcional($cuerpo['alias'] ?? null, 'alias', 150, $errores);
         $telefono = $this->validarTelefono($cuerpo['telefono'] ?? null, $errores);
         $correo = $this->validarCorreo($cuerpo['correoElectronico'] ?? null, $errores);
@@ -242,12 +252,20 @@ final class ValidacionService
             $errores['identificacion.tipoCodigo'] = 'Seleccione un tipo de identificación válido.';
         }
         $visible = $this->textoCampo($valor['numero'] ?? null, 'identificacion.numero', 250, $errores, 1, false);
-        $patron = in_array($tipo, ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'], true)
-            ? '/^[0-9][0-9 -]*$/' : '/^[A-Za-z0-9][A-Za-z0-9 -]*$/';
-        if ($visible !== '' && !preg_match($patron, $visible)) {
-            $errores['identificacion.numero'] = 'Use únicamente letras, dígitos, espacios o guiones según el tipo.';
+        $numero = in_array($tipo, ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'], true)
+            ? $this->normalizarIdentificacion($visible)
+            : mb_strtoupper(trim($visible), 'UTF-8');
+        $reglas = [
+            'CEDULA_FISICA' => ['patron' => '/^[1-9][0-9]{8}$/', 'mensaje' => 'La cédula física debe tener 9 dígitos y no iniciar con cero.'],
+            'CEDULA_JURIDICA' => ['patron' => '/^[1-9][0-9]{9}$/', 'mensaje' => 'La cédula jurídica debe tener 10 dígitos.'],
+            'DIMEX' => ['patron' => '/^[1-9][0-9]{10,11}$/', 'mensaje' => 'El DIMEX debe tener 11 o 12 dígitos y no iniciar con cero.'],
+            'NITE' => ['patron' => '/^[0-9]{10}$/', 'mensaje' => 'El NITE debe tener 10 dígitos.'],
+            'PASAPORTE' => ['patron' => '/^[A-Z0-9]{1,9}$/', 'mensaje' => 'El pasaporte debe tener hasta 9 caracteres alfanuméricos.'],
+        ];
+        if ($numero !== '' && isset($reglas[$tipo]) && !preg_match($reglas[$tipo]['patron'], $numero)) {
+            $errores['identificacion.numero'] = $reglas[$tipo]['mensaje'];
         }
-        return ['tipoCodigo' => $tipo, 'numero' => $this->normalizarIdentificacion($visible)];
+        return ['tipoCodigo' => $tipo, 'numero' => $numero];
     }
 
     public function validarTelefono(mixed $valor, array &$errores): string
@@ -412,5 +430,14 @@ final class ValidacionService
             return null;
         }
         return trim($valor);
+    }
+
+    private function validarNombrePersona(mixed $valor, string $campo, array &$errores): string
+    {
+        $nombre = $this->textoCampo($valor, $campo, 75, $errores, 2);
+        if ($nombre !== '' && !preg_match('/^[\p{L}\p{M}][\p{L}\p{M} .\'’\-]*$/u', $nombre)) {
+            $errores[$campo] = 'Use únicamente letras, espacios, puntos, apóstrofes o guiones.';
+        }
+        return $nombre;
     }
 }

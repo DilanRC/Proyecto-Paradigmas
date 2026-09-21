@@ -160,7 +160,9 @@ function test_token(string $label): string
 
 function test_document(): string
 {
-    return 'TST' . strtoupper(bin2hex(random_bytes(8)));
+    // La fixture usa PASAPORTE: el documento de viaje admite como máximo
+    // nueve caracteres alfanuméricos en el contrato de registro.
+    return 'P' . strtoupper(bin2hex(random_bytes(4)));
 }
 
 function test_direccion_payload(array $overrides = []): array

@@ -147,7 +147,7 @@ test('los patrones significan lo mismo que los del backend', () => {
         assert.equal(reglaIdentificacion(tipo).pattern, '[0-9][0-9 \\-]*', tipo);
     }
     for (const tipo of ['NITE', 'PASAPORTE']) {
-        assert.equal(reglaIdentificacion(tipo).pattern, '[A-Za-z0-9][A-Za-z0-9 \\-]*', tipo);
+        assert.equal(reglaIdentificacion(tipo).pattern, '[A-Za-z0-9][A-Za-z0-9]*', tipo);
     }
 });
 
@@ -160,7 +160,8 @@ test('el patron acepta y rechaza lo mismo que el servidor', () => {
     assert.equal(acepta('CEDULA_FISICA', '-1111'), false, 'no puede empezar por guion');
 
     assert.equal(acepta('PASAPORTE', 'AB123456'), true);
-    assert.equal(acepta('PASAPORTE', 'AB-123 456'), true);
+    assert.equal(acepta('PASAPORTE', 'AB-123 456'), false, 'no admite separadores');
+    assert.equal(acepta('PASAPORTE', 'AB123456789'), true, 'el patrón captura caracteres; el maxlength limita a 9');
     assert.equal(acepta('PASAPORTE', '¡mal!'), false, 'no admite simbolos');
 });
 

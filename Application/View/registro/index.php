@@ -10,10 +10,10 @@
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/onboarding.css?v=front-3">
+    <link rel="stylesheet" href="css/onboarding.css?v=front-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=front-5"></script>
+    <script type="module" src="js/registro.js?v=front-6"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -38,10 +38,10 @@
             <p>No vamos a obligarte a ser productor, comprador o transportista. Primero registramos tu identidad una sola vez y después preguntamos únicamente lo necesario para las actividades que elijas.</p>
         </div>
         <ol class="onboarding-progress" aria-label="Progreso de registro">
-            <li data-progress="persona" class="is-active"><span>1</span>Tu información</li>
-            <li data-progress="intereses"><span>2</span>Qué quieres hacer</li>
-            <li data-progress="fincas"><span>3</span>Fincas</li>
-            <li data-progress="revision"><span>4</span>Revisión</li>
+            <li data-progress="persona" class="is-active"><span>1</span>Tus datos</li>
+            <li data-progress="intereses"><span>2</span>Tu actividad</li>
+            <li data-progress="fincas"><span>3</span>Tus fincas</li>
+            <li data-progress="revision"><span>4</span>Listo</li>
         </ol>
     </section>
 
@@ -51,7 +51,7 @@
                 <div class="step-heading"><span class="step-number">01</span><div><h2>Tu información</h2><p>Estos datos identifican a la persona. No se volverán a pedir por cada actividad.</p></div></div>
                 <div class="form-grid onboarding-grid">
                     <label class="auth-field"><span>Tipo de identificación *</span><select name="identificacionTipo" required><option value="">Seleccione</option><option value="CEDULA_FISICA">Cédula física</option><option value="CEDULA_JURIDICA">Cédula jurídica</option><option value="DIMEX">DIMEX</option><option value="NITE">NITE</option><option value="PASAPORTE">Pasaporte</option></select><small class="auth-error" data-error-for="identificacionTipo"></small></label>
-                    <label class="auth-field"><span>Número de identificación *</span><input name="identificacionNumero" type="text" maxlength="250" autocomplete="off" required><small class="auth-error" data-error-for="identificacionNumero"></small></label>
+                    <label class="auth-field"><span>Número de identificación *</span><input name="identificacionNumero" type="text" maxlength="12" autocomplete="off" required><small class="field-help" data-identificacion-hint>Elige el tipo para conocer el formato.</small><small class="auth-error" data-error-for="identificacionNumero"></small></label>
                     <div class="identity-name-group auth-field--wide">
                         <div class="identity-name-group__intro"><span>Tu nombre</span><small>Lo mostraremos en tu perfil y en tus actividades.</small></div>
                         <div class="identity-name-group__fields">
@@ -79,16 +79,15 @@
             </section>
 
             <section class="onboarding-step" data-step="fincas" hidden>
-                <div class="step-heading"><span class="step-number">03</span><div><h2>Tus fincas</h2><p>Como elegiste vender o publicar, necesitamos al menos una finca. Puedes agregar varias por separado.</p></div></div>
+                <div class="step-heading"><span class="step-number">03</span><div><h2>Añade tus fincas</h2><p>Agrega una o varias fincas. El nombre es necesario; la dirección escrita y el punto en el mapa son opcionales.</p></div></div>
                 <div id="fincas-list" class="fincas-list"></div>
                 <button class="onboarding-add" id="agregar-finca" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Agregar otra finca</button>
                 <p class="auth-error onboarding-error" data-error-for="fincas"></p>
             </section>
 
             <section class="onboarding-step" data-step="revision" hidden>
-                <div class="step-heading"><span class="step-number">04</span><div><h2>Revisa antes de continuar</h2><p>Te mostramos qué información se guardaría y por qué se pidió.</p></div></div>
-                <div id="registro-resumen" class="registration-summary"></div>
-                <div class="business-note"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><p>Tu cuenta se valida con Supabase y esta revisión se guarda en el servidor en una sola operación. Si eliges vender o publicar, tus fincas quedan ligadas a la misma identidad.</p></div>
+                <div class="step-heading"><span class="step-number">04</span><div><h2>Todo listo</h2><p>Terminaremos de guardar tus datos y podrás entrar a tu cuenta.</p></div></div>
+                <div class="registration-ready"><i class="fa-solid fa-check" aria-hidden="true"></i><strong>Tu cuenta quedará lista para usar.</strong><span>Al terminar podrás completar o cambiar tus actividades desde tu perfil.</span></div>
             </section>
 
             <p id="registro-status" class="auth-status" role="status" aria-live="polite"></p>
@@ -104,7 +103,7 @@
     <article class="finca-card" data-finca>
         <div class="finca-card__heading"><strong>Finca</strong><button type="button" data-remove-finca aria-label="Eliminar finca"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></div>
         <label class="auth-field"><span>Nombre de la finca *</span><input type="text" data-finca-nombre maxlength="150" required placeholder="Ej. Finca El Roble"></label>
-        <details class="finca-address"><summary>Agregar dirección ahora <span>opcional</span></summary><p>La dirección se podrá completar o modificar desde la finca. En este registro inicial no es obligatoria.</p></details>
+        <details class="finca-address" open><summary>Dirección de la finca <span>opcional</span></summary><p>Escribe la provincia, cantón, distrito y señas, o marca el punto exacto en el mapa. Puedes dejarlo para después.</p></details>
     </article>
 </template>
 </body>

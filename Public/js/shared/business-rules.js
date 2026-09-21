@@ -67,6 +67,13 @@ export function validatePersonaDraft(persona = {}, { requirePassword = true } = 
 
     if (persona.nombres && String(persona.nombres).trim().length < 2) errors.nombres = 'Ingrese al menos 2 caracteres.';
     if (persona.apellidos && String(persona.apellidos).trim().length < 2) errors.apellidos = 'Ingrese al menos 2 caracteres.';
+    for (const field of ['nombres', 'apellidos']) {
+        const value = String(persona[field] ?? '').trim();
+        if (value && !/^[\p{L}\p{M}][\p{L}\p{M} .\u0027’\-]*$/u.test(value)) {
+            errors[field] = 'Use únicamente letras, espacios, puntos, apóstrofes o guiones.';
+        }
+        if (value.length > 75) errors[field] = 'No puede superar 75 caracteres.';
+    }
 
     const phoneDigits = String(persona.telefono ?? '').replace(/\D/g, '');
     if (persona.telefono && (phoneDigits.length < 8 || phoneDigits.length > 15)) {

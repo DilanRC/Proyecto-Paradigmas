@@ -12,6 +12,7 @@ import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { request } from './shared/api.js';
 import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
 import { syncPublicProfile } from './shared/public-profile.js';
+import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 
 const DRAFT_KEY = 'tindercows:registration-draft';
 const PROFILE_KEY = 'tindercows:profile';
@@ -56,9 +57,9 @@ function montarDireccionFinca(card, direccionInicial = null) {
     const numero = ++secuenciaFinca;
     const listaId = `registro-pueblos-finca-${numero}`;
     details.innerHTML = `
-        <summary>Dirección y punto exacto <span>opcional</span></summary>
+        <summary>Dirección de la finca <span>opcional</span></summary>
         <div class="farm-address-editor">
-            <p class="fieldset-help">Puede completar la dirección ahora. El mapa es opcional y solo sirve para marcar el punto exacto de esta finca.</p>
+            <p class="fieldset-help">Puede escribir la dirección o marcar el punto exacto en el mapa. No es obligatorio completarlo ahora.</p>
             <div class="farm-address-editor__grid">
                 <label class="field"><span>Provincia</span><select data-finca-provincia></select></label>
                 <label class="field"><span>Cantón</span><select data-finca-canton></select></label>
@@ -285,7 +286,8 @@ function initialize() {
         nextButton.hidden = stepIndex === steps.length - 1;
         finishButton.hidden = stepIndex !== steps.length - 1;
         status.textContent = '';
-        if (active === 'revision') renderSummary(snapshot(form, existingProfile), extending);
+        // La validación técnica y la persistencia son internas; la persona solo
+        // necesita ver que el registro está listo para terminar.
     };
 
     const validateCurrent = () => {
@@ -318,6 +320,16 @@ function initialize() {
     });
     previousButton.addEventListener('click', () => { stepIndex = Math.max(0, stepIndex - 1); sync(); });
     document.querySelector('#agregar-finca')?.addEventListener('click', () => addFinca());
+    const identificacionTipo = form.elements.namedItem('identificacionTipo');
+    const identificacionNumero = form.elements.namedItem('identificacionNumero');
+    const identificacionHint = form.querySelector('[data-identificacion-hint]');
+    const actualizarIdentificacion = () => {
+        if (identificacionTipo instanceof HTMLSelectElement && identificacionNumero instanceof HTMLInputElement) {
+            aplicarRestriccionIdentificacion(identificacionNumero, identificacionTipo.value, { hint: identificacionHint });
+        }
+    };
+    identificacionTipo?.addEventListener('change', actualizarIdentificacion);
+    actualizarIdentificacion();
     form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });
     form.addEventListener('change', () => { persistDraft(form, existingProfile); });
 

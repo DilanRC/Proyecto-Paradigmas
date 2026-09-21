@@ -178,7 +178,7 @@ final class RegistroPublicoController
         // La contraseña deliberadamente no forma parte de este contrato PHP.
         // Solo Supabase Auth debe recibirla.
         try {
-            return $this->validacion->validarPersona([
+            $datosValidacion = [
                 'identificacion' => [
                     'tipoCodigo' => $valor['identificacionTipo'] ?? null,
                     'numero' => $valor['identificacionNumero'] ?? null,
@@ -187,7 +187,12 @@ final class RegistroPublicoController
                 'alias' => $valor['alias'] ?? null,
                 'telefono' => $valor['telefono'] ?? null,
                 'correoElectronico' => $valor['correoElectronico'] ?? null,
-            ], false)['datos'];
+            ];
+            if (array_key_exists('nombres', $valor) || array_key_exists('apellidos', $valor)) {
+                $datosValidacion['nombres'] = $valor['nombres'] ?? null;
+                $datosValidacion['apellidos'] = $valor['apellidos'] ?? null;
+            }
+            return $this->validacion->validarPersona($datosValidacion, false)['datos'];
         } catch (ValidacionException $excepcion) {
             foreach ($excepcion->errores as $campo => $mensaje) {
                 $campoPublico = match ($campo) {

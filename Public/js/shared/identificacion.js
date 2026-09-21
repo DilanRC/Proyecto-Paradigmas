@@ -3,12 +3,9 @@
 // Los patrones son EXACTAMENTE los que aplica el backend en
 // Application/Controller/*Controller.php::validarIdentificacion():
 //
-//   CEDULA_FISICA | CEDULA_JURIDICA | DIMEX   ->  /^[0-9][0-9 -]*$/
-//   NITE | PASAPORTE                          ->  /^[A-Za-z0-9][A-Za-z0-9 -]*$/
-//
-// No se anaden longitudes propias. El servidor solo exige entre 1 y 250
-// caracteres, asi que imponer aqui "nueve digitos" rechazaria valores que el
-// backend acepta y el formulario dejaria de reflejar el contrato real.
+// Las longitudes se basan en los formatos oficiales consultados del TSE y del
+// Ministerio de Hacienda. El backend repite estas reglas; el navegador solo
+// ofrece una primera ayuda y nunca sustituye la validación del servidor.
 
 /** Tipos cuyo numero solo admite digitos. */
 export const TIPOS_NUMERICOS = ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'];
@@ -20,15 +17,15 @@ export const TIPOS_NUMERICOS = ['CEDULA_FISICA', 'CEDULA_JURIDICA', 'DIMEX'];
 // '[0-9][0-9 -]*' el campo aceptaba letras en una cedula sin protestar.
 // Con el escape el significado es identico al del backend.
 const PATRON_NUMERICO = '[0-9][0-9 \\-]*';
-const PATRON_ALFANUMERICO = '[A-Za-z0-9][A-Za-z0-9 \\-]*';
+const PATRON_ALFANUMERICO = '[A-Za-z0-9][A-Za-z0-9]*';
 
 /** Ejemplo y explicacion por tipo. Son orientativos, no restricciones extra. */
 const GUIA = {
-    CEDULA_FISICA: { ejemplo: '1-1111-1111', formato: 'Nueve dígitos, con o sin guiones.' },
-    CEDULA_JURIDICA: { ejemplo: '3-101-111111', formato: 'Diez dígitos, con o sin guiones.' },
-    DIMEX: { ejemplo: '111111111111', formato: 'Solo dígitos.' },
-    NITE: { ejemplo: '1111111111', formato: 'Letras y dígitos, sin símbolos.' },
-    PASAPORTE: { ejemplo: 'AB123456', formato: 'Letras y dígitos, sin símbolos.' },
+    CEDULA_FISICA: { ejemplo: '1-1111-1111', formato: '9 dígitos; se aceptan guiones al escribir.', minLength: 9, maxLength: 12 },
+    CEDULA_JURIDICA: { ejemplo: '3-101-111111', formato: '10 dígitos; se aceptan guiones al escribir.', minLength: 10, maxLength: 13 },
+    DIMEX: { ejemplo: '111111111111', formato: '11 o 12 dígitos, sin guiones.', minLength: 11, maxLength: 12 },
+    NITE: { ejemplo: '1111111111', formato: '10 dígitos, sin guiones.', minLength: 10, maxLength: 10 },
+    PASAPORTE: { ejemplo: 'AB1234567', formato: 'Hasta 9 letras y dígitos, sin símbolos.', minLength: 1, maxLength: 9 },
 };
 
 /**
@@ -43,12 +40,14 @@ export function reglaIdentificacion(tipo) {
         pattern: tipo === '' ? null : (numerico ? PATRON_NUMERICO : PATRON_ALFANUMERICO),
         inputMode: numerico ? 'numeric' : 'text',
         placeholder: guia?.ejemplo ?? '',
+        minLength: guia?.minLength ?? 1,
+        maxLength: guia?.maxLength ?? 12,
         // El mensaje que vera el usuario si el patron falla.
         titulo: tipo === ''
             ? ''
             : numerico
                 ? 'Use únicamente dígitos, espacios o guiones.'
-                : 'Use únicamente letras, dígitos, espacios o guiones.',
+                : 'Use únicamente letras y dígitos, sin símbolos.',
         ayuda: tipo === ''
             ? 'Elija primero el tipo de identificación.'
             : `${guia?.formato ?? ''} Se guarda sin espacios ni guiones.`.trim(),
@@ -70,6 +69,8 @@ export function aplicarRestriccionIdentificacion(numero, tipo, { hint = null } =
 
     numero.inputMode = regla.inputMode;
     numero.placeholder = regla.placeholder;
+    numero.minLength = regla.minLength;
+    numero.maxLength = regla.maxLength;
     if (hint) hint.textContent = regla.ayuda;
 
     return regla;
