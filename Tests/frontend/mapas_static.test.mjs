@@ -36,6 +36,13 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('draggable: true'));
 });
 
+test('el selector limita el mapa a Costa Rica y puede completar dirección por coordenadas', () => {
+    assert.ok(map.includes('BOUNDS_COSTA_RICA'));
+    assert.ok(farmMap.includes('buscarDireccionPorCoordenadas'));
+    assert.ok(farmMap.includes('country_code !== \'cr\''));
+    assert.ok(farmMap.includes('onPuntoChange'));
+});
+
 test('la finca puede centrar el mapa en la ubicación del usuario sin activar el rastreo automáticamente', () => {
     assert.ok(farmMap.includes('data-farm-map-location'));
     assert.ok(farmMap.includes('capturarUbicacionAutomatica'));

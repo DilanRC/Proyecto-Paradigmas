@@ -13,7 +13,7 @@
 // entre productores DISTINTOS siempre se permite (advertencia, no bloqueo).
 
 import { conectarDireccion } from './direccion.js';
-import { crearSelectorPuntoFinca } from './finca-mapa.js';
+import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './finca-mapa.js';
 
 export const FINCA_NOMBRE_MAX = 150;
 
@@ -107,12 +107,32 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
         const direccion = conectarDireccion({ provincia, canton, distrito, pueblo, listaPueblos });
         direccion.aplicar(direccionInicial ?? {});
         senas.value = direccionInicial?.senas ?? '';
+        let geocodificacion = 0;
+        async function completarDireccionDesdePunto(punto) {
+            const turno = ++geocodificacion;
+            if (!punto) return;
+            try {
+                const encontrada = await buscarDireccionPorCoordenadas(punto);
+                if (turno !== geocodificacion || !fila.isConnected) return;
+                direccion.aplicar({
+                    provincia: encontrada.provincia || provincia.value,
+                    canton: encontrada.canton || canton.value,
+                    distrito: encontrada.distrito || distrito.value,
+                    pueblo: encontrada.pueblo || pueblo.value,
+                });
+                notificar();
+            } catch {
+                // El punto y la dirección manual siguen siendo válidos aunque el
+                // servicio externo no responda o no encuentre un nombre local.
+            }
+        }
         const mapa = crearSelectorPuntoFinca({
             mount: mapaMount,
             puntoInicial: {
                 latitud: direccionInicial?.latitud ?? null,
                 longitud: direccionInicial?.longitud ?? null,
             },
+            onPuntoChange: completarDireccionDesdePunto,
         });
 
         nombre.addEventListener('input', () => {

@@ -6,6 +6,10 @@ export const MAPLIBRE_MODULE_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VER
 export const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 export const CENTRO_COSTA_RICA = Object.freeze([-84.0907, 9.9281]);
+// Rectángulo operativo que incluye Costa Rica continental, Isla del Coco,
+// demás islas y el espacio marítimo costarricense. El mapa no permite navegar
+// fuera de esta zona ni solicita teselas de otras regiones.
+export const BOUNDS_COSTA_RICA = Object.freeze([[-90, 3.3], [-81.5, 12.8]]);
 export const MAP_LOAD_TIMEOUT_MS = 8000;
 
 const PROVIDER_ATTRIBUTION = '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>';
@@ -89,6 +93,8 @@ export async function crearMapa({
             interactive,
             attributionControl: false,
             cooperativeGestures: interactive,
+            maxBounds: BOUNDS_COSTA_RICA,
+            renderWorldCopies: false,
         });
     } catch (cause) {
         const error = crearError('initialization', 'No fue posible iniciar el mapa.', cause);

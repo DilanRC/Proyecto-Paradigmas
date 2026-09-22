@@ -1,4 +1,4 @@
-import { CENTRO_COSTA_RICA, crearMapa, normalizarCoordenadas } from './mapa.js';
+import { BOUNDS_COSTA_RICA, CENTRO_COSTA_RICA, crearMapa, normalizarCoordenadas } from './mapa.js';
 import { capturarUbicacionAutomatica, leerUbicacionUsuario } from './ubicacion-sesion.js';
 
 function asegurarEstilos() {
@@ -21,11 +21,58 @@ function normalizarPunto(punto) {
     };
 }
 
+function estaEnZonaCostaRica(punto) {
+    const latitud = Number(punto?.latitud);
+    const longitud = Number(punto?.longitud);
+    return Number.isFinite(latitud) && Number.isFinite(longitud)
+        && latitud >= BOUNDS_COSTA_RICA[0][1] && latitud <= BOUNDS_COSTA_RICA[1][1]
+        && longitud >= BOUNDS_COSTA_RICA[0][0] && longitud <= BOUNDS_COSTA_RICA[1][0];
+}
+
+/** Geocodificación inversa puntual; no se ejecuta mientras el mapa está cerrado. */
+export async function buscarDireccionPorCoordenadas(punto, {
+    fetchImpl = globalThis.fetch,
+    signal,
+} = {}) {
+    if (!estaEnZonaCostaRica(punto)) {
+        const error = new Error('El punto debe estar dentro de Costa Rica, sus islas o territorio marítimo.');
+        error.kind = 'outside-costa-rica';
+        throw error;
+    }
+    const params = new URLSearchParams({
+        format: 'jsonv2',
+        addressdetails: '1',
+        zoom: '18',
+        lat: Number(punto.latitud).toFixed(7),
+        lon: Number(punto.longitud).toFixed(7),
+        'accept-language': 'es',
+    });
+    const response = await fetchImpl(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+        headers: { Accept: 'application/json' },
+        signal,
+    });
+    if (!response.ok) throw new Error('No fue posible identificar la dirección del punto.');
+    const payload = await response.json();
+    if (payload?.address?.country_code !== 'cr') {
+        const error = new Error('El punto seleccionado no pertenece a Costa Rica.');
+        error.kind = 'outside-costa-rica';
+        throw error;
+    }
+    const address = payload.address ?? {};
+    return {
+        provincia: address.state ?? '',
+        canton: address.county ?? address.municipality ?? '',
+        distrito: address.city_district ?? address.suburb ?? address.town ?? '',
+        pueblo: address.village ?? address.hamlet ?? address.city ?? address.town ?? '',
+    };
+}
+
 export function crearSelectorPuntoFinca({
     mount,
     puntoInicial = null,
     storage = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
     crearMapaFn = crearMapa,
+    onPuntoChange = () => {},
 } = {}) {
     if (!mount) throw new TypeError('Se requiere un contenedor para el selector de finca.');
     asegurarEstilos();
@@ -94,6 +141,7 @@ export function crearSelectorPuntoFinca({
         status.textContent = punto
             ? 'Punto exacto preparado. Se guardará junto con la dirección de la finca.'
             : 'No hay punto exacto seleccionado.';
+        onPuntoChange(punto);
         return punto;
     };
 
@@ -134,12 +182,14 @@ export function crearSelectorPuntoFinca({
                     mapa?.establecerMarcador?.(punto, { centrar: false });
                     render();
                     notificarCambio();
+                    onPuntoChange(punto);
                     status.textContent = 'Punto seleccionado. Puede arrastrar el marcador para afinarlo.';
                 },
                 onMarkerChange: (coordenadas) => {
                     punto = normalizarPunto(coordenadas);
                     render();
                     notificarCambio();
+                    onPuntoChange(punto);
                     status.textContent = 'Punto ajustado. Se guardará al guardar la dirección.';
                 },
                 onError: (error) => {
@@ -198,6 +248,7 @@ export function crearSelectorPuntoFinca({
         mapa?.quitarMarcador?.();
         render();
         notificarCambio();
+        onPuntoChange(null);
         status.textContent = 'Punto exacto eliminado. La dirección escrita se conserva.';
     });
     retry.addEventListener('click', () => { cerrarMapa(); abrirMapa(); });
@@ -212,6 +263,7 @@ export function crearSelectorPuntoFinca({
                 else mapa.quitarMarcador?.();
             }
             render();
+            onPuntoChange(punto);
         },
         limpiar() { establecer(null); },
         cerrarMapa,
