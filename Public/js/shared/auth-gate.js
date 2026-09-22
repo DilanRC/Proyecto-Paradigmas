@@ -112,7 +112,7 @@ function revealPrivateUi() {
 if (typeof window !== 'undefined') {
     const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
     const hasVerifiedAuthSession = readAuthSession(window.sessionStorage) !== null;
-    if (allowed && !hasVerifiedAuthSession) {
+    if (allowed && isPrivateRoute(window.location.pathname) && !hasVerifiedAuthSession) {
         clearAdminBrowserSession(window.sessionStorage);
         window.location.replace(loginTarget(window.location.pathname));
     } else if (allowed && typeof document !== 'undefined') {

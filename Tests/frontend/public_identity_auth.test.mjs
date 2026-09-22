@@ -316,6 +316,13 @@ test('una ruta privada sin sesión vuelve al login conservando destino local', (
     assert.equal(redirected, 'admin/entrar?next=admin%2Fproductores');
 });
 
+test('las rutas públicas no redirigen al login por el gate administrativo', () => {
+    assert.match(
+        authGate,
+        /if \(allowed && isPrivateRoute\(window\.location\.pathname\) && !hasVerifiedAuthSession\)/,
+    );
+});
+
 test('el shell privado distingue volver al sitio público de cerrar sesión', () => {
     assert.ok(authGate.includes("publicLink.textContent = 'Sitio público'"));
     assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión administrativa'"));
