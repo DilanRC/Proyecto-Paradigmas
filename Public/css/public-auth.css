@@ -23,6 +23,11 @@
     --tc-shadow:0 28px 80px rgba(0,0,0,.28);
     --tc-shadow-soft:0 16px 45px rgba(0,0,0,.18);
     --tc-glow:rgba(210,79,40,.16);
+    --tc-danger:#ffaaa0;
+    --tc-success:#9bd88a;
+    --tc-success-bg:#203b2b;
+    --tc-warning:#f2c477;
+    --tc-neutral-status:#c7bdb3;
     /* Aliases consumidos por onboarding.css y las vistas de actividad. */
     --background:var(--tc-bg);
     --surface:var(--tc-surface);
@@ -52,6 +57,11 @@ html[data-theme='light'] {
     --tc-shadow:0 28px 80px rgba(57,67,50,.13);
     --tc-shadow-soft:0 16px 40px rgba(57,67,50,.10);
     --tc-glow:rgba(209,95,60,.13);
+    --tc-danger:#a9362c;
+    --tc-success:#26744a;
+    --tc-success-bg:#e5f6ec;
+    --tc-warning:#8a5a00;
+    --tc-neutral-status:#5f6762;
     color-scheme:light;
 }
 
@@ -838,7 +848,7 @@ html[data-theme='light'] .brand-logo--dark {
 .auth-status {
     min-height:17px;
     margin:0;
-    color:#d46558;
+    color:var(--tc-danger);
     font-size:11px;
 }
 

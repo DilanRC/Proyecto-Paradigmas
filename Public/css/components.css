@@ -80,7 +80,7 @@
 .button--secondary {
     color:var(--text);
     border-color:var(--border);
-    background:#fff;
+    background:var(--surface);
 }
 
 .button--danger {
@@ -388,7 +388,7 @@
 .skeleton__row {
     height:44px;
     border-radius:var(--small-radius);
-    background:linear-gradient(90deg,#eceee9 25%,#f6f7f4 50%,#eceee9 75%);
+    background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%);
     background-size:200% 100%;
     animation:skeleton-sweep 1.2s ease-in-out infinite;
 }
@@ -488,10 +488,10 @@
 
 .toast__dismiss:hover { background:rgba(0,0,0,.08); }
 
-.toast--success { color:#125b36; background:#e5f6ec; }
-.toast--error   { color:#8f2229; background:#fdebed; }
-.toast--warning { color:#7a4b00; background:#fdf1dd; }
-.toast--info    { color:#1f4b6e; background:#e7f1f9; }
+.toast--success { color:var(--feedback-success-text); background:var(--feedback-success-bg); }
+.toast--error   { color:var(--feedback-error-text); background:var(--feedback-error-bg); }
+.toast--warning { color:var(--feedback-warning-text); background:var(--feedback-warning-bg); }
+.toast--info    { color:var(--feedback-info-text); background:var(--feedback-info-bg); }
 
 @media (max-width:600px) {
     .toast-region { right:16px; left:16px; bottom:16px; width:auto; }

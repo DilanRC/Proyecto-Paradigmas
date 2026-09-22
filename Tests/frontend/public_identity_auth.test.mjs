@@ -150,7 +150,7 @@ test('Explorar es una vista distinta con deck deslizable y acciones icono más t
 });
 
 test('publicar persiste mediante el endpoint autenticado y limpia el borrador solo al guardar', () => {
-    assert.ok(publicarJs.includes("import { getAccessToken } from './shared/supabase-auth.js';"));
+    assert.match(publicarJs, /import\s*\{[^}]*\bgetAccessToken\b[^}]*\}\s*from\s*'\.\/shared\/supabase-auth\.js';/);
     assert.ok(publicarJs.includes("method: 'POST'"));
     assert.ok(publicarJs.includes("fetch('api/v1/publicaciones'"));
     assert.ok(publicarJs.includes("sessionStorage.removeItem(DRAFT_KEY)"));

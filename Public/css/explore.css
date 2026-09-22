@@ -521,8 +521,8 @@
 }
 
 .inscripcion__estado--registrado {
-    color:var(--primary-dark);
-    background:var(--primary-soft);
+    color:var(--tc-success);
+    background:var(--tc-success-bg);
 }
 
 .inscripcion__estado--no-registrado {
@@ -531,7 +531,7 @@
 }
 
 .inscripcion__estado--desconocido {
-    color:var(--badge-inactive-text);
+    color:var(--tc-neutral-status);
     background:var(--tc-bg-elevated);
 }
 
@@ -571,11 +571,11 @@
 }
 
 .inscripcion__aviso--ok {
-    color:var(--primary-dark);
+    color:var(--tc-success);
 }
 
 .inscripcion__aviso--error {
-    color:var(--danger);
+    color:var(--tc-danger);
 }
 
 .inscripcion__aviso--muted {

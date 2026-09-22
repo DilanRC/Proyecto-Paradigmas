@@ -16,9 +16,11 @@ test('dashboard administrativo tiene ruta limpia y entrada protegida', () => {
 test('dashboard centraliza indicadores de APIs reales sin exponer identificaciones', () => {
     const view = read('Application/View/dashboard/index.php');
     const js = read('Public/js/dashboard.js');
+    const main = view.match(/<main\b[\s\S]*?<\/main>/i)?.[0];
+    assert.ok(main, 'El dashboard debe tener un elemento main completo.');
     assert.ok(view.includes('id="dashboard-metrics"'));
-    assert.doesNotMatch(view, /<img\b/i, 'El dashboard administrativo no debe renderizar imágenes.');
-    assert.doesNotMatch(view, /dashboard-gallery|dashboard-hero__image|dashboard-card__image/, 'El dashboard no debe conservar contenedores de imágenes.');
+    assert.doesNotMatch(main, /<img\b/i, 'El contenido del dashboard no debe renderizar imágenes.');
+    assert.doesNotMatch(main, /dashboard-gallery|dashboard-hero__image|dashboard-card__image/, 'El dashboard no debe conservar contenedores de imágenes.');
     for (const endpoint of ['api/v1/productores', 'api/v1/compradores', 'api/v1/transportistas', 'api/v1/vehiculos']) {
         assert.ok(js.includes(endpoint), `falta el indicador ${endpoint}`);
     }

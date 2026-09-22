@@ -585,13 +585,13 @@ html[data-theme='light'] .rural-panel .page-header {
 
 html[data-theme='light'] .rural-panel thead,
 html[data-theme='light'] .rural-panel th {
-    background:#334237 !important;
+    background:var(--admin-surface-3) !important;
 }
 
 .rural-panel th {
     padding:11px 12px !important;
     border-bottom:1px solid rgba(238,219,202,.16) !important;
-    color:#f4e9de !important;
+    color:var(--admin-text) !important;
     font-size:9px !important;
     font-weight:800 !important;
     letter-spacing:.06em !important;

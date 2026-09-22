@@ -32,6 +32,9 @@ const contrast = (a, b) => {
 
 // --- lectura de los tokens reales -------------------------------------------------
 const tokensCss = readFileSync(new URL('tokens.css', CSS_DIR), 'utf8');
+const lightThemeCss = tokensCss.match(/:root\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+const darkThemeCss = tokensCss.match(/html\[data-theme='dark'\]\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+assert.ok(lightThemeCss && darkThemeCss, 'Deben existir bloques explícitos para ambos temas.');
 const token = (name) => {
     const found = tokensCss.match(new RegExp(`--${name}\\s*:\\s*(#[0-9a-fA-F]{3,6})`));
     assert.ok(found, `El token --${name} no esta declarado en tokens.css`);
@@ -82,22 +85,61 @@ for (const [name, background, label] of PAIRS) {
         `${ok ? 'OK' : 'FALLA'}   ${label}`,
     );
 }
-// Variantes de notificacion: color y fondo se leen del propio componente, de
-// modo que cambiar una de las dos se detecta aqui.
+// Variantes de notificacion: el componente consume tokens semanticos para que
+// la misma variante conserve contraste y pertenencia visual en ambos temas.
 const componentsCss = readFileSync(new URL('components.css', CSS_DIR), 'utf8');
 const toastVariants = [...componentsCss.matchAll(
-    /\.toast--(\w+)\s*\{[^}]*?color:\s*(#[0-9a-fA-F]{3,6})[^}]*?background:\s*(#[0-9a-fA-F]{3,6})/g,
+    /\.toast--(\w+)\s*\{[^}]*?color:\s*var\(--feedback-(\w+)-text\)[^}]*?background:\s*var\(--feedback-\2-bg\)/g,
 )];
-assert.ok(toastVariants.length >= 4, 'Se esperaban las variantes success, error, warning e info');
+assert.deepEqual(
+    toastVariants.map(([, variant]) => variant).sort(),
+    ['error', 'info', 'success', 'warning'],
+    'Se esperaban exactamente las variantes success, error, warning e info',
+);
 
-for (const [, variant, fg, bg] of toastVariants) {
-    const ratio = contrast(parseHex(fg), parseHex(bg));
-    const ok = ratio >= AA_NORMAL;
-    if (!ok) failures += 1;
-    console.log(
-        `  .toast--${variant.padEnd(15)} ${bg}  ${ratio.toFixed(2).padStart(5)}   ${AA_NORMAL}    ` +
-        `${ok ? 'OK' : 'FALLA'}   notificacion ${variant}`,
-    );
+const feedbackPairs = ['success', 'error', 'warning', 'info'];
+const feedbackColor = (themeCss, name, type) => {
+    const match = themeCss.match(new RegExp(`--feedback-${name}-${type}\\s*:\\s*(#[0-9a-fA-F]{3,6})`));
+    assert.ok(match, `Falta el token de feedback ${name}-${type}`);
+    return parseHex(match[1]);
+};
+
+for (const [themeCss, theme] of [[lightThemeCss, 'claro'], [darkThemeCss, 'oscuro']]) {
+    for (const variant of feedbackPairs) {
+        const ratio = contrast(feedbackColor(themeCss, variant, 'text'), feedbackColor(themeCss, variant, 'bg'));
+        const ok = ratio >= AA_NORMAL;
+        if (!ok) failures += 1;
+        console.log(
+            `  .toast--${variant.padEnd(15)} ${theme.padEnd(6)} ${ratio.toFixed(2).padStart(5)}   ${AA_NORMAL}    ` +
+            `${ok ? 'OK' : 'FALLA'}   notificacion ${variant}`,
+        );
+    }
+}
+
+const publicAuthCss = readFileSync(new URL('public-auth.css', CSS_DIR), 'utf8');
+const publicDarkCss = publicAuthCss.match(/:root\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+const publicLightCss = publicAuthCss.match(/html\[data-theme='light'\]\s*\{([\s\S]*?)\}/)?.[1] ?? '';
+const exploreCss = readFileSync(new URL('explore.css', CSS_DIR), 'utf8');
+assert.match(exploreCss, /\.inscripcion__estado--registrado[\s\S]*?color:var\(--tc-success\)[\s\S]*?background:var\(--tc-success-bg\)/);
+assert.match(exploreCss, /\.inscripcion__estado--desconocido[\s\S]*?color:var\(--tc-neutral-status\)/);
+assert.match(exploreCss, /\.inscripcion__aviso--ok[\s\S]*?color:var\(--tc-success\)/);
+assert.match(exploreCss, /\.inscripcion__aviso--error[\s\S]*?color:var\(--tc-danger\)/);
+const publicToken = (themeCss, name) => {
+    const match = themeCss.match(new RegExp(`--tc-${name}\\s*:\\s*(#[0-9a-fA-F]{3,6})`));
+    assert.ok(match, `Falta el token público --tc-${name}`);
+    return parseHex(match[1]);
+};
+for (const [themeCss, theme] of [[publicLightCss, 'claro'], [publicDarkCss, 'oscuro']]) {
+    for (const [name, background, label] of [
+        ['success', publicToken(themeCss, 'surface'), 'aviso correcto'],
+        ['danger', publicToken(themeCss, 'surface'), 'aviso de error'],
+        ['neutral-status', publicToken(themeCss, 'surface'), 'estado desconocido'],
+    ]) {
+        const ratio = contrast(publicToken(themeCss, name), background);
+        const ok = ratio >= AA_NORMAL;
+        if (!ok) failures += 1;
+        console.log(`  explorar ${label.padEnd(20)} ${theme.padEnd(6)} ${ratio.toFixed(2).padStart(5)}   ${AA_NORMAL}    ${ok ? 'OK' : 'FALLA'}`);
+    }
 }
 
 assert.equal(failures, 0, `${failures} combinaciones de texto no alcanzan ${AA_NORMAL}:1`);
@@ -123,5 +165,6 @@ for (const sheet of sheets) {
     }
 }
 
-console.log(`\nOK frontend_contrast_test: ${PAIRS.length + toastVariants.length} combinaciones cumplen AA y ` +
+const checkedCombinations = PAIRS.length + toastVariants.length * 2 + feedbackPairs.length * 3 * 2;
+console.log(`\nOK frontend_contrast_test: ${checkedCombinations} combinaciones cumplen AA y ` +
     `${sheets.length} hojas sin texto en rgba() ni tipografias fantasma.`);
