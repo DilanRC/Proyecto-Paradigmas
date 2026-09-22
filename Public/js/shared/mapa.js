@@ -154,7 +154,7 @@ export async function crearMapa({
             zoom: coordenadas ? zoomMarcador : zoom,
             interactive,
             attributionControl: false,
-            cooperativeGestures: interactive,
+            cooperativeGestures: false,
             maxBounds: BOUNDS_COSTA_RICA,
             renderWorldCopies: false,
         });
@@ -195,7 +195,6 @@ export async function crearMapa({
             });
         });
         loaded = true;
-        map.scrollZoom?.disable?.();
         // Reafirma los límites después de cargar el estilo para evitar que
         // ciertos builds permitan desplazar el mapa fuera del ámbito definido.
         map.setMaxBounds?.(BOUNDS_COSTA_RICA);
@@ -210,6 +209,7 @@ export async function crearMapa({
         map.addControl?.(new maplibre.AttributionControl({ compact: false, customAttribution: PROVIDER_ATTRIBUTION }), 'bottom-right');
     }
     if (interactive && maplibre.NavigationControl) map.addControl?.(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
+    if (interactive && maplibre.FullscreenControl) map.addControl?.(new maplibre.FullscreenControl(), 'top-right');
 
     function crearMarcador(lngLat) {
         const nuevo = new maplibre.Marker({ draggable }).setLngLat(lngLat).addTo(map);

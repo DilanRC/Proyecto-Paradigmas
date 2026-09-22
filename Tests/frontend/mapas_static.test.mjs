@@ -30,6 +30,9 @@ test('MapLibre y OpenFreeMap siguen centralizados en mapa.js', () => {
 test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('Punto exacto de la finca'));
     assert.ok(farmMap.includes('Abrir mapa para ubicar finca'));
+    assert.ok(farmMap.includes('pantalla completa'));
+    assert.equal(farmMap.includes('límites locales provienen'), false);
+    assert.equal(farmMap.includes('OpenFreeMap carga la cartografía'), false);
     assert.match(farmMap, /data-farm-map-location>Usar mi ubicación<\/button>/);
     assert.ok(farmMap.includes('Quitar punto exacto'));
     assert.ok(farmMap.includes('La dirección escrita sigue siendo válida sin mapa'));
@@ -59,8 +62,10 @@ test('la finca puede centrar el mapa en la ubicación del usuario sin activar el
     assert.match(farmMap, /limpiar\(\) \{[\s\S]*?solicitudUbicacion \+= 1/);
     assert.ok(farmMap.includes("'outside-costa-rica'"));
     assert.ok(farmMap.includes('mapa.centrar(ubicacion, 15)'));
-    assert.ok(farmMap.includes('bloquearRuedaSobreMapa'));
-    assert.ok(map.includes('map.scrollZoom?.disable?.()'));
+    assert.equal(farmMap.includes('bloquearRuedaSobreMapa'), false);
+    assert.equal(map.includes('map.scrollZoom?.disable?.()'), false);
+    assert.ok(map.includes('FullscreenControl'));
+    assert.ok(map.includes('cooperativeGestures: false'));
 });
 
 test('usuario y admin reutilizan el mismo selector de finca', () => {

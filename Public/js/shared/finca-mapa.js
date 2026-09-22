@@ -104,7 +104,7 @@ export function crearSelectorPuntoFinca({
         <p class="farm-map-picker__status" data-farm-map-status role="status" aria-live="polite"></p>
         <p class="farm-map-picker__coords" data-farm-map-coords hidden></p>
         <div class="map-shell" data-farm-map-shell hidden>
-            <p class="map-shell__notice">Haga clic sobre la finca y luego ajuste el marcador si lo necesita. OpenFreeMap carga la cartografía; los límites locales provienen de IGN/SNIT y Fundación MarViva. El punto solo se guarda al guardar la dirección.</p>
+            <p class="map-shell__notice">Haga clic para marcar la ubicación y arrastre el punto para ajustarlo. Use la rueda o los controles para acercar y alejar; también puede abrir el mapa en pantalla completa.</p>
             <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>
             <div class="map-shell__fallback" data-farm-map-fallback hidden>
                 <strong>Mapa no disponible.</strong>
@@ -166,12 +166,6 @@ export function crearSelectorPuntoFinca({
             puntoValidado = false;
             if (punto) status.textContent = 'No se pudo validar el punto guardado. Se conservará la dirección, pero el punto no se guardará.';
         });
-
-    const bloquearRuedaSobreMapa = (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-    };
-    canvas.addEventListener('wheel', bloquearRuedaSobreMapa, { passive: false });
 
     const notificarCambio = () => {
         mount.dispatchEvent(new Event('change', { bubbles: true }));
@@ -395,7 +389,6 @@ export function crearSelectorPuntoFinca({
             destruido = true;
             solicitudUbicacion += 1;
             cerrarMapa();
-            canvas.removeEventListener('wheel', bloquearRuedaSobreMapa);
             mount.replaceChildren();
         },
     });
