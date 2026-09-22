@@ -11,10 +11,16 @@
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=admin-public-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/public-v3.css?v=public-4">
+    <link rel="stylesheet" href="css/public-v3.css?v=public-7">
     <link rel="stylesheet" href="css/public-product.css?v=product-1">
+    <link rel="preload" as="image" href="assets/dashboard/finca-camino-costa-rica.png">
+    <link rel="preload" as="image" href="assets/dashboard/finca-potrero-costa-rica.png">
+    <link rel="preload" as="image" href="assets/dashboard/finca-bebedero-costa-rica.png">
+    <link rel="preload" as="image" href="assets/dashboard/subasta-pasarela-costa-rica.png">
+    <link rel="preload" as="image" href="assets/dashboard/subasta-corrales-costa-rica.png">
+    <link rel="preload" as="image" href="assets/dashboard/subasta-rematador-costa-rica.png">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-2"></script>
+    <script type="module" src="js/public-ui.js?v=public-4"></script>
 </head>
 <body class="public-home">
     <div class="public-shell" id="inicio">
@@ -30,8 +36,6 @@
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a class="is-active" href="#inicio"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
                 <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
-                <a href="#nosotros"><i class="fa-solid fa-people-group" aria-hidden="true"></i><span>Nosotros</span></a>
-                <a href="#como-funciona"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Cómo funciona</span></a>
             </nav>
 
             <div class="public-header__actions">
@@ -87,14 +91,14 @@
                     <button class="public-carousel__arrow public-carousel__arrow--prev" type="button" data-carousel-prev aria-label="Escenas anteriores"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
                     <div class="public-carousel__track" data-carousel-track tabindex="0" aria-label="Escenas ganaderas de Ganado Cerca">
                         <div class="public-carousel__page">
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-camino-costa-rica.png" alt="Ganado recorriendo un camino empedrado y húmedo" width="1536" height="1024" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-potrero-costa-rica.png" alt="Ganado mixto en un potrero verde" width="1538" height="1023" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-bebedero-costa-rica.png" alt="Ganado junto a un bebedero de concreto" width="1540" height="1021" loading="lazy"></figure>
+                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-camino-costa-rica.png" alt="Ganado recorriendo un camino empedrado y húmedo" width="1536" height="1024" loading="eager"></figure>
+                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-potrero-costa-rica.png" alt="Ganado mixto en un potrero verde" width="1538" height="1023" loading="eager"></figure>
+                            <figure class="public-carousel__slide"><img src="assets/dashboard/finca-bebedero-costa-rica.png" alt="Ganado junto a un bebedero de concreto" width="1540" height="1021" loading="eager"></figure>
                         </div>
                         <div class="public-carousel__page">
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-pasarela-costa-rica.png" alt="Pasarela elevada sobre corrales de un remate" width="1448" height="1086" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-corrales-costa-rica.png" alt="Ganaderos observando ganado desde los corrales" width="1448" height="1086" loading="lazy"></figure>
-                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-rematador-costa-rica.png" alt="Público participando junto al puesto del rematador" width="1774" height="887" loading="lazy"></figure>
+                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-pasarela-costa-rica.png" alt="Pasarela elevada sobre corrales de un remate" width="1448" height="1086" loading="eager"></figure>
+                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-corrales-costa-rica.png" alt="Ganaderos observando ganado desde los corrales" width="1448" height="1086" loading="eager"></figure>
+                            <figure class="public-carousel__slide"><img src="assets/dashboard/subasta-rematador-costa-rica.png" alt="Público participando junto al puesto del rematador" width="1774" height="887" loading="eager"></figure>
                         </div>
                     </div>
                     <button class="public-carousel__arrow public-carousel__arrow--next" type="button" data-carousel-next aria-label="Escenas siguientes"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>

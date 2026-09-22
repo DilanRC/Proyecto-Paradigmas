@@ -17,6 +17,12 @@ export function resolveAdminNext(search = '') {
     return requested && ADMIN_DESTINATIONS.has(requested) ? requested : 'admin/dashboard';
 }
 
+export function isAdminLogin(location = globalThis.location) {
+    const pathname = String(location?.pathname ?? '').replace(/\/+$/, '');
+    return pathname.endsWith('/admin/entrar')
+        || new URLSearchParams(location?.search ?? '').get('area') === 'admin';
+}
+
 function setError(control, message) {
     const error = document.querySelector(`[data-error-for="${control.name}"]`);
     control.setAttribute('aria-invalid', message ? 'true' : 'false');
@@ -120,7 +126,7 @@ function initialize() {
                 return;
             }
 
-            if (new URLSearchParams(window.location.search).get('area') === 'admin') {
+            if (isAdminLogin(window.location)) {
                 if (!await isAdminAccount()) {
                     setStatus(status, 'La cuenta inició sesión, pero no tiene autorización administrativa.', 'error');
                     return;

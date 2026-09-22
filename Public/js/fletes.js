@@ -54,7 +54,7 @@ async function initialize() {
     }
 
     renderState(stateBox, 'fa-solid fa-circle-info', 'Aún no ofreces fletes. Completa esta actividad y conserva los datos que ya registraste.');
-    primary.href = 'registro/transportista';
+    primary.href = 'registro/transportista?next=fletes';
     primary.textContent = 'Quiero ofrecer fletes';
 }
 

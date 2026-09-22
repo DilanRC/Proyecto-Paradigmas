@@ -46,7 +46,6 @@
                     <h1 id="publish-title">Prepara una publicación sin salir del flujo.</h1>
                     <p>Si todavía no participas como productor, Ganado Cerca te pedirá únicamente los datos que faltan y luego volverá aquí.</p>
                 </div>
-                <span class="flow-status-chip"><i class="fa-solid fa-database" aria-hidden="true"></i> Guardado persistente al publicar</span>
             </section>
 
             <section class="flow-card" id="publish-gate" hidden aria-live="polite"></section>

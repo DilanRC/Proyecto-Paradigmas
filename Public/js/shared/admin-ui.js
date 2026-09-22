@@ -3,7 +3,7 @@ import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-4';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-5';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -230,7 +230,7 @@ function enhanceSidebarAccount() {
     trigger.innerHTML = `
         <span class="admin-account-card__avatar" aria-hidden="true">TC</span>
         <span class="admin-account-card__copy"><strong>${sessionDisplayName()}</strong></span>
-        <i class="admin-account-menu__chevron fa-solid fa-chevron-up" aria-hidden="true"></i>
+        <i class="admin-account-menu__chevron fa-solid fa-chevron-down" aria-hidden="true"></i>
     `;
 
     const panel = document.createElement('div');
@@ -274,6 +274,9 @@ function enhanceSidebarAccount() {
 
     card.append(trigger, panel);
     footer.replaceChildren(card);
+    // El panel nace cerrado: sincronizar hidden, aria-expanded y el chevron
+    // evita mostrar una dirección opuesta al estado real.
+    setAccountMenuOpen(card, false);
     applyTheme(preferredTheme());
 }
 

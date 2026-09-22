@@ -58,7 +58,7 @@ function showWorkspace(profile) {
             'Falta una finca para publicar',
             'La actividad Productor está activa, pero este perfil no tiene una finca disponible. Completa esa información antes de preparar la publicación.',
             [
-                { label: 'Completar datos de productor', href: 'registro/productor&next=publicar', primary: true },
+                { label: 'Completar datos de productor', href: 'registro/productor?next=publicar', primary: true },
                 { label: 'Volver a Mi actividad', href: 'mi-actividad' },
             ],
         );
@@ -136,7 +136,7 @@ async function initialize() {
             'Publicar ganado requiere una Persona autenticada para poder continuar con su contexto de productor.',
             [
                 { label: 'Entrar', href: 'entrar?next=publicar', primary: true },
-                { label: 'Crear cuenta', href: 'registro/productor&next=publicar' },
+                { label: 'Crear cuenta', href: 'registro/productor?next=publicar' },
             ],
         );
         return;
@@ -158,7 +158,7 @@ async function initialize() {
         setGate(
             'Completa tu cuenta antes de publicar',
             'Todavía no existe una Persona registrada en este prototipo. El registro reutilizará esa identidad para todas las actividades futuras.',
-            [{ label: 'Completar registro', href: 'registro/productor&next=publicar', primary: true }],
+            [{ label: 'Completar registro', href: 'registro/productor?next=publicar', primary: true }],
         );
         return;
     }
@@ -169,7 +169,7 @@ async function initialize() {
         setGate(
             'Activa tu participación como productor',
             'Solo faltan los datos propios de vender o publicar. No volveremos a pedir tu identidad personal.',
-            [{ label: 'Completar datos de productor', href: 'registro/productor&next=publicar', primary: true }],
+            [{ label: 'Completar datos de productor', href: 'registro/productor?next=publicar', primary: true }],
         );
         return;
     }

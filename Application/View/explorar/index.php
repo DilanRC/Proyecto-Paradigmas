@@ -39,8 +39,6 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
                 <a class="is-active" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
-                <a href="./#nosotros"><i class="fa-solid fa-people-group" aria-hidden="true"></i><span>Nosotros</span></a>
-                <a href="./#como-funciona"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Cómo funciona</span></a>
             </nav>
 
             <div class="public-header__actions">

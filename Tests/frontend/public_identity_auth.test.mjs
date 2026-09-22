@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 import test from 'node:test';
 
-import { resolveAdminNext, resolveNext } from '../../Public/js/login.js';
+import { isAdminLogin, resolveAdminNext, resolveNext } from '../../Public/js/login.js';
 import {
     enforceBrowserSession,
     isPrivateRoute,
@@ -66,9 +66,10 @@ test('la portada usa identidad Ganado Cerca y habla como producto', () => {
     assert.equal(home.includes('api/productores.php'), false);
 });
 
-test('navbar público prioriza Inicio, Explorar, Nosotros y Cómo funciona; legal queda en footer', () => {
+test('navbar público prioriza Inicio y Explorar; legal queda en footer', () => {
     const nav = home.match(/<nav class="public-nav public-nav--primary"[\s\S]*?<\/nav>/)?.[0] ?? '';
-    for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona']) assert.ok(nav.includes(label));
+    for (const label of ['Inicio', 'Explorar']) assert.ok(nav.includes(label));
+    for (const label of ['Nosotros', 'Cómo funciona']) assert.equal(nav.includes(label), false);
     for (const label of ['Privacidad', 'Términos', 'Legal']) assert.equal(nav.includes(label), false);
     assert.ok(home.includes('public-footer__legal'));
     assert.ok(home.includes('href="privacidad"'));
@@ -112,8 +113,11 @@ test('la portada muestra las seis escenas ganaderas en un carrusel navegable', (
 });
 
 test('Fletes comparte el shell público y no expone lenguaje técnico', () => {
-    for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona', 'Fletes']) {
+    for (const label of ['Inicio', 'Explorar', 'Fletes']) {
         assert.ok(fletes.includes(`<span>${label}</span>`), `Fletes debe conservar ${label} en su navegación`);
+    }
+    for (const label of ['Nosotros', 'Cómo funciona']) {
+        assert.equal(fletes.includes(`<span>${label}</span>`), false, `Fletes no debe mostrar ${label} en su navegación`);
     }
     assert.ok(fletes.includes('js/public-ui.js'));
     assert.ok(fletes.includes('css/public-product.css'));
@@ -236,7 +240,9 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.equal(resolveNext('?next=../entrar'), 'explorar');
     assert.equal(resolveAdminNext('?next=admin/productores'), 'admin/productores');
     assert.equal(resolveAdminNext('?next=https://example.com'), 'admin/dashboard');
-    assert.ok(read('../../Public/js/login.js').includes("area') === 'admin"));
+    assert.equal(isAdminLogin({ pathname: '/admin/entrar', search: '?next=admin%2Fdashboard' }), true);
+    assert.equal(isAdminLogin({ pathname: '/entrar', search: '?area=admin' }), true);
+    assert.equal(isAdminLogin({ pathname: '/entrar', search: '' }), false);
 });
 
 test('el estado de autenticación tiene contraste y tamaño legibles', () => {

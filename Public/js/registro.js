@@ -51,6 +51,21 @@ function selectedCapabilities(form) {
     return normalizeCapabilities([...form.querySelectorAll('input[name="capacidades"]:checked')].map((input) => input.value));
 }
 
+function actualizarReglasPassword(input) {
+    if (!(input instanceof HTMLInputElement)) return;
+    const password = input.value;
+    const reglas = {
+        letter: /[A-Za-zÁÉÍÓÚáéíóúÑñ]/.test(password),
+        uppercase: /[A-ZÁÉÍÓÚÑ]/.test(password),
+        number: /\d/.test(password),
+        length: password.length >= 8,
+    };
+    Object.entries(reglas).forEach(([regla, valida]) => {
+        const item = document.querySelector(`[data-password-rules] [data-rule="${regla}"]`);
+        item?.classList.toggle('is-valid', valida);
+    });
+}
+
 function montarDireccionFinca(card, direccionInicial = null) {
     const details = card.querySelector('.finca-address');
     if (!details) return;
@@ -407,6 +422,9 @@ async function initialize() {
     document.querySelector('#agregar-finca')?.addEventListener('click', () => addFinca());
     const identificacionTipo = form.elements.namedItem('identificacionTipo');
     const identificacionNumero = form.elements.namedItem('identificacionNumero');
+    const password = form.elements.namedItem('password');
+    password?.addEventListener('input', () => actualizarReglasPassword(password));
+    actualizarReglasPassword(password);
     const identificacionHint = form.querySelector('[data-identificacion-hint]');
     const actualizarIdentificacion = () => {
         if (identificacionTipo instanceof HTMLSelectElement && identificacionNumero instanceof HTMLInputElement) {

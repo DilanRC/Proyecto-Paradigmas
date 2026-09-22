@@ -42,7 +42,9 @@ test('navbar y búsqueda pública conservan icono más texto sin meter legal en 
     const productCss = read('Public/css/public-product.css');
     const nav = home.match(/<nav class="public-nav public-nav--primary"[\s\S]*?<\/nav>/)?.[0] ?? '';
 
-    for (const label of ['Inicio', 'Explorar', 'Nosotros', 'Cómo funciona']) assert.ok(nav.includes(label));
+    for (const label of ['Inicio', 'Explorar']) assert.ok(nav.includes(label));
+    assert.equal(nav.includes('Nosotros'), false);
+    assert.equal(nav.includes('Cómo funciona'), false);
     assert.equal(nav.includes('Privacidad'), false);
     assert.ok(home.includes('data-public-search-toggle'));
     assert.ok(productCss.includes(".public-search[data-open='true'] .public-search__field"));
@@ -74,10 +76,10 @@ test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () =
     assert.ok(adminJs.includes("trigger.className = 'admin-account-menu__trigger'"));
 });
 
-test('registro limita aria-live al estado y publicar comunica persistencia real', () => {
+test('registro limita aria-live al estado y publicar conserva el contrato de persistencia', () => {
     const registro = read('Application/View/registro/index.php');
     const publicar = read('Application/View/publicar/index.php');
     assert.doesNotMatch(registro, /class="onboarding-card" aria-live=/);
     assert.match(registro, /id="registro-status"[^>]*aria-live="polite"/);
-    assert.match(publicar, /Guardado persistente al publicar/);
+    assert.doesNotMatch(publicar, /Guardado persistente al publicar/);
 });

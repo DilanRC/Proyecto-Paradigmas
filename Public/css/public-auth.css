@@ -852,6 +852,33 @@ html[data-theme='light'] .brand-logo--dark {
     font-size:11px;
 }
 
+.password-rules {
+    display: grid;
+    gap: 4px;
+    margin: 7px 0 0;
+    padding: 0;
+    list-style: none;
+    color: var(--tc-danger);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.password-rules li::before {
+    content: '✕';
+    display: inline-block;
+    width: 18px;
+    margin-right: 4px;
+    font-weight: 800;
+}
+
+.password-rules li.is-valid {
+    color: var(--tc-success);
+}
+
+.password-rules li.is-valid::before {
+    content: '✓';
+}
+
 .auth-status {
     display:table;
     max-width:100%;

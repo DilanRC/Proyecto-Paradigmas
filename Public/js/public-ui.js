@@ -1,7 +1,7 @@
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
 import { readPublicProfile } from './shared/public-profile.js';
-import { clearAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-2';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-3';
 import { request } from './shared/api.js';
 
 const SESSION_KEY = 'tindercows:login';
@@ -72,7 +72,7 @@ function initializePublicCarousel() {
         const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const render = () => {
             index = (index + pages.length) % pages.length;
-            track.style.transform = `translateX(-${index * 100}%)`;
+            pages.forEach((page, pageIndex) => page.classList.toggle('is-active', pageIndex === index));
             if (status) status.textContent = index === 0 ? 'Escenas 1–3 de 6' : 'Escenas 4–6 de 6';
             dots.querySelectorAll('button').forEach((dot, dotIndex) => {
                 dot.setAttribute('aria-current', dotIndex === index ? 'page' : 'false');
@@ -93,7 +93,7 @@ function initializePublicCarousel() {
         });
         let timer = null;
         const stop = () => { if (timer) { window.clearInterval(timer); timer = null; } };
-        const start = () => { if (!reducedMotion && !timer) timer = window.setInterval(() => { index += 1; render(); }, 1000); };
+        const start = () => { if (!reducedMotion && !timer) timer = window.setInterval(() => { index += 1; render(); }, 5000); };
         track.addEventListener('pointerenter', stop);
         track.addEventListener('pointerleave', start);
         track.addEventListener('focusin', stop);
@@ -178,7 +178,15 @@ async function resolveAdminLink(menu) {
             headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
             cache: 'no-store',
         });
-        if (response.ok) adminLink.hidden = false;
+        if (response.ok) {
+            adminLink.hidden = false;
+            adminLink.addEventListener('click', async (event) => {
+                event.preventDefault();
+                const session = readSession();
+                writeAdminBrowserSession(session?.email || '');
+                window.location.assign(adminLink.href);
+            });
+        }
     } catch {
         // El menú de perfil sigue disponible; el acceso admin falla cerrado.
     }

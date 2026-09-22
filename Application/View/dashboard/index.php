@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-2">
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-3">
     <script type="module" src="js/dashboard.js"></script>
 </head>
 <body class="rural-panel admin-dashboard">

@@ -8,8 +8,9 @@
 //
 //   1. Resuelve la superficie con identidad.php (publica) para no pintar
 //      controles de escritura a un visitante sin sesión.
-//   2. Consulta el estado de cada contexto con las lecturas públicas de cada
-//      panel (misma lógica que consultarCapacidades).
+//   2. Consulta el estado de la persona autenticada desde Mi actividad. Los
+//      listados de productores, compradores y transportistas son administrativos
+//      y no deben usarse para esta comprobación.
 //   3. Ejecuta inscribir / abandonar / reactivar y traduce un 401 SIN_SESION
 //      en "inicie sesión", nunca en un error genérico.
 //
@@ -17,10 +18,10 @@
 // es el enlace explícito a entrar (contrato de la vista pública).
 
 import { request } from './api.js';
-import { consultarCapacidades } from './capacidades.js';
 import { resolverSuperficie } from './sesion.js';
 
 export const CAPACIDADES_URL = 'api/v1/capacidades';
+export const ACTIVIDAD_URL = 'api/v1/actividad';
 
 /** Contextos registrables presentados por la acción de negocio. */
 export const CONTEXTOS_INSCRIPCION = [
@@ -99,6 +100,20 @@ export async function enviarAccionInscripcion({
         }
         return { ok: false, requiereSesion: false, error };
     }
+}
+
+/** Adapta el mapa privado de Mi actividad al formato que pinta esta sección. */
+export function capacidadesDesdeActividad(data) {
+    const mapa = data?.capacidades ?? {};
+    return CONTEXTOS_INSCRIPCION.map((contexto) => {
+        const detalle = mapa[contexto.clave.toUpperCase()] ?? {};
+        const estado = detalle.estado ?? null;
+        return {
+            ...contexto,
+            situacion: estado === 'NO_CONFIGURADO' ? 'no-registrado' : 'registrado',
+            estado: estado === 'ACTIVO' || estado === 'INACTIVO' ? estado : null,
+        };
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -184,12 +199,13 @@ export async function montarInscripcion({
         return null;
     }
 
-    const cabecera = elemento('p', `Sesión verificada · identificación ${identificacionNumero}`, 'inscripcion__identidad');
-    contenedor.append(cabecera);
-
     let capacidades;
     try {
-        capacidades = await consultarCapacidades(identificacionNumero, { requestImpl });
+        // Estos datos pertenecen a la persona autenticada. Los endpoints de
+        // productores/compradores/transportistas son administrativos y
+        // responden 403 a usuarios normales, aunque su sesión sea válida.
+        const actividad = await requestImpl(ACTIVIDAD_URL, { timeoutMs: 10000 });
+        capacidades = capacidadesDesdeActividad(actividad.data);
     } catch {
         contenedor.append(crearMensaje('error', 'No fue posible consultar sus contextos. Reintente.'));
         return null;
