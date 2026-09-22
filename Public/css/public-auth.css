@@ -853,7 +853,16 @@ html[data-theme='light'] .brand-logo--dark {
 }
 
 .auth-status {
-    color:var(--tc-secondary);
+    min-height:0;
+    margin:12px 0 4px;
+    padding:11px 13px;
+    border:1px solid color-mix(in srgb,var(--tc-success) 58%,var(--tc-line-strong));
+    border-radius:10px;
+    color:var(--tc-success);
+    background:var(--tc-success-bg);
+    font-size:14px;
+    font-weight:700;
+    line-height:1.45;
 }
 
 .auth-submit {

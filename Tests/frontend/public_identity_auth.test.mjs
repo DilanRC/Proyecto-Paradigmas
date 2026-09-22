@@ -239,6 +239,13 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.ok(read('../../Public/js/login.js').includes("area') === 'admin"));
 });
 
+test('el estado de autenticación tiene contraste y tamaño legibles', () => {
+    assert.match(publicCss, /\.auth-status\s*\{[\s\S]*font-size:14px/);
+    assert.match(publicCss, /\.auth-status\s*\{[\s\S]*font-weight:700/);
+    assert.match(publicCss, /\.auth-status\s*\{[\s\S]*background:var\(--tc-success-bg\)/);
+    assert.match(publicCss, /\.auth-status\s*\{[\s\S]*color:var\(--tc-success\)/);
+});
+
 test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => {
     assert.match(publicUi, /readAuthSession/);
     assert.match(publicUi, /createAccountMenu/);
