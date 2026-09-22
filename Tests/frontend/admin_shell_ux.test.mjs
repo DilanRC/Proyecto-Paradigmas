@@ -81,6 +81,6 @@ test('tabla y panel contemplan desktop y adaptación a tarjetas en móvil', () =
 });
 
 test('el mapa opcional de finca conserva la paleta del panel administrativo', () => {
-    assert.ok(adminCss.includes('.rural-panel .finca-fila__mapa .farm-map-picker {'));
+    assert.match(adminCss, /\.rural-panel \.finca-fila__mapa \.farm-map-picker,[\s\S]*?\.rural-panel \.farm-map-picker \{/);
     assert.ok(adminCss.includes('background:var(--admin-surface-3);'));
 });

@@ -909,7 +909,8 @@ html[data-theme='light'] .rural-panel th {
     min-width:0;
 }
 
-.rural-panel .finca-fila__mapa .farm-map-picker {
+.rural-panel .finca-fila__mapa .farm-map-picker,
+.rural-panel .farm-map-picker {
     margin-top:4px;
     border-color:var(--admin-line-strong);
     background:var(--admin-surface-3);
@@ -917,25 +918,32 @@ html[data-theme='light'] .rural-panel th {
 }
 
 .rural-panel .finca-fila__mapa .farm-map-picker__copy strong,
-.rural-panel .finca-fila__mapa .farm-map-picker__coords {
+.rural-panel .finca-fila__mapa .farm-map-picker__coords,
+.rural-panel .farm-map-picker__copy strong,
+.rural-panel .farm-map-picker__coords {
     color:var(--admin-text);
 }
 
 .rural-panel .finca-fila__mapa .farm-map-picker__copy p,
 .rural-panel .finca-fila__mapa .farm-map-picker__status,
-.rural-panel .finca-fila__mapa .map-shell__notice {
+.rural-panel .finca-fila__mapa .map-shell__notice,
+.rural-panel .farm-map-picker__copy p,
+.rural-panel .farm-map-picker__status,
+.rural-panel .farm-map-picker .map-shell__notice {
     color:var(--admin-text-soft);
 }
 
 .rural-panel .finca-fila__mapa .farm-map-picker__actions .button,
-.rural-panel .finca-fila__mapa .farm-map-picker__actions .button:hover {
+.rural-panel .finca-fila__mapa .farm-map-picker__actions .button:hover,
+.rural-panel .farm-map-picker .button {
     color:var(--admin-text) !important;
     background:var(--admin-surface-2) !important;
     border-color:var(--admin-line-strong) !important;
     box-shadow:none;
 }
 
-.rural-panel .finca-fila__mapa .map-shell__canvas {
+.rural-panel .finca-fila__mapa .map-shell__canvas,
+.rural-panel .farm-map-picker .map-shell__canvas {
     border-color:var(--admin-line-strong);
     background:var(--admin-surface);
 }

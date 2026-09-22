@@ -6,11 +6,73 @@ export const MAPLIBRE_MODULE_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VER
 export const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 export const CENTRO_COSTA_RICA = Object.freeze([-84.0907, 9.9281]);
-// Rectángulo operativo que incluye Costa Rica continental, Isla del Coco,
-// demás islas y el espacio marítimo costarricense. El mapa no permite navegar
-// fuera de esta zona ni solicita teselas de otras regiones.
+// Rectángulo de navegación que contiene Costa Rica continental, sus islas y
+// el mar territorial. La validación exacta usa el GeoJSON local de límites.
 export const BOUNDS_COSTA_RICA = Object.freeze([[-90, 3.3], [-81.5, 12.8]]);
 export const MAP_LOAD_TIMEOUT_MS = 8000;
+export const LIMITES_COSTA_RICA_URL = '/assets/geo/costa-rica-limits.geojson?v=20260921';
+
+let limitesCostaRicaPromise = null;
+let limitesCostaRicaUrl = null;
+
+export function cargarLimitesCostaRica({ fetchImpl = globalThis.fetch, url = LIMITES_COSTA_RICA_URL } = {}) {
+    if (!limitesCostaRicaPromise || limitesCostaRicaUrl !== url) {
+        limitesCostaRicaUrl = url;
+        const carga = Promise.resolve(fetchImpl(url, { headers: { Accept: 'application/geo+json, application/json' } }))
+            .then((response) => {
+                if (!response.ok) throw new Error('No fue posible cargar los límites geográficos de Costa Rica.');
+                return response.json();
+            })
+            .then((geojson) => {
+                if (geojson?.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
+                    throw new Error('Los límites geográficos de Costa Rica tienen un formato inválido.');
+                }
+                return geojson;
+            });
+        const cargaFinal = carga.catch((error) => {
+            if (limitesCostaRicaPromise === cargaFinal) {
+                limitesCostaRicaPromise = null;
+                limitesCostaRicaUrl = null;
+            }
+            throw error;
+        });
+        limitesCostaRicaPromise = cargaFinal;
+    }
+    return limitesCostaRicaPromise;
+}
+
+function puntoEnAnillo(longitud, latitud, anillo) {
+    let dentro = false;
+    for (let indice = 0, anterior = anillo.length - 1; indice < anillo.length; anterior = indice++) {
+        const [xActual, yActual] = anillo[indice];
+        const [xAnterior, yAnterior] = anillo[anterior];
+        const cruza = (yActual > latitud) !== (yAnterior > latitud)
+            && longitud < ((xAnterior - xActual) * (latitud - yActual)) / (yAnterior - yActual) + xActual;
+        if (cruza) dentro = !dentro;
+    }
+    return dentro;
+}
+
+function puntoEnGeometria(longitud, latitud, geometry) {
+    if (geometry?.type === 'Polygon') {
+        return puntoEnAnillo(longitud, latitud, geometry.coordinates[0])
+            && !geometry.coordinates.slice(1).some((anillo) => puntoEnAnillo(longitud, latitud, anillo));
+    }
+    if (geometry?.type === 'MultiPolygon') {
+        return geometry.coordinates.some((poligono) => puntoEnGeometria(longitud, latitud, {
+            type: 'Polygon',
+            coordinates: poligono,
+        }));
+    }
+    return false;
+}
+
+export function puntoDentroDeLimitesCostaRica(punto, geojson) {
+    const latitud = Number(punto?.latitud);
+    const longitud = Number(punto?.longitud);
+    if (!Number.isFinite(latitud) || !Number.isFinite(longitud)) return false;
+    return (geojson?.features ?? []).some((feature) => puntoEnGeometria(longitud, latitud, feature.geometry));
+}
 
 const PROVIDER_ATTRIBUTION = '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>';
 

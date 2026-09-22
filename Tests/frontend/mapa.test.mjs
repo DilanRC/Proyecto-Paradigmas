@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
-import { crearMapa, MAP_STYLE_URL, normalizarCoordenadas } from '../../Public/js/shared/mapa.js';
+import {
+    crearMapa,
+    MAP_STYLE_URL,
+    cargarLimitesCostaRica,
+    normalizarCoordenadas,
+    puntoDentroDeLimitesCostaRica,
+} from '../../Public/js/shared/mapa.js';
 
 class FakeEmitter {
     constructor() { this.handlers = new Map(); }
@@ -35,6 +42,41 @@ const fakeLib = { Map: FakeMap, Marker: FakeMarker, AttributionControl: FakeAttr
 test('normalizarCoordenadas valida rangos', () => {
     assert.deepEqual(normalizarCoordenadas({ latitud: 9, longitud: -84 }).lngLat, [-84, 9]);
     assert.throws(() => normalizarCoordenadas({ latitud: 99, longitud: -84 }), RangeError);
+});
+
+test('los límites locales aceptan tierra y mar territorial, pero rechazan países vecinos', () => {
+    const limites = {
+        type: 'FeatureCollection',
+        features: [
+            { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-85, 9], [-84, 9], [-84, 10], [-85, 10], [-85, 9]]] } },
+            { type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-86, 9], [-85, 9], [-85, 10], [-86, 10], [-86, 9]]] } },
+        ],
+    };
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 9.5, longitud: -84.5 }, limites), true);
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 9.5, longitud: -85.5 }, limites), true);
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 12.1, longitud: -86.25 }, limites), false);
+});
+
+test('el asset versionado acepta Costa Rica, Isla del Coco y mar territorial, pero rechaza países vecinos', () => {
+    const limites = JSON.parse(fs.readFileSync('Public/assets/geo/costa-rica-limits.geojson', 'utf8'));
+    assert.equal(limites.metadata.coordinateReferenceSystem, 'EPSG:4326');
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 9.9281, longitud: -84.0907 }, limites), true);
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 5.524, longitud: -87.065 }, limites), true);
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 11, longitud: -86 }, limites), true);
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 12.1364, longitud: -86.2514 }, limites), false);
+    assert.equal(puntoDentroDeLimitesCostaRica({ latitud: 9, longitud: -79.5 }, limites), false);
+});
+
+test('la carga de límites permite reintentar después de un fallo', async () => {
+    let intentos = 0;
+    const fetchImpl = async () => {
+        intentos += 1;
+        if (intentos === 1) return { ok: false, json: async () => ({}) };
+        return { ok: true, json: async () => ({ type: 'FeatureCollection', features: [] }) };
+    };
+    await assert.rejects(() => cargarLimitesCostaRica({ fetchImpl, url: 'https://example.test/limits.geojson' }));
+    await assert.doesNotReject(() => cargarLimitesCostaRica({ fetchImpl, url: 'https://example.test/limits.geojson' }));
+    assert.equal(intentos, 2);
 });
 
 test('crearMapa centraliza estilo, atribucion, marcador y destruccion', async () => {

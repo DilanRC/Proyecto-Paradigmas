@@ -30,6 +30,7 @@ test('MapLibre y OpenFreeMap siguen centralizados en mapa.js', () => {
 test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('Punto exacto de la finca'));
     assert.ok(farmMap.includes('Abrir mapa para ubicar finca'));
+    assert.match(farmMap, /data-farm-map-location>Usar mi ubicación<\/button>/);
     assert.ok(farmMap.includes('Quitar punto exacto'));
     assert.ok(farmMap.includes('La dirección escrita sigue siendo válida sin mapa'));
     assert.ok(farmMap.includes('onMapClick'));
@@ -38,6 +39,9 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
 
 test('el selector limita el mapa a Costa Rica y puede completar dirección por coordenadas', () => {
     assert.ok(map.includes('BOUNDS_COSTA_RICA'));
+    assert.ok(map.includes('LIMITES_COSTA_RICA_URL'));
+    assert.ok(map.includes('puntoDentroDeLimitesCostaRica'));
+    assert.ok(farmMap.includes('cargarLimitesCostaRica'));
     assert.ok(farmMap.includes('buscarDireccionPorCoordenadas'));
     assert.ok(farmMap.includes('country_code !== \'cr\''));
     assert.ok(farmMap.includes('onPuntoChange'));
@@ -50,6 +54,10 @@ test('el selector limita el mapa a Costa Rica y puede completar dirección por c
 test('la finca puede centrar el mapa en la ubicación del usuario sin activar el rastreo automáticamente', () => {
     assert.ok(farmMap.includes('data-farm-map-location'));
     assert.ok(farmMap.includes('capturarUbicacionAutomatica'));
+    assert.ok(farmMap.includes('if (!mapa)'));
+    assert.ok(farmMap.includes("solicitudUbicacion += 1"));
+    assert.match(farmMap, /limpiar\(\) \{[\s\S]*?solicitudUbicacion \+= 1/);
+    assert.ok(farmMap.includes("'outside-costa-rica'"));
     assert.ok(farmMap.includes('mapa.centrar(ubicacion, 15)'));
     assert.ok(farmMap.includes('bloquearRuedaSobreMapa'));
     assert.ok(map.includes('map.scrollZoom?.disable?.()'));

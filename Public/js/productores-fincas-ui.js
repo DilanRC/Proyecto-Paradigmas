@@ -1,6 +1,6 @@
 import { request } from './shared/api.js';
 import { conectarDireccion } from './shared/direccion.js';
-import { crearSelectorPuntoFinca } from './shared/finca-mapa.js';
+import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 
 const FINCAS_DIRECCION_URL = 'api/v1/fincas/direccion';
 const modal = document.querySelector('#modal-productor');
@@ -85,13 +85,47 @@ function montarDireccion(card, inicial = null) {
     });
     direccion.aplicar(inicial ?? {});
     details.querySelector('[data-farm-directions]').value = inicial?.senas ?? '';
+    let geocodificacion = 0;
+    let geocodificacionAbortController = null;
+    async function completarDireccionDesdePunto(punto) {
+        geocodificacionAbortController?.abort();
+        const turno = ++geocodificacion;
+        if (!punto) return;
+        const controller = new AbortController();
+        geocodificacionAbortController = controller;
+        try {
+            const encontrada = await buscarDireccionPorCoordenadas(punto, { signal: controller.signal });
+            if (turno !== geocodificacion || !card.isConnected) return;
+            direccion.aplicar({
+                provincia: encontrada.provincia || details.querySelector('[data-farm-province]')?.value,
+                canton: encontrada.canton || details.querySelector('[data-farm-canton]')?.value,
+                distrito: encontrada.distrito || details.querySelector('[data-farm-district]')?.value,
+                pueblo: encontrada.pueblo || details.querySelector('[data-farm-town]')?.value,
+            });
+            syncHidden();
+        } catch {
+            // El punto y la dirección manual siguen siendo válidos si Nominatim falla.
+        } finally {
+            if (geocodificacionAbortController === controller) geocodificacionAbortController = null;
+        }
+    }
     const mapa = crearSelectorPuntoFinca({
         mount: details.querySelector('[data-farm-map]'),
         puntoInicial: { latitud: inicial?.latitud ?? null, longitud: inicial?.longitud ?? null },
+        onPuntoChange: completarDireccionDesdePunto,
     });
-    editores.set(card, { direccion, mapa });
-    details.addEventListener('input', syncHidden);
-    details.addEventListener('change', syncHidden);
+    const cancelarGeocodificacion = () => {
+        geocodificacion += 1;
+        geocodificacionAbortController?.abort();
+        geocodificacionAbortController = null;
+    };
+    editores.set(card, { direccion, mapa, cancelarGeocodificacion });
+    const invalidarGeocodificacion = () => {
+        cancelarGeocodificacion();
+        syncHidden();
+    };
+    details.addEventListener('input', invalidarGeocodificacion);
+    details.addEventListener('change', invalidarGeocodificacion);
 }
 
 function buildCard(borrador = {}, persisted = false) {
@@ -123,7 +157,9 @@ function buildCard(borrador = {}, persisted = false) {
     remove.className = 'button button--secondary farm-card__remove';
     remove.textContent = 'Quitar';
     remove.addEventListener('click', () => {
-        editores.get(card)?.mapa?.destruir?.();
+        const editor = editores.get(card);
+        editor?.cancelarGeocodificacion?.();
+        editor?.mapa?.destruir?.();
         card.remove();
         syncHidden();
     });
@@ -152,7 +188,10 @@ async function cargarDireccionPersistida(card, identificacionNumero, nombreFinca
             editores.get(card)?.direccion?.aplicar?.(direccion);
             const senas = card.querySelector('[data-farm-directions]');
             if (senas) senas.value = direccion.senas ?? '';
-            editores.get(card)?.mapa?.aplicarPunto?.({ latitud: direccion.latitud, longitud: direccion.longitud });
+            editores.get(card)?.mapa?.aplicarPunto?.(
+                { latitud: direccion.latitud, longitud: direccion.longitud },
+                { notificar: false },
+            );
             card.dataset.addressExists = 'true';
             if (state) state.textContent = 'Dirección registrada cargada.';
             syncHidden();
@@ -171,7 +210,11 @@ async function cargarDireccionPersistida(card, identificacionNumero, nombreFinca
 function renderFromHidden() {
     if (!list) return;
     const token = ++renderToken;
-    for (const card of list.querySelectorAll('[data-farm-card]')) editores.get(card)?.mapa?.destruir?.();
+    for (const card of list.querySelectorAll('[data-farm-card]')) {
+        const editor = editores.get(card);
+        editor?.cancelarGeocodificacion?.();
+        editor?.mapa?.destruir?.();
+    }
     const borradores = leerBorradores();
     const persisted = Boolean(document.querySelector('#identificacion-original')?.value);
     const identificacionNumero = document.querySelector('#identificacion-original')?.value || '';

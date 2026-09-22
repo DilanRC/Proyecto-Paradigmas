@@ -1,5 +1,15 @@
-import { BOUNDS_COSTA_RICA, CENTRO_COSTA_RICA, crearMapa, normalizarCoordenadas } from './mapa.js';
-import { capturarUbicacionAutomatica, leerUbicacionUsuario } from './ubicacion-sesion.js';
+import {
+    CENTRO_COSTA_RICA,
+    cargarLimitesCostaRica,
+    crearMapa,
+    normalizarCoordenadas,
+    puntoDentroDeLimitesCostaRica,
+} from './mapa.js';
+import {
+    capturarUbicacionAutomatica,
+    leerUbicacionUsuario,
+    UBICACION_USUARIO_KEY,
+} from './ubicacion-sesion.js';
 
 function asegurarEstilos() {
     if (typeof document === 'undefined' || document.querySelector('link[data-tc-map-ui]')) return;
@@ -21,20 +31,13 @@ function normalizarPunto(punto) {
     };
 }
 
-function estaEnZonaCostaRica(punto) {
-    const latitud = Number(punto?.latitud);
-    const longitud = Number(punto?.longitud);
-    return Number.isFinite(latitud) && Number.isFinite(longitud)
-        && latitud >= BOUNDS_COSTA_RICA[0][1] && latitud <= BOUNDS_COSTA_RICA[1][1]
-        && longitud >= BOUNDS_COSTA_RICA[0][0] && longitud <= BOUNDS_COSTA_RICA[1][0];
-}
-
 /** Geocodificación inversa puntual; no se ejecuta mientras el mapa está cerrado. */
 export async function buscarDireccionPorCoordenadas(punto, {
     fetchImpl = globalThis.fetch,
     signal,
 } = {}) {
-    if (!estaEnZonaCostaRica(punto)) {
+    const limites = await cargarLimitesCostaRica();
+    if (!puntoDentroDeLimitesCostaRica(punto, limites)) {
         const error = new Error('El punto debe estar dentro de Costa Rica, sus islas o territorio marítimo.');
         error.kind = 'outside-costa-rica';
         throw error;
@@ -95,13 +98,13 @@ export function crearSelectorPuntoFinca({
         </div>
         <div class="farm-map-picker__actions">
             <button type="button" class="button button--secondary" data-farm-map-open>Abrir mapa para ubicar finca</button>
-            <button type="button" class="button button--secondary" data-farm-map-location hidden>Usar mi ubicación</button>
+            <button type="button" class="button button--secondary" data-farm-map-location>Usar mi ubicación</button>
             <button type="button" class="button button--secondary" data-farm-map-clear hidden>Quitar punto exacto</button>
         </div>
         <p class="farm-map-picker__status" data-farm-map-status role="status" aria-live="polite"></p>
         <p class="farm-map-picker__coords" data-farm-map-coords hidden></p>
         <div class="map-shell" data-farm-map-shell hidden>
-            <p class="map-shell__notice">Haga clic sobre la finca y luego ajuste el marcador si lo necesita. OpenFreeMap carga la cartografía; el punto solo se guarda al guardar la dirección.</p>
+            <p class="map-shell__notice">Haga clic sobre la finca y luego ajuste el marcador si lo necesita. OpenFreeMap carga la cartografía; los límites locales provienen de IGN/SNIT y Fundación MarViva. El punto solo se guarda al guardar la dirección.</p>
             <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>
             <div class="map-shell__fallback" data-farm-map-fallback hidden>
                 <strong>Mapa no disponible.</strong>
@@ -121,9 +124,48 @@ export function crearSelectorPuntoFinca({
     const retry = mount.querySelector('[data-farm-map-retry]');
 
     let punto = normalizarPunto(puntoInicial);
+    let puntoValidado = !punto;
     let mapa = null;
+    let mapaEnCarga = null;
+    let solicitudUbicacion = 0;
+    let validacionPuntoToken = 0;
     let token = 0;
     let destruido = false;
+    let limitesCostaRica = null;
+    let limitesListos = null;
+    const prepararLimites = () => {
+        limitesListos = cargarLimitesCostaRica().then((geojson) => {
+        limitesCostaRica = geojson;
+        return geojson;
+        });
+        return limitesListos;
+    };
+    const estaEnZonaCostaRica = (punto) => puntoDentroDeLimitesCostaRica(punto, limitesCostaRica);
+    const invalidarPuntoFueraDeZona = (notificar = true) => {
+        if (!punto || !limitesCostaRica) return;
+        if (estaEnZonaCostaRica(punto)) {
+            puntoValidado = true;
+            return;
+        }
+        puntoValidado = false;
+        punto = null;
+        render();
+        mapa?.quitarMarcador?.();
+        if (notificar) {
+            notificarCambio();
+            onPuntoChange(null);
+        }
+        status.textContent = 'El punto guardado está fuera del área permitida y fue eliminado.';
+    };
+    prepararLimites()
+        .then(() => {
+            invalidarPuntoFueraDeZona();
+            render();
+        })
+        .catch(() => {
+            puntoValidado = false;
+            if (punto) status.textContent = 'No se pudo validar el punto guardado. Se conservará la dirección, pero el punto no se guardará.';
+        });
 
     const bloquearRuedaSobreMapa = (event) => {
         event.preventDefault();
@@ -136,16 +178,18 @@ export function crearSelectorPuntoFinca({
     };
 
     const render = () => {
-        clearButton.hidden = punto === null;
-        coords.hidden = punto === null;
+        clearButton.hidden = punto === null || !puntoValidado;
+        coords.hidden = punto === null || !puntoValidado;
         coords.textContent = punto
             ? `Punto seleccionado: ${punto.latitud}, ${punto.longitud}`
             : '';
     };
 
     const establecer = (nuevoPunto, { moverMapa = true } = {}) => {
+        validacionPuntoToken += 1;
         punto = normalizarPunto(nuevoPunto);
-        if (punto && mapa && moverMapa) mapa.establecerMarcador(punto);
+        puntoValidado = !punto || Boolean(limitesCostaRica && estaEnZonaCostaRica(punto));
+        if (punto && puntoValidado && mapa && moverMapa) mapa.establecerMarcador(punto);
         render();
         notificarCambio();
         status.textContent = punto
@@ -163,23 +207,28 @@ export function crearSelectorPuntoFinca({
         fallback.hidden = true;
         canvas.replaceChildren();
         openButton.disabled = false;
-        locationButton.hidden = true;
+        locationButton.disabled = false;
+        solicitudUbicacion += 1;
     };
 
-    const abrirMapa = async () => {
+    const abrirMapaInterno = async () => {
         if (destruido || mapa) return;
         const operacion = ++token;
         shell.hidden = false;
         fallback.hidden = true;
         openButton.disabled = true;
         status.textContent = 'Cargando mapa opcional…';
-        const ubicacionUsuario = leerUbicacionUsuario(storage);
-        const centro = punto
-            ? [Number(punto.longitud), Number(punto.latitud)]
-            : ubicacionUsuario
-                ? [Number(ubicacionUsuario.longitud), Number(ubicacionUsuario.latitud)]
-                : CENTRO_COSTA_RICA;
         try {
+            await prepararLimites();
+            invalidarPuntoFueraDeZona();
+            const ubicacionGuardada = leerUbicacionUsuario(storage);
+            const ubicacionUsuario = estaEnZonaCostaRica(ubicacionGuardada) ? ubicacionGuardada : null;
+            if (ubicacionGuardada && !ubicacionUsuario) storage?.removeItem?.(UBICACION_USUARIO_KEY);
+            const centro = punto
+                ? [Number(punto.longitud), Number(punto.latitud)]
+                : ubicacionUsuario
+                    ? [Number(ubicacionUsuario.longitud), Number(ubicacionUsuario.latitud)]
+                    : CENTRO_COSTA_RICA;
             const creado = await crearMapaFn({
                 contenedor: canvas,
                 coordenadas: punto,
@@ -188,7 +237,12 @@ export function crearSelectorPuntoFinca({
                 draggable: true,
                 interactive: true,
                 onMapClick: (coordenadas) => {
+                    if (!estaEnZonaCostaRica(coordenadas)) {
+                        status.textContent = 'El punto debe estar dentro de Costa Rica, sus islas o el mar territorial.';
+                        return;
+                    }
                     punto = normalizarPunto(coordenadas);
+                    puntoValidado = true;
                     mapa?.establecerMarcador?.(punto, { centrar: false });
                     render();
                     notificarCambio();
@@ -196,7 +250,14 @@ export function crearSelectorPuntoFinca({
                     status.textContent = 'Punto seleccionado. Puede arrastrar el marcador para afinarlo.';
                 },
                 onMarkerChange: (coordenadas) => {
+                    if (!estaEnZonaCostaRica(coordenadas)) {
+                        if (punto) mapa?.establecerMarcador?.(punto, { centrar: false });
+                        else mapa?.quitarMarcador?.();
+                        status.textContent = 'El marcador debe permanecer dentro de Costa Rica, sus islas o el mar territorial.';
+                        return;
+                    }
                     punto = normalizarPunto(coordenadas);
+                    puntoValidado = true;
                     render();
                     notificarCambio();
                     onPuntoChange(punto);
@@ -227,34 +288,70 @@ export function crearSelectorPuntoFinca({
         }
     };
 
+    const abrirMapa = () => {
+        if (destruido || mapa) return Promise.resolve();
+        if (mapaEnCarga) {
+            return mapaEnCarga.then(() => {
+                if (!mapa && !destruido) return abrirMapa();
+                return undefined;
+            });
+        }
+        const carga = abrirMapaInterno();
+        mapaEnCarga = carga;
+        return carga.finally(() => {
+            if (mapaEnCarga === carga) mapaEnCarga = null;
+        });
+    };
+
     openButton.addEventListener('click', abrirMapa);
     locationButton.addEventListener('click', async () => {
-        if (destruido || !mapa) return;
+        if (destruido) return;
         locationButton.disabled = true;
         status.textContent = 'Buscando tu ubicación…';
+        const solicitud = ++solicitudUbicacion;
         try {
+            await prepararLimites();
             const resultado = await capturarUbicacionAutomatica({ storage });
+            if (destruido || solicitud !== solicitudUbicacion) return;
             const ubicacion = resultado.ubicacion;
+            if (!estaEnZonaCostaRica(ubicacion)) {
+                storage?.removeItem?.(UBICACION_USUARIO_KEY);
+                const error = new Error('La ubicación automática está fuera del área permitida de Costa Rica.');
+                error.kind = 'outside-costa-rica';
+                throw error;
+            }
             establecer(ubicacion, { moverMapa: false });
-            mapa.establecerMarcador(ubicacion);
-            mapa.centrar(ubicacion, 15);
-            status.textContent = resultado.reutilizada
-                ? 'Usamos tu ubicación reciente. Puedes ajustar el punto en el mapa.'
-                : 'Ubicación encontrada. Puedes ajustar el punto en el mapa.';
+            if (!mapa) await abrirMapa();
+            if (destruido || solicitud !== solicitudUbicacion) return;
+            if (mapa) {
+                mapa.establecerMarcador(ubicacion);
+                mapa.centrar(ubicacion, 15);
+                status.textContent = resultado.reutilizada
+                    ? 'Usamos tu ubicación reciente. Puedes ajustar el punto en el mapa.'
+                    : 'Ubicación encontrada. Puedes ajustar el punto en el mapa.';
+            } else {
+                status.textContent = 'Ubicación encontrada. El mapa no está disponible, pero el punto se guardará con la finca.';
+            }
         } catch (error) {
+            if (destruido || solicitud !== solicitudUbicacion) return;
             const mensajes = {
                 denied: 'Permiso de ubicación denegado. Puedes marcar el punto o escribir la dirección.',
                 unsupported: 'Este navegador no ofrece ubicación automática. Puedes marcar el punto o escribir la dirección.',
                 timeout: 'La ubicación tardó demasiado. Puedes reintentarlo o marcar el punto manualmente.',
                 unavailable: 'No pudimos encontrar tu ubicación. Puedes marcar el punto o escribir la dirección.',
+                'outside-costa-rica': 'La ubicación automática está fuera del área permitida de Costa Rica.',
             };
             status.textContent = mensajes[error?.kind] ?? 'No pudimos encontrar tu ubicación. Puedes continuar manualmente.';
         } finally {
-            if (!destruido) locationButton.disabled = false;
+            if (!destruido && solicitud === solicitudUbicacion) locationButton.disabled = false;
         }
     });
     clearButton.addEventListener('click', () => {
+        solicitudUbicacion += 1;
+        validacionPuntoToken += 1;
+        locationButton.disabled = false;
         punto = null;
+        puntoValidado = true;
         mapa?.quitarMarcador?.();
         render();
         notificarCambio();
@@ -265,20 +362,38 @@ export function crearSelectorPuntoFinca({
     render();
 
     return Object.freeze({
-        obtenerPunto: () => punto ? { ...punto } : null,
-        aplicarPunto(nuevoPunto) {
+        obtenerPunto: () => punto && puntoValidado ? { ...punto } : null,
+        aplicarPunto(nuevoPunto, { notificar = true } = {}) {
+            const validacion = ++validacionPuntoToken;
             punto = normalizarPunto(nuevoPunto);
+            puntoValidado = !punto ? true : false;
+            limitesListos.then(() => {
+                if (validacion !== validacionPuntoToken) return;
+                const puntoAntesDeValidar = punto;
+                invalidarPuntoFueraDeZona(notificar);
+                render();
+                if (punto === puntoAntesDeValidar && puntoValidado && !notificar) {
+                    mount.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+                if (punto === puntoAntesDeValidar && puntoValidado && notificar) onPuntoChange(punto);
+            }).catch(() => {
+                puntoValidado = false;
+            });
             if (mapa) {
-                if (punto) mapa.establecerMarcador(punto);
+                if (punto && puntoValidado) mapa.establecerMarcador(punto);
                 else mapa.quitarMarcador?.();
             }
             render();
-            onPuntoChange(punto);
         },
-        limpiar() { establecer(null); },
+        limpiar() {
+            solicitudUbicacion += 1;
+            locationButton.disabled = false;
+            establecer(null);
+        },
         cerrarMapa,
         destruir() {
             destruido = true;
+            solicitudUbicacion += 1;
             cerrarMapa();
             canvas.removeEventListener('wheel', bloquearRuedaSobreMapa);
             mount.replaceChildren();
