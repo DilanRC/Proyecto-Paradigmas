@@ -1085,6 +1085,43 @@ html[data-theme='light'] .rural-panel th {
     border-radius:5px;
 }
 
+.rural-panel .map-shell__search {
+    position:absolute;
+    z-index:5;
+    top:16px;
+    left:16px;
+    width:min(390px,calc(100% - 32px));
+    margin:0;
+}
+
+.rural-panel .map-shell__search-row {
+    display:flex;
+    gap:7px;
+}
+
+.rural-panel .map-shell__search input {
+    min-width:0;
+    flex:1;
+    min-height:44px;
+    padding:10px 16px;
+    border:1px solid var(--admin-line-strong);
+    border-radius:999px;
+    color:#26372b;
+    background:rgba(255,255,255,.96);
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+
+.rural-panel .map-shell__search-row .button {
+    display:grid;
+    width:44px;
+    height:44px;
+    min-height:44px;
+    flex:0 0 44px;
+    padding:0;
+    place-items:center;
+    border-radius:50%;
+}
+
 .rural-panel .map-shell__fallback {
     display:grid;
     place-items:center;

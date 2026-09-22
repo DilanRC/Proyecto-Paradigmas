@@ -168,3 +168,10 @@ etiquetas del estilo; así la imagen satelital queda debajo de los nombres y los
 detalles siguen siendo legibles. El control de capas usa botones con
 `aria-pressed` para que Mapa, Satélite y Detalles oficiales tengan un estado
 visible y reversible.
+
+La composición visual sigue una regla de prioridad: la búsqueda es una barra
+flotante compacta sobre la esquina superior izquierda del mapa; el selector de
+capas queda bajo fullscreen en la esquina superior derecha; ubicación y quitar
+punto quedan juntos en la esquina inferior derecha. No se debe volver a poner
+la búsqueda como una fila de ancho completo fuera del mapa, porque reduce el
+área útil y rompe el patrón de interacción esperado.

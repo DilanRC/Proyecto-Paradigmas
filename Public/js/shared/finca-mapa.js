@@ -139,10 +139,10 @@ export function crearSelectorPuntoFinca({
                 <button type="button" class="map-shell__action" data-farm-map-clear hidden aria-label="Quitar punto exacto" title="Quitar punto exacto"><i class="fa-solid fa-location-dot-slash" aria-hidden="true"></i></button>
             </div>
             <div class="map-shell__search" data-farm-map-search-form role="search">
-                <label for="" data-farm-map-search-label>Buscar lugar</label>
+                <label class="screen-reader-only" for="" data-farm-map-search-label>Buscar lugar</label>
                 <div class="map-shell__search-row">
                     <input data-farm-map-search type="search" autocomplete="off" placeholder="Nombre de finca, pueblo o lugar">
-                    <button type="button" data-farm-map-search-submit class="button button--secondary">Buscar</button>
+                    <button type="button" data-farm-map-search-submit class="button button--secondary" aria-label="Buscar lugar" title="Buscar lugar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                 </div>
                 <div class="map-shell__results" data-farm-map-results role="listbox" aria-label="Resultados de búsqueda" hidden></div>
             </div>
