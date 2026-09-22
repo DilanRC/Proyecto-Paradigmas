@@ -20,7 +20,7 @@ test('el admin comparte la paleta de los logos con el sitio publico', () => {
 
 test('el shell existente se mejora desde un bootstrap compartido, no con cinco implementaciones', () => {
     assert.ok(apiJs.startsWith("import './auth-gate.js';\nimport './admin-ui.js';"));
-    assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-3'"));
+    assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-6'"));
     assert.ok(adminJs.includes('enhanceSidebarAccount();'));
     assert.ok(adminJs.includes('enhancePageHeader();'));
     assert.ok(adminJs.includes('enhanceFilters();'));
@@ -30,6 +30,13 @@ test('el shell existente se mejora desde un bootstrap compartido, no con cinco i
         const html = read(`../../Application/View/${view}/index.php`);
         assert.equal(html.includes('admin-v3.css'), false, `${view} no debe duplicar imports del shell`);
     }
+});
+
+test('los botones secundarios del admin conservan contraste en ambos temas y al cargar', () => {
+    assert.ok(adminCss.includes('.rural-panel .button--secondary {'));
+    assert.ok(adminCss.includes('background:var(--admin-surface-2) !important;'));
+    assert.ok(adminCss.includes('.rural-panel .button--secondary:disabled {'));
+    assert.ok(adminCss.includes('opacity:1 !important;'));
 });
 
 test('la navegación y utilidades mantienen icono mas texto visible', () => {

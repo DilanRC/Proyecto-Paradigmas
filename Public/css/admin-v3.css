@@ -360,6 +360,27 @@ html[data-theme='light'] .rural-panel .page-header {
     background:var(--admin-primary-strong) !important;
 }
 
+.rural-panel .button--secondary {
+    color:var(--admin-text) !important;
+    border-color:var(--admin-line-strong) !important;
+    background:var(--admin-surface-2) !important;
+    box-shadow:none !important;
+}
+
+.rural-panel .button--secondary:hover:not(:disabled),
+.rural-panel .button--secondary:focus-visible {
+    color:var(--admin-text) !important;
+    border-color:var(--admin-primary) !important;
+    background:var(--admin-surface-3) !important;
+}
+
+.rural-panel .button--secondary:disabled {
+    color:var(--admin-muted) !important;
+    border-color:var(--admin-line) !important;
+    background:var(--admin-surface) !important;
+    opacity:1 !important;
+}
+
 .rural-panel .panel {
     margin:0 !important;
     overflow:hidden !important;
