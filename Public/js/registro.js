@@ -57,9 +57,9 @@ function montarDireccionFinca(card, direccionInicial = null) {
     const numero = ++secuenciaFinca;
     const listaId = `registro-pueblos-finca-${numero}`;
     details.innerHTML = `
-        <summary><span class="finca-address__title">Agregar dirección</span><span class="finca-address__meta">Opcional · puedes hacerlo ahora o después</span></summary>
+        <summary><span class="finca-address__title">Agregar dirección *</span><span class="finca-address__meta">Necesaria para continuar</span></summary>
         <div class="farm-address-editor">
-            <p class="fieldset-help">Puede escribir la dirección o marcar el punto exacto en el mapa. No es obligatorio completarlo ahora.</p>
+            <p class="fieldset-help">Complete provincia, cantón, distrito, pueblo y señas. El punto exacto en el mapa es opcional.</p>
             <div class="farm-address-editor__grid">
                 <label class="field"><span>Provincia</span><select data-finca-provincia></select></label>
                 <label class="field"><span>Cantón</span><select data-finca-canton></select></label>
@@ -151,10 +151,16 @@ function readFincas() {
 
 function validarDireccionesFinca(fincas) {
     for (const finca of fincas) {
-        if (!finca.direccion) continue;
-        if (!finca.direccion.provincia || !finca.direccion.canton || !finca.direccion.distrito) {
+        if (!finca.direccion) {
             return {
-                fincas: `Complete provincia, cantón y distrito de ${finca.nombre || 'la finca'} o deje toda su dirección vacía.`,
+                fincas: `Complete la dirección de ${finca.nombre || 'la finca'} antes de continuar.`,
+            };
+        }
+        const faltantes = ['provincia', 'canton', 'distrito', 'pueblo', 'senas']
+            .filter((campo) => !finca.direccion[campo]);
+        if (faltantes.length > 0) {
+            return {
+                fincas: `Complete provincia, cantón, distrito, pueblo y señas de ${finca.nombre || 'la finca'}.`,
             };
         }
     }
@@ -163,6 +169,7 @@ function validarDireccionesFinca(fincas) {
 
 function setErrors(errors = {}) {
     document.querySelectorAll('[data-error-for]').forEach((node) => { node.textContent = ''; });
+    document.querySelectorAll('[data-finca-error]').forEach((node) => { node.textContent = ''; });
     document.querySelectorAll('[aria-invalid="true"]').forEach((node) => node.removeAttribute('aria-invalid'));
     for (const [field, message] of Object.entries(errors)) {
         const errorNode = document.querySelector(`[data-error-for="${CSS.escape(field)}"]`);
@@ -172,8 +179,18 @@ function setErrors(errors = {}) {
     }
 }
 
+function setStatus(status, message, kind = 'info') {
+    status.textContent = message;
+    status.dataset.status = message ? kind : '';
+}
+
 function snapshot(form, existingProfile = null) {
-    const persona = existingProfile?.persona ? { ...existingProfile.persona } : formPersona(form);
+    // La contraseña nunca vive en el perfil cacheado. Para el alta, el valor
+    // válido solo puede venir del input actual; el perfil aporta únicamente
+    // datos previamente conocidos de la identidad.
+    const persona = existingProfile?.persona
+        ? { ...existingProfile.persona, ...formPersona(form) }
+        : formPersona(form);
     return { persona, capacidades: selectedCapabilities(form), fincas: readFincas() };
 }
 
@@ -349,7 +366,7 @@ async function initialize() {
         previousButton.hidden = stepIndex === 0;
         nextButton.hidden = stepIndex === steps.length - 1;
         finishButton.hidden = stepIndex !== steps.length - 1;
-        status.textContent = '';
+        setStatus(status, '');
         // La validación técnica y la persistencia son internas; la persona solo
         // necesita ver que el registro está listo para terminar.
     };
@@ -366,11 +383,15 @@ async function initialize() {
             errors = { ...validateFincas(fincas, selectedCapabilities(form)), ...validarDireccionesFinca(fincas) };
         }
         setErrors(errors);
+        if (errors.fincas) {
+            const fincaError = document.querySelector('[data-finca-error]');
+            if (fincaError) fincaError.textContent = errors.fincas;
+        }
         const first = Object.keys(errors)[0];
         if (first) {
             const control = form.elements.namedItem(first) || document.querySelector(`[data-error-for="${CSS.escape(first)}"]`);
             control?.focus?.();
-            status.textContent = 'Revise los datos señalados antes de continuar.';
+            setStatus(status, 'Revise los datos señalados antes de continuar.', 'error');
             return false;
         }
         return true;
@@ -399,7 +420,21 @@ async function initialize() {
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (!validateCurrent() || finishButton.disabled) return;
+        if (finishButton.disabled) return;
+
+        // El último paso no contiene campos editables. Revalidamos la identidad
+        // antes de llamar a Supabase para no enviar un borrador desactualizado.
+        const personaErrors = validatePersonaDraft(formPersona(form), { requirePassword: !readAuthSession() });
+        if (Object.keys(personaErrors).length > 0) {
+            stepIndex = steps.indexOf('persona');
+            sync();
+            setErrors(personaErrors);
+            setStatus(status, 'Corrija los datos de la cuenta antes de terminar.', 'error');
+            const first = Object.keys(personaErrors)[0];
+            form.elements.namedItem(first)?.focus?.();
+            return;
+        }
+        if (!validateCurrent()) return;
         const draft = persistDraft(form, existingProfile);
         form.setAttribute('aria-busy', 'true');
         finishButton.setAttribute('aria-busy', 'true');
@@ -409,16 +444,16 @@ async function initialize() {
         const summary = buildRegistrationSummary(draft);
         try {
             if (!readAuthSession()) {
-                status.textContent = 'Creando tu cuenta…';
+                setStatus(status, 'Creando tu cuenta…');
                 const auth = await signUpWithPassword(summary.persona.correoElectronico, draft.persona.password);
                 if (!auth.session) {
-                    status.textContent = 'Cuenta creada. Confirma tu correo y luego entra para completar el registro.';
+                    setStatus(status, 'Cuenta creada. Confirma tu correo y luego entra para completar el registro.', 'success');
                     finishButton.disabled = false;
                     return;
                 }
             }
 
-            status.textContent = 'Guardando tu identidad y actividades…';
+            setStatus(status, 'Guardando tu identidad y actividades…');
             await request('api/v1/registro', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -433,9 +468,9 @@ async function initialize() {
             // atrapada en el botón ni hacerle repetir una operación exitosa.
             sessionStorage.removeItem(DRAFT_KEY);
             const fallback = extending ? 'mi-actividad?actualizado=1' : 'mi-actividad?bienvenida=1';
-            status.textContent = extending
+            setStatus(status, extending
                 ? 'Actividad guardada. Abriendo tu perfil…'
-                : 'Registro completado. Abriendo tu perfil…';
+                : 'Registro completado. Abriendo tu perfil…', 'success');
             try {
                 const activity = await request('api/v1/actividad', { timeoutMs: 10000 });
                 syncPublicProfile(activity.data);
@@ -447,7 +482,7 @@ async function initialize() {
         } catch (error) {
             const fieldErrors = error?.errors ?? {};
             if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors);
-            status.textContent = error?.message || 'No fue posible completar el registro. Intenta nuevamente.';
+            setStatus(status, error?.message || 'No fue posible completar el registro. Revise los datos e intente nuevamente.', 'error');
             finishButton.disabled = false;
         } finally {
             form.setAttribute('aria-busy', 'false');

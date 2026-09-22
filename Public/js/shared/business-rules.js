@@ -42,6 +42,15 @@ export const REGISTRATION_RULES = Object.freeze({
     }),
 });
 
+const COMMON_PASSWORDS = new Set(['12345678', 'password', 'qwertyui', 'abcdefgh', '87654321']);
+
+function isWeakPassword(value) {
+    const password = String(value ?? '').toLowerCase();
+    if (COMMON_PASSWORDS.has(password)) return true;
+    if (/^(\d)\1+$/.test(password)) return true;
+    return /^(?:0123456789|123456789|9876543210)/.test(password);
+}
+
 export function normalizeCapabilities(values = []) {
     return [...new Set(values)]
         .map((value) => String(value).toUpperCase())
@@ -85,7 +94,17 @@ export function validatePersonaDraft(persona = {}, { requirePassword = true } = 
     }
 
     if (persona.password && String(persona.password).length < REGISTRATION_RULES.persona.passwordMinLength) {
-        errors.password = 'Use al menos 8 caracteres.';
+        errors.password = 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número.';
+    }
+    if (persona.password && !/[A-Za-z]/.test(String(persona.password))) {
+        errors.password = 'La contraseña debe incluir al menos una letra, una mayúscula y un número.';
+    } else if (persona.password && !/[A-Z]/.test(String(persona.password))) {
+        errors.password = 'La contraseña debe incluir al menos una letra mayúscula y un número.';
+    } else if (persona.password && !/\d/.test(String(persona.password))) {
+        errors.password = 'La contraseña debe incluir al menos un número.';
+    }
+    if (persona.password && !errors.password && isWeakPassword(persona.password)) {
+        errors.password = 'Esta contraseña usa una secuencia muy común que los intentos automáticos prueban primero. Combina varias palabras con números y un símbolo.';
     }
 
     if (requirePassword && persona.password !== persona.passwordConfirmacion) {

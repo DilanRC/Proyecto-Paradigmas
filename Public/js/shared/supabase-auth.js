@@ -73,12 +73,18 @@ function friendlyAuthMessage(status, payload, fallback) {
 
 function friendlySignupMessage(status, payload) {
     const code = payload?.code ?? payload?.error_code ?? null;
+    const providerMessage = String(payload?.msg || payload?.message || '').toLowerCase();
     if (status === 429) return 'Hubo demasiados intentos. Intenta de nuevo más tarde.';
     if (code === 'user_already_exists' || code === 'email_exists') {
         return 'Ya existe una cuenta con este correo. Entra con tu contraseña para continuar.';
     }
-    if (code === 'weak_password') return 'La contraseña no cumple la política de seguridad de la cuenta.';
-    return payload?.msg || payload?.message || 'No fue posible crear la cuenta.';
+    if (code === 'weak_password' || providerMessage.includes('valid password')) {
+        return 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número. Evita secuencias comunes como 12345678.';
+    }
+    if (providerMessage.includes('email') && providerMessage.includes('valid')) {
+        return 'Ingrese un correo electrónico válido.';
+    }
+    return 'No fue posible crear la cuenta. Revise los datos e intente nuevamente.';
 }
 
 async function authConfig() {

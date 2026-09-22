@@ -274,6 +274,13 @@ export function crearSelectorPuntoFinca({
         token += 1;
         searchController.current?.abort();
         searchController.current = null;
+        const elementoPantallaCompleta = document.fullscreenElement;
+        if (elementoPantallaCompleta && (elementoPantallaCompleta === mount || mount.contains(elementoPantallaCompleta))) {
+            // El botón de cierre también debe abandonar la pantalla completa;
+            // si se destruye el nodo primero, el navegador puede dejar un
+            // viewport negro bloqueando el resto de la página.
+            document.exitFullscreen?.().catch(() => {});
+        }
         mapa?.destruir?.();
         mapa = null;
         shell.hidden = true;

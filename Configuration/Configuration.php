@@ -6,6 +6,48 @@ namespace Configuration;
 
 const APPLICATION_NAME = 'TinderCows';
 
+// Apache/XAMPP no carga `.env` por sí mismo. Las variables definidas por el
+// servidor conservan prioridad; el archivo solo completa las que falten.
+loadEnvironmentFile(dirname(__DIR__) . '/.env');
+
+function loadEnvironmentFile(string $path): void
+{
+    if (!is_readable($path)) {
+        return;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($lines === false) {
+        return;
+    }
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        if (str_starts_with($line, 'export ')) {
+            $line = substr($line, 7);
+        }
+        $separator = strpos($line, '=');
+        if ($separator === false) {
+            continue;
+        }
+
+        $name = trim(substr($line, 0, $separator));
+        $value = trim(substr($line, $separator + 1));
+        if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name)) {
+            continue;
+        }
+        if (strlen($value) >= 2 && (($value[0] === '"' && $value[-1] === '"') || ($value[0] === "'" && $value[-1] === "'"))) {
+            $value = substr($value, 1, -1);
+        }
+        if (getenv($name) === false) {
+            putenv("{$name}={$value}");
+        }
+    }
+}
+
 /** Reads a JSON request body as an associative array. */
 function readJsonBody(): array
 {

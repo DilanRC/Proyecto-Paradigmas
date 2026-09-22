@@ -28,7 +28,8 @@ function validate(form) {
     for (const control of form.querySelectorAll('input')) {
         let message = '';
         if (!control.validity.valid) {
-            message = control.type === 'email' ? 'Ingrese un correo válido.' : 'Ingrese al menos 8 caracteres.';
+            if (control.type === 'email') message = control.value ? 'Ingrese un correo válido.' : 'El correo electrónico es obligatorio.';
+            else message = control.value ? 'Use al menos 8 caracteres.' : 'La contraseña es obligatoria.';
             valid = false;
         }
         setError(control, message);
@@ -39,6 +40,11 @@ function validate(form) {
 function setBusy(form, button, busy) {
     form.setAttribute('aria-busy', String(busy));
     button.disabled = busy;
+}
+
+function setStatus(status, message, kind = 'info') {
+    status.textContent = message;
+    status.dataset.status = message ? kind : '';
 }
 
 async function loadBusinessProfile() {
@@ -68,7 +74,7 @@ function initialize() {
 
     form.addEventListener('input', (event) => {
         if (event.target instanceof HTMLInputElement) setError(event.target, '');
-        status.textContent = '';
+        setStatus(status, '');
     });
 
     form.addEventListener('submit', async (event) => {
@@ -79,13 +85,13 @@ function initialize() {
         const email = String(data.get('email') ?? '').trim().toLowerCase();
         const password = String(data.get('password') ?? '');
         setBusy(form, submit, true);
-        status.textContent = 'Verificando credenciales…';
+        setStatus(status, 'Verificando credenciales…');
 
         try {
             clearAuthSession();
             clearAdminBrowserSession();
             await signInWithPassword(email, password);
-            status.textContent = 'Credenciales válidas. Vinculando tu identidad de TinderCows…';
+            setStatus(status, 'Credenciales válidas. Vinculando tu identidad de TinderCows…');
 
             let profile;
             try {
@@ -94,41 +100,41 @@ function initialize() {
                 if (error?.status === 401 || error?.status === 409) {
                     if (error?.status === 409 && await isAdminAccount()) {
                         writeAdminBrowserSession(email);
-                        status.textContent = 'Acceso administrativo confirmado. Abriendo TinderCows…';
+                        setStatus(status, 'Acceso administrativo confirmado. Abriendo TinderCows…', 'success');
                         window.location.assign(resolveAdminNext(window.location.search));
                         return;
                     }
                     if (error?.status === 409) {
-                        status.textContent = 'La cuenta está validada. Completa ahora tu registro guiado para crear tu perfil.';
+                        setStatus(status, 'La cuenta está validada. Completa ahora tu registro guiado para crear tu perfil.', 'info');
                         window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
                         return;
                     }
                     try { await signOut(); } catch { clearAuthSession(); }
-                    status.textContent = 'La sesión no pudo verificarse. Vuelve a iniciar sesión.';
+                    setStatus(status, 'La sesión no pudo verificarse. Vuelve a iniciar sesión.', 'error');
                     return;
                 }
                 // Si MySQL/API está temporalmente indisponible conservamos la
                 // sesión válida de Supabase para que el usuario pueda reintentar
                 // sin crear otra sesión remota.
-                status.textContent = error?.message || 'La sesión se inició, pero no pudimos cargar tu perfil. Intenta nuevamente.';
+                setStatus(status, error?.message || 'La sesión se inició, pero no pudimos cargar tu perfil. Intenta nuevamente.', 'error');
                 return;
             }
 
             if (new URLSearchParams(window.location.search).get('area') === 'admin') {
                 if (!await isAdminAccount()) {
-                    status.textContent = 'La cuenta inició sesión, pero no tiene autorización administrativa.';
+                    setStatus(status, 'La cuenta inició sesión, pero no tiene autorización administrativa.', 'error');
                     return;
                 }
                 writeAdminBrowserSession(email);
-                status.textContent = 'Acceso administrativo confirmado. Abriendo TinderCows…';
+                setStatus(status, 'Acceso administrativo confirmado. Abriendo TinderCows…', 'success');
                 window.location.assign(resolveAdminNext(window.location.search));
                 return;
             }
 
-            status.textContent = 'Acceso confirmado. Abriendo TinderCows…';
+            setStatus(status, 'Acceso confirmado. Abriendo TinderCows…', 'success');
             window.location.assign(resolveNext(window.location.search, Boolean(profile?.persona)));
         } catch (error) {
-            status.textContent = error?.message || 'No fue posible iniciar sesión.';
+            setStatus(status, error?.message || 'No fue posible iniciar sesión. Revise sus datos e intente nuevamente.', 'error');
         } finally {
             setBusy(form, submit, false);
         }

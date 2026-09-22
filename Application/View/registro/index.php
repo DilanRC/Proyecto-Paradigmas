@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=front-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=front-6"></script>
+    <script type="module" src="js/registro.js?v=front-8"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -63,7 +63,7 @@
                     <label class="auth-field"><span>Alias <em>opcional</em></span><input name="alias" type="text" maxlength="150"><small class="auth-error" data-error-for="alias"></small></label>
                     <label class="auth-field"><span>Teléfono *</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></label>
                     <label class="auth-field"><span>Correo electrónico *</span><input name="correoElectronico" type="email" maxlength="150" autocomplete="email" required><small class="auth-error" data-error-for="correoElectronico"></small></label>
-                    <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="password"></small></label>
+                    <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="field-help">Mínimo 8 caracteres, una letra mayúscula y un número.</small><small class="auth-error" data-error-for="password"></small></label>
                     <label class="auth-field"><span>Confirmar contraseña *</span><span class="auth-password-control"><input id="registro-password-confirmacion" name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password-confirmacion" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
                 </div>
             </section>
@@ -80,7 +80,7 @@
             </section>
 
             <section class="onboarding-step" data-step="fincas" hidden>
-                <div class="step-heading"><span class="step-number">03</span><div><h2>Añade tus fincas</h2><p>Agrega una o varias fincas. El nombre es necesario; la dirección escrita y el punto en el mapa son opcionales.</p></div></div>
+                <div class="step-heading"><span class="step-number">03</span><div><h2>Añade tus fincas</h2><p>Agrega una o varias fincas. El nombre y la dirección escrita son necesarios para continuar. El punto exacto en el mapa es opcional.</p></div></div>
                 <div id="fincas-list" class="fincas-list"></div>
                 <button class="onboarding-add" id="agregar-finca" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Agregar otra finca</button>
                 <p class="auth-error onboarding-error" data-error-for="fincas"></p>
@@ -104,7 +104,8 @@
     <article class="finca-card" data-finca>
         <div class="finca-card__heading"><strong>Finca</strong><button type="button" data-remove-finca aria-label="Eliminar finca"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></div>
         <label class="auth-field"><span>Nombre de la finca *</span><input type="text" data-finca-nombre maxlength="150" required placeholder="Ej. Finca El Roble"></label>
-        <details class="finca-address"><summary><span class="finca-address__title">Agregar dirección</span><span class="finca-address__meta">Opcional · puedes hacerlo ahora o después</span></summary><p>Escribe la ubicación de la finca o marca un punto de referencia en el mapa.</p></details>
+        <details class="finca-address"><summary><span class="finca-address__title">Agregar dirección *</span><span class="finca-address__meta">Necesaria para continuar</span></summary><p>Completa provincia, cantón, distrito, pueblo y señas. El punto exacto en el mapa es opcional.</p></details>
+        <small class="auth-error" data-finca-error></small>
     </article>
 </template>
 </body>

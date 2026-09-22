@@ -853,8 +853,11 @@ html[data-theme='light'] .brand-logo--dark {
 }
 
 .auth-status {
+    display:table;
+    max-width:100%;
+    box-sizing:border-box;
     min-height:0;
-    margin:12px 0 4px;
+    margin:12px auto 4px;
     padding:11px 13px;
     border:1px solid color-mix(in srgb,var(--tc-success) 58%,var(--tc-line-strong));
     border-radius:10px;
@@ -863,6 +866,18 @@ html[data-theme='light'] .brand-logo--dark {
     font-size:14px;
     font-weight:700;
     line-height:1.45;
+}
+
+.auth-status[data-status='error'] {
+    border-color:color-mix(in srgb,var(--tc-danger) 58%,var(--tc-line-strong));
+    color:var(--tc-danger);
+    background:color-mix(in srgb,var(--tc-danger) 12%,var(--tc-bg));
+}
+
+.auth-status[data-status='info'] {
+    border-color:var(--tc-line-strong);
+    color:var(--tc-text-soft);
+    background:color-mix(in srgb,var(--tc-text) 6%,var(--tc-bg));
 }
 
 .auth-status:empty {
