@@ -220,7 +220,7 @@ Si una instalación heredada rechazara personas sin alias, aplique después
 `Database/Migrations/010normalizapersonaalias.sql`; solo ajusta la nulabilidad
 de `tbpersonaalias` y conserva los valores existentes.
 
-En Vercel, el arranque ejecuta la migración v9 contra Supabase, recarga la caché
+En Vercel, el arranque ejecuta la migración v10 contra Supabase, recarga la caché
 de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
 con columnas incompatibles.
 

@@ -8,7 +8,7 @@ const EXPECTED_COLUMNS = [
     ],
     'tbpersona' => [
         'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
-        'tbpersonanombre', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
+        'tbpersonanombre', 'tbpersonaalias', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
     ],
     'tbproductor' => [
         'tbproductorid', 'tbpersonaid',
@@ -19,7 +19,7 @@ const EXPECTED_COLUMNS = [
     ],
     'tbdireccion' => [
         'tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
-        'tbdireccionpueblo', 'tbdireccionsenas',
+        'tbdireccionpueblo', 'tbdireccionsenas', 'tbdireccionlatitud', 'tbdireccionlongitud',
     ],
     'tbproductorestadoperiodo' => [
         'tbproductorestadoperiodoid', 'tbproductorid', 'tbproductorestadoperiodoestado',
@@ -285,8 +285,11 @@ function normalizePersonCapabilities(PDO $connection): void
         ALTER TABLE public.tbcomprador ADD COLUMN tbpersonaid INTEGER NULL;
         ALTER TABLE public.tbtransportista ADD COLUMN tbpersonaid INTEGER NULL');
     $connection->exec("INSERT INTO public.tbpersona
+      (tbpersonaid, tbpersonaidentificacionnumero, tbpersonaidentificaciontipo,
+       tbpersonanombre, tbpersonaalias, tbpersonatelefono,
+       tbpersonacorreoelectronico, tbpersonaestado)
       SELECT ROW_NUMBER() OVER (ORDER BY identificacion)::INTEGER, identificacion,
-             MIN(tipo), MIN(nombre), MIN(telefono), MIN(correo), 1
+             MIN(tipo), MIN(nombre), NULL, MIN(telefono), MIN(correo), 1
       FROM (
         SELECT tbproductoridentificacionnumero identificacion, tbproductoridentificaciontipo tipo,
                tbproductornombre nombre, tbproductortelefono telefono,
@@ -314,6 +317,17 @@ function normalizePersonCapabilities(PDO $connection): void
           DROP COLUMN tb{$profile}correoelectronico,
           ALTER COLUMN tbpersonaid SET NOT NULL");
     }
+}
+
+/** Completa columnas que ya usan los modelos pero faltaban en el primer espejo
+ * PostgreSQL. Se ejecuta también cuando la base ya está normalizada. */
+function ensureCurrentColumns(PDO $connection): void
+{
+    $connection->exec('ALTER TABLE public.tbpersona
+        ADD COLUMN IF NOT EXISTS tbpersonaalias VARCHAR(150) NULL;
+        ALTER TABLE public.tbdireccion
+        ADD COLUMN IF NOT EXISTS tbdireccionlatitud NUMERIC(10,7) NULL,
+        ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL');
 }
 
 /**
@@ -443,8 +457,9 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v9'))");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))");
     $connection->exec($schema);
+    ensureCurrentColumns($connection);
     normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
     agregarHistoricoDireccion($connection);
@@ -453,7 +468,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=34 migration=v9\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=34 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

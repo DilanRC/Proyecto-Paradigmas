@@ -56,7 +56,7 @@ $checks = [
     'diagnostico_columnas' => str_contains($migration, 'esperado=[%s] actual=[%s]'),
     'orden_columnas_neutro' => substr_count($migration, 'sort($columns)') === 2,
     'recarga_postgrest' => str_contains($migration, "NOTIFY pgrst, 'reload schema'"),
-    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=34 migration=v9'),
+    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=34 migration=v10'),
     'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
     'arranque_vercel' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
 ];

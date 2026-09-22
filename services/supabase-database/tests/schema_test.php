@@ -35,6 +35,13 @@ $check(str_contains($migration, 'normalizeProductorAddress($connection)')
     'La migración normaliza tbproductordireccion y deja el enlace obligatorio');
 $check(str_contains($migration, 'normalizePersonCapabilities($connection)'),
     'La migración debe normalizar persona y capacidades');
+$check(str_contains($schema, 'tbpersonaalias VARCHAR(150) NULL')
+    && str_contains($migration, 'ADD COLUMN IF NOT EXISTS tbpersonaalias'),
+    'Supabase debe conservar el alias que consultan los listados administrativos');
+$check(str_contains($schema, 'tbdireccionlatitud NUMERIC(10,7) NULL')
+    && str_contains($schema, 'tbdireccionlongitud NUMERIC(10,7) NULL')
+    && str_contains($migration, 'ADD COLUMN IF NOT EXISTS tbdireccionlatitud'),
+    'Supabase debe conservar las coordenadas que consulta el formulario de finca');
 $check(strpos($migration, 'capacidad duplicada por identificación')
     < strpos($migration, 'ALTER TABLE public.tbproductor ADD COLUMN tbpersonaid'),
     'Los conflictos deben abortar antes de alterar perfiles');
@@ -52,7 +59,7 @@ foreach (['PRIMARY KEY', 'FOREIGN KEY', 'DEFAULT ', 'CREATE INDEX', 'UNIQUE'] as
 $check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización de migración');
 $check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
 $check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
-$check(str_contains($migration, 'supabase_schema_status=ready tables=34 migration=v9'), 'Falta traza operativa');
+$check(str_contains($migration, 'supabase_schema_status=ready tables=34 migration=v10'), 'Falta traza operativa');
 $check(!str_contains($schema, 'tbproductorestado SMALLINT'),
     'La columna tbproductorestado fue retirada de tbproductor en v5');
 $check(str_contains($migration, 'eliminarEstadoProductor($connection)'),

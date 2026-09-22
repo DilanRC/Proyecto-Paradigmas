@@ -408,8 +408,12 @@ function initialize() {
             // 404 es normal: la finca todavia no tiene direccion y se creara.
             if (error.status !== 404) {
                 toast.error(error.message);
-                closeFincaAddressDialog();
             }
+            // El formulario sigue disponible aunque la consulta falle: una finca
+            // sin dirección puede capturarse manualmente y un fallo transitorio
+            // no debe borrar el contexto ni cerrar el diálogo.
+            fincaDireccionContexto.exists = false;
+            elements.clearFincaAddress.hidden = true;
         }
     }
 

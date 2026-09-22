@@ -20,7 +20,7 @@ contenedor sin borrar ni alterar datos existentes.
 Evidencia operativa esperada en los logs de Vercel:
 
 ```text
-supabase_schema_status=ready tables=34 migration=v9
+supabase_schema_status=ready tables=34 migration=v10
 ```
 
 No se debe ejecutar la migración remota hasta verificar un snapshot y recibir

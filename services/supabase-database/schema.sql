@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonaidentificacionnumero VARCHAR(250) NOT NULL,
     tbpersonaidentificaciontipo VARCHAR(40) NOT NULL,
     tbpersonanombre VARCHAR(150) NOT NULL,
+    tbpersonaalias VARCHAR(150) NULL,
     tbpersonatelefono VARCHAR(20) NOT NULL,
     tbpersonacorreoelectronico VARCHAR(150) NOT NULL,
     tbpersonaestado SMALLINT NOT NULL
@@ -60,7 +61,9 @@ CREATE TABLE IF NOT EXISTS public.tbdireccion (
     tbdireccioncanton VARCHAR(100) NOT NULL,
     tbdirecciondistrito VARCHAR(100) NOT NULL,
     tbdireccionpueblo VARCHAR(150) NULL,
-    tbdireccionsenas VARCHAR(500) NULL
+    tbdireccionsenas VARCHAR(500) NULL,
+    tbdireccionlatitud NUMERIC(10,7) NULL,
+    tbdireccionlongitud NUMERIC(10,7) NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbfinca (
