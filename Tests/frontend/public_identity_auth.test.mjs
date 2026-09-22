@@ -319,7 +319,7 @@ test('una ruta privada sin sesión vuelve al login conservando destino local', (
 test('las rutas públicas no redirigen al login por el gate administrativo', () => {
     assert.match(
         authGate,
-        /if \(allowed && isPrivateRoute\(window\.location\.pathname\) && !hasVerifiedAuthSession\)/,
+        /if \(isPrivateRoute\(pathname\)\)/,
     );
 });
 
@@ -332,7 +332,7 @@ test('el shell privado distingue volver al sitio público de cerrar sesión', ()
 test('los paneles privados fallan cerrados y comparten bootstrap de API', () => {
     assert.ok(baseCss.includes('body.rural-panel {\n    visibility:hidden;'));
     assert.ok(baseCss.includes("html[data-tc-auth='ready'] body.rural-panel"));
-    assert.ok(api.startsWith("import './auth-gate.js';\nimport './admin-ui.js';"));
+    assert.ok(api.startsWith("import './auth-gate.js?v=auth-gate-2';\nimport './admin-ui.js';"));
     for (const path of PRIVATE_MODULES) {
         const module = read(path);
         assert.ok(module.includes("from './shared/api.js'"));

@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <script type="module" src="js/productores.js"></script>
+    <script type="module" src="js/productores.js?v=sections-3"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
@@ -87,12 +87,13 @@
             <div class="modal__header"><div><span class="label" id="subtitulo-modal">Nuevo registro</span><h2 id="titulo-modal">Crear productor</h2></div><button class="close-button" id="cerrar-modal" type="button" aria-label="Cerrar formulario">×</button></div>
             <div class="modal__content">
                 <input type="hidden" id="identificacion-original" name="identificacionNumeroOriginal">
-                <nav class="modal__sections" aria-label="Secciones del formulario">
-                    <a href="#seccion-datos" class="modal__section-link">Datos</a>
-                    <a href="#seccion-direccion" class="modal__section-link">Dirección</a>
-                    <a href="#seccion-fincas" class="modal__section-link">Fincas</a>
-                </nav>
-                <fieldset id="seccion-datos"><legend>Datos personales</legend><div class="form-grid">
+                <div class="modal-section-tabs" role="tablist" aria-label="Secciones del formulario">
+                    <button class="modal-section-tab" id="tab-datos" type="button" role="tab" aria-selected="true" aria-controls="seccion-datos" data-modal-section-target="seccion-datos">Datos</button>
+                    <button class="modal-section-tab" id="tab-direccion" type="button" role="tab" aria-selected="false" aria-controls="seccion-direccion" data-modal-section-target="seccion-direccion">Dirección</button>
+                    <button class="modal-section-tab" id="tab-fincas" type="button" role="tab" aria-selected="false" aria-controls="seccion-fincas" data-modal-section-target="seccion-fincas">Fincas</button>
+                </div>
+                <section class="modal-section" id="seccion-datos" role="tabpanel" aria-labelledby="tab-datos" data-modal-section="datos">
+                <fieldset><legend>Identificación</legend><div class="form-grid">
                     <label class="field"><span>Tipo <b aria-hidden="true">*</b></span><select id="identificacion-tipo" name="identificacion.tipoCodigo" required aria-describedby="error-identificacion-tipo"><option value="">Seleccione un tipo</option></select><small class="field__error" id="error-identificacion-tipo" data-error-for="identificacion.tipoCodigo"></small></label>
                     <label class="field"><span>Número <b aria-hidden="true">*</b></span><input id="identificacion-numero" name="identificacion.numero" type="text" maxlength="250" autocomplete="off" required aria-describedby="ayuda-identificacion-numero error-identificacion-numero"><small class="field__hint" id="ayuda-identificacion-numero"></small><small class="field__error" id="error-identificacion-numero" data-error-for="identificacion.numero"></small></label>
                 </div></fieldset>
@@ -101,14 +102,19 @@
                     <label class="field"><span>Teléfono <b aria-hidden="true">*</b></span><input id="telefono" name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required pattern="(?=(?:\D*\d){8,15}\D*$)\+?[0-9 \(\)\-]+" title="Use entre 8 y 15 dígitos. Se admiten prefijo +, espacios, paréntesis y guiones." aria-describedby="ayuda-telefono error-telefono"><small class="field__hint" id="ayuda-telefono">Entre 8 y 15 dígitos.</small><small class="field__error" id="error-telefono" data-error-for="telefono"></small></label>
                     <label class="field"><span>Correo electrónico <b aria-hidden="true">*</b></span><input id="correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="error-correo"><small class="field__error" id="error-correo" data-error-for="correoElectronico"></small></label>
                 </div></fieldset>
-                <fieldset id="seccion-direccion"><legend>Dirección principal</legend><div class="form-grid">
+                </section>
+                <section class="modal-section" id="seccion-direccion" role="tabpanel" aria-labelledby="tab-direccion" data-modal-section="direccion" hidden>
+                <fieldset><legend>Dirección principal</legend><div class="form-grid">
                     <label class="field"><span>Provincia <b aria-hidden="true">*</b></span><select id="direccion-provincia" name="direccionPrincipal.provincia" required aria-describedby="error-direccion-provincia"></select><small class="field__error" id="error-direccion-provincia" data-error-for="direccionPrincipal.provincia"></small></label>
                     <label class="field"><span>Cantón <b aria-hidden="true">*</b></span><select id="direccion-canton" name="direccionPrincipal.canton" required aria-describedby="error-direccion-canton"></select><small class="field__error" id="error-direccion-canton" data-error-for="direccionPrincipal.canton"></small></label>
                     <label class="field"><span>Distrito <b aria-hidden="true">*</b></span><select id="direccion-distrito" name="direccionPrincipal.distrito" required disabled aria-describedby="error-direccion-distrito"><option value="">Seleccione un distrito</option></select><small class="field__error" id="error-direccion-distrito" data-error-for="direccionPrincipal.distrito"></small></label>
                     <label class="field"><span>Pueblo</span><input id="direccion-pueblo" name="direccionPrincipal.pueblo" maxlength="150" list="lista-pueblos" autocomplete="off" disabled placeholder="Escriba para buscar" aria-describedby="ayuda-direccion-pueblo error-direccion-pueblo"><small class="field__hint" id="ayuda-direccion-pueblo">Escriba las primeras letras y elija de la lista.</small><datalist id="lista-pueblos"></datalist><small class="field__error" id="error-direccion-pueblo" data-error-for="direccionPrincipal.pueblo"></small></label>
                     <label class="field field--full"><span>Señas</span><textarea id="direccion-senas" name="direccionPrincipal.senas" maxlength="500" rows="3" aria-describedby="error-direccion-senas"></textarea><small class="field__error" id="error-direccion-senas" data-error-for="direccionPrincipal.senas"></small></label>
                 </div></fieldset>
-                <fieldset id="seccion-fincas"><legend>Fincas del productor</legend><p class="fieldset-help" id="ayuda-fincas">Agregue cada finca por separado con su nombre. Puede dejar la lista vacía.</p><div id="fincas-lista" aria-describedby="ayuda-fincas error-fincas"></div><button class="button button--secondary" id="agregar-finca" type="button"><span aria-hidden="true">＋</span>Agregar finca</button><small class="field__error" id="error-fincas" data-error-for="fincas"></small></fieldset>
+                </section>
+                <section class="modal-section" id="seccion-fincas" role="tabpanel" aria-labelledby="tab-fincas" data-modal-section="fincas" hidden>
+                <fieldset><legend>Fincas del productor</legend><p class="fieldset-help" id="ayuda-fincas">Agregue cada finca por separado con su nombre. Puede dejar la lista vacía.</p><div id="fincas-lista" aria-describedby="ayuda-fincas error-fincas"></div><button class="button button--secondary" id="agregar-finca" type="button"><span aria-hidden="true">＋</span>Agregar finca</button><small class="field__error" id="error-fincas" data-error-for="fincas"></small></fieldset>
+                </section>
                 <p class="form-note"><b aria-hidden="true">*</b> Campos obligatorios</p>
             </div>
             <div class="modal__actions"><button class="button button--secondary" id="cancelar-formulario" type="button">Cancelar</button><button class="button button--reactivate" id="reactivar-existente" type="button" hidden>Reactivar registro existente</button><button class="button button--primary" id="guardar-productor" type="submit">Guardar productor</button></div>

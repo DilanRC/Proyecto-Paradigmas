@@ -19,8 +19,8 @@ test('el admin comparte la paleta de los logos con el sitio publico', () => {
 });
 
 test('el shell existente se mejora desde un bootstrap compartido, no con cinco implementaciones', () => {
-    assert.ok(apiJs.startsWith("import './auth-gate.js';\nimport './admin-ui.js';"));
-    assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-8'"));
+    assert.ok(apiJs.startsWith("import './auth-gate.js?v=auth-gate-2';\nimport './admin-ui.js';"));
+    assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-9'"));
     assert.ok(adminJs.includes('enhanceSidebarAccount();'));
     assert.ok(adminJs.includes('enhancePageHeader();'));
     assert.ok(adminJs.includes('enhanceFilters();'));
@@ -40,7 +40,7 @@ test('los botones secundarios del admin conservan contraste en ambos temas y al 
 });
 
 test('los dialogos administrativos permanecen ocultos hasta abrirse', () => {
-    assert.ok(adminCss.includes('.rural-panel dialog.modal:not([open]) {'));
+    assert.ok(adminCss.includes('.rural-panel dialog.modal:not([open]),'));
     assert.ok(adminCss.includes('display:none !important;'));
 });
 

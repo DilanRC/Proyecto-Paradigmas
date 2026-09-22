@@ -39,7 +39,7 @@ for (const [panel, vista] of PANELES) {
     test(`${panel}: la vista carga el modulo y sus hojas de estilo`, () => {
         const html = leer(`Application/View/${vista}/index.php`);
 
-        assert.match(html, new RegExp(`<script type="module" src="js/${panel}\\.js">`),
+        assert.match(html, new RegExp(`<script type="module" src="js/${panel}\\.js(?:\\?[^\"]+)?">`),
             `${panel}: la vista debe cargar el panel como modulo ES`);
         for (const hoja of ['tokens', 'base', 'components']) {
             assert.ok(html.includes(`css/${hoja}.css`), `${panel}: falta la capa ${hoja}.css`);

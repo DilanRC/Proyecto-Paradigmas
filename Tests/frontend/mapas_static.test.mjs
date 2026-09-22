@@ -30,13 +30,13 @@ test('MapLibre y OpenFreeMap siguen centralizados en mapa.js', () => {
 
 test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('Punto exacto de la finca'));
-    assert.ok(farmMap.includes('Abrir mapa para ubicar finca'));
-    assert.ok(farmMap.includes('pantalla completa'));
+    assert.ok(farmMap.includes('data-farm-map-open>Abrir mapa</button>'));
+    assert.ok(farmMap.includes('data-farm-map-close hidden>Cerrar mapa</button>'));
     assert.equal(farmMap.includes('límites locales provienen'), false);
     assert.equal(farmMap.includes('OpenFreeMap carga la cartografía'), false);
-    assert.match(farmMap, /data-farm-map-location>Usar mi ubicación<\/button>/);
-    assert.ok(farmMap.includes('Quitar punto exacto'));
-    assert.ok(farmMap.includes('La dirección escrita sigue siendo válida sin mapa'));
+    assert.ok(farmMap.includes('data-farm-map-location'));
+    assert.ok(farmMap.includes('data-farm-map-clear'));
+    assert.equal(farmMap.includes('data-farm-map-coords'), false);
     assert.ok(farmMap.includes('onMapClick'));
     assert.ok(farmMap.includes('draggable: true'));
     assert.ok(farmMap.includes('Buscar lugar'));
@@ -73,6 +73,7 @@ test('la finca puede centrar el mapa en la ubicación del usuario sin activar el
     assert.equal(map.includes('map.scrollZoom?.disable?.()'), false);
     assert.ok(map.includes('FullscreenControl'));
     assert.ok(map.includes('cooperativeGestures: false'));
+    assert.ok(farmMap.includes('listenersDeCapasInstalados'));
 });
 
 test('usuario y admin reutilizan el mismo selector de finca', () => {
@@ -83,8 +84,8 @@ test('usuario y admin reutilizan el mismo selector de finca', () => {
 });
 
 test('el modal de productores se divide en datos, dirección y fincas', () => {
-    assert.ok(productoresView.includes('class="modal__sections"'));
-    assert.ok(productoresView.includes('href="#seccion-datos"'));
+    assert.ok(productoresView.includes('class="modal-section-tabs"'));
+    assert.ok(productoresView.includes('data-modal-section-target="seccion-datos"'));
     assert.ok(productoresView.includes('id="seccion-direccion"'));
     assert.ok(productoresView.includes('id="seccion-fincas"'));
 });

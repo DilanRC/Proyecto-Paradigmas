@@ -1,7 +1,7 @@
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
 import { readPublicProfile } from './shared/public-profile.js';
-import { clearAdminBrowserSession } from './shared/auth-gate.js';
+import { clearAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-2';
 
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';

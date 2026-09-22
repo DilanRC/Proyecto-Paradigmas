@@ -110,21 +110,26 @@ function revealPrivateUi() {
 }
 
 if (typeof window !== 'undefined') {
-    const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
-    const hasVerifiedAuthSession = readAuthSession(window.sessionStorage) !== null;
-    if (allowed && isPrivateRoute(window.location.pathname) && !hasVerifiedAuthSession) {
-        clearAdminBrowserSession(window.sessionStorage);
-        window.location.replace(loginTarget(window.location.pathname));
-    } else if (allowed && typeof document !== 'undefined') {
-        revealPrivateUi();
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => {
+    const pathname = window.location.pathname;
+    // Las rutas públicas, incluido /entrar, no deben inicializar el shell
+    // privado ni ejecutar efectos que puedan provocar navegación o recargas.
+    if (isPrivateRoute(pathname)) {
+        const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
+        const hasVerifiedAuthSession = readAuthSession(window.sessionStorage) !== null;
+        if (allowed && !hasVerifiedAuthSession) {
+            clearAdminBrowserSession(window.sessionStorage);
+            window.location.replace(loginTarget(pathname));
+        } else if (allowed && typeof document !== 'undefined') {
+            revealPrivateUi();
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    wirePrivateShell(window.sessionStorage);
+                    inicializarUbicacionAutomatica();
+                }, { once: true });
+            } else {
                 wirePrivateShell(window.sessionStorage);
                 inicializarUbicacionAutomatica();
-            }, { once: true });
-        } else {
-            wirePrivateShell(window.sessionStorage);
-            inicializarUbicacionAutomatica();
+            }
         }
     }
 }

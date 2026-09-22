@@ -750,11 +750,24 @@ html[data-theme='light'] .rural-panel th {
     font-size:9px !important;
 }
 
-.rural-panel dialog.modal:not([open]) {
+.rural-panel .button--secondary {
+    color:var(--admin-text-soft) !important;
+    border-color:var(--admin-line-strong) !important;
+    background:var(--admin-surface-2) !important;
+}
+
+.rural-panel .button--secondary:hover:not(:disabled) {
+    color:var(--admin-text) !important;
+    border-color:var(--admin-primary) !important;
+    background:var(--admin-surface-3) !important;
+}
+
+.rural-panel dialog.modal:not([open]),
+.rural-panel .modal:not([open]) {
     display:none !important;
 }
 
-.rural-panel .modal {
+.rural-panel .modal[open] {
     display:flex !important;
     flex-direction:column !important;
     border:1px solid var(--admin-line-strong) !important;
@@ -788,43 +801,44 @@ html[data-theme='light'] .rural-panel th {
     gap:18px;
 }
 
-.rural-panel #modal-productor .modal__content > fieldset {
+.rural-panel #modal-productor .modal__content > fieldset,
+.rural-panel #modal-productor .modal__content > .modal-section > fieldset {
     scroll-margin-top:18px;
     margin:0;
     padding:20px;
     background:color-mix(in srgb,var(--admin-surface-2) 62%,transparent);
 }
 
-.rural-panel .modal__sections {
-    position:sticky;
-    top:-24px;
-    z-index:2;
-    display:flex;
-    gap:8px;
-    padding:8px;
+.rural-panel .modal-section-tabs {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:6px;
+    margin:0 0 22px;
+    padding:5px;
     border:1px solid var(--admin-line);
     border-radius:12px;
-    background:color-mix(in srgb,var(--admin-surface) 94%,transparent);
-    backdrop-filter:blur(8px);
+    background:var(--admin-surface-2);
 }
 
-.rural-panel .modal__section-link {
-    flex:1;
+.rural-panel .modal-section-tab {
     min-height:40px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    border:1px solid transparent;
     border-radius:8px;
     color:var(--admin-text-soft);
-    font-size:.78rem;
-    font-weight:800;
-    text-decoration:none;
+    background:transparent;
+    font-size:12px;
+    font-weight:750;
 }
 
-.rural-panel .modal__section-link:hover,
-.rural-panel .modal__section-link:focus-visible {
+.rural-panel .modal-section-tab:hover,
+.rural-panel .modal-section-tab.is-active {
     color:var(--admin-text);
+    border-color:var(--admin-line-strong);
     background:var(--admin-surface-3);
+}
+
+.rural-panel .modal-section[hidden] {
+    display:none !important;
 }
 
 .rural-panel .modal__header,
@@ -945,6 +959,96 @@ html[data-theme='light'] .rural-panel th {
     display:none;
 }
 
+.rural-panel .farm-map-picker {
+    grid-column:1 / -1;
+    width:100%;
+    margin-top:4px;
+    padding:0;
+    border:0;
+    background:transparent;
+}
+
+.rural-panel .farm-map-picker__header {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    width:100%;
+}
+
+.rural-panel .farm-map-picker__header strong {
+    color:var(--admin-text);
+    font-size:12px;
+}
+
+.rural-panel .farm-map-picker__header .label {
+    color:var(--admin-primary-strong);
+    font-size:10px;
+    letter-spacing:.08em;
+}
+
+.rural-panel .farm-map-picker__header-actions {
+    display:flex;
+    gap:8px;
+    margin-left:auto;
+}
+
+.rural-panel .farm-map-picker__header-actions .button {
+    min-height:34px;
+    padding:0 12px;
+    font-size:11px;
+}
+
+.rural-panel .map-shell {
+    position:relative;
+    width:100%;
+    margin-top:10px;
+}
+
+.rural-panel .map-shell__canvas {
+    position:relative;
+    width:100%;
+    height:min(48vh,420px);
+    min-height:280px;
+    overflow:hidden;
+    border:1px solid var(--admin-line-strong);
+    border-radius:14px;
+    background:var(--admin-surface-2);
+}
+
+.rural-panel .map-shell__actions {
+    position:absolute;
+    z-index:3;
+    top:12px;
+    left:12px;
+    display:flex;
+    gap:8px;
+}
+
+.rural-panel .map-shell__action {
+    display:grid;
+    width:44px;
+    height:44px;
+    place-items:center;
+    border:1px solid rgba(255,255,255,.65);
+    border-radius:10px;
+    color:#243129;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+
+.rural-panel .map-shell__action:hover:not(:disabled) {
+    color:var(--admin-primary-strong);
+    background:#fff;
+}
+
+.rural-panel .map-shell__fallback {
+    display:grid;
+    place-items:center;
+    min-height:80px;
+    margin-top:10px;
+}
+
 .rural-panel .finca-fila__direccion textarea {
     grid-column:1 / -1;
     resize:vertical;
@@ -963,24 +1067,18 @@ html[data-theme='light'] .rural-panel th {
     color:var(--admin-text-soft);
 }
 
-.rural-panel .finca-fila__mapa .farm-map-picker__copy strong,
-.rural-panel .finca-fila__mapa .farm-map-picker__coords,
-.rural-panel .farm-map-picker__copy strong,
-.rural-panel .farm-map-picker__coords {
+.rural-panel .finca-fila__mapa .farm-map-picker__header strong,
+.rural-panel .farm-map-picker__header strong {
     color:var(--admin-text);
 }
 
-.rural-panel .finca-fila__mapa .farm-map-picker__copy p,
 .rural-panel .finca-fila__mapa .farm-map-picker__status,
-.rural-panel .finca-fila__mapa .map-shell__notice,
-.rural-panel .farm-map-picker__copy p,
-.rural-panel .farm-map-picker__status,
-.rural-panel .farm-map-picker .map-shell__notice {
+.rural-panel .farm-map-picker__status {
     color:var(--admin-text-soft);
 }
 
-.rural-panel .finca-fila__mapa .farm-map-picker__actions .button,
-.rural-panel .finca-fila__mapa .farm-map-picker__actions .button:hover,
+.rural-panel .finca-fila__mapa .farm-map-picker__header-actions .button,
+.rural-panel .finca-fila__mapa .farm-map-picker__header-actions .button:hover,
 .rural-panel .farm-map-picker .button {
     color:var(--admin-text) !important;
     background:var(--admin-surface-2) !important;
@@ -1001,10 +1099,6 @@ html[data-theme='light'] .rural-panel th {
 
     .rural-panel .modal__content {
         padding:18px 14px 10px !important;
-    }
-
-    .rural-panel .modal__sections {
-        top:-18px;
     }
 
     .rural-panel .finca-fila {

@@ -13,7 +13,7 @@
 // entre productores DISTINTOS siempre se permite (advertencia, no bloqueo).
 
 import { conectarDireccion } from './direccion.js';
-import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './finca-mapa.js';
+import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './finca-mapa.js?map-ui-5';
 
 export const FINCA_NOMBRE_MAX = 150;
 

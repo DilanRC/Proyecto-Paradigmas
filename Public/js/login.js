@@ -1,7 +1,7 @@
-import { request } from './shared/api.js';
+import { request } from './shared/api.js?v=api-2';
 import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-2';
 
 const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar']);
 const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago']);

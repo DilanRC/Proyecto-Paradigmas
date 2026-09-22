@@ -87,6 +87,24 @@ function nullable(value) {
     return text === '' ? null : text;
 }
 
+function inicializarSeccionesModal(modal) {
+    const tabs = [...modal.querySelectorAll('[data-modal-section-target]')];
+    const sections = [...modal.querySelectorAll('[data-modal-section]')];
+    const activar = (targetId) => {
+        tabs.forEach((tab) => {
+            const active = tab.dataset.modalSectionTarget === targetId;
+            tab.setAttribute('aria-selected', String(active));
+            tab.classList.toggle('is-active', active);
+        });
+        sections.forEach((section) => {
+            section.hidden = section.id !== targetId;
+        });
+    };
+    tabs.forEach((tab) => tab.addEventListener('click', () => activar(tab.dataset.modalSectionTarget)));
+    activar(tabs[0]?.dataset.modalSectionTarget ?? '');
+    return { activar };
+}
+
 function getInitials(name = '') {
     return name.split(/\s+/).filter(Boolean).slice(0, 2)
         .map((part) => part.charAt(0).toUpperCase()).join('') || 'P';
@@ -127,6 +145,7 @@ function initialize() {
         cancelFincaAddress: $('#cancelar-direccion-finca'), clearFincaAddress: $('#vaciar-direccion-finca'),
         toastPolite: $('#toast-status'), toastAssertive: $('#toast-alert'),
     };
+    const seccionesModal = inicializarSeccionesModal(elements.modal);
 
     const productores = new Map();
     const toast = createToast({ polite: elements.toastPolite, assertive: elements.toastAssertive });
@@ -512,6 +531,7 @@ function initialize() {
 
     function resetForm() {
         elements.form.reset();
+        seccionesModal.activar('seccion-datos');
         errores.clearErrors();
         renderTypeOptions();
         direccionPrincipal.aplicar({});

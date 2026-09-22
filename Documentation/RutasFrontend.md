@@ -1,6 +1,6 @@
 # Rutas de TinderCows
 
-Estado documentado: 2026-09-20, rama `feat/Front-2.0`.
+Estado documentado: 2026-09-22, rama `dev`.
 
 ## Ejecución local
 
@@ -67,6 +67,37 @@ la vista pública, siempre sujeto a la validación del servidor.
 
 ## Estado de autenticación
 
+### Regla anti-recarga infinita
+
+`/entrar` y el resto de rutas públicas no deben inicializar el shell administrativo,
+la geolocalización automática ni ninguna navegación al cargar el módulo de
+autenticación. `Public/js/shared/auth-gate.js` se importa desde código compartido,
+por lo que su efecto de arranque está deliberadamente encerrado en
+`isPrivateRoute(pathname)`. La única navegación automática del gate ocurre cuando
+una ruta privada no tiene sesión administrativa verificada.
+
+Si vuelve a observarse una recarga de `/entrar`, primero debe comprobarse la red:
+
+- Muchos `GET /entrar` con respuesta `200` y sin `3xx` indican una recarga iniciada
+  por el navegador o JavaScript, no una redirección de Apache.
+- Revisar la consola del navegador y el panel Network antes de cambiar el servidor.
+- Verificar que ningún módulo cargado por `/entrar` llame a `location.assign`,
+  `location.replace`, `location.reload` o inicialice el shell privado durante la
+  evaluación del módulo.
+- Mantener una prueba de regresión que compruebe que el bloque de arranque privado
+  está protegido por `isPrivateRoute(pathname)`.
+
+La captura automática de ubicación se reserva para las pantallas administrativas
+que realmente ofrecen funciones basadas en la ubicación; el login no debe pedir
+permisos de geolocalización ni producir efectos secundarios de sesión.
+
+Cuando se modifique el gate o una dependencia que lo importe, se debe aumentar
+la versión de consulta del módulo (`auth-gate.js?v=...`) y de la entrada del login.
+Los módulos ES se cachean por URL completa; cambiar solo el contenido del archivo
+no garantiza que una pestaña abierta deje de ejecutar la versión anterior.
+La entrada PHP de `/entrar` también envía `Cache-Control: no-store` para que una
+pestaña atrapada en un ciclo no conserve el HTML anterior.
+
 ### Implementado
 
 - Formulario de acceso con validación de navegador.
@@ -90,3 +121,29 @@ la vista pública, siempre sujeto a la validación del servidor.
 - Política definitiva de privacidad, retención y ejercicio de derechos.
 
 La autorización real de API continúa siendo un mecanismo separado del login visual: `SupabaseActorResolver` verifica el Bearer y `AdminAuthorization` aplica la allowlist para escrituras administrativas.
+
+## Sincronización Docker y remoto
+
+### Incidente registrado: checkout equivocado (2026-09-22)
+
+Docker monta como `/var/www/html` el checkout local
+`/home/dilan/Documentos/GitHub/Proyecto-Paradigmas`. Un checkout temporal bajo
+`/tmp/` puede servir para revisar archivos, pero no cambia lo que ve el
+contenedor. Editar o probar únicamente ese checkout deja Docker, localhost y
+`origin/dev` en estados distintos; ese fue el origen del desorden de esta
+sesión.
+
+Antes de modificar frontend o configuración se debe comprobar el mismo origen
+en tres puntos: `git rev-parse HEAD` y `git status --short` en el checkout
+montado, `git ls-remote origin refs/heads/dev` para el remoto, y el montaje de
+`docker inspect proyecto-paradigmas-app-1`. Si hay cambios locales, se guardan
+en un stash o parche con nombre antes de actualizar; nunca se reemplazan con un
+reset destructivo. Después de integrar se compara el SHA de `HEAD` con el SHA
+remoto, se comprueban los archivos por HTTP desde el contenedor y se conserva
+el respaldo hasta terminar las pruebas.
+
+La regresión se demuestra comprobando que Docker sirve el mismo commit y los
+mismos recursos que el checkout, incluido `/assets/geo/costa-rica-limits.geojson`.
+Una pantalla remota que difiera de localhost requiere primero revisar el
+checkout montado, el caché de módulos ES y el volumen del contenedor; no se
+deben corregir versiones distintas en paralelo.

@@ -4,7 +4,7 @@ import {
     crearMapa,
     normalizarCoordenadas,
     puntoDentroDeLimitesCostaRica,
-} from './mapa.js';
+} from './mapa.js?v=map-core-5';
 import {
     capturarUbicacionAutomatica,
     leerUbicacionUsuario,
@@ -125,19 +125,19 @@ export function crearSelectorPuntoFinca({
 
     mount.classList.add('farm-map-picker');
     mount.innerHTML = `
-        <div class="farm-map-picker__copy">
-            <strong>Punto exacto de la finca <span class="label">opcional</span></strong>
-            <p>Abra el mapa solo si desea marcar la entrada, corral o punto de referencia exacto de esta finca. La dirección escrita sigue siendo válida sin mapa.</p>
+        <div class="farm-map-picker__header">
+            <strong>Punto exacto de la finca <span class="label">OPCIONAL</span></strong>
+            <div class="farm-map-picker__header-actions">
+                <button type="button" class="button button--secondary" data-farm-map-open>Abrir mapa</button>
+                <button type="button" class="button button--secondary" data-farm-map-close hidden>Cerrar mapa</button>
+            </div>
         </div>
-        <div class="farm-map-picker__actions">
-            <button type="button" class="button button--secondary" data-farm-map-open>Abrir mapa para ubicar finca</button>
-            <button type="button" class="button button--secondary" data-farm-map-location>Usar mi ubicación</button>
-            <button type="button" class="button button--secondary" data-farm-map-clear hidden>Quitar punto exacto</button>
-        </div>
-        <p class="farm-map-picker__status" data-farm-map-status role="status" aria-live="polite"></p>
-        <p class="farm-map-picker__coords" data-farm-map-coords hidden></p>
+        <p class="screen-reader-only" data-farm-map-status role="status" aria-live="polite"></p>
         <div class="map-shell" data-farm-map-shell hidden>
-            <p class="map-shell__notice">Haga clic para marcar la ubicación y arrastre el punto para ajustarlo. Use la rueda o los controles para acercar y alejar; también puede abrir el mapa en pantalla completa.</p>
+            <div class="map-shell__actions" aria-label="Controles del mapa">
+                <button type="button" class="map-shell__action" data-farm-map-location hidden aria-label="Usar mi ubicación" title="Usar mi ubicación"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i></button>
+                <button type="button" class="map-shell__action" data-farm-map-clear hidden aria-label="Quitar punto exacto" title="Quitar punto exacto"><i class="fa-solid fa-location-dot-slash" aria-hidden="true"></i></button>
+            </div>
             <div class="map-shell__search" data-farm-map-search-form role="search">
                 <label for="" data-farm-map-search-label>Buscar lugar</label>
                 <div class="map-shell__search-row">
@@ -152,17 +152,15 @@ export function crearSelectorPuntoFinca({
             </div>
             <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>
             <div class="map-shell__fallback" data-farm-map-fallback hidden>
-                <strong>Mapa no disponible.</strong>
-                <p>Puede continuar con provincia, cantón, distrito, pueblo y señas.</p>
                 <button type="button" class="button button--secondary" data-farm-map-retry>Reintentar mapa</button>
             </div>
         </div>`;
 
     const openButton = mount.querySelector('[data-farm-map-open]');
+    const closeButton = mount.querySelector('[data-farm-map-close]');
     const locationButton = mount.querySelector('[data-farm-map-location]');
     const clearButton = mount.querySelector('[data-farm-map-clear]');
     const status = mount.querySelector('[data-farm-map-status]');
-    const coords = mount.querySelector('[data-farm-map-coords]');
     const shell = mount.querySelector('[data-farm-map-shell]');
     const canvas = mount.querySelector('[data-farm-map-canvas]');
     const fallback = mount.querySelector('[data-farm-map-fallback]');
@@ -189,6 +187,7 @@ export function crearSelectorPuntoFinca({
     let destruido = false;
     let limitesCostaRica = null;
     let limitesListos = null;
+    let listenersDeCapasInstalados = false;
     const prepararLimites = () => {
         limitesListos = cargarLimitesCostaRica().then((geojson) => {
         limitesCostaRica = geojson;
@@ -229,10 +228,6 @@ export function crearSelectorPuntoFinca({
 
     const render = () => {
         clearButton.hidden = punto === null || !puntoValidado;
-        coords.hidden = punto === null || !puntoValidado;
-        coords.textContent = punto
-            ? `Punto seleccionado: ${punto.latitud}, ${punto.longitud}`
-            : '';
     };
 
     const establecer = (nuevoPunto, { moverMapa = true } = {}) => {
@@ -281,6 +276,8 @@ export function crearSelectorPuntoFinca({
         fallback.hidden = true;
         canvas.replaceChildren();
         openButton.disabled = false;
+        openButton.hidden = false;
+        closeButton.hidden = true;
         locationButton.disabled = false;
         solicitudUbicacion += 1;
     };
@@ -291,6 +288,8 @@ export function crearSelectorPuntoFinca({
         shell.hidden = false;
         fallback.hidden = true;
         openButton.disabled = true;
+        openButton.hidden = true;
+        closeButton.hidden = false;
         status.textContent = 'Cargando mapa opcional…';
         try {
             await prepararLimites();
@@ -348,20 +347,23 @@ export function crearSelectorPuntoFinca({
                 return;
             }
             mapa = creado;
-            detailsToggle.addEventListener('change', () => {
-                const activo = mapa?.activarDetallesOficiales?.(detailsToggle.checked);
-                if (detailsToggle.checked && !activo) {
-                    detailsToggle.checked = false;
-                    status.textContent = 'No pudimos cargar los detalles oficiales. Puedes continuar con el mapa base.';
-                }
-            });
-            satelliteToggle.addEventListener('change', () => {
-                const activo = mapa?.activarCapaRaster?.('satellite', satelliteToggle.checked);
-                if (satelliteToggle.checked && !activo) {
-                    satelliteToggle.checked = false;
-                    status.textContent = 'No pudimos cargar la vista satelital. Puedes continuar con el mapa base.';
-                }
-            });
+            if (!listenersDeCapasInstalados) {
+                detailsToggle.addEventListener('change', () => {
+                    const activo = mapa?.activarDetallesOficiales?.(detailsToggle.checked);
+                    if (detailsToggle.checked && !activo) {
+                        detailsToggle.checked = false;
+                        status.textContent = 'No pudimos cargar los detalles oficiales. Puedes continuar con el mapa base.';
+                    }
+                });
+                satelliteToggle.addEventListener('change', () => {
+                    const activo = mapa?.activarCapaRaster?.('satellite', satelliteToggle.checked);
+                    if (satelliteToggle.checked && !activo) {
+                        satelliteToggle.checked = false;
+                        status.textContent = 'No pudimos cargar la vista satelital. Puedes continuar con el mapa base.';
+                    }
+                });
+                listenersDeCapasInstalados = true;
+            }
             locationButton.hidden = false;
             status.textContent = punto
                 ? 'Mapa listo. Puede arrastrar el marcador o elegir otro punto.'
@@ -392,6 +394,7 @@ export function crearSelectorPuntoFinca({
     };
 
     openButton.addEventListener('click', abrirMapa);
+    closeButton.addEventListener('click', cerrarMapa);
     locationButton.addEventListener('click', async () => {
         if (destruido) return;
         locationButton.disabled = true;
