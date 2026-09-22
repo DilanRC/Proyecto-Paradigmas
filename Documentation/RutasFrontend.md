@@ -187,7 +187,8 @@ y Esri para las capas autorizadas.
 
 ### Incidente registrado: sobre-zoom y búsqueda sin sugerencias (2026-09-22)
 
-OpenFreeMap usa datos vectoriales de OpenMapTiles con un nivel nativo limitado.
+OpenFreeMap usa datos vectoriales de OpenMapTiles con un nivel nativo limitado;
+ese dato pertenece al estilo remoto y no se replica como una constante local.
 El arreglo inicial confundió ese nivel con el zoom de interacción y atrapó todo
 el mapa en 14. La solución separa ambos conceptos: el mapa puede interactuar
 hasta 20, la fuente vectorial conserva su nivel nativo y MapLibre reutiliza el

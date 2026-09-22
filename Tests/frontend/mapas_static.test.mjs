@@ -51,7 +51,6 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(map.includes('ESRI_SATELLITE_TILES_URL'));
     assert.match(map, /MAP_INTERACTION_MAX_ZOOM = 20/);
     assert.match(map, /MAP_MARKER_ZOOM = 18/);
-    assert.match(map, /OPEN_MAP_NATIVE_MAX_ZOOM = 14/);
     assert.ok(map.includes('maxzoom: 18'));
     assert.ok(farmMap.includes("searchInput.addEventListener('input'"));
     assert.ok(farmMap.includes('sugerenciasTimer'));

@@ -9,7 +9,6 @@ export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
 // fuente. MapLibre puede reutilizar el último nivel disponible (overzoom).
 export const MAP_INTERACTION_MAX_ZOOM = 20;
 export const MAP_MARKER_ZOOM = 18;
-export const OPEN_MAP_NATIVE_MAX_ZOOM = 14;
 export const SNIT_IGN_WMS_URL = 'https://geos.snitcr.go.cr/be/IGN_5/wms';
 export const ESRI_SATELLITE_TILES_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const RASTER_LAYERS = Object.freeze({
