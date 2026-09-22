@@ -41,6 +41,10 @@ test('el selector limita el mapa a Costa Rica y puede completar dirección por c
     assert.ok(farmMap.includes('buscarDireccionPorCoordenadas'));
     assert.ok(farmMap.includes('country_code !== \'cr\''));
     assert.ok(farmMap.includes('onPuntoChange'));
+    assert.ok(farmMap.includes('address.village'));
+    assert.ok(farmMap.includes('address.hamlet'));
+    assert.ok(map.includes('setMaxBounds'));
+    assert.ok(map.includes('setMinZoom'));
 });
 
 test('la finca puede centrar el mapa en la ubicación del usuario sin activar el rastreo automáticamente', () => {

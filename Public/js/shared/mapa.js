@@ -134,6 +134,10 @@ export async function crearMapa({
         });
         loaded = true;
         map.scrollZoom?.disable?.();
+        // Reafirma los límites después de cargar el estilo para evitar que
+        // ciertos builds permitan desplazar el mapa fuera del ámbito definido.
+        map.setMaxBounds?.(BOUNDS_COSTA_RICA);
+        map.setMinZoom?.(6.4);
     } catch (error) {
         try { map.remove?.(); } catch {}
         onError(error);

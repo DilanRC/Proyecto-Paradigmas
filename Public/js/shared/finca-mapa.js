@@ -5,7 +5,7 @@ function asegurarEstilos() {
     if (typeof document === 'undefined' || document.querySelector('link[data-tc-map-ui]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/mapa.css?v=mapas-3';
+    link.href = 'css/mapa.css?v=mapas-4';
     link.dataset.tcMapUi = 'true';
     document.head.append(link);
 }
@@ -59,11 +59,21 @@ export async function buscarDireccionPorCoordenadas(punto, {
         throw error;
     }
     const address = payload.address ?? {};
+    const distrito = address.city_district
+        ?? address.district
+        ?? address.village
+        ?? address.town
+        ?? '';
+    const pueblo = address.hamlet
+        ?? address.neighbourhood
+        ?? address.suburb
+        ?? address.city
+        ?? '';
     return {
         provincia: address.state ?? '',
         canton: address.county ?? address.municipality ?? '',
-        distrito: address.city_district ?? address.suburb ?? address.town ?? '',
-        pueblo: address.village ?? address.hamlet ?? address.city ?? address.town ?? '',
+        distrito,
+        pueblo: pueblo === distrito ? '' : pueblo,
     };
 }
 
