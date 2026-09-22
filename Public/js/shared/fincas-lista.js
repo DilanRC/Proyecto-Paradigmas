@@ -13,6 +13,7 @@
 // entre productores DISTINTOS siempre se permite (advertencia, no bloqueo).
 
 import { conectarDireccion } from './direccion.js';
+import { crearSelectorPuntoFinca } from './finca-mapa.js';
 
 export const FINCA_NOMBRE_MAX = 150;
 
@@ -42,7 +43,7 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
         if (typeof onCambiar === 'function') onCambiar();
     }
 
-    function crearFila({ nombre: nombreInicial = '' } = {}) {
+    function crearFila({ nombre: nombreInicial = '', direccion: direccionInicial = null } = {}) {
         const fila = document.createElement('div');
         fila.className = 'finca-fila';
 
@@ -92,7 +93,9 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
         senas.placeholder = 'Señas de la dirección (opcional)';
         senas.setAttribute('aria-label', 'Señas de la dirección de la finca');
 
-        direccionBloque.append(provincia, canton, distrito, pueblo, listaPueblos, senas);
+        const mapaMount = document.createElement('div');
+        mapaMount.className = 'finca-fila__mapa';
+        direccionBloque.append(provincia, canton, distrito, pueblo, listaPueblos, senas, mapaMount);
 
         toggle.addEventListener('click', () => {
             const abierta = toggle.getAttribute('aria-expanded') === 'true';
@@ -102,6 +105,15 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
         });
 
         const direccion = conectarDireccion({ provincia, canton, distrito, pueblo, listaPueblos });
+        direccion.aplicar(direccionInicial ?? {});
+        senas.value = direccionInicial?.senas ?? '';
+        const mapa = crearSelectorPuntoFinca({
+            mount: mapaMount,
+            puntoInicial: {
+                latitud: direccionInicial?.latitud ?? null,
+                longitud: direccionInicial?.longitud ?? null,
+            },
+        });
 
         nombre.addEventListener('input', () => {
             quitar.setAttribute('aria-label', `Quitar finca ${nombre.value.trim() || 'sin nombre'}`);
@@ -110,6 +122,7 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
 
         quitar.addEventListener('click', () => {
             fila.remove();
+            mapa.destruir();
             const indice = filas.findIndex((r) => r.fila === fila);
             if (indice >= 0) filas.splice(indice, 1);
             notificar();
@@ -118,7 +131,7 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
         fila.append(nombre, toggle, quitar, direccionBloque);
         contenedor.append(fila);
 
-        const registro = { fila, nombre, provincia, canton, distrito, pueblo, senas, direccionBloque };
+        const registro = { fila, nombre, provincia, canton, distrito, pueblo, senas, direccionBloque, mapa };
         filas.push(registro);
         notificar();
         return registro;
@@ -128,6 +141,7 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
     function leerDireccion(registro) {
         if (registro.direccionBloque.hidden) return null;
         const { provincia, canton, distrito, pueblo, senas } = registro;
+        const punto = registro.mapa.obtenerPunto();
         if (provincia.value === '' && canton.value === '' && distrito.value === '') return null;
         return {
             provincia: provincia.value,
@@ -135,6 +149,8 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
             distrito: distrito.value,
             pueblo: pueblo.value.trim() || null,
             senas: senas.value.trim() || null,
+            latitud: punto?.latitud ?? null,
+            longitud: punto?.longitud ?? null,
         };
     }
 
@@ -146,7 +162,10 @@ export function crearFincasLista({ contenedor, agregarBoton = null, onCambiar = 
     }
 
     function reiniciar() {
-        filas.forEach((registro) => registro.fila.remove());
+        filas.forEach((registro) => {
+            registro.mapa.destruir();
+            registro.fila.remove();
+        });
         filas.length = 0;
         notificar();
     }

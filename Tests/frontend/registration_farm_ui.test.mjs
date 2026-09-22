@@ -28,3 +28,12 @@ test('los controles de dirección tienen una capa visual propia y el mapa sigue 
     assert.match(map, /data-farm-map-open/);
     assert.match(map, /data-farm-map-shell hidden/);
 });
+
+test('el panel administrativo integra el selector opcional de punto exacto en cada finca', async () => {
+    const farmList = await source('Public/js/shared/fincas-lista.js');
+
+    assert.match(farmList, /crearSelectorPuntoFinca/);
+    assert.match(farmList, /latitud: punto\?\.latitud/);
+    assert.match(farmList, /longitud: punto\?\.longitud/);
+    assert.match(farmList, /direccionInicial\?\.latitud/);
+});

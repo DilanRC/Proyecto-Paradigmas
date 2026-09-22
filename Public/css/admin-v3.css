@@ -904,6 +904,29 @@ html[data-theme='light'] .rural-panel th {
     resize:vertical;
 }
 
+.rural-panel .finca-fila__mapa {
+    grid-column:1 / -1;
+    min-width:0;
+}
+
+.rural-panel .finca-fila__mapa .farm-map-picker {
+    margin-top:4px;
+    border-color:var(--admin-line-strong);
+    background:var(--admin-surface-3);
+    color:var(--admin-text-soft);
+}
+
+.rural-panel .finca-fila__mapa .farm-map-picker__copy strong,
+.rural-panel .finca-fila__mapa .farm-map-picker__coords {
+    color:var(--admin-text);
+}
+
+.rural-panel .finca-fila__mapa .farm-map-picker__copy p,
+.rural-panel .finca-fila__mapa .farm-map-picker__status,
+.rural-panel .finca-fila__mapa .map-shell__notice {
+    color:var(--admin-text-soft);
+}
+
 @media (max-width:640px) {
     .rural-panel .finca-fila {
         grid-template-columns:minmax(0,1fr) auto;
