@@ -11,6 +11,8 @@ import {
     UBICACION_USUARIO_KEY,
 } from './ubicacion-sesion.js';
 
+let selectorSequence = 0;
+
 function asegurarEstilos() {
     if (typeof document === 'undefined' || document.querySelector('link[data-tc-map-ui]')) return;
     const link = document.createElement('link');
@@ -80,6 +82,37 @@ export async function buscarDireccionPorCoordenadas(punto, {
     };
 }
 
+export async function buscarLugaresPorNombre(nombre, {
+    fetchImpl = globalThis.fetch,
+    signal,
+} = {}) {
+    const consulta = String(nombre ?? '').trim();
+    if (consulta.length < 3) return [];
+    const params = new URLSearchParams({
+        q: `${consulta}, Costa Rica`,
+        format: 'jsonv2',
+        addressdetails: '1',
+        countrycodes: 'cr',
+        limit: '5',
+        viewbox: '-90,12.8,-81.5,3.3',
+        bounded: '1',
+        'accept-language': 'es',
+    });
+    const response = await fetchImpl(`https://nominatim.openstreetmap.org/search?${params}`, {
+        headers: { Accept: 'application/json' },
+        signal,
+    });
+    if (!response.ok) throw new Error('No fue posible buscar ese lugar.');
+    const payload = await response.json();
+    return (Array.isArray(payload) ? payload : []).filter((item) => item?.address?.country_code === 'cr')
+        .map((item) => ({
+            nombre: String(item.display_name ?? '').trim(),
+            latitud: Number(item.lat),
+            longitud: Number(item.lon),
+        }))
+        .filter((item) => Number.isFinite(item.latitud) && Number.isFinite(item.longitud));
+}
+
 export function crearSelectorPuntoFinca({
     mount,
     puntoInicial = null,
@@ -105,6 +138,18 @@ export function crearSelectorPuntoFinca({
         <p class="farm-map-picker__coords" data-farm-map-coords hidden></p>
         <div class="map-shell" data-farm-map-shell hidden>
             <p class="map-shell__notice">Haga clic para marcar la ubicación y arrastre el punto para ajustarlo. Use la rueda o los controles para acercar y alejar; también puede abrir el mapa en pantalla completa.</p>
+            <div class="map-shell__search" data-farm-map-search-form role="search">
+                <label for="" data-farm-map-search-label>Buscar lugar</label>
+                <div class="map-shell__search-row">
+                    <input data-farm-map-search type="search" autocomplete="off" placeholder="Nombre de finca, pueblo o lugar">
+                    <button type="button" data-farm-map-search-submit class="button button--secondary">Buscar</button>
+                </div>
+                <div class="map-shell__results" data-farm-map-results role="listbox" aria-label="Resultados de búsqueda" hidden></div>
+            </div>
+            <div class="map-shell__layers" aria-label="Capas del mapa">
+                <label><input type="checkbox" data-farm-map-details> Mostrar detalles oficiales</label>
+                <label><input type="checkbox" data-farm-map-satellite> Vista satelital</label>
+            </div>
             <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>
             <div class="map-shell__fallback" data-farm-map-fallback hidden>
                 <strong>Mapa no disponible.</strong>
@@ -122,6 +167,17 @@ export function crearSelectorPuntoFinca({
     const canvas = mount.querySelector('[data-farm-map-canvas]');
     const fallback = mount.querySelector('[data-farm-map-fallback]');
     const retry = mount.querySelector('[data-farm-map-retry]');
+    const searchForm = mount.querySelector('[data-farm-map-search-form]');
+    const searchInput = mount.querySelector('[data-farm-map-search]');
+    const searchSubmit = mount.querySelector('[data-farm-map-search-submit]');
+    const searchLabel = mount.querySelector('[data-farm-map-search-label]');
+    const searchResults = mount.querySelector('[data-farm-map-results]');
+    const detailsToggle = mount.querySelector('[data-farm-map-details]');
+    const satelliteToggle = mount.querySelector('[data-farm-map-satellite]');
+    const searchId = `farm-map-search-${++selectorSequence}`;
+    searchInput.id = searchId;
+    searchLabel.htmlFor = searchId;
+    const searchController = { current: null };
 
     let punto = normalizarPunto(puntoInicial);
     let puntoValidado = !punto;
@@ -193,8 +249,32 @@ export function crearSelectorPuntoFinca({
         return punto;
     };
 
+    const mostrarResultados = (resultados) => {
+        searchResults.replaceChildren(...resultados.map((resultado) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'map-shell__result';
+            button.role = 'option';
+            button.textContent = resultado.nombre;
+            button.addEventListener('click', () => {
+                if (!estaEnZonaCostaRica(resultado)) {
+                    status.textContent = 'Ese lugar está fuera del área permitida.';
+                    return;
+                }
+                establecer(resultado);
+                mapa?.centrar?.(resultado, 16);
+                searchResults.hidden = true;
+                status.textContent = 'Lugar encontrado. Puedes ajustar el punto en el mapa.';
+            });
+            return button;
+        }));
+        searchResults.hidden = resultados.length === 0;
+    };
+
     const cerrarMapa = () => {
         token += 1;
+        searchController.current?.abort();
+        searchController.current = null;
         mapa?.destruir?.();
         mapa = null;
         shell.hidden = true;
@@ -268,6 +348,20 @@ export function crearSelectorPuntoFinca({
                 return;
             }
             mapa = creado;
+            detailsToggle.addEventListener('change', () => {
+                const activo = mapa?.activarDetallesOficiales?.(detailsToggle.checked);
+                if (detailsToggle.checked && !activo) {
+                    detailsToggle.checked = false;
+                    status.textContent = 'No pudimos cargar los detalles oficiales. Puedes continuar con el mapa base.';
+                }
+            });
+            satelliteToggle.addEventListener('change', () => {
+                const activo = mapa?.activarCapaRaster?.('satellite', satelliteToggle.checked);
+                if (satelliteToggle.checked && !activo) {
+                    satelliteToggle.checked = false;
+                    status.textContent = 'No pudimos cargar la vista satelital. Puedes continuar con el mapa base.';
+                }
+            });
             locationButton.hidden = false;
             status.textContent = punto
                 ? 'Mapa listo. Puede arrastrar el marcador o elegir otro punto.'
@@ -353,6 +447,37 @@ export function crearSelectorPuntoFinca({
         status.textContent = 'Punto exacto eliminado. La dirección escrita se conserva.';
     });
     retry.addEventListener('click', () => { cerrarMapa(); abrirMapa(); });
+    const buscar = async () => {
+        const consulta = searchInput.value.trim();
+        if (consulta.length < 3) {
+            status.textContent = 'Escribe al menos tres caracteres para buscar.';
+            searchResults.hidden = true;
+            return;
+        }
+        searchController.current?.abort();
+        const controller = new AbortController();
+        searchController.current = controller;
+        searchResults.hidden = true;
+        status.textContent = 'Buscando lugar…';
+        try {
+            const resultados = await buscarLugaresPorNombre(consulta, { signal: controller.signal });
+            if (controller.signal.aborted || destruido) return;
+            mostrarResultados(resultados);
+            status.textContent = resultados.length ? 'Elige un resultado para marcarlo en el mapa.' : 'No encontramos ese lugar en Costa Rica.';
+        } catch (error) {
+            if (error?.name === 'AbortError' || controller.signal.aborted || destruido) return;
+            status.textContent = 'No pudimos buscar ese lugar. Puedes marcarlo directamente en el mapa.';
+        } finally {
+            if (searchController.current === controller) searchController.current = null;
+        }
+    };
+    searchSubmit.addEventListener('click', buscar);
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            buscar();
+        }
+    });
     render();
 
     return Object.freeze({
@@ -381,6 +506,7 @@ export function crearSelectorPuntoFinca({
         },
         limpiar() {
             solicitudUbicacion += 1;
+            searchController.current?.abort();
             locationButton.disabled = false;
             establecer(null);
         },

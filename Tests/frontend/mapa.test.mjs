@@ -7,7 +7,10 @@ import {
     cargarLimitesCostaRica,
     normalizarCoordenadas,
     puntoDentroDeLimitesCostaRica,
+    SNIT_IGN_WMS_URL,
+    ESRI_SATELLITE_TILES_URL,
 } from '../../Public/js/shared/mapa.js';
+import { buscarLugaresPorNombre } from '../../Public/js/shared/finca-mapa.js';
 
 class FakeEmitter {
     constructor() { this.handlers = new Map(); }
@@ -21,6 +24,9 @@ class FakeMap extends FakeEmitter {
     static last = null;
     constructor(options) { super(); this.options = options; this.zoom = options.zoom; this.removed = false; this.controls = []; FakeMap.last = this; queueMicrotask(() => this.emit('load')); }
     addControl(control) { this.controls.push(control); }
+    addSource(name, source) { this.sources ??= new Map(); this.sources.set(name, source); }
+    addLayer(layer) { this.layers ??= new Map(); this.layers.set(layer.id, layer); }
+    setLayoutProperty(id, property, value) { this.layers.get(id).layout[property] = value; }
     jumpTo(options) { this.lastJump = options; this.zoom = options.zoom ?? this.zoom; }
     fitBounds(bounds, options) { this.lastBounds = { bounds, options }; }
     getZoom() { return this.zoom; }
@@ -36,8 +42,9 @@ class FakeMarker extends FakeEmitter {
 }
 class FakeAttributionControl { constructor(options) { this.options = options; } }
 class FakeNavigationControl { constructor(options) { this.options = options; } }
+class FakeFullscreenControl {}
 class FakeResizeObserver { constructor(cb) { this.cb = cb; } observe(target) { this.target = target; } disconnect() { this.disconnected = true; } }
-const fakeLib = { Map: FakeMap, Marker: FakeMarker, AttributionControl: FakeAttributionControl, NavigationControl: FakeNavigationControl };
+const fakeLib = { Map: FakeMap, Marker: FakeMarker, AttributionControl: FakeAttributionControl, NavigationControl: FakeNavigationControl, FullscreenControl: FakeFullscreenControl };
 
 test('normalizarCoordenadas valida rangos', () => {
     assert.deepEqual(normalizarCoordenadas({ latitud: 9, longitud: -84 }).lngLat, [-84, 9]);
@@ -97,6 +104,13 @@ test('crearMapa centraliza estilo, atribucion, marcador y destruccion', async ()
     assert.deepEqual(controller.obtenerCoordenadas(), { latitud: '10.0000000', longitud: '-85.0000000' });
     controller.ajustar([{ latitud: 9, longitud: -85 }, { latitud: 11, longitud: -83 }]);
     assert.deepEqual(FakeMap.last.lastBounds.bounds, [[-85, 9], [-83, 11]]);
+    assert.equal(controller.activarDetallesOficiales(), true);
+    assert.equal(controller.activarCapaRaster('satellite'), true);
+    assert.match(FakeMap.last.sources.get('tc-snit-edificaciones').tiles[0], /edificaciones2017_5k/);
+    assert.match(FakeMap.last.sources.get('tc-snit-edificaciones').tiles[0], /\{bbox-epsg-3857\}/);
+    assert.equal(FakeMap.last.layers.get('tc-satellite-layer').layout.visibility, 'visible');
+    assert.match(ESRI_SATELLITE_TILES_URL, /World_Imagery/);
+    assert.match(SNIT_IGN_WMS_URL, /snitcr\.go\.cr/);
     controller.destruir();
     assert.equal(FakeMap.last.removed, true);
     assert.equal(controller.destruido, true);
@@ -126,4 +140,24 @@ test('mapa que nunca carga expira en vez de dejar spinner permanente', async () 
         timeoutMs: 5,
         ResizeObserverImpl: null,
     }), (error) => error.kind === 'timeout');
+});
+
+test('la búsqueda de lugares queda acotada a Costa Rica y devuelve coordenadas utilizables', async () => {
+    let llamada = '';
+    const resultados = await buscarLugaresPorNombre('San José', {
+        fetchImpl: async (url) => {
+            llamada = String(url);
+            return {
+                ok: true,
+                json: async () => [
+                    { display_name: 'San José, Costa Rica', lat: '9.93', lon: '-84.08', address: { country_code: 'cr' } },
+                    { display_name: 'San Jose, otro país', lat: '1', lon: '1', address: { country_code: 'us' } },
+                ],
+            };
+        },
+    });
+    const parametros = new URL(llamada).searchParams;
+    assert.equal(parametros.get('countrycodes'), 'cr');
+    assert.equal(parametros.get('bounded'), '1');
+    assert.deepEqual(resultados, [{ nombre: 'San José, Costa Rica', latitud: 9.93, longitud: -84.08 }]);
 });

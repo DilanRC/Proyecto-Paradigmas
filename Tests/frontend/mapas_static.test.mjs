@@ -8,6 +8,7 @@ const farmMap = fs.readFileSync('Public/js/shared/finca-mapa.js', 'utf8');
 const adapter = fs.readFileSync('Public/js/productores-fincas-ui.js', 'utf8');
 const registration = fs.readFileSync('Public/js/registro.js', 'utf8');
 const explore = fs.readFileSync('Public/js/explore.js', 'utf8');
+const productoresView = fs.readFileSync('Application/View/productores/index.php', 'utf8');
 
 test('la ubicacion del usuario se intenta automaticamente pero no se persiste como productor', () => {
     assert.ok(auth.includes('inicializarUbicacionAutomatica()'));
@@ -38,6 +39,12 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('La dirección escrita sigue siendo válida sin mapa'));
     assert.ok(farmMap.includes('onMapClick'));
     assert.ok(farmMap.includes('draggable: true'));
+    assert.ok(farmMap.includes('Buscar lugar'));
+    assert.ok(farmMap.includes('buscarLugaresPorNombre'));
+    assert.ok(farmMap.includes('Mostrar detalles oficiales'));
+    assert.ok(farmMap.includes('Vista satelital'));
+    assert.ok(map.includes('SNIT_IGN_WMS_URL'));
+    assert.ok(map.includes('ESRI_SATELLITE_TILES_URL'));
 });
 
 test('el selector limita el mapa a Costa Rica y puede completar dirección por coordenadas', () => {
@@ -73,6 +80,13 @@ test('usuario y admin reutilizan el mismo selector de finca', () => {
     assert.ok(registration.includes('crearSelectorPuntoFinca'));
     assert.ok(adapter.includes("from './shared/finca-mapa.js'"));
     assert.ok(adapter.includes('crearSelectorPuntoFinca'));
+});
+
+test('el modal de productores se divide en datos, dirección y fincas', () => {
+    assert.ok(productoresView.includes('class="modal__sections"'));
+    assert.ok(productoresView.includes('href="#seccion-datos"'));
+    assert.ok(productoresView.includes('id="seccion-direccion"'));
+    assert.ok(productoresView.includes('id="seccion-fincas"'));
 });
 
 test('la UI equivocada de ubicacion observada del productor ya no existe', () => {

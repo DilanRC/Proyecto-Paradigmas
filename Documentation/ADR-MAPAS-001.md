@@ -132,6 +132,8 @@ Se mantiene:
 - `Public/js/shared/mapa.js` como unica capa que conoce MapLibre directamente;
 - `Public/js/shared/finca-mapa.js` como componente de negocio reutilizable por usuario y admin.
 
+El selector puede activar bajo demanda dos capas WMS del IGN (`edificaciones2017_5k` y `vias_5000`) sobre el mapa base. También ofrece una vista satelital opcional de Esri World Imagery. Ambas opciones se cargan solamente después de que la persona las activa; la atribución permanece visible en el mapa.
+
 El mapa no se carga al mostrar un formulario. MapLibre/OpenFreeMap se cargan solo al pulsar el boton de mapa.
 
 La atribucion a OpenFreeMap y OpenStreetMap permanece visible.
@@ -150,6 +152,10 @@ Es persistente porque describe un lugar del negocio. La UI debe dejar claro que 
 
 OpenFreeMap recibe peticiones de estilo/teselas solamente cuando se abre un mapa. Obtener GPS automaticamente no abre el mapa ni envia esa coordenada al proveedor cartografico.
 
+### SNIT/IGN y vista satelital
+
+El WMS `https://geos.snitcr.go.cr/be/IGN_5/wms` responde en `EPSG:3857` para las capas de edificaciones y vías usadas por el selector. El SNIT aplica cuotas y control de acceso, por lo que no se habilitan estas capas automáticamente ni se consulta el servicio desde el servidor en cada carga. La vista satelital usa teselas de Esri World Imagery con la atribución correspondiente; no se presenta como cartografía oficial del IGN.
+
 ## Contrato JSON
 
 El contrato de negocio Browser <-> PHP sigue usando JSON.
@@ -160,9 +166,11 @@ Style JSON, tiles, sprites y fuentes son recursos cartograficos externos y no en
 
 ## Geocodificacion y rutas
 
-### Photon
+### Nominatim
 
-No se integra todavia. El catalogo territorial interno resuelve la validacion administrativa y actualmente no existe una necesidad aprobada de autocomplete/reverse geocoding que justifique enviar direcciones o coordenadas a otro tercero.
+El selector permite buscar un lugar por nombre solo cuando el usuario abre el mapa y pulsa Buscar. La consulta exige `countrycodes=cr`, usa una ventana geográfica de Costa Rica y limita la respuesta a cinco resultados. Antes de marcar el punto, la UI vuelve a validar las coordenadas contra el GeoJSON local. La búsqueda no reemplaza los selectores oficiales de provincia, cantón y distrito.
+
+La búsqueda y la geocodificación inversa usan Nominatim sobre OpenStreetMap. Se mantiene como proveedor de consulta mientras no exista una clave configurada para un proveedor comercial con mayor cobertura visual. MapTiler se evaluó como alternativa, pero su plan gratuito exige uso no comercial y una clave pública con cuotas; no se activa por defecto para no introducir una dependencia operativa silenciosa.
 
 Si se incorpora, sera detras de PHP:
 
@@ -170,7 +178,7 @@ Si se incorpora, sera detras de PHP:
 Frontend -> JSON -> Controller -> Service -> PhotonClient -> Photon
 ```
 
-con timeout, debounce, cancelacion de consultas obsoletas, limite geografico cuando aplique y sin sobrescribir silenciosamente la direccion elegida por el usuario.
+con timeout, cancelacion de consultas obsoletas, limite geografico cuando aplique y sin sobrescribir silenciosamente la direccion elegida por el usuario.
 
 ### Valhalla
 
@@ -197,4 +205,8 @@ Se reserva para un proceso real de fletes que requiera ruta, distancia vial, dur
 - MapLibre GL JS: https://maplibre.org/maplibre-gl-js/docs/
 - OpenFreeMap: https://openfreemap.org/
 - OpenStreetMap attribution: https://www.openstreetmap.org/copyright
+- Nominatim usage policy: https://operations.osmfoundation.org/policies/nominatim/
+- SNIT condiciones de uso: https://www.snitcr.go.cr/snit_condiciones
+- Esri World Imagery REST service: https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer
+- MapTiler pricing: https://www.maptiler.com/cloud/pricing/
 - Photon: https://github.com/komoot/photon

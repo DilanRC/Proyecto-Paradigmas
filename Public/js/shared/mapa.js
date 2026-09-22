@@ -5,6 +5,13 @@ export const MAPLIBRE_VERSION = '6.9.0';
 export const MAPLIBRE_MODULE_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.mjs`;
 export const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+export const SNIT_IGN_WMS_URL = 'https://geos.snitcr.go.cr/be/IGN_5/wms';
+export const ESRI_SATELLITE_TILES_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const RASTER_LAYERS = Object.freeze({
+    snitEdificaciones: { source: 'tc-snit-edificaciones', layer: 'tc-snit-edificaciones-layer', wmsLayer: 'edificaciones2017_5k', opacity: 0.78 },
+    snitVias: { source: 'tc-snit-vias', layer: 'tc-snit-vias-layer', wmsLayer: 'vias_5000', opacity: 0.82 },
+    satellite: { source: 'tc-satellite', layer: 'tc-satellite-layer', opacity: 1 },
+});
 export const CENTRO_COSTA_RICA = Object.freeze([-84.0907, 9.9281]);
 // Rectángulo de navegación que contiene Costa Rica continental, sus islas y
 // el mar territorial. La validación exacta usa el GeoJSON local de límites.
@@ -74,7 +81,7 @@ export function puntoDentroDeLimitesCostaRica(punto, geojson) {
     return (geojson?.features ?? []).some((feature) => puntoEnGeometria(longitud, latitud, feature.geometry));
 }
 
-const PROVIDER_ATTRIBUTION = '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a>';
+const PROVIDER_ATTRIBUTION = '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> · <a href="https://www.snitcr.go.cr/" target="_blank" rel="noopener noreferrer">SNIT/IGN</a> · <a href="https://www.esri.com/en-us/legal/terms/full-master-agreement" target="_blank" rel="noopener noreferrer">Esri</a>';
 
 function resolverDocumento(documentRef) {
     return documentRef ?? (typeof document !== 'undefined' ? document : null);
@@ -116,6 +123,11 @@ function crearError(kind, message, cause = null) {
 
 function formatearCoordenadas(lngLat) {
     return { latitud: Number(lngLat.lat).toFixed(7), longitud: Number(lngLat.lng).toFixed(7) };
+}
+
+function crearUrlWms(capa) {
+    const params = new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: capa, styles: '', format: 'image/png', transparent: 'true', width: '256', height: '256', crs: 'EPSG:3857', bbox: '{bbox-epsg-3857}' });
+    return `${SNIT_IGN_WMS_URL}?${params}`.replace('%7Bbbox-epsg-3857%7D', '{bbox-epsg-3857}');
 }
 
 export async function crearMapa({
@@ -168,6 +180,7 @@ export async function crearMapa({
     let loaded = false;
     let marker = null;
     let resizeObserver = null;
+    const capasRaster = new Set();
 
     map.on?.('error', (event) => {
         if (!loaded || destroyed) return;
@@ -210,6 +223,42 @@ export async function crearMapa({
     }
     if (interactive && maplibre.NavigationControl) map.addControl?.(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
     if (interactive && maplibre.FullscreenControl) map.addControl?.(new maplibre.FullscreenControl(), 'top-right');
+
+    function activarCapaRaster(nombre, visible = true) {
+        if (destroyed || !map.addSource || !map.addLayer) return false;
+        const capa = RASTER_LAYERS[nombre];
+        if (!capa) return false;
+        try {
+            if (!capasRaster.has(nombre)) {
+                const source = nombre === 'satellite'
+                    ? { type: 'raster', tiles: [ESRI_SATELLITE_TILES_URL], tileSize: 256 }
+                    : { type: 'raster', tiles: [crearUrlWms(capa.wmsLayer)], tileSize: 256 };
+                map.addSource(capa.source, source);
+                const capaMapa = { id: capa.layer, type: 'raster', source: capa.source, layout: { visibility: 'none' }, paint: { 'raster-opacity': capa.opacity } };
+                const debajoDeDetalles = nombre === 'satellite' && capasRaster.has('snitEdificaciones')
+                    ? 'tc-snit-edificaciones-layer'
+                    : undefined;
+                map.addLayer(capaMapa, debajoDeDetalles);
+                capasRaster.add(nombre);
+            }
+            map.setLayoutProperty?.(capa.layer, 'visibility', visible ? 'visible' : 'none');
+            return true;
+        } catch (error) {
+            onError(crearError('resource', 'No fue posible cargar una capa adicional del mapa.', error));
+            return false;
+        }
+    }
+
+    function activarDetallesOficiales(visible = true) {
+        const edificios = activarCapaRaster('snitEdificaciones', visible);
+        const vias = activarCapaRaster('snitVias', visible);
+        if (!edificios || !vias) {
+            activarCapaRaster('snitEdificaciones', false);
+            activarCapaRaster('snitVias', false);
+            return false;
+        }
+        return true;
+    }
 
     function crearMarcador(lngLat) {
         const nuevo = new maplibre.Marker({ draggable }).setLngLat(lngLat).addTo(map);
@@ -281,6 +330,8 @@ export async function crearMapa({
         obtenerCoordenadas,
         centrar,
         ajustar,
+        activarCapaRaster,
+        activarDetallesOficiales,
         redimensionar,
         destruir,
         get destruido() { return destroyed; },
