@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-    <base href="/">
+    <base href="<?= tc_public_base_attribute() ?>">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Entra a Ganado Cerca para explorar publicaciones y oportunidades ganaderas.">

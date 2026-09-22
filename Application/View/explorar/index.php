@@ -7,7 +7,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-    <base href="/">
+    <base href="<?= tc_public_base_attribute() ?>">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Explora ganado y oportunidades cercanas en Ganado Cerca.">

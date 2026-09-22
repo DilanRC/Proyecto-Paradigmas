@@ -146,6 +146,10 @@ local `NO_AUTENTICADO`.
 
 ## Despliegue
 
+Para ejecutar sin Docker en XAMPP, configure Apache con `Public/` como raíz
+del sitio o abra la aplicación bajo `/Proyecto-Paradigmas/Public/`. La guía
+completa está en [`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md).
+
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
