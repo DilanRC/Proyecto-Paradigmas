@@ -83,6 +83,10 @@ final class SupabaseActorResolver
         }
 
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
+        if (array_key_exists('email_confirmed_at', $data)
+            && ($data['email_confirmed_at'] === null || $data['email_confirmed_at'] === false)) {
+            throw new HttpException('Debe confirmar su correo antes de usar la cuenta.', 401);
+        }
         $subject = is_string($data['id'] ?? null) ? trim($data['id']) : '';
         $email = is_string($data['email'] ?? null)
             ? mb_strtolower(trim($data['email']), 'UTF-8')
@@ -125,7 +129,7 @@ final class SupabaseActorResolver
     /** @return array{success:bool,data:array<string,mixed>} */
     private function normalizarUsuarioSupabase(array $payload): array
     {
-        return [
+        $data = [
             'success' => isset($payload['id'], $payload['email']),
             'data' => [
                 'id' => $payload['id'] ?? null,
@@ -133,6 +137,13 @@ final class SupabaseActorResolver
                 'role' => $payload['role'] ?? null,
             ],
         ];
+        if (array_key_exists('email_confirmed_at', $payload)) {
+            $data['data']['email_confirmed_at'] = $payload['email_confirmed_at'];
+        } elseif (array_key_exists('confirmed_at', $payload)) {
+            $data['data']['email_confirmed_at'] = $payload['confirmed_at'];
+        }
+
+        return $data;
     }
 
     private function authorizationHeader(array $server): ?string

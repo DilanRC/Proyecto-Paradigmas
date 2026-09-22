@@ -64,6 +64,35 @@ test('verify route preserves the SDK auth error status and code', async () => {
   })
 })
 
+test('verify route forwards confirmation state only when the provider exposes it', async () => {
+  const response = await createHandler({
+    env,
+    verify: async () => ({
+      data: {
+        token: 'signed-jwt',
+        keyName: 'default',
+        userClaims: {
+          id: 'user-2',
+          email: 'unconfirmed@example.test',
+          role: 'authenticated',
+          email_confirmed_at: null,
+        },
+      },
+      error: null,
+    }),
+    createClient: () => ({}),
+  })(new Request('http://service/v1/auth/verify'))
+  assert.deepEqual(await response.json(), {
+    success: true,
+    data: {
+      id: 'user-2',
+      email: 'unconfirmed@example.test',
+      role: 'authenticated',
+      email_confirmed_at: null,
+    },
+  })
+})
+
 test('unknown routes and unsupported methods are rejected', async () => {
   const handler = createHandler({ env })
   assert.equal((await handler(new Request('http://service/missing'))).status, 404)

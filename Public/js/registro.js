@@ -179,7 +179,13 @@ function snapshot(form, existingProfile = null) {
 
 function persistDraft(form, existingProfile = null) {
     const draft = snapshot(form, existingProfile);
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    const draftForStorage = {
+        ...draft,
+        persona: Object.fromEntries(
+            Object.entries(draft.persona).filter(([field]) => !['password', 'passwordConfirmacion'].includes(field)),
+        ),
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draftForStorage));
     return draft;
 }
 

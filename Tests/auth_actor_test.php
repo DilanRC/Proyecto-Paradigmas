@@ -91,6 +91,22 @@ try {
         test_same(409, $error->estadoHttp, 'Token válido sin persona vinculada debe responder 409');
     }
 
+    $sinCorreoConfirmado = new SupabaseActorResolver(fn (): array => [
+        'status' => 200,
+        'body' => json_encode(['success' => true, 'data' => [
+            'id' => 'user-3',
+            'email' => $email,
+            'email_confirmed_at' => null,
+            'role' => 'authenticated',
+        ]], JSON_THROW_ON_ERROR),
+    ]);
+    try {
+        $sinCorreoConfirmado->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer token-no-confirmado']);
+        throw new RuntimeException('Un token con correo no confirmado debe fallar.');
+    } catch (HttpException $error) {
+        test_same(401, $error->estadoHttp, 'Correo no confirmado debe responder 401');
+    }
+
     putenv('SUPABASE_AUTH_VERIFY_URL=');
     putenv('SUPABASE_URL=https://project.example.test');
     $directo = new SupabaseActorResolver(function (string $url, string $authorization) use ($email): array {

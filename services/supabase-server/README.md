@@ -7,8 +7,10 @@ por RLS. No expone ni usa el cliente administrativo.
 ## Contrato
 
 - `GET /health`: preparación del servicio, sin mostrar valores de configuración.
-- `GET /v1/auth/verify`: exige `Authorization: Bearer <jwt>` y devuelve únicamente
-  `id`, `email` y `role` verificados.
+- `GET /v1/auth/verify`: exige `Authorization: Bearer <jwt>` y devuelve `id`,
+  `email` y `role` verificados. Si Supabase expone el estado de confirmación,
+  también transporta `email_confirmed_at`; PHP rechaza la sesión cuando está
+  explícitamente sin confirmar.
 - OpenAPI: `contracts/supabase-auth-v1.openapi.json`.
 
 El CRUD PHP consume este endpoint cuando recibe `Authorization`. La identidad

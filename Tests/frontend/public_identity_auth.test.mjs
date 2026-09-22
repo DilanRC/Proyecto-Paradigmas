@@ -29,6 +29,7 @@ const passwordToggleJs = read('../../Public/js/password-toggle.js');
 const publicUi = read('../../Public/js/public-ui.js');
 const publicV3 = read('../../Public/css/public-v3.css');
 const registroJs = read('../../Public/js/registro.js');
+const supabaseAuth = read('../../Public/js/shared/supabase-auth.js');
 const fletes = read('../../Application/View/fletes/index.php');
 const baseCss = read('../../Public/css/base.css');
 const api = read('../../Public/js/shared/api.js');
@@ -251,6 +252,12 @@ test('el registro guiado persiste mediante Supabase y la API, no mediante una se
     assert.match(registroJs, /api\/v1\/registro/);
     assert.match(registroJs, /syncPublicProfile/);
     assert.doesNotMatch(registroJs, /frontend-prototype/);
+});
+
+test('el borrador guiado no persiste contraseñas aunque las conserve en memoria para Supabase', () => {
+    assert.match(registroJs, /Object\.entries\(draft\.persona\)\.filter/);
+    assert.match(registroJs, /!\['password', 'passwordConfirmacion'\]\.includes\(field\)/);
+    assert.match(supabaseAuth, /email_confirmed_at/);
 });
 
 test('el alta no queda bloqueada si falla la lectura auxiliar del perfil', () => {

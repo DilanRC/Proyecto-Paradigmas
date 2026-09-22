@@ -50,12 +50,16 @@ export function createHandler({
 
     createClient({ auth: { token: auth.token, keyName: auth.keyName } })
     const claims = auth.userClaims
+    const confirmation = Object.prototype.hasOwnProperty.call(claims, 'email_confirmed_at')
+      ? claims.email_confirmed_at
+      : claims.confirmed_at
     return json({
       success: true,
       data: {
         id: claims.id,
         email: claims.email ?? null,
         role: claims.role ?? null,
+        ...(confirmation !== undefined && { email_confirmed_at: confirmation }),
       },
     })
   }

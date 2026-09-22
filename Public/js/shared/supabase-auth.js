@@ -111,6 +111,16 @@ async function authConfig() {
 }
 
 function sessionFromTokenResponse(payload, previous = null) {
+    const user = payload?.user ?? {};
+    const confirmationField = Object.prototype.hasOwnProperty.call(user, 'email_confirmed_at')
+        ? user.email_confirmed_at
+        : user.confirmed_at;
+    if (confirmationField === null || confirmationField === false) {
+        throw new AuthError('Debes confirmar tu correo antes de entrar.', {
+            status: 400,
+            code: 'email_not_confirmed',
+        });
+    }
     const accessToken = String(payload?.access_token ?? '');
     const refreshToken = String(payload?.refresh_token ?? previous?.refreshToken ?? '');
     const email = String(payload?.user?.email ?? previous?.email ?? '').trim().toLowerCase();
@@ -129,7 +139,7 @@ function sessionFromTokenResponse(payload, previous = null) {
         version: SESSION_VERSION,
         mode: SESSION_MODE,
         email,
-        userId: typeof payload?.user?.id === 'string' ? payload.user.id : previous?.userId ?? null,
+        userId: typeof user?.id === 'string' ? user.id : previous?.userId ?? null,
         accessToken,
         refreshToken,
         expiresAt,
