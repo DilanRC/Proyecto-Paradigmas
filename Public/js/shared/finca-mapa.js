@@ -148,8 +148,8 @@ export function crearSelectorPuntoFinca({
                 <div class="map-shell__results" data-farm-map-results role="listbox" aria-label="Resultados de búsqueda" hidden></div>
             </div>
             <div class="map-shell__layer-control" aria-label="Capas del mapa">
-                <button type="button" class="map-shell__layer-button" data-farm-map-normal aria-pressed="true"><span class="map-shell__layer-swatch map-shell__layer-swatch--normal" aria-hidden="true"></span>Mapa</button>
                 <button type="button" class="map-shell__layer-button" data-farm-map-satellite aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--satellite" aria-hidden="true"></span>Satélite</button>
+                <button type="button" class="map-shell__layer-button" data-farm-map-normal aria-pressed="true"><span class="map-shell__layer-swatch map-shell__layer-swatch--normal" aria-hidden="true"></span>Mapa</button>
                 <button type="button" class="map-shell__layer-button" data-farm-map-details aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--details" aria-hidden="true"></span>Detalles oficiales</button>
             </div>
             <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>

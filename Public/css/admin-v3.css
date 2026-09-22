@@ -1226,6 +1226,12 @@ html[data-theme='light'] .rural-panel th {
     }
 }
 
+/* Selector de finca: composición tipo mapa de navegación, con el mapa como
+   superficie principal y cada grupo de controles en una zona estable. */
+.rural-panel .map-shell__search-row{position:relative;display:block}.rural-panel .map-shell__search input{width:100%;padding-right:52px;box-sizing:border-box}.rural-panel .map-shell__search-row .button{position:absolute;top:3px;right:3px;width:38px;height:38px;min-height:38px;box-shadow:none}
+.rural-panel .map-shell__layer-control{top:auto;right:auto;bottom:12px;left:12px;align-items:stretch;gap:4px;padding:5px;border-radius:14px}.rural-panel .map-shell__layer-button{min-width:68px;min-height:64px;align-content:space-between}.rural-panel .map-shell__layer-button[data-farm-map-satellite]{min-width:96px}.rural-panel .map-shell__layer-swatch{height:36px}.rural-panel .map-shell__actions{right:12px;bottom:12px;gap:6px}.rural-panel .map-shell__action{border-radius:50%}
+@media (max-width:640px){.rural-panel .map-shell__layer-control{left:10px;bottom:10px;max-width:calc(100% - 80px);overflow-x:auto}.rural-panel .map-shell__layer-button{min-width:60px}.rural-panel .map-shell__layer-button[data-farm-map-satellite]{min-width:82px}.rural-panel .map-shell__actions{right:10px;bottom:10px}}
+
 @media (max-width:1050px) {
     :root { --admin-sidebar-width:222px; }
     .rural-panel .tools {

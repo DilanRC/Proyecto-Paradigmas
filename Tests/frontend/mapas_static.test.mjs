@@ -45,6 +45,8 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('data-farm-map-satellite'));
     assert.ok(farmMap.includes('data-farm-map-normal'));
     assert.ok(farmMap.includes('map-shell__layer-control'));
+    assert.ok(farmMap.indexOf('data-farm-map-satellite') < farmMap.indexOf('data-farm-map-normal'));
+    assert.ok(fs.readFileSync('Public/css/mapa.css', 'utf8').includes('bottom:1rem;left:1rem'));
     assert.ok(map.includes('SNIT_IGN_WMS_URL'));
     assert.ok(map.includes('ESRI_SATELLITE_TILES_URL'));
     assert.match(map, /MAP_MAX_ZOOM = 14/);
