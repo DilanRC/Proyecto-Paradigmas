@@ -20,7 +20,7 @@ test('el admin comparte la paleta de los logos con el sitio publico', () => {
 
 test('el shell existente se mejora desde un bootstrap compartido, no con cinco implementaciones', () => {
     assert.ok(apiJs.startsWith("import './auth-gate.js';\nimport './admin-ui.js';"));
-    assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-6'"));
+    assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-7'"));
     assert.ok(adminJs.includes('enhanceSidebarAccount();'));
     assert.ok(adminJs.includes('enhancePageHeader();'));
     assert.ok(adminJs.includes('enhanceFilters();'));
