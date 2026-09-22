@@ -183,6 +183,10 @@ export async function crearMapa({
     let resizeObserver = null;
     const capasRaster = new Set();
 
+    function capaAntesDeEtiquetas() {
+        return map.getStyle?.().layers?.find((layer) => layer.type === 'symbol')?.id;
+    }
+
     map.on?.('error', (event) => {
         if (!loaded || destroyed) return;
         onError(crearError('resource', 'Un recurso cartografico no pudo cargarse.', event?.error ?? null));
@@ -241,10 +245,7 @@ export async function crearMapa({
                     : { type: 'raster', tiles: [crearUrlWms(capa.wmsLayer)], tileSize: 256 };
                 map.addSource(capa.source, source);
                 const capaMapa = { id: capa.layer, type: 'raster', source: capa.source, layout: { visibility: 'none' }, paint: { 'raster-opacity': capa.opacity } };
-                const debajoDeDetalles = nombre === 'satellite' && capasRaster.has('snitEdificaciones')
-                    ? 'tc-snit-edificaciones-layer'
-                    : undefined;
-                map.addLayer(capaMapa, debajoDeDetalles);
+                map.addLayer(capaMapa, capaAntesDeEtiquetas());
                 capasRaster.add(nombre);
             }
             map.setLayoutProperty?.(capa.layer, 'visibility', visible ? 'visible' : 'none');

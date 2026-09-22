@@ -158,3 +158,13 @@ organiza en fullscreen con `flex` y el canvas ocupa el espacio restante.
 Toda modificación futura del contenedor de fullscreen debe comprobar que los
 controles siguen visibles y operables, que `Esc` restaura el estado normal y que
 el mapa conserva scroll, zoom, búsqueda, capas y ubicación.
+
+### Incidente registrado: etiquetas ausentes en vista satelital (2026-09-22)
+
+La capa satelital se añadía al final del estilo MapLibre. Ese orden cubría las
+capas `symbol` que dibujan nombres de calles, barrios y lugares. Las capas
+raster del mapa y de SNIT/IGN deben insertarse antes de la primera capa de
+etiquetas del estilo; así la imagen satelital queda debajo de los nombres y los
+detalles siguen siendo legibles. El control de capas usa botones con
+`aria-pressed` para que Mapa, Satélite y Detalles oficiales tengan un estado
+visible y reversible.

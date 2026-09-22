@@ -41,8 +41,10 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(farmMap.includes('draggable: true'));
     assert.ok(farmMap.includes('Buscar lugar'));
     assert.ok(farmMap.includes('buscarLugaresPorNombre'));
-    assert.ok(farmMap.includes('Mostrar detalles oficiales'));
-    assert.ok(farmMap.includes('Vista satelital'));
+    assert.ok(farmMap.includes('data-farm-map-details'));
+    assert.ok(farmMap.includes('data-farm-map-satellite'));
+    assert.ok(farmMap.includes('data-farm-map-normal'));
+    assert.ok(farmMap.includes('map-shell__layer-control'));
     assert.ok(map.includes('SNIT_IGN_WMS_URL'));
     assert.ok(map.includes('ESRI_SATELLITE_TILES_URL'));
 });

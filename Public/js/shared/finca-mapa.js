@@ -146,9 +146,10 @@ export function crearSelectorPuntoFinca({
                 </div>
                 <div class="map-shell__results" data-farm-map-results role="listbox" aria-label="Resultados de búsqueda" hidden></div>
             </div>
-            <div class="map-shell__layers" aria-label="Capas del mapa">
-                <label><input type="checkbox" data-farm-map-details> Mostrar detalles oficiales</label>
-                <label><input type="checkbox" data-farm-map-satellite> Vista satelital</label>
+            <div class="map-shell__layer-control" aria-label="Capas del mapa">
+                <button type="button" class="map-shell__layer-button" data-farm-map-normal aria-pressed="true"><span class="map-shell__layer-swatch map-shell__layer-swatch--normal" aria-hidden="true"></span>Mapa</button>
+                <button type="button" class="map-shell__layer-button" data-farm-map-satellite aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--satellite" aria-hidden="true"></span>Satélite</button>
+                <button type="button" class="map-shell__layer-button" data-farm-map-details aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--details" aria-hidden="true"></span>Detalles oficiales</button>
             </div>
             <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>
             <div class="map-shell__fallback" data-farm-map-fallback hidden>
@@ -171,6 +172,7 @@ export function crearSelectorPuntoFinca({
     const searchLabel = mount.querySelector('[data-farm-map-search-label]');
     const searchResults = mount.querySelector('[data-farm-map-results]');
     const detailsToggle = mount.querySelector('[data-farm-map-details]');
+    const normalToggle = mount.querySelector('[data-farm-map-normal]');
     const satelliteToggle = mount.querySelector('[data-farm-map-satellite]');
     const searchId = `farm-map-search-${++selectorSequence}`;
     searchInput.id = searchId;
@@ -349,19 +351,31 @@ export function crearSelectorPuntoFinca({
             }
             mapa = creado;
             if (!listenersDeCapasInstalados) {
-                detailsToggle.addEventListener('change', () => {
-                    const activo = mapa?.activarDetallesOficiales?.(detailsToggle.checked);
-                    if (detailsToggle.checked && !activo) {
-                        detailsToggle.checked = false;
+                detailsToggle.addEventListener('click', () => {
+                    const siguiente = detailsToggle.getAttribute('aria-pressed') !== 'true';
+                    const activo = mapa?.activarDetallesOficiales?.(siguiente);
+                    if (siguiente && !activo) {
+                        detailsToggle.setAttribute('aria-pressed', 'false');
                         status.textContent = 'No pudimos cargar los detalles oficiales. Puedes continuar con el mapa base.';
+                        return;
                     }
+                    detailsToggle.setAttribute('aria-pressed', String(siguiente));
                 });
-                satelliteToggle.addEventListener('change', () => {
-                    const activo = mapa?.activarCapaRaster?.('satellite', satelliteToggle.checked);
-                    if (satelliteToggle.checked && !activo) {
-                        satelliteToggle.checked = false;
+                normalToggle.addEventListener('click', () => {
+                    mapa?.activarCapaRaster?.('satellite', false);
+                    normalToggle.setAttribute('aria-pressed', 'true');
+                    satelliteToggle.setAttribute('aria-pressed', 'false');
+                });
+                satelliteToggle.addEventListener('click', () => {
+                    const siguiente = satelliteToggle.getAttribute('aria-pressed') !== 'true';
+                    const activo = mapa?.activarCapaRaster?.('satellite', siguiente);
+                    if (siguiente && !activo) {
+                        satelliteToggle.setAttribute('aria-pressed', 'false');
                         status.textContent = 'No pudimos cargar la vista satelital. Puedes continuar con el mapa base.';
+                        return;
                     }
+                    satelliteToggle.setAttribute('aria-pressed', String(siguiente));
+                    normalToggle.setAttribute('aria-pressed', String(!siguiente));
                 });
                 listenersDeCapasInstalados = true;
             }

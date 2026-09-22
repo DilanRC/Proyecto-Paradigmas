@@ -1019,8 +1019,9 @@ html[data-theme='light'] .rural-panel th {
 .rural-panel .map-shell__actions {
     position:absolute;
     z-index:3;
-    top:12px;
-    left:12px;
+    right:12px;
+    bottom:12px;
+    left:auto;
     display:flex;
     gap:8px;
 }
@@ -1040,6 +1041,48 @@ html[data-theme='light'] .rural-panel th {
 .rural-panel .map-shell__action:hover:not(:disabled) {
     color:var(--admin-primary-strong);
     background:#fff;
+}
+
+.rural-panel .map-shell__layer-control {
+    position:absolute;
+    z-index:4;
+    top:108px;
+    right:12px;
+    display:flex;
+    gap:4px;
+    padding:5px;
+    border:1px solid rgba(45,55,49,.25);
+    border-radius:10px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+}
+
+.rural-panel .map-shell__layer-button {
+    display:grid;
+    min-width:72px;
+    gap:3px;
+    padding:4px;
+    border:1px solid transparent;
+    border-radius:7px;
+    color:#26372b;
+    background:transparent;
+    font-size:10px;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.rural-panel .map-shell__layer-button:hover,
+.rural-panel .map-shell__layer-button:focus-visible,
+.rural-panel .map-shell__layer-button[aria-pressed='true'] {
+    border-color:var(--admin-primary);
+    background:#fff7ef;
+    outline:0;
+}
+
+.rural-panel .map-shell__layer-swatch {
+    display:block;
+    height:28px;
+    border-radius:5px;
 }
 
 .rural-panel .map-shell__fallback {
