@@ -60,6 +60,10 @@ test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_ENV:-}" == "production"'
     'La política debe conservar los despliegues de producción');
 test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_GIT_COMMIT_REF:-}" == "dev"'),
     'La política debe permitir previews únicamente desde dev');
+test_assert(str_contains($vercelIgnoreBuild, 'VERCEL_REGISTRY_AUTO_PRUNE'),
+    'La política debe podar el registro antes de publicar la imagen');
+test_assert(str_contains($vercelIgnoreBuild, 'Tools/vercel-prune-registry.sh'),
+    'La política debe reutilizar la poda determinista del registro');
 test_assert(str_contains($compose, 'phpmyadmin:5.2.2-apache'),
     'Compose debe ofrecer phpMyAdmin para inspeccionar MySQL');
 test_assert(str_contains($compose, 'PMA_HOST: db'),

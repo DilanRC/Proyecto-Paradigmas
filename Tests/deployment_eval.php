@@ -28,7 +28,9 @@ $checks = [
         && ($vercelConfiguration['services']['app']['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
         && !array_key_exists('ignoreCommand', $vercelConfiguration)
         && str_contains($vercelIgnoreBuild, 'VERCEL_GIT_COMMIT_REF:-}" == "dev"')
-        && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"'),
+        && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"')
+        && str_contains($vercelIgnoreBuild, 'VERCEL_REGISTRY_AUTO_PRUNE')
+        && str_contains($vercelIgnoreBuild, 'Tools/vercel-prune-registry.sh'),
     'registro_con_poda' => is_file("{$root}/Tools/vercel-prune-registry.sh")
         && is_file("{$root}/Tools/vercel-prune-registry.php")
         && str_contains(file_get_contents("{$root}/Tools/vercel-prune-registry.sh"), 'vcr image rm')
