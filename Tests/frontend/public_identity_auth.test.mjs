@@ -244,6 +244,7 @@ test('el estado de autenticación tiene contraste y tamaño legibles', () => {
     assert.match(publicCss, /\.auth-status\s*\{[\s\S]*font-weight:700/);
     assert.match(publicCss, /\.auth-status\s*\{[\s\S]*background:var\(--tc-success-bg\)/);
     assert.match(publicCss, /\.auth-status\s*\{[\s\S]*color:var\(--tc-success\)/);
+    assert.match(publicCss, /\.auth-status:empty\s*\{[\s\S]*display:none/);
 });
 
 test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => {
