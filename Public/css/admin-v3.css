@@ -1092,6 +1092,33 @@ html[data-theme='light'] .rural-panel th {
     background:var(--admin-surface);
 }
 
+.rural-panel .farm-map-picker:fullscreen {
+    display:flex;
+    flex-direction:column;
+    width:100vw;
+    height:100dvh;
+    box-sizing:border-box;
+    margin:0;
+    padding:16px;
+    overflow:auto;
+    border:0;
+    border-radius:0;
+    background:var(--admin-surface);
+}
+
+.rural-panel .farm-map-picker:fullscreen .map-shell {
+    display:flex;
+    flex:1 1 auto;
+    flex-direction:column;
+    min-height:0;
+}
+
+.rural-panel .farm-map-picker:fullscreen .map-shell__canvas {
+    flex:1 1 auto;
+    height:auto;
+    min-height:240px;
+}
+
 @media (max-width:640px) {
     .rural-panel .modal {
         width:calc(100% - 18px) !important;

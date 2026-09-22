@@ -304,6 +304,7 @@ export function crearSelectorPuntoFinca({
                     : CENTRO_COSTA_RICA;
             const creado = await crearMapaFn({
                 contenedor: canvas,
+                fullscreenContainer: mount,
                 coordenadas: punto,
                 centro,
                 zoom: ubicacionUsuario && !punto ? 13 : 7,

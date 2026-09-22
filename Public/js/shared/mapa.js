@@ -144,6 +144,7 @@ export async function crearMapa({
     onMarkerChange = () => {},
     onMapClick = () => {},
     onError = () => {},
+    fullscreenContainer = null,
     ResizeObserverImpl = typeof ResizeObserver !== 'undefined' ? ResizeObserver : null,
 } = {}) {
     if (!contenedor) throw new TypeError('Se requiere un contenedor para el mapa.');
@@ -222,7 +223,12 @@ export async function crearMapa({
         map.addControl?.(new maplibre.AttributionControl({ compact: false, customAttribution: PROVIDER_ATTRIBUTION }), 'bottom-right');
     }
     if (interactive && maplibre.NavigationControl) map.addControl?.(new maplibre.NavigationControl({ showCompass: false }), 'top-right');
-    if (interactive && maplibre.FullscreenControl) map.addControl?.(new maplibre.FullscreenControl(), 'top-right');
+    if (interactive && maplibre.FullscreenControl) {
+        map.addControl?.(
+            new maplibre.FullscreenControl({ container: fullscreenContainer ?? contenedor }),
+            'top-right',
+        );
+    }
 
     function activarCapaRaster(nombre, visible = true) {
         if (destroyed || !map.addSource || !map.addLayer) return false;

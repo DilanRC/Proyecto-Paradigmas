@@ -74,6 +74,8 @@ test('la finca puede centrar el mapa en la ubicación del usuario sin activar el
     assert.ok(map.includes('FullscreenControl'));
     assert.ok(map.includes('cooperativeGestures: false'));
     assert.ok(farmMap.includes('listenersDeCapasInstalados'));
+    assert.ok(map.includes('fullscreenContainer ?? contenedor'));
+    assert.ok(farmMap.includes('fullscreenContainer: mount'));
 });
 
 test('usuario y admin reutilizan el mismo selector de finca', () => {

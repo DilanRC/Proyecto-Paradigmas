@@ -147,3 +147,14 @@ mismos recursos que el checkout, incluido `/assets/geo/costa-rica-limits.geojson
 Una pantalla remota que difiera de localhost requiere primero revisar el
 checkout montado, el caché de módulos ES y el volumen del contenedor; no se
 deben corregir versiones distintas en paralelo.
+
+### Incidente registrado: fullscreen recortaba los controles del mapa (2026-09-22)
+
+El mapa tenía búsqueda, capas, ubicación y cierre fuera del nodo que MapLibre
+maximizaba. Al activar pantalla completa solo se veía el lienzo, por lo que las
+opciones parecían desaparecer. El control debe recibir como `container` el
+selector completo de finca, no únicamente el canvas del mapa. El selector se
+organiza en fullscreen con `flex` y el canvas ocupa el espacio restante.
+Toda modificación futura del contenedor de fullscreen debe comprobar que los
+controles siguen visibles y operables, que `Esc` restaura el estado normal y que
+el mapa conserva scroll, zoom, búsqueda, capas y ubicación.
