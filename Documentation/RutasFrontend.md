@@ -175,3 +175,20 @@ capas queda bajo fullscreen en la esquina superior derecha; ubicación y quitar
 punto quedan juntos en la esquina inferior derecha. No se debe volver a poner
 la búsqueda como una fila de ancho completo fuera del mapa, porque reduce el
 área útil y rompe el patrón de interacción esperado.
+
+### Incidente registrado: sobre-zoom y búsqueda sin sugerencias (2026-09-22)
+
+OpenFreeMap usa datos vectoriales de OpenMapTiles con un nivel máximo operativo.
+Permitir que el usuario se acercara sin límite hacía que MapLibre solicitara
+teselas inexistentes y mostrara bloques grises con “Map data not yet available”.
+El mapa ahora limita el zoom a 14, y los centrados por ubicación automática o
+por búsqueda respetan ese mismo límite.
+
+La búsqueda ahora consulta después de una pausa breve mientras se escribe,
+además de conservar Enter y el botón de búsqueda. Las sugerencias se obtienen
+de Nominatim con país Costa Rica y el área acotada del proyecto; al elegir una
+se conserva la latitud y longitud devueltas por el proveedor. No se copia la
+cartografía ni el autocompletado propietario de Google: la ubicación automática
+usa la geolocalización del navegador y la búsqueda usa el proveedor abierto
+aprobado para el proyecto, evitando una dependencia de pago y manteniendo la
+atribución requerida.

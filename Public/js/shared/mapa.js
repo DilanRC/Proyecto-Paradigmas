@@ -5,6 +5,9 @@ export const MAPLIBRE_VERSION = '6.9.0';
 export const MAPLIBRE_MODULE_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.mjs`;
 export const MAPLIBRE_CSS_URL = `https://unpkg.com/maplibre-gl@${MAPLIBRE_VERSION}/dist/maplibre-gl.css`;
 export const MAP_STYLE_URL = 'https://tiles.openfreemap.org/styles/liberty';
+// OpenFreeMap publica la cartografía vectorial de OpenMapTiles hasta este
+// nivel para el estilo Liberty. Evita el sobre-zoom que produce teselas vacías.
+export const MAP_MAX_ZOOM = 14;
 export const SNIT_IGN_WMS_URL = 'https://geos.snitcr.go.cr/be/IGN_5/wms';
 export const ESRI_SATELLITE_TILES_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
 const RASTER_LAYERS = Object.freeze({
@@ -135,7 +138,7 @@ export async function crearMapa({
     coordenadas = null,
     centro = CENTRO_COSTA_RICA,
     zoom = 7,
-    zoomMarcador = 15,
+    zoomMarcador = MAP_MAX_ZOOM,
     draggable = false,
     interactive = true,
     styleUrl = MAP_STYLE_URL,
@@ -169,6 +172,7 @@ export async function crearMapa({
             attributionControl: false,
             cooperativeGestures: false,
             maxBounds: BOUNDS_COSTA_RICA,
+            maxZoom: MAP_MAX_ZOOM,
             renderWorldCopies: false,
         });
     } catch (cause) {
@@ -217,6 +221,7 @@ export async function crearMapa({
         // ciertos builds permitan desplazar el mapa fuera del ámbito definido.
         map.setMaxBounds?.(BOUNDS_COSTA_RICA);
         map.setMinZoom?.(6.4);
+        map.setMaxZoom?.(MAP_MAX_ZOOM);
     } catch (error) {
         try { map.remove?.(); } catch {}
         onError(error);
@@ -293,7 +298,7 @@ export async function crearMapa({
     function centrar(nuevasCoordenadas, nuevoZoom = zoomMarcador) {
         if (destroyed) return;
         const normalizadas = normalizarCoordenadas(nuevasCoordenadas);
-        map.jumpTo?.({ center: normalizadas.lngLat, zoom: nuevoZoom });
+        map.jumpTo?.({ center: normalizadas.lngLat, zoom: Math.min(nuevoZoom, MAP_MAX_ZOOM) });
     }
 
     function ajustar(puntos = [], { padding = 40, maxZoom = zoomMarcador } = {}) {

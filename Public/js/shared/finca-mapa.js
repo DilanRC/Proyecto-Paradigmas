@@ -1,5 +1,6 @@
 import {
     CENTRO_COSTA_RICA,
+    MAP_MAX_ZOOM,
     cargarLimitesCostaRica,
     crearMapa,
     normalizarCoordenadas,
@@ -259,7 +260,7 @@ export function crearSelectorPuntoFinca({
                     return;
                 }
                 establecer(resultado);
-                mapa?.centrar?.(resultado, 16);
+                mapa?.centrar?.(resultado, MAP_MAX_ZOOM);
                 searchResults.hidden = true;
                 status.textContent = 'Lugar encontrado. Puedes ajustar el punto en el mapa.';
             });
@@ -431,7 +432,7 @@ export function crearSelectorPuntoFinca({
             if (destruido || solicitud !== solicitudUbicacion) return;
             if (mapa) {
                 mapa.establecerMarcador(ubicacion);
-                mapa.centrar(ubicacion, 15);
+                mapa.centrar(ubicacion, MAP_MAX_ZOOM);
                 status.textContent = resultado.reutilizada
                     ? 'Usamos tu ubicación reciente. Puedes ajustar el punto en el mapa.'
                     : 'Ubicación encontrada. Puedes ajustar el punto en el mapa.';
@@ -465,6 +466,7 @@ export function crearSelectorPuntoFinca({
         status.textContent = 'Punto exacto eliminado. La dirección escrita se conserva.';
     });
     retry.addEventListener('click', () => { cerrarMapa(); abrirMapa(); });
+    let sugerenciasTimer = null;
     const buscar = async () => {
         const consulta = searchInput.value.trim();
         if (consulta.length < 3) {
@@ -490,6 +492,17 @@ export function crearSelectorPuntoFinca({
         }
     };
     searchSubmit.addEventListener('click', buscar);
+    searchInput.addEventListener('input', () => {
+        clearTimeout(sugerenciasTimer);
+        searchController.current?.abort();
+        const consulta = searchInput.value.trim();
+        if (consulta.length < 3) {
+            searchResults.replaceChildren();
+            searchResults.hidden = true;
+            return;
+        }
+        sugerenciasTimer = setTimeout(() => { buscar(); }, 300);
+    });
     searchInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
             event.preventDefault();
