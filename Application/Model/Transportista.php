@@ -76,6 +76,25 @@ final class Transportista
         return $this->mapear($fila, $this->vehiculos->listarVehiculosPorTransportista((int) $fila['tbtransportistaid']));
     }
 
+    public function buscarPorPersonaId(int $personaId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT t.*, pe.tbpersonaidentificacionnumero AS tbtransportistaidentificacionnumero,
+                    pe.tbpersonaidentificaciontipo AS tbtransportistaidentificaciontipo,
+                    pe.tbpersonanombre AS tbtransportistanombre, pe.tbpersonatelefono AS tbtransportistatelefono,
+                    pe.tbpersonacorreoelectronico AS tbtransportistacorreoelectronico, pe.tbpersonaestado
+             FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid
+             WHERE t.tbpersonaid = :personaId'
+        );
+        $sentencia->execute(['personaId' => $personaId]);
+        $filas = $sentencia->fetchAll();
+        if ($filas === []) return null;
+        if (count($filas) !== 1) throw new \RuntimeException('La Persona tiene más de un contexto Transportista.');
+        $fila = $filas[0];
+
+        return $this->mapear($fila, $this->vehiculos->listarVehiculosPorTransportista((int) $fila['tbtransportistaid']));
+    }
+
     /**
      * Lectura mínima por id interno, para uso de otros controllers/modelos
      * (por ejemplo, TransportistaVehiculoController al resolver el dueño de

@@ -9,6 +9,10 @@ import {
     puntoDentroDeLimitesCostaRica,
     SNIT_IGN_WMS_URL,
     ESRI_SATELLITE_TILES_URL,
+    ANOC_10CM_LAYER,
+    ANOC_50CM_LAYER,
+    puntoDentroDeCobertura,
+    resolverFuenteImagen,
 } from '../../Public/js/shared/mapa.js';
 import { buscarLugaresPorNombre } from '../../Public/js/shared/finca-mapa.js';
 
@@ -86,6 +90,18 @@ test('la carga de límites permite reintentar después de un fallo', async () =>
     assert.equal(intentos, 2);
 });
 
+test('la selección de imagen aérea prioriza ANOC 10 cm, luego 50 cm y finalmente Esri', () => {
+    const punto10 = { latitud: 8.92, longitud: -83.51 };
+    const punto50 = { latitud: 10.7, longitud: -85.6 };
+    const puntoFuera = { latitud: 9.9, longitud: -84.1 };
+    assert.equal(puntoDentroDeCobertura(punto10, resolverFuenteImagen(punto10).bounds), true);
+    assert.equal(resolverFuenteImagen(punto10).id, 'anoc-10cm');
+    assert.equal(resolverFuenteImagen(punto50).id, 'anoc-50cm');
+    assert.equal(resolverFuenteImagen(puntoFuera).id, 'esri');
+    assert.equal(resolverFuenteImagen(punto10, { disponibilidad: { 'anoc-10cm': false } }).id, 'esri');
+    assert.equal(resolverFuenteImagen(punto50, { disponibilidad: { 'anoc-50cm': false } }).id, 'esri');
+});
+
 test('crearMapa centraliza estilo, atribucion, marcador y destruccion', async () => {
     const container = {};
     const controller = await crearMapa({
@@ -99,6 +115,7 @@ test('crearMapa centraliza estilo, atribucion, marcador y destruccion', async ()
     assert.equal(FakeMap.last.options.style, MAP_STYLE_URL);
     assert.equal(FakeMap.last.options.attributionControl, false);
     assert.equal(FakeMap.last.options.interactive, false);
+    assert.equal(FakeMap.last.options.maxZoom, 20);
     assert.deepEqual(controller.obtenerCoordenadas(), { latitud: '9.9000000', longitud: '-84.1000000' });
     controller.establecerMarcador({ latitud: 10, longitud: -85 });
     assert.deepEqual(controller.obtenerCoordenadas(), { latitud: '10.0000000', longitud: '-85.0000000' });
@@ -114,6 +131,25 @@ test('crearMapa centraliza estilo, atribucion, marcador y destruccion', async ()
     controller.destruir();
     assert.equal(FakeMap.last.removed, true);
     assert.equal(controller.destruido, true);
+});
+
+test('las ortofotos ANOC usan WMTS KVP y no cambian el zoom global del mapa', async () => {
+    const controller = await crearMapa({
+        contenedor: {}, coordenadas: { latitud: 8.92, longitud: -83.51 },
+        maplibreLoader: async () => fakeLib, ResizeObserverImpl: null, timeoutMs: 100,
+    });
+    const fuente10 = controller.activarImagenAerea();
+    assert.equal(fuente10.id, 'anoc-10cm');
+    const origen10 = FakeMap.last.sources.get('tc-image-anoc-10cm');
+    assert.match(origen10.tiles[0], new RegExp(ANOC_10CM_LAYER));
+    assert.match(origen10.tiles[0], /TILEMATRIX=EPSG:3857:\{z\}/);
+    assert.equal(origen10.maxzoom, 20);
+    controller.establecerMarcador({ latitud: 10.7, longitud: -85.6 }, { centrar: false });
+    const fuente50 = controller.activarImagenAerea();
+    assert.equal(fuente50.id, 'anoc-50cm');
+    assert.match(FakeMap.last.sources.get('tc-image-anoc-50cm').tiles[0], new RegExp(ANOC_50CM_LAYER));
+    assert.equal(FakeMap.last.options.maxZoom, 20);
+    controller.destruir();
 });
 
 test('fallo de estilo antes de load produce fallback controlable', async () => {

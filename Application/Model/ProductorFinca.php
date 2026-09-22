@@ -108,6 +108,110 @@ final class ProductorFinca
         return $sentencia->fetchAll();
     }
 
+    /** @return array<int,array{fincaId:int,nombre:string}> */
+    public function listarActivasConIds(int $productorId): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbfincaid AS fincaId, tbfincanombre AS nombre
+             FROM tbfinca
+             WHERE tbproductorid = :productorId
+               AND tbfincaestado = 1
+             ORDER BY tbfincanombre'
+        );
+        $sentencia->execute(['productorId' => $productorId]);
+
+        return array_map(
+            static fn (array $fila): array => [
+                'fincaId' => (int) $fila['fincaId'],
+                'nombre' => $fila['nombre'],
+            ],
+            $sentencia->fetchAll(),
+        );
+    }
+
+    public function bloquearPropia(int $fincaId, int $productorId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbfincaid AS fincaId, tbproductorid AS productorId,
+                    tbfincanombre AS nombre, tbfincaestado AS estado
+             FROM tbfinca
+             WHERE tbfincaid = :fincaId
+               AND tbproductorid = :productorId
+             FOR UPDATE'
+        );
+        $sentencia->execute(['fincaId' => $fincaId, 'productorId' => $productorId]);
+        $fila = $sentencia->fetch();
+
+        return $fila === false ? null : [
+            'fincaId' => (int) $fila['fincaId'],
+            'productorId' => (int) $fila['productorId'],
+            'nombre' => $fila['nombre'],
+            'estado' => (int) $fila['estado'],
+        ];
+    }
+
+    public function buscarIdPorNombre(int $productorId, string $nombre): ?int
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbfincaid
+             FROM tbfinca
+             WHERE tbproductorid = :productorId
+               AND tbfincanombre = :nombre
+             ORDER BY tbfincaid
+             LIMIT 2'
+        );
+        $sentencia->execute(['productorId' => $productorId, 'nombre' => $nombre]);
+        $filas = $sentencia->fetchAll(PDO::FETCH_COLUMN);
+        if (count($filas) > 1) {
+            throw new \RuntimeException('Existen fincas duplicadas para el productor.');
+        }
+
+        return $filas === [] ? null : (int) $filas[0];
+    }
+
+    public function crear(int $productorId, string $nombre): int
+    {
+        $fincaId = $this->siguienteId();
+        $sentencia = $this->conexion->prepare(
+            'INSERT INTO tbfinca
+             (tbfincaid, tbproductorid, tbfincanombre, tbfincaestado)
+             VALUES (:fincaId, :productorId, :nombre, 1)'
+        );
+        $sentencia->execute([
+            'fincaId' => $fincaId,
+            'productorId' => $productorId,
+            'nombre' => $nombre,
+        ]);
+
+        return $fincaId;
+    }
+
+    public function cambiarEstado(int $fincaId, int $productorId, bool $activo): void
+    {
+        $sentencia = $this->conexion->prepare(
+            'UPDATE tbfinca SET tbfincaestado = :estado
+             WHERE tbfincaid = :fincaId AND tbproductorid = :productorId'
+        );
+        $sentencia->execute([
+            'estado' => $activo ? 1 : 0,
+            'fincaId' => $fincaId,
+            'productorId' => $productorId,
+        ]);
+    }
+
+    public function actualizarNombre(int $fincaId, int $productorId, string $nombre): void
+    {
+        $sentencia = $this->conexion->prepare(
+            'UPDATE tbfinca SET tbfincanombre = :nombre
+             WHERE tbfincaid = :fincaId AND tbproductorid = :productorId'
+        );
+        $sentencia->execute([
+            'nombre' => $nombre,
+            'fincaId' => $fincaId,
+            'productorId' => $productorId,
+        ]);
+    }
+
     public function listarPorProductores(array $productorIds): array
     {
         if ($productorIds === []) {

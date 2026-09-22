@@ -226,7 +226,26 @@ function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 }
 
-function initialize() {
+async function resolveAuthenticatedActivity(authSession) {
+    if (!authSession) return null;
+    try {
+        const response = await request('api/v1/actividad', { timeoutMs: 10000 });
+        const activity = response.data;
+        syncPublicProfile(activity);
+        const allConfigured = Object.values(activity?.capacidades ?? {})
+            .every((detail) => detail?.estado !== 'NO_CONFIGURADO');
+        if (allConfigured) {
+            window.location.assign('mi-actividad');
+            return { redirected: true };
+        }
+        return activity;
+    } catch {
+        // Un usuario autenticado sin Persona aún puede completar la primera alta.
+        return null;
+    }
+}
+
+async function initialize() {
     const form = document.querySelector('#registro-form');
     const nextButton = document.querySelector('#registro-siguiente');
     const previousButton = document.querySelector('#registro-anterior');
@@ -237,6 +256,8 @@ function initialize() {
     inicializarUbicacionAutomatica();
 
     const authSession = readAuthSession();
+    const activityProfile = await resolveAuthenticatedActivity(authSession);
+    if (activityProfile?.redirected) return;
     const existingProfile = readStored(PROFILE_KEY);
     const extending = Boolean(existingProfile?.persona && authSession);
     if (authSession && !existingProfile?.persona) {

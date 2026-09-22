@@ -52,6 +52,11 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.match(map, /MAP_INTERACTION_MAX_ZOOM = 20/);
     assert.match(map, /MAP_MARKER_ZOOM = 18/);
     assert.ok(map.includes('maxzoom: 18'));
+    assert.ok(map.includes('ANOC_10CM_WMTS_URL'));
+    assert.ok(map.includes('ANOC_50CM_WMTS_URL'));
+    assert.ok(map.includes('resolverFuenteImagen'));
+    assert.equal(map.includes('OPEN_MAP_NATIVE_MAX_ZOOM'), false);
+    assert.equal(map.includes('setMaxZoom(18)'), false, 'el zoom 18 solo pertenece al proveedor Esri');
     assert.ok(farmMap.includes("searchInput.addEventListener('input'"));
     assert.ok(farmMap.includes('sugerenciasTimer'));
     assert.ok(farmMap.includes('mapa?.centrar?.(resultado, MAP_MARKER_ZOOM)'));

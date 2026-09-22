@@ -2,6 +2,7 @@ import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
 import { readPublicProfile } from './shared/public-profile.js';
 import { clearAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-2';
+import { request } from './shared/api.js';
 
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';
@@ -183,6 +184,28 @@ async function resolveAdminLink(menu) {
     }
 }
 
+async function resolveProfileRegister(menu) {
+    const register = menu?.querySelector('[data-profile-register]');
+    if (!register) return;
+    register.hidden = true;
+    try {
+        const response = await request('api/v1/actividad', { timeoutMs: 10000 });
+        const capacidades = response.data?.capacidades ?? {};
+        const pendientes = Object.entries(capacidades)
+            .filter(([, detail]) => detail?.estado === 'NO_CONFIGURADO')
+            .map(([id]) => id);
+        if (pendientes.length === 0) return;
+        register.hidden = false;
+        register.href = pendientes.length === 1
+            ? `registro?capacidad=${encodeURIComponent(pendientes[0])}&next=mi-actividad`
+            : 'mi-actividad#actividades';
+        const label = register.querySelector('span');
+        if (label) label.textContent = pendientes.length === 1 ? 'Completar actividad' : 'Agregar actividad';
+    } catch {
+        // La acción opcional falla cerrada si no se puede consultar el estado.
+    }
+}
+
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
     addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
@@ -196,6 +219,7 @@ function enhancePublicNavigation() {
     if (session?.authenticated === true) {
         const menu = createAccountMenu(actions, session, readPublicProfile());
         void resolveAdminLink(menu);
+        void resolveProfileRegister(menu);
         return;
     }
 

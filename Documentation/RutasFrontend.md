@@ -57,6 +57,9 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 | `/api/capacidades.php` |
 | `/api/identidad.php` |
 | `/api/metodo-no-permitido.php` |
+| `/api/v1/actividad` |
+| `/api/v1/mi-fincas` |
+| `/api/v1/mi-vehiculos` |
 
 `/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
 
@@ -216,7 +219,18 @@ El catálogo oficial del SNIT confirma los servicios `202601_10cm` y
 confirman cobertura parcial, no nacional: la ortoimagen de 10 cm publica un
 bloque aproximado entre -83.56/-83.46 y 8.85/9.00; la de 50 cm publica un
 bloque aproximado entre -85.89/-85.37 y 10.20/11.23. Por eso se documentan
-como fuentes oficiales candidatas para una capa de ortofoto por cobertura,
-pero no se sustituyen todavía como satélite nacional predeterminado.
+como fuentes oficiales de ortofoto por cobertura. La interfaz las selecciona
+bajo demanda por punto, sin alterar el mapa base ni tratar una cobertura
+parcial como cobertura nacional.
 Las capacidades consultadas son `https://geos1.snitcr.go.cr/ANOC_10cm_202601/wmts?SERVICE=WMTS&REQUEST=GetCapabilities&VERSION=1.0.0`
 y `https://geos1.snitcr.go.cr/ANOC_50cm_202601/wmts?SERVICE=WMTS&REQUEST=GetCapabilities&VERSION=1.0.0`.
+
+La implementación usa WMTS KVP con los identificadores
+`ortoimagen_10cm_mision_202601` y `ortoimagen_50cm_mision_202601`,
+`TILEMATRIXSET=EPSG:3857` y las cajas WGS84 publicadas por cada capability.
+La prioridad es 10 cm, 50 cm y Esri World Imagery como respaldo. Si una
+tesela falla, esa fuente se marca no disponible durante la instancia del mapa
+y se intenta la siguiente. ANOC declara `maxzoom:20` para acompañar la
+interacción del mapa; Esri conserva `maxzoom:18`. El mapa conserva
+`MAP_INTERACTION_MAX_ZOOM=20` y el centrado de marcador `MAP_MARKER_ZOOM=18`;
+no existe un límite nativo global de 18.

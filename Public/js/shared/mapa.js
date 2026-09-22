@@ -11,6 +11,39 @@ export const MAP_INTERACTION_MAX_ZOOM = 20;
 export const MAP_MARKER_ZOOM = 18;
 export const SNIT_IGN_WMS_URL = 'https://geos.snitcr.go.cr/be/IGN_5/wms';
 export const ESRI_SATELLITE_TILES_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+export const ANOC_10CM_WMTS_URL = 'https://geos1.snitcr.go.cr/ANOC_10cm_202601/wmts';
+export const ANOC_50CM_WMTS_URL = 'https://geos1.snitcr.go.cr/ANOC_50cm_202601/wmts';
+export const ANOC_10CM_LAYER = 'ortoimagen_10cm_mision_202601';
+export const ANOC_50CM_LAYER = 'ortoimagen_50cm_mision_202601';
+export const ANOC_10CM_BOUNDS = Object.freeze({
+    minLongitud: -83.55581538057955,
+    minLatitud: 8.851926979750909,
+    maxLongitud: -83.46222066541057,
+    maxLatitud: 8.998951994913051,
+});
+export const ANOC_50CM_BOUNDS = Object.freeze({
+    minLongitud: -85.88095481687932,
+    minLatitud: 10.197936887155999,
+    maxLongitud: -85.37283029642228,
+    maxLatitud: 11.23457328241847,
+});
+export const IMAGEN_AEREA_PRIORIDAD = Object.freeze(['anoc-10cm', 'anoc-50cm', 'esri']);
+export const IMAGEN_AEREA = Object.freeze({
+    'anoc-10cm': Object.freeze({
+        id: 'anoc-10cm', proveedor: 'snit', etiqueta: 'ANOC 10 cm',
+        url: ANOC_10CM_WMTS_URL, layer: ANOC_10CM_LAYER, bounds: ANOC_10CM_BOUNDS,
+        maxzoom: 20,
+    }),
+    'anoc-50cm': Object.freeze({
+        id: 'anoc-50cm', proveedor: 'snit', etiqueta: 'ANOC 50 cm',
+        url: ANOC_50CM_WMTS_URL, layer: ANOC_50CM_LAYER, bounds: ANOC_50CM_BOUNDS,
+        maxzoom: 20,
+    }),
+    esri: Object.freeze({
+        id: 'esri', proveedor: 'esri', etiqueta: 'Esri World Imagery',
+        url: ESRI_SATELLITE_TILES_URL, bounds: null, maxzoom: 18,
+    }),
+});
 const RASTER_LAYERS = Object.freeze({
     snitEdificaciones: { source: 'tc-snit-edificaciones', layer: 'tc-snit-edificaciones-layer', wmsLayer: 'edificaciones2017_5k', opacity: 0.78 },
     snitVias: { source: 'tc-snit-vias', layer: 'tc-snit-vias-layer', wmsLayer: 'vias_5000', opacity: 0.82 },
@@ -85,6 +118,29 @@ export function puntoDentroDeLimitesCostaRica(punto, geojson) {
     return (geojson?.features ?? []).some((feature) => puntoEnGeometria(longitud, latitud, feature.geometry));
 }
 
+export function puntoDentroDeCobertura(punto, bounds) {
+    const latitud = Number(punto?.latitud);
+    const longitud = Number(punto?.longitud);
+    return Boolean(
+        bounds
+        && Number.isFinite(latitud)
+        && Number.isFinite(longitud)
+        && longitud >= bounds.minLongitud
+        && longitud <= bounds.maxLongitud
+        && latitud >= bounds.minLatitud
+        && latitud <= bounds.maxLatitud,
+    );
+}
+
+export function resolverFuenteImagen(punto, { disponibilidad = {} } = {}) {
+    for (const id of IMAGEN_AEREA_PRIORIDAD) {
+        const fuente = IMAGEN_AEREA[id];
+        if (disponibilidad[id] === false) continue;
+        if (!fuente.bounds || puntoDentroDeCobertura(punto, fuente.bounds)) return fuente;
+    }
+    return null;
+}
+
 const PROVIDER_ATTRIBUTION = '<a href="https://openfreemap.org/" target="_blank" rel="noopener noreferrer">OpenFreeMap</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap contributors</a> · <a href="https://www.snitcr.go.cr/" target="_blank" rel="noopener noreferrer">SNIT/IGN</a> · <a href="https://www.esri.com/en-us/legal/terms/full-master-agreement" target="_blank" rel="noopener noreferrer">Esri</a>';
 
 function resolverDocumento(documentRef) {
@@ -132,6 +188,10 @@ function formatearCoordenadas(lngLat) {
 function crearUrlWms(capa) {
     const params = new URLSearchParams({ service: 'WMS', version: '1.3.0', request: 'GetMap', layers: capa, styles: '', format: 'image/png', transparent: 'true', width: '256', height: '256', crs: 'EPSG:3857', bbox: '{bbox-epsg-3857}' });
     return `${SNIT_IGN_WMS_URL}?${params}`.replace('%7Bbbox-epsg-3857%7D', '{bbox-epsg-3857}');
+}
+
+function crearUrlWmts(fuente) {
+    return `${fuente.url}?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=${fuente.layer}&STYLE=_empty&TILEMATRIXSET=EPSG:3857&TILEMATRIX=EPSG:3857:{z}&TILEROW={y}&TILECOL={x}&FORMAT=image/png`;
 }
 
 export async function crearMapa({
@@ -187,6 +247,10 @@ export async function crearMapa({
     let marker = null;
     let resizeObserver = null;
     const capasRaster = new Set();
+    const imagenesAereas = new Map();
+    const disponibilidadImagenes = {};
+    let imagenAereaActiva = null;
+    let ultimoPuntoImagen = coordenadas ?? { latitud: centro[1], longitud: centro[0] };
 
     function capaAntesDeEtiquetas() {
         return map.getStyle?.().layers?.find((layer) => layer.type === 'symbol')?.id;
@@ -194,6 +258,16 @@ export async function crearMapa({
 
     map.on?.('error', (event) => {
         if (!loaded || destroyed) return;
+        const fuenteFallida = [...imagenesAereas.values()].find((item) => item.source === event?.sourceId)?.fuente;
+        if (fuenteFallida && imagenAereaActiva === fuenteFallida.id) {
+            disponibilidadImagenes[fuenteFallida.id] = false;
+            const siguiente = activarImagenAerea(ultimoPuntoImagen);
+            const error = crearError('image-fallback', siguiente
+                ? `La fuente ${fuenteFallida.etiqueta} no está disponible. Se muestra ${siguiente.etiqueta}.`
+                : 'La imagen aérea no está disponible. El mapa normal continúa operativo.', event?.error ?? null);
+            onError(error);
+            return;
+        }
         onError(crearError('resource', 'Un recurso cartografico no pudo cargarse.', event?.error ?? null));
     });
 
@@ -273,6 +347,54 @@ export async function crearMapa({
         return true;
     }
 
+    function asegurarImagenAerea(fuente) {
+        const existente = imagenesAereas.get(fuente.id);
+        if (existente) return existente;
+        const source = `tc-image-${fuente.id}`;
+        const layer = `tc-image-${fuente.id}-layer`;
+        map.addSource(source, {
+            type: 'raster',
+            tiles: [fuente.proveedor === 'esri' ? fuente.url : crearUrlWmts(fuente)],
+            tileSize: 256,
+            maxzoom: fuente.maxzoom,
+            ...(fuente.bounds ? { bounds: [fuente.bounds.minLongitud, fuente.bounds.minLatitud, fuente.bounds.maxLongitud, fuente.bounds.maxLatitud] } : {}),
+        });
+        map.addLayer({ id: layer, type: 'raster', source, layout: { visibility: 'none' }, paint: { 'raster-opacity': 1 } }, capaAntesDeEtiquetas());
+        const creada = { fuente, source, layer };
+        imagenesAereas.set(fuente.id, creada);
+        return creada;
+    }
+
+    function activarImagenAerea(punto = ultimoPuntoImagen) {
+        if (destroyed) return null;
+        ultimoPuntoImagen = punto ?? ultimoPuntoImagen;
+        let fuente = resolverFuenteImagen(ultimoPuntoImagen, { disponibilidad: disponibilidadImagenes });
+        while (fuente) {
+            try {
+                const imagen = asegurarImagenAerea(fuente);
+                for (const otra of imagenesAereas.values()) {
+                    map.setLayoutProperty?.(otra.layer, 'visibility', otra.fuente.id === fuente.id ? 'visible' : 'none');
+                }
+                imagenAereaActiva = fuente.id;
+                return fuente;
+            } catch (error) {
+                disponibilidadImagenes[fuente.id] = false;
+                onError(crearError('image-fallback', `No fue posible cargar ${fuente.etiqueta}.`, error));
+                fuente = resolverFuenteImagen(ultimoPuntoImagen, { disponibilidad: disponibilidadImagenes });
+            }
+        }
+        imagenAereaActiva = null;
+        for (const imagen of imagenesAereas.values()) map.setLayoutProperty?.(imagen.layer, 'visibility', 'none');
+        return null;
+    }
+
+    function desactivarImagenAerea() {
+        imagenAereaActiva = null;
+        for (const imagen of imagenesAereas.values()) {
+            map.setLayoutProperty?.(imagen.layer, 'visibility', 'none');
+        }
+    }
+
     function crearMarcador(lngLat) {
         const nuevo = new maplibre.Marker({ draggable }).setLngLat(lngLat).addTo(map);
         if (draggable && nuevo.on) nuevo.on('dragend', () => { if (!destroyed) onMarkerChange(formatearCoordenadas(nuevo.getLngLat())); });
@@ -282,6 +404,7 @@ export async function crearMapa({
     function establecerMarcador(nuevasCoordenadas, { centrar: debeCentrar = true } = {}) {
         if (destroyed) return null;
         const normalizadas = normalizarCoordenadas(nuevasCoordenadas);
+        ultimoPuntoImagen = normalizadas;
         if (!marker) marker = crearMarcador(normalizadas.lngLat);
         else marker.setLngLat(normalizadas.lngLat);
         if (debeCentrar) map.jumpTo?.({ center: normalizadas.lngLat, zoom: Math.max(map.getZoom?.() ?? zoomMarcador, zoomMarcador) });
@@ -344,6 +467,9 @@ export async function crearMapa({
         centrar,
         ajustar,
         activarCapaRaster,
+        activarImagenAerea,
+        desactivarImagenAerea,
+        obtenerImagenAerea: () => imagenAereaActiva ? IMAGEN_AEREA[imagenAereaActiva] : null,
         activarDetallesOficiales,
         redimensionar,
         destruir,

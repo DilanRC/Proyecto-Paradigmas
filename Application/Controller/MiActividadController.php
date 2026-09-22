@@ -73,6 +73,7 @@ final class MiActividadController
     {
         $persona = $this->personaAutenticada();
         $identificacion = (string) $persona['tbpersonaidentificacionnumero'];
+        $capacidades = $this->capacidades($identificacion);
 
         return $this->respuesta(true, 'Actividad consultada correctamente.', [
             'persona' => [
@@ -84,7 +85,8 @@ final class MiActividadController
                 'telefono' => $persona['tbpersonatelefono'],
                 'correoElectronico' => $persona['tbpersonacorreoelectronico'],
             ],
-            'capacidades' => $this->capacidades($identificacion),
+            'capacidades' => $capacidades,
+            'resumen' => $this->resumen($capacidades),
         ]);
     }
 
@@ -227,8 +229,30 @@ final class MiActividadController
             ),
         ];
         $capacidades['PRODUCTOR']['fincas'] = $productor['fincas'] ?? [];
+        $capacidades['TRANSPORTISTA']['vehiculos'] = $transportista['vehiculos'] ?? [];
 
         return $capacidades;
+    }
+
+    private function resumen(array $capacidades): array
+    {
+        $actividadesActivas = 0;
+        $actividadesPendientes = 0;
+        foreach ($capacidades as $capacidad) {
+            if (($capacidad['estado'] ?? null) === 'ACTIVO') {
+                $actividadesActivas++;
+            }
+            if (($capacidad['estado'] ?? null) === 'NO_CONFIGURADO') {
+                $actividadesPendientes++;
+            }
+        }
+
+        return [
+            'actividadesActivas' => $actividadesActivas,
+            'actividadesPendientes' => $actividadesPendientes,
+            'fincas' => count($capacidades['PRODUCTOR']['fincas'] ?? []),
+            'vehiculos' => count($capacidades['TRANSPORTISTA']['vehiculos'] ?? []),
+        ];
     }
 
     private function capacidad(

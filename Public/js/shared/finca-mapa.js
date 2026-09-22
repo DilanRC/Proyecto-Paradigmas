@@ -148,7 +148,7 @@ export function crearSelectorPuntoFinca({
                 <div class="map-shell__results" data-farm-map-results role="listbox" aria-label="Resultados de búsqueda" hidden></div>
             </div>
             <div class="map-shell__layer-control" aria-label="Capas del mapa">
-                <button type="button" class="map-shell__layer-button" data-farm-map-satellite aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--satellite" aria-hidden="true"></span>Satélite</button>
+                <button type="button" class="map-shell__layer-button" data-farm-map-satellite aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--satellite" aria-hidden="true"></span>Imagen aérea</button>
                 <button type="button" class="map-shell__layer-button" data-farm-map-normal aria-pressed="true"><span class="map-shell__layer-swatch map-shell__layer-swatch--normal" aria-hidden="true"></span>Mapa</button>
                 <button type="button" class="map-shell__layer-button" data-farm-map-details aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--details" aria-hidden="true"></span>Detalles oficiales</button>
             </div>
@@ -191,6 +191,7 @@ export function crearSelectorPuntoFinca({
     let limitesCostaRica = null;
     let limitesListos = null;
     let listenersDeCapasInstalados = false;
+    let imagenAereaSeleccionada = false;
     const prepararLimites = () => {
         limitesListos = cargarLimitesCostaRica().then((geojson) => {
         limitesCostaRica = geojson;
@@ -283,6 +284,9 @@ export function crearSelectorPuntoFinca({
         closeButton.hidden = true;
         locationButton.disabled = false;
         solicitudUbicacion += 1;
+        imagenAereaSeleccionada = false;
+        satelliteToggle.setAttribute('aria-pressed', 'false');
+        normalToggle.setAttribute('aria-pressed', 'true');
     };
 
     const abrirMapaInterno = async () => {
@@ -321,6 +325,7 @@ export function crearSelectorPuntoFinca({
                     punto = normalizarPunto(coordenadas);
                     puntoValidado = true;
                     mapa?.establecerMarcador?.(punto, { centrar: false });
+                    if (imagenAereaSeleccionada) mapa?.activarImagenAerea?.(punto);
                     render();
                     notificarCambio();
                     onPuntoChange(punto);
@@ -335,13 +340,14 @@ export function crearSelectorPuntoFinca({
                     }
                     punto = normalizarPunto(coordenadas);
                     puntoValidado = true;
+                    if (imagenAereaSeleccionada) mapa?.activarImagenAerea?.(punto);
                     render();
                     notificarCambio();
                     onPuntoChange(punto);
                     status.textContent = 'Punto ajustado. Se guardará al guardar la dirección.';
                 },
                 onError: (error) => {
-                    if (error?.kind === 'resource') {
+                    if (error?.kind === 'resource' || error?.kind === 'image-fallback') {
                         status.textContent = 'Parte de la cartografía no cargó. Puede seguir usando la dirección manual.';
                     }
                 },
@@ -363,20 +369,29 @@ export function crearSelectorPuntoFinca({
                     detailsToggle.setAttribute('aria-pressed', String(siguiente));
                 });
                 normalToggle.addEventListener('click', () => {
+                    imagenAereaSeleccionada = false;
+                    mapa?.desactivarImagenAerea?.();
                     mapa?.activarCapaRaster?.('satellite', false);
                     normalToggle.setAttribute('aria-pressed', 'true');
                     satelliteToggle.setAttribute('aria-pressed', 'false');
                 });
                 satelliteToggle.addEventListener('click', () => {
                     const siguiente = satelliteToggle.getAttribute('aria-pressed') !== 'true';
-                    const activo = mapa?.activarCapaRaster?.('satellite', siguiente);
-                    if (siguiente && !activo) {
+                    const fuente = siguiente ? mapa?.activarImagenAerea?.(punto) : null;
+                    if (siguiente && !fuente) {
                         satelliteToggle.setAttribute('aria-pressed', 'false');
-                        status.textContent = 'No pudimos cargar la vista satelital. Puedes continuar con el mapa base.';
+                        status.textContent = 'No hay una imagen aérea disponible. Puedes continuar con el mapa base.';
                         return;
                     }
+                    imagenAereaSeleccionada = siguiente;
+                    if (!siguiente) mapa?.desactivarImagenAerea?.();
                     satelliteToggle.setAttribute('aria-pressed', String(siguiente));
                     normalToggle.setAttribute('aria-pressed', String(!siguiente));
+                    if (fuente?.id === 'esri') {
+                        status.textContent = 'No hay ortofoto oficial de alta resolución para esta zona. Se muestra la imagen aérea disponible.';
+                    } else if (fuente) {
+                        status.textContent = `Se muestra ${fuente.etiqueta}.`;
+                    }
                 });
                 listenersDeCapasInstalados = true;
             }

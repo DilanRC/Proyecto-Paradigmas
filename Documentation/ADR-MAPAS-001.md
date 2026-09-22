@@ -132,7 +132,7 @@ Se mantiene:
 - `Public/js/shared/mapa.js` como unica capa que conoce MapLibre directamente;
 - `Public/js/shared/finca-mapa.js` como componente de negocio reutilizable por usuario y admin.
 
-El selector puede activar bajo demanda dos capas WMS del IGN (`edificaciones2017_5k` y `vias_5000`) sobre el mapa base. También ofrece una vista satelital opcional de Esri World Imagery. Ambas opciones se cargan solamente después de que la persona las activa; la atribución permanece visible en el mapa.
+El selector puede activar bajo demanda dos capas WMS del IGN (`edificaciones2017_5k` y `vias_5000`) sobre el mapa base. La opción **Imagen aérea** elige por cobertura la ortofoto oficial ANOC de 10 cm, luego la de 50 cm y finalmente Esri World Imagery. Estas capas se cargan solamente después de que la persona las activa; la atribución permanece visible en el mapa.
 
 El mapa no se carga al mostrar un formulario. MapLibre/OpenFreeMap se cargan solo al pulsar el boton de mapa.
 
@@ -155,6 +155,21 @@ OpenFreeMap recibe peticiones de estilo/teselas solamente cuando se abre un mapa
 ### SNIT/IGN y vista satelital
 
 El WMS `https://geos.snitcr.go.cr/be/IGN_5/wms` responde en `EPSG:3857` para las capas de edificaciones y vías usadas por el selector. El SNIT aplica cuotas y control de acceso, por lo que no se habilitan estas capas automáticamente ni se consulta el servicio desde el servidor en cada carga. La vista satelital usa teselas de Esri World Imagery con la atribución correspondiente; no se presenta como cartografía oficial del IGN.
+
+La cobertura ANOC se comprobó el 22 de septiembre de 2026 mediante las
+capabilities WMTS actuales. La misión `ANOC_10cm_202601` publica la capa
+`ortoimagen_10cm_mision_202601` con la caja `[-83.55581538057955,
+8.851926979750909, -83.46222066541057, 8.998951994913051]`; la misión
+`ANOC_50cm_202601` publica `ortoimagen_50cm_mision_202601` con la caja
+`[-85.88095481687932, 10.197936887155999, -85.37283029642228,
+11.23457328241847]`. Ambas se consumen con GetTile KVP en `EPSG:3857`, no
+como una caja nacional ficticia. El selector resuelve la fuente por el punto
+actual, y el error de carga de una fuente activa provoca fallback a la
+siguiente; si todas fallan, el mapa normal y la dirección manual continúan.
+
+La interacción del mapa mantiene `MAP_INTERACTION_MAX_ZOOM=20`, mientras el
+centrado del marcador usa `MAP_MARKER_ZOOM=18`. Esri conserva `maxzoom:18` en
+su propia fuente y ANOC `maxzoom:20`; no se impone un `maxZoom` global de 18.
 
 ## Contrato JSON
 

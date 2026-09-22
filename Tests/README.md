@@ -21,6 +21,10 @@ docker compose exec -T app php Tests/audit_test.php
 docker compose exec -T app php Tests/concurrency_test.php
 docker compose exec -T app php Tests/concurrency_eval.php
 docker compose exec -T app php Tests/mi_actividad_test.php
+docker compose exec -T app php Tests/mi_vehiculos_test.php
+docker compose exec -T app php Tests/api_mi_vehiculos_http_test.php
+docker compose exec -T app php Tests/mi_fincas_test.php
+docker compose exec -T app php Tests/api_mi_fincas_http_test.php
 docker compose exec -T app php Tests/capacidad_test.php
 docker compose exec -T app php Tests/naming_eval.php
 docker compose exec -T app php Tests/deployment_eval.php

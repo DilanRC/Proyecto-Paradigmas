@@ -17,7 +17,7 @@ servidor.
 | `/registro/comprador` | Pública | Registro guiado con Comprador preseleccionado |
 | `/registro/transportista` | Pública | Registro guiado con Transportista preseleccionado |
 | `/fletes` | Pública | Oferta de transporte |
-| `/mi-actividad` | Privada de Persona | Perfil y actividades |
+| `/mi-actividad` | Privada de Persona | Dashboard de identidad, actividades, fincas y vehículos propios |
 | `/publicar` | Privada de Persona | Publicar ganado |
 | `/sobre-nosotros` | Informativa | Información del producto |
 | `/como-usar` | Informativa | Guía de uso |
@@ -43,6 +43,8 @@ compatibilidad técnica durante la migración.
 | `/api/v1/auth/config` | Configuración pública de autenticación |
 | `/api/v1/admin/status` | Estado de autorización administrativa |
 | `/api/v1/actividad` | Actividad de la Persona autenticada |
+| `/api/v1/mi-vehiculos` | Vehículos propios del Transportista autenticado; nunca recibe una Persona o Transportista objetivo |
+| `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |
 | `/api/v1/registro` | Alta transaccional de identidad y actividades |
 | `/api/v1/capacidades` | Activar, desactivar o consultar capacidades |
