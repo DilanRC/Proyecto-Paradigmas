@@ -7,7 +7,7 @@ import {
     validatePersonaDraft,
 } from './shared/business-rules.js';
 import { conectarDireccion } from './shared/direccion.js';
-import { crearSelectorPuntoFinca } from './shared/finca-mapa.js';
+import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { request } from './shared/api.js';
 import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
@@ -79,14 +79,49 @@ function montarDireccionFinca(card, direccionInicial = null) {
     });
     direccion.aplicar(direccionInicial ?? {});
     details.querySelector('[data-finca-senas]').value = direccionInicial?.senas ?? '';
+    let geocodificacion = 0;
+    let geocodificacionAbortController = null;
+    const completarDireccionDesdePunto = async (punto) => {
+        geocodificacionAbortController?.abort();
+        const turno = ++geocodificacion;
+        if (!punto) return;
+        const controller = new AbortController();
+        geocodificacionAbortController = controller;
+        try {
+            const encontrada = await buscarDireccionPorCoordenadas(punto, { signal: controller.signal });
+            if (turno !== geocodificacion || !card.isConnected) return;
+            direccion.aplicar({
+                provincia: encontrada.provincia || card.querySelector('[data-finca-provincia]')?.value,
+                canton: encontrada.canton || card.querySelector('[data-finca-canton]')?.value,
+                distrito: encontrada.distrito || card.querySelector('[data-finca-distrito]')?.value,
+                pueblo: encontrada.pueblo || card.querySelector('[data-finca-pueblo]')?.value,
+            });
+            card.dispatchEvent(new Event('change', { bubbles: true }));
+        } catch (error) {
+            if (error?.name === 'AbortError') return;
+            // El punto y la dirección manual siguen siendo válidos si Nominatim
+            // falla o no encuentra un nombre local.
+        } finally {
+            if (geocodificacionAbortController === controller) geocodificacionAbortController = null;
+        }
+    };
     const mapa = crearSelectorPuntoFinca({
         mount: details.querySelector('[data-finca-mapa]'),
         puntoInicial: {
             latitud: direccionInicial?.latitud ?? null,
             longitud: direccionInicial?.longitud ?? null,
         },
+        onPuntoChange: completarDireccionDesdePunto,
     });
-    editoresFinca.set(card, { direccion, mapa });
+    editoresFinca.set(card, {
+        direccion,
+        mapa,
+        cancelarGeocodificacion: () => {
+            geocodificacion += 1;
+            geocodificacionAbortController?.abort();
+            geocodificacionAbortController = null;
+        },
+    });
 }
 
 function leerDireccionFinca(card) {
@@ -158,7 +193,9 @@ function addFinca(valor = {}) {
     if (input) input.value = finca.nombre ?? '';
     montarDireccionFinca(node, finca.direccion ?? null);
     node.querySelector('[data-remove-finca]')?.addEventListener('click', () => {
-        editoresFinca.get(node)?.mapa?.destruir?.();
+        const editor = editoresFinca.get(node);
+        editor?.cancelarGeocodificacion?.();
+        editor?.mapa?.destruir?.();
         node.remove();
         if (!document.querySelector('[data-finca]')) addFinca();
     });

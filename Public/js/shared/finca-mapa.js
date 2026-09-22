@@ -39,7 +39,7 @@ export async function buscarDireccionPorCoordenadas(punto, {
     fetchImpl = globalThis.fetch,
     signal,
 } = {}) {
-    const limites = await cargarLimitesCostaRica();
+    const limites = await cargarLimitesCostaRica({ fetchImpl });
     if (!puntoDentroDeLimitesCostaRica(punto, limites)) {
         const error = new Error('El punto debe estar dentro de Costa Rica, sus islas o territorio marítimo.');
         error.kind = 'outside-costa-rica';

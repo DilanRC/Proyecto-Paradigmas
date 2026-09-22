@@ -95,7 +95,9 @@ test('la finca puede centrar el mapa en la ubicación del usuario sin activar el
 
 test('usuario y admin reutilizan el mismo selector de finca', () => {
     assert.ok(registration.includes("from './shared/finca-mapa.js'"));
+    assert.ok(registration.includes('buscarDireccionPorCoordenadas'));
     assert.ok(registration.includes('crearSelectorPuntoFinca'));
+    assert.ok(registration.includes('onPuntoChange: completarDireccionDesdePunto'));
     assert.ok(adapter.includes("from './shared/finca-mapa.js'"));
     assert.ok(adapter.includes('crearSelectorPuntoFinca'));
 });

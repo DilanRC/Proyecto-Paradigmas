@@ -14,7 +14,7 @@ import {
     puntoDentroDeCobertura,
     resolverFuenteImagen,
 } from '../../Public/js/shared/mapa.js';
-import { buscarLugaresPorNombre } from '../../Public/js/shared/finca-mapa.js';
+import { buscarDireccionPorCoordenadas, buscarLugaresPorNombre } from '../../Public/js/shared/finca-mapa.js';
 
 class FakeEmitter {
     constructor() { this.handlers = new Map(); }
@@ -196,4 +196,35 @@ test('la búsqueda de lugares queda acotada a Costa Rica y devuelve coordenadas 
     assert.equal(parametros.get('countrycodes'), 'cr');
     assert.equal(parametros.get('bounded'), '1');
     assert.deepEqual(resultados, [{ nombre: 'San José, Costa Rica', latitud: 9.93, longitud: -84.08 }]);
+});
+
+test('la geocodificación inversa transforma la respuesta de Nominatim en la DTA del formulario', async () => {
+    let llamadas = 0;
+    const direccion = await buscarDireccionPorCoordenadas({ latitud: 10.0347, longitud: -84.0907 }, {
+        fetchImpl: async () => {
+            llamadas += 1;
+            if (llamadas === 1) {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        type: 'FeatureCollection',
+                        features: [{ type: 'Feature', geometry: { type: 'Polygon', coordinates: [[[-85, 9], [-84, 9], [-84, 11], [-85, 11], [-85, 9]]] } }],
+                    }),
+                };
+            }
+            return {
+                ok: true,
+                json: async () => ({
+                    address: {
+                        country_code: 'cr', state: 'Heredia', county: 'San Rafael',
+                        village: 'Ángeles', neighbourhood: 'Uvita',
+                    },
+                }),
+            };
+        },
+    });
+
+    assert.deepEqual(direccion, {
+        provincia: 'Heredia', canton: 'San Rafael', distrito: 'Ángeles', pueblo: 'Uvita',
+    });
 });
