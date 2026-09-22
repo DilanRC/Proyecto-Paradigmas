@@ -1,7 +1,7 @@
 import { SESSION_KEY } from './auth-gate.js';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
-const ADMIN_CSS = 'css/admin-v3.css?v=admin-6';
+const ADMIN_CSS = 'css/admin-v3.css?v=admin-7';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
 const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-4';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';

@@ -750,6 +750,10 @@ html[data-theme='light'] .rural-panel th {
     font-size:9px !important;
 }
 
+.rural-panel dialog.modal:not([open]) {
+    display:none !important;
+}
+
 .rural-panel .modal {
     display:flex !important;
     flex-direction:column !important;

@@ -39,6 +39,11 @@ test('los botones secundarios del admin conservan contraste en ambos temas y al 
     assert.ok(adminCss.includes('opacity:1 !important;'));
 });
 
+test('los dialogos administrativos permanecen ocultos hasta abrirse', () => {
+    assert.ok(adminCss.includes('.rural-panel dialog.modal:not([open]) {'));
+    assert.ok(adminCss.includes('display:none !important;'));
+});
+
 test('la navegación y utilidades mantienen icono mas texto visible', () => {
     assert.ok(adminCss.includes('.rural-panel__nav-item::before'));
     assert.ok(adminCss.includes('.admin-account-card__actions .rural-panel__admin-link'));
