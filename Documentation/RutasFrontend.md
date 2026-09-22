@@ -187,11 +187,17 @@ y Esri para las capas autorizadas.
 
 ### Incidente registrado: sobre-zoom y búsqueda sin sugerencias (2026-09-22)
 
-OpenFreeMap usa datos vectoriales de OpenMapTiles con un nivel máximo operativo.
-Permitir que el usuario se acercara sin límite hacía que MapLibre solicitara
-teselas inexistentes y mostrara bloques grises con “Map data not yet available”.
-El mapa ahora limita el zoom a 14, y los centrados por ubicación automática o
-por búsqueda respetan ese mismo límite.
+OpenFreeMap usa datos vectoriales de OpenMapTiles con un nivel nativo limitado.
+El arreglo inicial confundió ese nivel con el zoom de interacción y atrapó todo
+el mapa en 14. La solución separa ambos conceptos: el mapa puede interactuar
+hasta 20, la fuente vectorial conserva su nivel nativo y MapLibre reutiliza el
+último nivel disponible mediante overzoom; el marcador se centra en 18.
+
+La capa satelital de Esri también declara su propio máximo nativo (18) y sus
+límites de Costa Rica, para que el zoom del mapa no obligue a todas las fuentes
+a tener la misma resolución. Si una fuente no tiene cobertura real en una zona,
+esa ausencia sigue siendo un estado de cobertura de la fuente, no un motivo
+para bloquear el mapa completo.
 
 La búsqueda ahora consulta después de una pausa breve mientras se escribe,
 además de conservar Enter y el botón de búsqueda. Las sugerencias se obtienen
@@ -201,3 +207,15 @@ cartografía ni el autocompletado propietario de Google: la ubicación automáti
 usa la geolocalización del navegador y la búsqueda usa el proveedor abierto
 aprobado para el proyecto, evitando una dependencia de pago y manteniendo la
 atribución requerida.
+
+### Investigación SNIT/IGN ANOC 2026
+
+El catálogo oficial del SNIT confirma los servicios `202601_10cm` y
+`202601_50cm`, ambos disponibles como WMS y WMTS. Sus capacidades actuales
+confirman cobertura parcial, no nacional: la ortoimagen de 10 cm publica un
+bloque aproximado entre -83.56/-83.46 y 8.85/9.00; la de 50 cm publica un
+bloque aproximado entre -85.89/-85.37 y 10.20/11.23. Por eso se documentan
+como fuentes oficiales candidatas para una capa de ortofoto por cobertura,
+pero no se sustituyen todavía como satélite nacional predeterminado.
+Las capacidades consultadas son `https://geos1.snitcr.go.cr/ANOC_10cm_202601/wmts?SERVICE=WMTS&REQUEST=GetCapabilities&VERSION=1.0.0`
+y `https://geos1.snitcr.go.cr/ANOC_50cm_202601/wmts?SERVICE=WMTS&REQUEST=GetCapabilities&VERSION=1.0.0`.

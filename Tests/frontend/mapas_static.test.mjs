@@ -49,10 +49,13 @@ test('el mapa se usa como selector opcional de punto exacto de finca', () => {
     assert.ok(fs.readFileSync('Public/css/mapa.css', 'utf8').includes('bottom:1rem;left:1rem'));
     assert.ok(map.includes('SNIT_IGN_WMS_URL'));
     assert.ok(map.includes('ESRI_SATELLITE_TILES_URL'));
-    assert.match(map, /MAP_MAX_ZOOM = 14/);
+    assert.match(map, /MAP_INTERACTION_MAX_ZOOM = 20/);
+    assert.match(map, /MAP_MARKER_ZOOM = 18/);
+    assert.match(map, /OPEN_MAP_NATIVE_MAX_ZOOM = 14/);
+    assert.ok(map.includes('maxzoom: 18'));
     assert.ok(farmMap.includes("searchInput.addEventListener('input'"));
     assert.ok(farmMap.includes('sugerenciasTimer'));
-    assert.ok(farmMap.includes('mapa?.centrar?.(resultado, MAP_MAX_ZOOM)'));
+    assert.ok(farmMap.includes('mapa?.centrar?.(resultado, MAP_MARKER_ZOOM)'));
 });
 
 test('el selector limita el mapa a Costa Rica y puede completar dirección por coordenadas', () => {
@@ -76,7 +79,7 @@ test('la finca puede centrar el mapa en la ubicación del usuario sin activar el
     assert.ok(farmMap.includes("solicitudUbicacion += 1"));
     assert.match(farmMap, /limpiar\(\) \{[\s\S]*?solicitudUbicacion \+= 1/);
     assert.ok(farmMap.includes("'outside-costa-rica'"));
-    assert.ok(farmMap.includes('mapa.centrar(ubicacion, MAP_MAX_ZOOM)'));
+    assert.ok(farmMap.includes('mapa.centrar(ubicacion, MAP_MARKER_ZOOM)'));
     assert.equal(farmMap.includes('bloquearRuedaSobreMapa'), false);
     assert.equal(map.includes('map.scrollZoom?.disable?.()'), false);
     assert.ok(map.includes('FullscreenControl'));
