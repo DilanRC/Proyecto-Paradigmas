@@ -852,6 +852,29 @@ html[data-theme='light'] .brand-logo--dark {
     font-size:11px;
 }
 
+.identity-check-status {
+    display:block;
+    min-height:17px;
+    margin:0;
+    color:var(--tc-success);
+    font-size:11px;
+}
+
+.identity-check-status[data-state='checking'] { color:var(--tc-text-soft); }
+.identity-check-status[data-state='taken'],
+.identity-check-status[data-state='error'] { color:var(--tc-danger); }
+
+.identity-check-retry {
+    padding:0;
+    border:0;
+    color:var(--tc-primary);
+    background:transparent;
+    font:inherit;
+    font-size:11px;
+    text-decoration:underline;
+    cursor:pointer;
+}
+
 .password-rules {
     display: grid;
     gap: 4px;

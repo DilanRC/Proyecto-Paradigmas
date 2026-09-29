@@ -75,8 +75,15 @@ function friendlySignupMessage(status, payload) {
     const code = payload?.code ?? payload?.error_code ?? null;
     const providerMessage = String(payload?.msg || payload?.message || '').toLowerCase();
     if (status === 429) return 'Hubo demasiados intentos. Intenta de nuevo más tarde.';
-    if (code === 'user_already_exists' || code === 'email_exists') {
-        return 'Ya existe una cuenta con este correo. Entra con tu contraseña para continuar.';
+    if (
+        code === 'user_already_exists'
+        || code === 'email_exists'
+        || providerMessage.includes('already registered')
+        || providerMessage.includes('already exists')
+        || providerMessage.includes('already been registered')
+    ) {
+        // Mantener un mensaje genérico evita confirmar si un correo está registrado.
+        return 'No fue posible crear la cuenta. Revise los datos e intente nuevamente.';
     }
     if (code === 'weak_password' || providerMessage.includes('valid password')) {
         return 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número. Evita secuencias comunes como 12345678.';

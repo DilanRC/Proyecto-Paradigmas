@@ -36,6 +36,16 @@ final class Persona
         return $filas[0] ?? null;
     }
 
+    public function existeIdentificacion(string $identificacionNumero): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT 1 FROM tbpersona WHERE tbpersonaidentificacionnumero = :identificacionNumero LIMIT 1'
+        );
+        $sentencia->execute(['identificacionNumero' => $identificacionNumero]);
+
+        return $sentencia->fetchColumn() !== false;
+    }
+
     /**
      * Resuelve una Persona por su identificador interno. Esta vía existe para
      * procesos autenticados: SupabaseActorResolver ya vinculó el JWT con

@@ -268,6 +268,22 @@ test('el registro guiado persiste mediante Supabase y la API, no mediante una se
     assert.doesNotMatch(registroJs, /frontend-prototype/);
 });
 
+test('el registro verifica la identificación antes de avanzar y de crear la cuenta', () => {
+    assert.match(registroJs, /api\/v1\/registro\/identificacion/);
+    assert.match(registroJs, /La identificación ya está registrada\./);
+    assert.match(registroJs, /nextButton\.disabled = .*identityState/);
+    assert.match(registroJs, /if \(!extending && !\(await checkIdentity\(\)\)\)/);
+    assert.match(read('../../Application/View/registro/index.php'), /data-identificacion-status[^>]*role="status"/);
+});
+
+test('el alta evita confirmar si un correo ya está registrado', () => {
+    assert.match(supabaseAuth, /code === 'user_already_exists'/);
+    assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
+    assert.match(supabaseAuth, /Mantener un mensaje genérico evita confirmar si un correo está registrado/);
+    assert.match(registroJs, /Si ya tienes cuenta, intenta iniciar sesión/);
+    assert.match(registroJs, /let submitInProgress = false/);
+});
+
 test('el borrador guiado no persiste contraseñas aunque las conserve en memoria para Supabase', () => {
     assert.match(registroJs, /Object\.entries\(draft\.persona\)\.filter/);
     assert.match(registroJs, /!\['password', 'passwordConfirmacion'\]\.includes\(field\)/);

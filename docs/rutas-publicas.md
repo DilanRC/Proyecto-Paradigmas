@@ -47,6 +47,7 @@ compatibilidad técnica durante la migración.
 | `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |
 | `/api/v1/registro` | Alta transaccional de identidad y actividades |
+| `/api/v1/registro/identificacion` | Verificación de disponibilidad de identificación durante el registro |
 | `/api/v1/capacidades` | Activar, desactivar o consultar capacidades |
 | `/api/v1/publicaciones` | Lectura y publicación de ganado |
 | `/api/v1/publicaciones/interacciones` | Pasar, interesarse y contactar |

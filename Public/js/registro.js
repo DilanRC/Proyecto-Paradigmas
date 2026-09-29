@@ -327,6 +327,8 @@ async function initialize() {
     const finishButton = document.querySelector('#registro-finalizar');
     const status = document.querySelector('#registro-status');
     if (!(form instanceof HTMLFormElement) || !nextButton || !previousButton || !finishButton || !status) return;
+    const identityStatus = form.querySelector('[data-identificacion-status]');
+    const identityRetry = form.querySelector('[data-identificacion-retry]');
 
     inicializarUbicacionAutomatica();
 
@@ -361,6 +363,10 @@ async function initialize() {
     }
 
     let stepIndex = 0;
+    let identityRevision = 0;
+    let identityTimer = null;
+    let identityState = extending ? 'available' : 'idle';
+    let submitInProgress = false;
     const computeSteps = () => {
         const base = requiredRegistrationSteps(selectedCapabilities(form));
         return extending ? base.filter((step) => step !== 'persona') : base;
@@ -381,16 +387,79 @@ async function initialize() {
         previousButton.hidden = stepIndex === 0;
         nextButton.hidden = stepIndex === steps.length - 1;
         finishButton.hidden = stepIndex !== steps.length - 1;
+        nextButton.disabled = steps[stepIndex] === 'persona' && ['checking', 'taken', 'error'].includes(identityState);
         setStatus(status, '');
         // La validación técnica y la persistencia son internas; la persona solo
         // necesita ver que el registro está listo para terminar.
     };
 
-    const validateCurrent = () => {
+    const setIdentityState = (state, message = '') => {
+        identityState = state;
+        if (identityStatus) {
+            identityStatus.textContent = message;
+            identityStatus.dataset.state = state;
+            identityStatus.classList.toggle('auth-error', state === 'taken' || state === 'error');
+        }
+        if (identityRetry) identityRetry.hidden = state !== 'error';
+        if (identificacionNumero instanceof HTMLInputElement) {
+            if (state === 'taken' || state === 'error') identificacionNumero.setAttribute('aria-invalid', 'true');
+            else identificacionNumero.removeAttribute('aria-invalid');
+        }
+        if (steps[stepIndex] === 'persona') nextButton.disabled = ['checking', 'taken', 'error'].includes(state);
+    };
+    const checkIdentity = async () => {
+        if (identityTimer) { clearTimeout(identityTimer); identityTimer = null; }
+        if (!(identificacionTipo instanceof HTMLSelectElement) || !(identificacionNumero instanceof HTMLInputElement)) return false;
+        const tipo = identificacionTipo.value;
+        const numero = identificacionNumero.value.trim();
+        if (!tipo || !numero || !identificacionNumero.validity.valid) {
+            setIdentityState('idle');
+            return false;
+        }
+        const revision = ++identityRevision;
+        setIdentityState('checking', 'Verificando identificación…');
+        try {
+            const response = await request('api/v1/registro/identificacion', {
+                method: 'POST',
+                body: JSON.stringify({ identificacionTipo: tipo, identificacionNumero: numero }),
+                timeoutMs: 8000,
+            });
+            if (revision !== identityRevision) return false;
+            if (response.data?.disponible === true) {
+                setIdentityState('available', 'Identificación disponible.');
+                return true;
+            }
+            setIdentityState('taken', 'La identificación ya está registrada.');
+            return false;
+        } catch {
+            if (revision === identityRevision) setIdentityState('error', 'No se pudo verificar la identificación. Intenta de nuevo.');
+            return false;
+        }
+    };
+    const scheduleIdentityCheck = () => {
+        identityRevision += 1;
+        if (identityTimer) clearTimeout(identityTimer);
+        if (extending) return;
+        const tipo = identificacionTipo?.value ?? '';
+        const numero = identificacionNumero instanceof HTMLInputElement ? identificacionNumero.value.trim() : '';
+        if (!tipo || !numero || !identificacionNumero?.validity?.valid) {
+            setIdentityState('idle');
+            return;
+        }
+        setIdentityState('checking', 'Verificando identificación…');
+        identityTimer = setTimeout(() => { identityTimer = null; void checkIdentity(); }, 350);
+    };
+
+    const validateCurrent = async () => {
         const active = steps[stepIndex];
         let errors = {};
         if (active === 'persona') {
             errors = validatePersonaDraft(formPersona(form), { requirePassword: !readAuthSession() });
+            if (Object.keys(errors).length === 0 && !extending && !(await checkIdentity())) {
+                identificacionNumero?.focus?.();
+                setStatus(status, identityStatus?.textContent || 'Verifique la identificación antes de continuar.', 'error');
+                return false;
+            }
         }
         if (active === 'intereses') errors = validateCapabilities(selectedCapabilities(form));
         if (active === 'fincas') {
@@ -412,8 +481,8 @@ async function initialize() {
         return true;
     };
 
-    nextButton.addEventListener('click', () => {
-        if (!validateCurrent()) return;
+    nextButton.addEventListener('click', async () => {
+        if (!(await validateCurrent())) return;
         persistDraft(form, existingProfile);
         stepIndex += 1;
         sync();
@@ -430,15 +499,20 @@ async function initialize() {
         if (identificacionTipo instanceof HTMLSelectElement && identificacionNumero instanceof HTMLInputElement) {
             aplicarRestriccionIdentificacion(identificacionNumero, identificacionTipo.value, { hint: identificacionHint });
         }
+        scheduleIdentityCheck();
     };
     identificacionTipo?.addEventListener('change', actualizarIdentificacion);
+    identificacionNumero?.addEventListener('input', scheduleIdentityCheck);
+    identityRetry?.addEventListener('click', () => { void checkIdentity(); });
     actualizarIdentificacion();
     form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });
     form.addEventListener('change', () => { persistDraft(form, existingProfile); });
 
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        if (finishButton.disabled) return;
+        if (submitInProgress || finishButton.disabled) return;
+        submitInProgress = true;
+        finishButton.disabled = true;
 
         // El último paso no contiene campos editables. Revalidamos la identidad
         // antes de llamar a Supabase para no enviar un borrador desactualizado.
@@ -450,9 +524,24 @@ async function initialize() {
             setStatus(status, 'Corrija los datos de la cuenta antes de terminar.', 'error');
             const first = Object.keys(personaErrors)[0];
             form.elements.namedItem(first)?.focus?.();
+            submitInProgress = false;
+            finishButton.disabled = false;
             return;
         }
-        if (!validateCurrent()) return;
+        if (!extending && !(await checkIdentity())) {
+            stepIndex = steps.indexOf('persona');
+            sync();
+            setStatus(status, identityStatus?.textContent || 'Verifique la identificación antes de terminar.', 'error');
+            identificacionNumero?.focus?.();
+            submitInProgress = false;
+            finishButton.disabled = false;
+            return;
+        }
+        if (!(await validateCurrent())) {
+            submitInProgress = false;
+            finishButton.disabled = false;
+            return;
+        }
         const draft = persistDraft(form, existingProfile);
         form.setAttribute('aria-busy', 'true');
         finishButton.setAttribute('aria-busy', 'true');
@@ -465,8 +554,9 @@ async function initialize() {
                 setStatus(status, 'Creando tu cuenta…');
                 const auth = await signUpWithPassword(summary.persona.correoElectronico, draft.persona.password);
                 if (!auth.session) {
-                    setStatus(status, 'Cuenta creada. Confirma tu correo y luego entra para completar el registro.', 'success');
+                    setStatus(status, 'Revisa tu correo para continuar. Si ya tienes cuenta, intenta iniciar sesión.', 'success');
                     finishButton.disabled = false;
+                    submitInProgress = false;
                     return;
                 }
             }
@@ -502,6 +592,7 @@ async function initialize() {
             if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors);
             setStatus(status, error?.message || 'No fue posible completar el registro. Revise los datos e intente nuevamente.', 'error');
             finishButton.disabled = false;
+            submitInProgress = false;
         } finally {
             form.setAttribute('aria-busy', 'false');
             finishButton.setAttribute('aria-busy', 'false');

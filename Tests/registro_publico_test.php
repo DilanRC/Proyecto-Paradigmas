@@ -5,8 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__) . '/Application/Service/RegistroPublicoService.php';
 require_once dirname(__DIR__) . '/Application/Controller/RegistroPublicoController.php';
+require_once dirname(__DIR__) . '/Application/Controller/RegistroIdentificacionController.php';
 
 use Application\Auth\ActorContext;
+use Application\Controller\RegistroIdentificacionController;
 use Application\Controller\RegistroPublicoController;
 
 $identificaciones = [];
@@ -151,6 +153,12 @@ try {
     test_same(201, $todos['status'], 'Registro combinado debe completar todos los contextos');
     $personaCompleta = registro_persona_id($idCompleto);
     test_assert($personaCompleta !== null, 'Registro combinado debe crear Persona');
+    $identificacionRegistrada = (new RegistroIdentificacionController(test_db()))->procesar('POST', [
+        'identificacionTipo' => 'PASAPORTE',
+        'identificacionNumero' => $idCompleto,
+    ]);
+    test_same(200, $identificacionRegistrada['status'], 'La verificación debe consultar identificaciones existentes');
+    test_same(false, $identificacionRegistrada['body']['data']['disponible'], 'La verificación debe detectar una identificación registrada');
     foreach (['tbproductor', 'tbcomprador', 'tbtransportista'] as $tabla) {
         test_same(1, registro_contar_contexto($tabla, 'tbpersonaid', $personaCompleta),
             "{$tabla} debe reutilizar la misma Persona");
@@ -216,6 +224,11 @@ try {
     test_assert($falloTardio, 'La fixture debe provocar un fallo tardío real');
     test_same(null, registro_persona_id($idRollback),
         'Un fallo tardío debe revertir también la Persona recién insertada');
+    $identificacionDisponible = (new RegistroIdentificacionController(test_db()))->procesar('POST', [
+        'identificacionTipo' => 'PASAPORTE',
+        'identificacionNumero' => $idRollback,
+    ]);
+    test_same(true, $identificacionDisponible['body']['data']['disponible'], 'La verificación debe permitir una identificación libre');
     $conteoProductorRollback = test_db()->prepare(
         'SELECT COUNT(*) FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid = p.tbpersonaid
          WHERE pe.tbpersonaidentificacionnumero = :identificacion'
