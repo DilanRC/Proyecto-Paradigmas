@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=front-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=front-9"></script>
+    <script type="module" src="js/registro.js?v=front-10"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -62,7 +62,7 @@
                     </div>
                     <label class="auth-field"><span>Alias <em>opcional</em></span><input name="alias" type="text" maxlength="150"><small class="auth-error" data-error-for="alias"></small></label>
                     <label class="auth-field"><span>Teléfono *</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></label>
-                    <div class="auth-field"><label for="registro-correo-electronico">Correo electrónico *</label><input id="registro-correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="registro-correo-status registro-correo-error"><small id="registro-correo-status" class="identity-check-status" data-correo-status data-state="idle" role="status" aria-live="polite"></small><button class="identity-check-retry" data-correo-retry type="button" hidden>Reintentar verificación</button><small id="registro-correo-error" class="auth-error" data-error-for="correoElectronico"></small></div>
+                    <div class="auth-field"><label for="registro-correo-electronico">Correo electrónico *</label><input id="registro-correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="registro-correo-error"><small id="registro-correo-error" class="auth-error" data-error-for="correoElectronico"></small></div>
                     <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="field-help">Usa una contraseña difícil de adivinar. Debe cumplir estos requisitos:</small><ul class="password-rules" data-password-rules aria-live="polite"><li data-rule="letter">Al menos una letra</li><li data-rule="uppercase">Al menos una letra en mayúscula</li><li data-rule="number">Al menos un número</li><li data-rule="length">Al menos 8 caracteres</li></ul><small class="auth-error" data-error-for="password"></small></label>
                     <label class="auth-field"><span>Confirmar contraseña *</span><span class="auth-password-control"><input id="registro-password-confirmacion" name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password-confirmacion" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
                 </div>

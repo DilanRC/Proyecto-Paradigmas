@@ -276,16 +276,17 @@ test('el registro autenticado no reutiliza un perfil cacheado de otro correo', (
 test('el registro verifica la identificación antes de avanzar y de crear la cuenta', () => {
     assert.match(registroJs, /api\/v1\/registro\/identificacion/);
     assert.match(registroJs, /La identificación ya está registrada\./);
-    assert.match(registroJs, /const syncNextButton = \(\) => \{[\s\S]*nextButton\.disabled[\s\S]*identityState[\s\S]*emailState/);
+    assert.match(registroJs, /const syncNextButton = \(\) => \{[\s\S]*nextButton\.disabled[\s\S]*identityState/);
     assert.match(registroJs, /if \(!extending && !\(await checkIdentity\(\)\)\)/);
     assert.match(read('../../Application/View/registro/index.php'), /data-identificacion-status[^>]*role="status"/);
 });
 
-test('el alta evita confirmar si un correo ya está registrado', () => {
+test('el alta traduce duplicados a un error genérico sin exponer el estado del correo', () => {
     assert.match(supabaseAuth, /code === 'user_already_exists'/);
     assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
     assert.match(supabaseAuth, /Mantener un mensaje genérico evita confirmar si un correo está registrado/);
     assert.match(registroJs, /Si ya tienes cuenta, intenta iniciar sesión\.', 'info'/);
+    assert.doesNotMatch(registroJs, /Ese correo ya tiene una cuenta/);
     assert.match(registroJs, /let submitInProgress = false/);
 });
 
