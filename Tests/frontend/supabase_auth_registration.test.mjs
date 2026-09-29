@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { signUpWithPassword } from '../../Public/js/shared/supabase-auth.js';
@@ -36,4 +37,21 @@ test('el alta traduce respuestas variantes de correo ya registrado', async () =>
     } finally {
         globalThis.fetch = originalFetch;
     }
+});
+
+test('el registro consulta Auth al escribir el correo y bloquea avanzar si está ocupado o no se verifica', () => {
+    const registration = readFileSync(new URL('../../Public/js/registro.js', import.meta.url), 'utf8');
+    const view = readFileSync(new URL('../../Application/View/registro/index.php', import.meta.url), 'utf8');
+    const route = readFileSync(new URL('../../Public/api/registro-validar-correo.php', import.meta.url), 'utf8');
+    const rewriteRules = readFileSync(new URL('../../Public/.htaccess', import.meta.url), 'utf8');
+
+    assert.match(view, /data-correo-status[^>]*role="status"[^>]*aria-live="polite"/);
+    assert.match(registration, /api\/v1\/registro\/correo/);
+    assert.match(registration, /emailInput\?\.addEventListener\('input', scheduleEmailCheck\)/);
+    assert.match(registration, /\['checking', 'taken', 'error'\]\.includes\(emailState\)/);
+    assert.match(registration, /if \(!readAuthSession\(\) && !\(await checkEmail\(\)\)\)/);
+    assert.match(route, /auth\.users/);
+    assert.match(route, /LOWER\(email\) = :correo/);
+    assert.match(rewriteRules, /api\/v1\/registro\/correo\/.+registro-validar-correo\.php/);
+    assert.match(route, /Cache-Control: no-store, private/);
 });

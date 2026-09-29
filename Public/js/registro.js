@@ -329,14 +329,23 @@ async function initialize() {
     if (!(form instanceof HTMLFormElement) || !nextButton || !previousButton || !finishButton || !status) return;
     const identityStatus = form.querySelector('[data-identificacion-status]');
     const identityRetry = form.querySelector('[data-identificacion-retry]');
+    const emailStatus = form.querySelector('[data-correo-status]');
+    const emailRetry = form.querySelector('[data-correo-retry]');
+    const emailInput = form.elements.namedItem('correoElectronico');
 
     inicializarUbicacionAutomatica();
 
     const authSession = readAuthSession();
     const activityProfile = await resolveAuthenticatedActivity(authSession);
     if (activityProfile?.redirected) return;
-    const existingProfile = readStored(PROFILE_KEY);
+    const cachedProfile = readStored(PROFILE_KEY);
+    const authEmail = authSession?.email?.trim().toLowerCase();
+    const profileEmail = cachedProfile?.persona?.correoElectronico?.trim().toLowerCase();
+    const existingProfile = authSession
+        ? (authEmail && authEmail === profileEmail ? cachedProfile : null)
+        : cachedProfile;
     const extending = Boolean(existingProfile?.persona && authSession);
+    restoreDraft(form, existingProfile);
     if (authSession && !existingProfile?.persona) {
         const email = form.elements.namedItem('correoElectronico');
         const password = form.elements.namedItem('password');
@@ -352,7 +361,6 @@ async function initialize() {
             }
         }
     }
-    restoreDraft(form, existingProfile);
     if (!document.querySelector('[data-finca]')) addFinca();
 
     if (extending) {
@@ -366,12 +374,21 @@ async function initialize() {
     let identityRevision = 0;
     let identityTimer = null;
     let identityState = extending ? 'available' : 'idle';
+    let emailRevision = 0;
+    let emailTimer = null;
+    let emailState = 'idle';
     let submitInProgress = false;
     const computeSteps = () => {
         const base = requiredRegistrationSteps(selectedCapabilities(form));
         return extending ? base.filter((step) => step !== 'persona') : base;
     };
     let steps = computeSteps();
+    const syncNextButton = () => {
+        nextButton.disabled = steps[stepIndex] === 'persona' && (
+            ['checking', 'taken', 'error'].includes(identityState)
+            || ['checking', 'taken', 'error'].includes(emailState)
+        );
+    };
 
     const sync = () => {
         steps = computeSteps();
@@ -387,7 +404,7 @@ async function initialize() {
         previousButton.hidden = stepIndex === 0;
         nextButton.hidden = stepIndex === steps.length - 1;
         finishButton.hidden = stepIndex !== steps.length - 1;
-        nextButton.disabled = steps[stepIndex] === 'persona' && ['checking', 'taken', 'error'].includes(identityState);
+        syncNextButton();
         setStatus(status, '');
         // La validación técnica y la persistencia son internas; la persona solo
         // necesita ver que el registro está listo para terminar.
@@ -405,7 +422,7 @@ async function initialize() {
             if (state === 'taken' || state === 'error') identificacionNumero.setAttribute('aria-invalid', 'true');
             else identificacionNumero.removeAttribute('aria-invalid');
         }
-        if (steps[stepIndex] === 'persona') nextButton.disabled = ['checking', 'taken', 'error'].includes(state);
+        syncNextButton();
     };
     const checkIdentity = async () => {
         if (identityTimer) { clearTimeout(identityTimer); identityTimer = null; }
@@ -450,6 +467,65 @@ async function initialize() {
         identityTimer = setTimeout(() => { identityTimer = null; void checkIdentity(); }, 350);
     };
 
+    const setEmailState = (state, message = '') => {
+        emailState = state;
+        if (emailStatus) {
+            emailStatus.textContent = message;
+            emailStatus.dataset.state = state;
+            emailStatus.classList.toggle('auth-error', state === 'taken' || state === 'error');
+        }
+        if (emailRetry) emailRetry.hidden = state !== 'error';
+        if (emailInput instanceof HTMLInputElement) {
+            if (state === 'taken' || state === 'error') emailInput.setAttribute('aria-invalid', 'true');
+            else emailInput.removeAttribute('aria-invalid');
+        }
+        syncNextButton();
+    };
+    const checkEmail = async () => {
+        if (emailTimer) { clearTimeout(emailTimer); emailTimer = null; }
+        if (!(emailInput instanceof HTMLInputElement)) return false;
+        const correo = emailInput.value.trim().toLowerCase();
+        if (!correo || !emailInput.validity.valid) {
+            setEmailState('idle');
+            return false;
+        }
+        const authSession = readAuthSession();
+        if (authSession?.email?.trim().toLowerCase() === correo) {
+            setEmailState('available', 'Correo de la cuenta verificada.');
+            return true;
+        }
+        const revision = ++emailRevision;
+        setEmailState('checking', 'Verificando correo…');
+        try {
+            const response = await request('api/v1/registro/correo', {
+                method: 'POST',
+                body: JSON.stringify({ correoElectronico: correo }),
+                timeoutMs: 8000,
+            });
+            if (revision !== emailRevision) return false;
+            if (response.data?.disponible === true) {
+                setEmailState('available', 'Correo disponible.');
+                return true;
+            }
+            setEmailState('taken', 'Ese correo ya tiene una cuenta. Inicia sesión para continuar.');
+            return false;
+        } catch {
+            if (revision === emailRevision) setEmailState('error', 'No se pudo verificar el correo. Intenta de nuevo.');
+            return false;
+        }
+    };
+    const scheduleEmailCheck = () => {
+        emailRevision += 1;
+        if (emailTimer) clearTimeout(emailTimer);
+        const correo = emailInput instanceof HTMLInputElement ? emailInput.value.trim() : '';
+        if (!correo || !(emailInput instanceof HTMLInputElement) || !emailInput.validity.valid) {
+            setEmailState('idle');
+            return;
+        }
+        setEmailState('checking', 'Verificando correo…');
+        emailTimer = setTimeout(() => { emailTimer = null; void checkEmail(); }, 350);
+    };
+
     const validateCurrent = async () => {
         const active = steps[stepIndex];
         let errors = {};
@@ -458,6 +534,11 @@ async function initialize() {
             if (Object.keys(errors).length === 0 && !extending && !(await checkIdentity())) {
                 identificacionNumero?.focus?.();
                 setStatus(status, identityStatus?.textContent || 'Verifique la identificación antes de continuar.', 'error');
+                return false;
+            }
+            if (Object.keys(errors).length === 0 && !extending && !(await checkEmail())) {
+                emailInput?.focus?.();
+                setStatus(status, emailStatus?.textContent || 'Verifique el correo antes de continuar.', 'error');
                 return false;
             }
         }
@@ -504,6 +585,8 @@ async function initialize() {
     identificacionTipo?.addEventListener('change', actualizarIdentificacion);
     identificacionNumero?.addEventListener('input', scheduleIdentityCheck);
     identityRetry?.addEventListener('click', () => { void checkIdentity(); });
+    emailInput?.addEventListener('input', scheduleEmailCheck);
+    emailRetry?.addEventListener('click', () => { void checkEmail(); });
     actualizarIdentificacion();
     form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });
     form.addEventListener('change', () => { persistDraft(form, existingProfile); });
@@ -533,6 +616,15 @@ async function initialize() {
             sync();
             setStatus(status, identityStatus?.textContent || 'Verifique la identificación antes de terminar.', 'error');
             identificacionNumero?.focus?.();
+            submitInProgress = false;
+            finishButton.disabled = false;
+            return;
+        }
+        if (!readAuthSession() && !(await checkEmail())) {
+            stepIndex = steps.indexOf('persona');
+            sync();
+            setStatus(status, emailStatus?.textContent || 'Verifique el correo antes de terminar.', 'error');
+            emailInput?.focus?.();
             submitInProgress = false;
             finishButton.disabled = false;
             return;

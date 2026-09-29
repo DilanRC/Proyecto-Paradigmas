@@ -268,10 +268,15 @@ test('el registro guiado persiste mediante Supabase y la API, no mediante una se
     assert.doesNotMatch(registroJs, /frontend-prototype/);
 });
 
+test('el registro autenticado no reutiliza un perfil cacheado de otro correo', () => {
+    assert.match(registroJs, /const existingProfile = authSession[\s\S]*authEmail === profileEmail \? cachedProfile : null/);
+    assert.ok(registroJs.indexOf('restoreDraft(form, existingProfile)') < registroJs.indexOf('email.value = authSession.email'));
+});
+
 test('el registro verifica la identificación antes de avanzar y de crear la cuenta', () => {
     assert.match(registroJs, /api\/v1\/registro\/identificacion/);
     assert.match(registroJs, /La identificación ya está registrada\./);
-    assert.match(registroJs, /nextButton\.disabled = .*identityState/);
+    assert.match(registroJs, /const syncNextButton = \(\) => \{[\s\S]*nextButton\.disabled[\s\S]*identityState[\s\S]*emailState/);
     assert.match(registroJs, /if \(!extending && !\(await checkIdentity\(\)\)\)/);
     assert.match(read('../../Application/View/registro/index.php'), /data-identificacion-status[^>]*role="status"/);
 });
