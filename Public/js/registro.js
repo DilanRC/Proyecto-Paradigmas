@@ -554,7 +554,7 @@ async function initialize() {
                 setStatus(status, 'Creando tu cuenta…');
                 const auth = await signUpWithPassword(summary.persona.correoElectronico, draft.persona.password);
                 if (!auth.session) {
-                    setStatus(status, 'Revisa tu correo para continuar. Si ya tienes cuenta, intenta iniciar sesión.', 'success');
+                    setStatus(status, 'Revisa tu correo para continuar. Si ya tienes cuenta, intenta iniciar sesión.', 'info');
                     finishButton.disabled = false;
                     submitInProgress = false;
                     return;

@@ -280,7 +280,7 @@ test('el alta evita confirmar si un correo ya está registrado', () => {
     assert.match(supabaseAuth, /code === 'user_already_exists'/);
     assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
     assert.match(supabaseAuth, /Mantener un mensaje genérico evita confirmar si un correo está registrado/);
-    assert.match(registroJs, /Si ya tienes cuenta, intenta iniciar sesión/);
+    assert.match(registroJs, /Si ya tienes cuenta, intenta iniciar sesión\.', 'info'/);
     assert.match(registroJs, /let submitInProgress = false/);
 });
 
