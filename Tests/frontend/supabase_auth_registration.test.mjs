@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { signUpWithPassword } from '../../Public/js/shared/supabase-auth.js';
+import { signUpWithPassword, SIGNUP_NEXT_STEPS_MESSAGE } from '../../Public/js/shared/supabase-auth.js';
 
 test('el alta traduce respuestas variantes de correo ya registrado', async () => {
     const originalFetch = globalThis.fetch;
@@ -28,7 +28,11 @@ test('el alta traduce respuestas variantes de correo ya registrado', async () =>
         for (let intento = 0; intento < 2; intento += 1) {
             await assert.rejects(
                 signUpWithPassword('docente@example.test', 'UnaClaveFuerte9', null),
-                { name: 'AuthError', message: 'No fue posible crear la cuenta. Revise los datos e intente nuevamente.' },
+                {
+                    name: 'AuthError',
+                    code: 'account_already_exists',
+                    message: SIGNUP_NEXT_STEPS_MESSAGE,
+                },
             );
         }
         assert.equal(requested.length, 3);
@@ -48,4 +52,6 @@ test('el registro no expone un verificador público de correos existentes', () =
     assert.doesNotMatch(registration, /api\/v1\/registro\/correo|checkEmail|scheduleEmailCheck/);
     assert.doesNotMatch(rewriteRules, /api\/v1\/registro\/correo/);
     assert.doesNotMatch(registration, /emailState/);
+    assert.match(registration, /if \(error\?\.code === 'account_already_exists'\)[\s\S]*SIGNUP_NEXT_STEPS_MESSAGE/);
+    assert.match(registration, /if \(!auth\.session\)[\s\S]*SIGNUP_NEXT_STEPS_MESSAGE/);
 });

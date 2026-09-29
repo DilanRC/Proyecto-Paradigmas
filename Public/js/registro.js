@@ -10,7 +10,7 @@ import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { request } from './shared/api.js';
-import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
+import { readAuthSession, SIGNUP_NEXT_STEPS_MESSAGE, signUpWithPassword } from './shared/supabase-auth.js';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 
@@ -563,7 +563,7 @@ async function initialize() {
                 setStatus(status, 'Creando tu cuenta…');
                 const auth = await signUpWithPassword(summary.persona.correoElectronico, draft.persona.password);
                 if (!auth.session) {
-                    setStatus(status, 'Revisa tu correo para continuar. Si ya tienes cuenta, intenta iniciar sesión.', 'info');
+                    setStatus(status, SIGNUP_NEXT_STEPS_MESSAGE, 'info');
                     finishButton.disabled = false;
                     submitInProgress = false;
                     return;
@@ -597,6 +597,12 @@ async function initialize() {
             }
             window.location.assign(resolveNext(fallback));
         } catch (error) {
+            if (error?.code === 'account_already_exists') {
+                setStatus(status, SIGNUP_NEXT_STEPS_MESSAGE, 'info');
+                finishButton.disabled = false;
+                submitInProgress = false;
+                return;
+            }
             const fieldErrors = error?.errors ?? {};
             if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors);
             setStatus(status, error?.message || 'No fue posible completar el registro. Revise los datos e intente nuevamente.', 'error');

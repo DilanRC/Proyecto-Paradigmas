@@ -281,11 +281,11 @@ test('el registro verifica la identificación antes de avanzar y de crear la cue
     assert.match(read('../../Application/View/registro/index.php'), /data-identificacion-status[^>]*role="status"/);
 });
 
-test('el alta traduce duplicados a un error genérico sin exponer el estado del correo', () => {
+test('el alta muestra la misma guía clara sin confirmar si el correo está registrado', () => {
     assert.match(supabaseAuth, /code === 'user_already_exists'/);
     assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
-    assert.match(supabaseAuth, /Mantener un mensaje genérico evita confirmar si un correo está registrado/);
-    assert.match(registroJs, /Si ya tienes cuenta, intenta iniciar sesión\.', 'info'/);
+    assert.match(supabaseAuth, /Si el correo puede usarse para crear una cuenta, te enviaremos instrucciones/);
+    assert.match(registroJs, /SIGNUP_NEXT_STEPS_MESSAGE, 'info'/);
     assert.doesNotMatch(registroJs, /Ese correo ya tiene una cuenta/);
     assert.match(registroJs, /let submitInProgress = false/);
 });

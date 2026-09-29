@@ -1,4 +1,5 @@
 export const SESSION_KEY = 'tindercows:login';
+export const SIGNUP_NEXT_STEPS_MESSAGE = 'Si el correo puede usarse para crear una cuenta, te enviaremos instrucciones. Si ya tienes acceso, inicia sesión.';
 
 const SESSION_VERSION = 2;
 const SESSION_MODE = 'supabase';
@@ -71,20 +72,21 @@ function friendlyAuthMessage(status, payload, fallback) {
     return fallback;
 }
 
+function signupAccountAlreadyExists(payload) {
+    const code = payload?.code ?? payload?.error_code ?? null;
+    const providerMessage = String(payload?.msg || payload?.message || '').toLowerCase();
+    return code === 'user_already_exists'
+        || code === 'email_exists'
+        || providerMessage.includes('already registered')
+        || providerMessage.includes('already exists')
+        || providerMessage.includes('already been registered');
+}
+
 function friendlySignupMessage(status, payload) {
     const code = payload?.code ?? payload?.error_code ?? null;
     const providerMessage = String(payload?.msg || payload?.message || '').toLowerCase();
     if (status === 429) return 'Hubo demasiados intentos. Intenta de nuevo más tarde.';
-    if (
-        code === 'user_already_exists'
-        || code === 'email_exists'
-        || providerMessage.includes('already registered')
-        || providerMessage.includes('already exists')
-        || providerMessage.includes('already been registered')
-    ) {
-        // Mantener un mensaje genérico evita confirmar si un correo está registrado.
-        return 'No fue posible crear la cuenta. Revise los datos e intente nuevamente.';
-    }
+    if (signupAccountAlreadyExists(payload)) return SIGNUP_NEXT_STEPS_MESSAGE;
     if (code === 'weak_password' || providerMessage.includes('valid password')) {
         return 'La contraseña debe tener al menos 8 caracteres, una letra mayúscula y un número. Evita secuencias comunes como 12345678.';
     }
@@ -227,7 +229,7 @@ export async function signUpWithPassword(email, password, storage = storageAvail
         const code = payload?.code ?? payload?.error_code ?? null;
         throw new AuthError(friendlySignupMessage(response.status, payload), {
             status: response.status,
-            code,
+            code: signupAccountAlreadyExists(payload) ? 'account_already_exists' : code,
         });
     }
 
