@@ -73,6 +73,11 @@ Todos los valores, incluida la fecha de bitácora y los estados iniciales, se
 envían desde PHP mediante `PDO::prepare()` y parámetros enlazados. MySQL solo
 almacena los datos.
 
+## Estructura del proyecto
+
+Mapa de carpetas, flujo de rutas → vistas → lógica y cómo agregar pantallas,
+endpoints o WebSockets: [Documentation/Arquitectura.md](Documentation/Arquitectura.md).
+
 ## Requisitos e inicio
 
 - Docker

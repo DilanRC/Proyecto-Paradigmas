@@ -1,5 +1,10 @@
 # Documentación
 
+- [Arquitectura: dónde está cada cosa](Arquitectura.md)
+- [Rutas públicas](RutasPublicas.md)
+- [Informe sprint 22 septiembre](Sprints/Informe-Sprint22Septiembre-ContextoYCambios.md)
+- [Auditorías UI/UX y accesibilidad](Auditorias/)
+
 - [Decisiones](Decisiones.md)
 - [DER](DER.md)
 - [Diagrama de aplicación](DAplicacion.md)
