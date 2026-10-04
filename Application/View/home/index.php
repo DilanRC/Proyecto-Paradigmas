@@ -13,10 +13,10 @@
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <link rel="stylesheet" href="css/public-product.css?v=product-7">
-    <link rel="stylesheet" href="css/explore.css?v=explore-7">
+    <link rel="stylesheet" href="css/explore.css?v=explore-8">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-9"></script>
-    <script type="module" src="js/home.js?v=home-4"></script>
+    <script type="module" src="js/public-ui.js?v=public-10"></script>
+    <script type="module" src="js/home.js?v=home-5"></script>
 </head>
 <body class="public-home">
     <div class="public-shell" id="inicio">

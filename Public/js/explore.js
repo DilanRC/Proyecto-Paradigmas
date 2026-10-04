@@ -155,6 +155,16 @@ function hasActiveFilters() {
         || state.precioMin !== null || state.precioMax !== null;
 }
 
+/** Solo URLs https absolutas llegan a un <img>; lo demás muestra el ícono. */
+export function safeImageUrl(valor) {
+    try {
+        const url = new URL(String(valor ?? ''));
+        return url.protocol === 'https:' ? url.href : null;
+    } catch {
+        return null;
+    }
+}
+
 function element(tag, className, text) {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -192,10 +202,23 @@ export function buildCard(publicacion, { compacta = false } = {}) {
     }
 
     const visual = element('div', 'explore-card__visual explore-card__visual--green');
-    visual.setAttribute('aria-hidden', 'true');
     const cow = element('i');
     cow.className = 'fa-solid fa-cow';
+    cow.setAttribute('aria-hidden', 'true');
     visual.append(cow);
+    const imagen = safeImageUrl(publicacion?.imagenUrl);
+    if (imagen) {
+        const foto = element('img', 'explore-card__photo');
+        foto.src = imagen;
+        foto.alt = formatText(publicacion?.titulo);
+        foto.loading = 'lazy';
+        foto.decoding = 'async';
+        foto.referrerPolicy = 'no-referrer';
+        // Si la imagen ya no existe, queda el ícono en vez de un recuadro roto.
+        foto.addEventListener('error', () => foto.remove(), { once: true });
+        visual.append(foto);
+        visual.classList.add('explore-card__visual--photo');
+    }
 
     const body = element('div', 'explore-card__body');
 

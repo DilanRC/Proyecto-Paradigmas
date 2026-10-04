@@ -119,9 +119,9 @@ final class AnimalComercial
              (tbanimalpublicacionid, tbanimalid, tbproductorvendedorid, tbfincaid,
               tbanimalpublicacionfecha, tbanimalpublicacionprecio,
               tbanimalpublicaciontitulo, tbanimalpublicaciondescripcion,
-              tbanimalpublicacionorigen)
+              tbanimalpublicacionimagenurl, tbanimalpublicacionorigen)
              VALUES (:id, :animalId, :vendedorId, :fincaId, :fecha, :precio,
-              :titulo, :descripcion, :origen)'
+              :titulo, :descripcion, :imagenUrl, :origen)'
         );
         $sentencia->execute([
             'id' => $publicacionId,
@@ -132,6 +132,7 @@ final class AnimalComercial
             'precio' => $datos['precio'] ?? null,
             'titulo' => $datos['titulo'] ?? null,
             'descripcion' => $datos['descripcion'] ?? null,
+            'imagenUrl' => $datos['imagenUrl'] ?? null,
             'origen' => $datos['origen'],
         ]);
         $this->abrirEstadoPeriodo(
@@ -357,6 +358,7 @@ final class AnimalComercial
             "SELECT p.tbanimalpublicacionid AS publicacionId,
                     p.tbanimalpublicaciontitulo AS titulo,
                     p.tbanimalpublicaciondescripcion AS descripcion,
+                    p.tbanimalpublicacionimagenurl AS imagenUrl,
                     p.tbanimalpublicacionprecio AS precio,
                     p.tbanimalpublicacionfecha AS fecha,
                     ep.tbanimalpublicacionestadoperiodoestado AS estado,
@@ -403,6 +405,7 @@ final class AnimalComercial
             'animalId' => (int) $fila['animalId'],
             'titulo' => $fila['titulo'],
             'descripcion' => $fila['descripcion'],
+            'imagenUrl' => $fila['imagenUrl'] ?? null,
             'precio' => $fila['precio'] === null ? null : (float) $fila['precio'],
             'fecha' => $fila['fecha'],
             'estado' => $fila['estado'],

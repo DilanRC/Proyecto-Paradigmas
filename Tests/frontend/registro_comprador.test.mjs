@@ -14,7 +14,11 @@ test('el alta inicial no pregunta actividades; la ampliación sí', async () => 
         'una cuenta nueva es un solo formulario que termina en "Registrar"');
     assert.deepEqual(registrationCapabilities(['PRODUCTOR', 'TRANSPORTISTA'], false), ['COMPRADOR'],
         'una cuenta nueva siempre se envía como Comprador');
-    // Activar Vendedor desde Ajustes reutiliza el formulario con sus fincas.
+    // Activar Vendedor desde Ajustes muestra solo el formulario de fincas.
+    assert.deepEqual(registrationSteps(['COMPRADOR', 'TRANSPORTISTA'], true, 'PRODUCTOR'), ['fincas']);
+    assert.deepEqual(registrationCapabilities(['COMPRADOR', 'TRANSPORTISTA'], true, 'PRODUCTOR'), ['PRODUCTOR'],
+        'solo se envía la actividad elegida, nunca las ya configuradas');
+    // Sin actividad elegida, la ampliación conserva su flujo completo.
     assert.deepEqual(registrationSteps(['PRODUCTOR'], true), ['intereses', 'fincas', 'revision']);
     assert.deepEqual(registrationCapabilities(['PRODUCTOR'], true), ['PRODUCTOR']);
 });
@@ -29,7 +33,8 @@ test('"Configurar" desde Ajustes preselecciona la actividad aun con URL bonita',
 test('después de registrarse va a Explorar; al ampliar vuelve al panel', () => {
     const js = read('Public/js/registro.js');
     assert.match(js, /const fallback = extending \? 'mi-actividad\?actualizado=1' : 'explorar';/);
-    assert.match(js, /fincas: extending \? summary\.fincas : \[\]/);
+    // Una cuenta nueva nunca envía fincas; una ampliación solo si activa Vendedor.
+    assert.match(js, /fincas: extending && registrationCapabilities\(summary\.capacidades, extending, solicitada\)\.includes\('PRODUCTOR'\)/);
     const vista = read('Application/View/registro/index.php');
     assert.match(vista, /Te registras como comprador/);
     // Diseño del formulario: tipo con radios, cuadrícula, plegables y "Registrar".

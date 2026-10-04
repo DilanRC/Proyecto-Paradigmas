@@ -2,7 +2,6 @@ import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { readAuthSession, getAccessToken } from './shared/supabase-auth.js';
 import { readPublicProfile } from './shared/public-profile.js';
 import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-4';
-import { request } from './shared/api.js';
 
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';
@@ -93,7 +92,6 @@ function createAccountMenu(actions, session, profile) {
             <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
             <a href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"></i><span>Mi panel</span></a>
             <a href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Ajustes de cuenta</span></a>
-            <a href="registro" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
             <a href="admin/dashboard" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
             <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
         </div>`;
@@ -141,28 +139,6 @@ async function resolveAdminLink(menu) {
         }
     } catch {
         // El menú de perfil sigue disponible; el acceso admin falla cerrado.
-    }
-}
-
-async function resolveProfileRegister(menu) {
-    const register = menu?.querySelector('[data-profile-register]');
-    if (!register) return;
-    register.hidden = true;
-    try {
-        const response = await request('api/v1/actividad', { timeoutMs: 10000 });
-        const capacidades = response.data?.capacidades ?? {};
-        const pendientes = Object.entries(capacidades)
-            .filter(([, detail]) => detail?.estado === 'NO_CONFIGURADO')
-            .map(([id]) => id);
-        if (pendientes.length === 0) return;
-        register.hidden = false;
-        register.href = pendientes.length === 1
-            ? `registro?capacidad=${encodeURIComponent(pendientes[0])}&next=mi-actividad`
-            : 'ajustes#participacion';
-        const label = register.querySelector('span');
-        if (label) label.textContent = pendientes.length === 1 ? 'Completar actividad' : 'Agregar actividad';
-    } catch {
-        // La acción opcional falla cerrada si no se puede consultar el estado.
     }
 }
 
@@ -237,7 +213,6 @@ function enhancePublicNavigation() {
     if (session?.authenticated === true) {
         const menu = createAccountMenu(actions, session, readPublicProfile());
         void resolveAdminLink(menu);
-        void resolveProfileRegister(menu);
         return;
     }
 

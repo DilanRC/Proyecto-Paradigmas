@@ -14,11 +14,11 @@
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <link rel="stylesheet" href="css/public-product.css?v=product-7">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/onboarding.css?v=front-2">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-2">
+    <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-9"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-2"></script>
+    <script type="module" src="js/public-ui.js?v=public-10"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-3"></script>
 </head>
 <body class="public-home activity-page settings-page">
     <div class="public-shell" id="inicio">

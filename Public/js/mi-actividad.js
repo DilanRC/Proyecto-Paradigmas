@@ -2,6 +2,7 @@ import { request } from './shared/api.js';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
+import { safeImageUrl } from './explore.js?v=foto-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
@@ -232,6 +233,13 @@ function formatColones(precio) {
     return `₡${String(Math.round(precio)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
+function miniatura(item) {
+    const url = safeImageUrl(item?.imagenUrl);
+    return url
+        ? `<img class="panel-thumb" src="${escapeHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : '<span class="panel-thumb panel-thumb--empty" aria-hidden="true"><i class="fa-solid fa-cow"></i></span>';
+}
+
 function setPublicationsView(view, message = '') {
     document.querySelector('#publications-loading').hidden = view !== 'loading';
     document.querySelector('#publications-error').hidden = view !== 'error';
@@ -243,7 +251,7 @@ function renderPublications(publicaciones) {
     const list = document.querySelector('#publications-list');
     const empty = document.querySelector('#publications-empty');
     setCount('#publications-count', publicaciones.length);
-    list.innerHTML = publicaciones.map((item) => `<article class="panel-row"><div><h3>${escapeHtml(item.titulo || 'Publicación')}</h3><p>${escapeHtml(item.finca?.nombre || '')} · ${formatColones(item.precio)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(item.estado)}">${item.estado === 'ACTIVO' ? 'Activa' : escapeHtml(String(item.estado ?? '').toLowerCase())}</span>${item.estado === 'ACTIVO' ? `<a class="activity-button activity-button--text" href="explorar?publicacion=${Number(item.publicacionId)}">Ver</a>` : ''}</div></article>`).join('');
+    list.innerHTML = publicaciones.map((item) => `<article class="panel-row panel-row--media">${miniatura(item)}<div><h3>${escapeHtml(item.titulo || 'Publicación')}</h3><p>${escapeHtml(item.finca?.nombre || '')} · ${formatColones(item.precio)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(item.estado)}">${item.estado === 'ACTIVO' ? 'Activa' : escapeHtml(String(item.estado ?? '').toLowerCase())}</span>${item.estado === 'ACTIVO' ? `<a class="activity-button activity-button--text" href="explorar?publicacion=${Number(item.publicacionId)}">Ver</a>` : ''}</div></article>`).join('');
     empty.hidden = publicaciones.length > 0;
     if (publicaciones.length > 0) return;
     // Sin fincas no se puede publicar: el siguiente paso es registrar una.

@@ -107,7 +107,7 @@ test('la portada sigue el orden hero, destacadas, cómo funciona', () => {
         assert.ok(home.includes(marca), `falta ${marca}`);
     }
     const homeJs = read('../../Public/js/home.js');
-    assert.match(homeJs, /import \{ buildCard \} from '\.\/explore\.js'/);
+    assert.match(homeJs, /import \{ buildCard \} from '\.\/explore\.js(\?v=[a-z0-9-]+)?'/);
     assert.match(homeJs, /const FIJAS_HASTA = 4;/);
     for (const destino of ['href="explorar"', 'href="registro"']) assert.ok(home.includes(destino));
     // Las formas de participar viven en Mi actividad, después de iniciar sesión.

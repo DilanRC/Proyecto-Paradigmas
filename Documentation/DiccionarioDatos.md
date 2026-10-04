@@ -292,6 +292,7 @@ estado no es columna: vive en `tbanimalpublicacionestadoperiodo`.
 | `tbanimalpublicacionprecio` | `DECIMAL(12,2) NULL` | Sí | Precio publicado, si aplica. | Usuario | - |
 | `tbanimalpublicaciontitulo` | `VARCHAR(150) NULL` | Sí | Título declarado. | Usuario | - |
 | `tbanimalpublicaciondescripcion` | `VARCHAR(500) NULL` | Sí | Descripción declarada. | Usuario | - |
+| `tbanimalpublicacionimagenurl` | `VARCHAR(500) NULL` | Sí | URL https de la imagen (Supabase Storage o externa). | Usuario | - |
 | `tbanimalpublicacionorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del alta. | Aplicación | - |
 
 ## tbanimalpublicacionestadoperiodo

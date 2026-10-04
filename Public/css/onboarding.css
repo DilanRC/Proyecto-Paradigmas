@@ -189,3 +189,195 @@
 @media (prefers-reduced-motion:reduce) {
     .signup-accordion summary::after { transition:none; }
 }
+
+/* Fincas (activar Vendedor): mismo lenguaje que el formulario de alta. */
+.signup-section--first { padding-top:0; border-top:0; }
+.signup-section--first .signup-required { margin-bottom:0; }
+
+.signup .finca-card {
+    display:grid;
+    gap:16px;
+    padding:22px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:18px;
+    background:var(--tc-bg-elevated);
+}
+
+.signup .finca-card__heading { margin:0; color:var(--tc-text); font-size:1.05rem; }
+
+.signup .finca-card .auth-field > span:not(.auth-password-control),
+.signup .finca-address .field > span {
+    color:var(--tc-text-soft);
+    font-size:.85rem;
+    font-weight:700;
+}
+
+.signup .finca-address { padding-top:16px; }
+
+.finca-address > .finca-address__heading {
+    display:grid;
+    gap:2px;
+    margin:0 0 18px;
+}
+
+.signup .finca-address__title { color:var(--tc-text); font-weight:800; }
+.signup .finca-address__meta { margin:0; color:var(--tc-text-soft); font-size:.88rem; text-align:left; }
+.signup .farm-address-editor { padding:0; border:0; }
+
+
+/* ---------------------------------------------------------------------------
+ * Publicar ganado: mismo sistema de formulario que el registro.
+ * ------------------------------------------------------------------------- */
+
+.publish-main {
+    width:min(1080px,calc(100% - 32px));
+    margin:0 auto;
+    padding:clamp(28px,5vw,56px) 0 72px;
+}
+
+.publish-intro { margin-bottom:24px; }
+
+.publish-intro h1 {
+    margin:6px 0 8px;
+    color:var(--tc-text);
+    font-size:clamp(2rem,4vw,2.75rem);
+    letter-spacing:-.03em;
+}
+
+.publish-intro p:not(.section-kicker) {
+    margin:0;
+    color:var(--tc-text-soft);
+    font-size:1rem;
+}
+
+.signup-title--sm { font-size:1.35rem; margin-bottom:18px; }
+
+.publish-photo {
+    padding-top:32px;
+    border-top:1px solid var(--tc-line);
+}
+
+.publish-photo { border-radius:0; }
+
+/* Un legend se dibuja sobre el borde del fieldset; flotándolo queda dentro. */
+.publish-photo > legend { float:left; width:100%; }
+.publish-photo > legend + * { clear:both; }
+
+#publish-workspace .signup-section--first .signup-required { margin-bottom:24px; }
+
+.publish-url > label {
+    color:var(--tc-text-soft);
+    font-size:.85rem;
+    font-weight:700;
+}
+
+.publish-dropzone {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:center;
+    gap:10px 14px;
+    margin-top:18px;
+    padding:28px 20px;
+    border:2px dashed var(--tc-line-strong);
+    border-radius:18px;
+    background:var(--tc-bg);
+    text-align:center;
+    transition:border-color .15s ease,background .15s ease;
+}
+
+.publish-dropzone.is-dragging {
+    border-color:var(--tc-primary);
+    background:color-mix(in srgb,var(--tc-primary) 10%,transparent);
+}
+
+.publish-dropzone__button { cursor:pointer; }
+
+/* El input real está oculto a la vista: su foco se muestra en el botón. */
+.publish-dropzone:has(input:focus-visible) .publish-dropzone__button {
+    outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent);
+    outline-offset:3px;
+}
+
+.publish-dropzone__text { color:var(--tc-text-soft); font-weight:700; }
+.publish-dropzone .field-help { flex-basis:100%; }
+
+.publish-url { margin-top:18px; }
+
+.publish-url input {
+    width:100%;
+    min-height:49px;
+    padding:0 14px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:13px;
+    color:var(--tc-text);
+    background:var(--tc-bg);
+}
+
+.publish-url input:focus {
+    border-color:var(--tc-primary);
+    box-shadow:0 0 0 3px var(--tc-glow);
+    outline:none;
+}
+
+.publish-preview {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    gap:14px;
+    margin-top:16px;
+}
+
+.publish-preview img {
+    width:min(100%,320px);
+    aspect-ratio:4 / 3;
+    border:1px solid var(--tc-line-strong);
+    border-radius:16px;
+    object-fit:cover;
+    background:var(--tc-bg);
+}
+
+.publish-photo .auth-error:not(:empty) { display:block; margin-top:10px; }
+
+.publish-status {
+    margin:0 34px;
+    padding:16px 18px;
+    border-radius:14px;
+}
+
+.publish-status h2 { margin:0 0 4px; font-size:1.05rem; }
+.publish-status p { margin:0; }
+.publish-status a { display:inline-block; margin-top:8px; color:inherit; font-weight:800; }
+
+.publish-status[data-kind='success'] {
+    color:var(--feedback-success-text);
+    background:var(--feedback-success-bg);
+}
+
+.publish-status[data-kind='error'] {
+    color:var(--feedback-error-text);
+    background:var(--feedback-error-bg);
+}
+
+/* El pie del formulario de publicar usa la misma línea y botón píldora. */
+#publish-workspace .onboarding-actions {
+    justify-content:space-between;
+    margin:0 34px;
+    padding:22px 0 34px;
+    border-top:1px solid var(--tc-line);
+}
+
+.publish-gate { padding:clamp(24px,4vw,40px); }
+.publish-gate__body h2 { margin:0 0 8px; color:var(--tc-text); }
+.publish-gate__body p { margin:0 0 20px; color:var(--tc-text-soft); }
+.publish-gate__actions { display:flex; flex-wrap:wrap; gap:10px; }
+
+@media (max-width:640px) {
+    .publish-main { width:min(100% - 20px,1080px); }
+    .publish-status { margin:0 22px; }
+    #publish-workspace .onboarding-actions { margin:0 22px; flex-direction:column-reverse; align-items:stretch; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .publish-dropzone { transition:none; }
+}

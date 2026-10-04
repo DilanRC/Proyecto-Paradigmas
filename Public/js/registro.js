@@ -40,13 +40,17 @@ export function loginPendiente(search = globalThis.location?.search ?? '') {
  * Comprador (el backend lo garantiza). Vender u ofrecer fletes se activa luego
  * desde Ajustes → Cómo participo, que reutiliza este mismo formulario.
  */
-export function registrationSteps(capabilities, extending) {
+export function registrationSteps(capabilities, extending, solicitada = null) {
     if (!extending) return ['persona'];
+    // "Configurar" desde Ajustes: Vendedor solo pide sus fincas.
+    if (solicitada === 'PRODUCTOR') return ['fincas'];
+    if (solicitada) return ['revision'];
     return requiredRegistrationSteps(capabilities).filter((step) => step !== 'persona');
 }
 
-export function registrationCapabilities(selected, extending) {
-    return extending ? selected : ['COMPRADOR'];
+export function registrationCapabilities(selected, extending, solicitada = null) {
+    if (!extending) return ['COMPRADOR'];
+    return solicitada ? [solicitada] : selected;
 }
 
 function formPersona(form) {
@@ -92,9 +96,8 @@ function montarDireccionFinca(card, direccionInicial = null) {
     const numero = ++secuenciaFinca;
     const listaId = `registro-pueblos-finca-${numero}`;
     details.innerHTML = `
-        <summary><span class="finca-address__title">Agregar dirección *</span><span class="finca-address__meta">Necesaria para continuar</span></summary>
+        <p class="finca-address__heading"><span class="finca-address__title">Dirección de la finca *</span><span class="finca-address__meta">Provincia, cantón, distrito, pueblo y señas. El punto en el mapa es opcional.</span></p>
         <div class="farm-address-editor">
-            <p class="fieldset-help">Complete provincia, cantón, distrito, pueblo y señas. El punto exacto en el mapa es opcional.</p>
             <div class="farm-address-editor__grid">
                 <label class="field"><span>Provincia</span><select data-finca-provincia></select></label>
                 <label class="field"><span>Cantón</span><select data-finca-canton></select></label>
@@ -379,6 +382,7 @@ async function initialize() {
         ? (authEmail && authEmail === profileEmail ? cachedProfile : null)
         : cachedProfile;
     const extending = Boolean(existingProfile?.persona && authSession);
+    const solicitada = extending ? (normalizeCapabilities([requestedCapability(window.location) ?? ''])[0] ?? null) : null;
     restoreDraft(form, existingProfile);
     if (authSession && !existingProfile?.persona) {
         const email = form.elements.namedItem('correoElectronico');
@@ -399,11 +403,24 @@ async function initialize() {
 
     if (extending) {
         const etiquetaFinal = finishButton.querySelector('[data-finish-label]');
-        if (etiquetaFinal) etiquetaFinal.textContent = 'Guardar actividad';
+        if (etiquetaFinal) etiquetaFinal.textContent = solicitada === 'PRODUCTOR' ? 'Activar vendedor' : 'Guardar actividad';
         const title = document.querySelector('#registro-title');
-        if (title) title.textContent = 'Amplía cómo quieres usar Ganado Cerca.';
         const intro = title?.nextElementSibling;
-        if (intro) intro.textContent = 'Ya conocemos tu identidad. Solo preguntaremos los datos adicionales que requiera la nueva actividad.';
+        // Quien amplía ya tiene cuenta: ni "Crear cuenta" ni "Ya tengo cuenta".
+        const kicker = title?.previousElementSibling;
+        if (kicker) kicker.textContent = 'Tu cuenta';
+        const volver = document.querySelector('.auth-header__actions .auth-back');
+        if (volver instanceof HTMLAnchorElement) {
+            volver.href = 'ajustes#participacion';
+            volver.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Volver a ajustes</span>';
+        }
+        if (solicitada === 'PRODUCTOR') {
+            if (title) title.textContent = 'Activa tu cuenta de vendedor.';
+            if (intro) intro.textContent = 'Registra al menos una finca: desde ahí publicarás tu ganado. Tus datos personales ya los tenemos.';
+        } else {
+            if (title) title.textContent = 'Amplía cómo quieres usar Ganado Cerca.';
+            if (intro) intro.textContent = 'Ya conocemos tu identidad. Solo preguntaremos los datos adicionales que requiera la nueva actividad.';
+        }
     }
 
     let stepIndex = 0;
@@ -411,7 +428,7 @@ async function initialize() {
     let identityTimer = null;
     let identityState = extending ? 'available' : 'idle';
     let submitInProgress = false;
-    const computeSteps = () => registrationSteps(selectedCapabilities(form), extending);
+    const computeSteps = () => registrationSteps(selectedCapabilities(form), extending, solicitada);
     let steps = computeSteps();
     const syncNextButton = () => {
         nextButton.disabled = steps[stepIndex] === 'persona'
@@ -519,7 +536,7 @@ async function initialize() {
         if (active === 'intereses') errors = validateCapabilities(selectedCapabilities(form));
         if (active === 'fincas') {
             const fincas = readFincas();
-            errors = { ...validateFincas(fincas, selectedCapabilities(form)), ...validarDireccionesFinca(fincas) };
+            errors = { ...validateFincas(fincas, registrationCapabilities(selectedCapabilities(form), extending, solicitada)), ...validarDireccionesFinca(fincas) };
         }
         setErrors(errors);
         if (errors.fincas) {
@@ -623,8 +640,9 @@ async function initialize() {
                 method: 'POST',
                 body: JSON.stringify({
                     persona: summary.persona,
-                    capacidades: registrationCapabilities(summary.capacidades, extending),
-                    fincas: extending ? summary.fincas : [],
+                    capacidades: registrationCapabilities(summary.capacidades, extending, solicitada),
+                    fincas: extending && registrationCapabilities(summary.capacidades, extending, solicitada).includes('PRODUCTOR')
+                        ? summary.fincas : [],
                 }),
             });
 

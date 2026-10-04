@@ -168,6 +168,7 @@ erDiagram
         DECIMAL tbanimalpublicacionprecio
         VARCHAR tbanimalpublicaciontitulo
         VARCHAR tbanimalpublicaciondescripcion
+        VARCHAR tbanimalpublicacionimagenurl
         VARCHAR tbanimalpublicacionorigen
     }
 

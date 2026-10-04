@@ -9,6 +9,7 @@ import { syncPublicProfile } from './shared/public-profile.js';
 import { createToast } from './shared/toast.js';
 
 const ACTIVITY_API = 'api/v1/actividad';
+const REGISTRO_API = 'api/v1/registro';
 let activityData = null;
 const pendingChanges = new Set();
 let toast = null;
@@ -62,10 +63,21 @@ function renderProfile(persona = {}) {
     }));
 }
 
+/**
+ * Vendedor necesita fincas: "Configurar" abre solo ese formulario. Comprador y
+ * Transportista no piden datos extra: se activan con el interruptor.
+ */
+export function necesitaFormulario(id) {
+    return id === 'PRODUCTOR';
+}
+
 function activityControl(id, detail) {
     const state = detail?.estado ?? 'NO_CONFIGURADO';
+    if (state === 'NO_CONFIGURADO' && necesitaFormulario(id)) {
+        return `<a class="activity-button activity-button--sm" href="registro/productor?next=ajustes">Configurar</a>`;
+    }
     if (state === 'NO_CONFIGURADO') {
-        return `<a class="activity-button activity-button--sm" href="${escapeHtml(detail?.destinoConfiguracion || `registro?capacidad=${id}&next=ajustes`)}">Configurar</a>`;
+        return `<input class="settings-switch" type="checkbox" role="switch" data-toggle-capability="${id}" data-configurar="true" aria-labelledby="cap-${id}-title" aria-describedby="cap-${id}-desc">`;
     }
     if (detail?.escrituraDisponible !== true) {
         return `<p class="settings-hint">${escapeHtml(detail?.motivoBloqueo || 'La actividad está administrada por el sistema.')}</p>`;
@@ -100,6 +112,12 @@ async function loadActivity({ quiet = false } = {}) {
     }
 }
 
+export function mensajeActivacion(id, activa, mensajeServidor = '') {
+    if (activa && id === 'TRANSPORTISTA') return 'Listo: ya ofreces fletes. Agrega tu vehículo desde Mi panel.';
+    if (activa && id === 'COMPRADOR') return 'Listo: ya puedes explorar y guardar ganado.';
+    return mensajeServidor || (activa ? 'Actividad activada correctamente.' : 'Actividad desactivada correctamente.');
+}
+
 async function changeCapability(input) {
     const id = input.dataset.toggleCapability;
     const nextActive = input.checked;
@@ -114,11 +132,16 @@ async function changeCapability(input) {
     const status = document.querySelector('#activity-status');
     status.textContent = nextActive ? 'Reactivando actividad…' : 'Desactivando actividad…';
     try {
-        const response = await request(ACTIVITY_API, { method: 'PATCH', body: JSON.stringify({ contexto: id, activo: nextActive }) });
+        // Primera activación de Transportista: la misma ampliación de cuenta que
+        // hacía el formulario de registro, sin datos extra que pedir.
+        const response = input.dataset.configurar === 'true' && id === 'TRANSPORTISTA'
+            ? await request(REGISTRO_API, { method: 'POST', body: JSON.stringify({ capacidades: [id], fincas: [] }) })
+            : await request(ACTIVITY_API, { method: 'PATCH', body: JSON.stringify({ contexto: id, activo: nextActive }) });
         const refreshed = await loadActivity({ quiet: true });
         if (refreshed) {
-            status.textContent = response.message || 'Actividad actualizada correctamente.';
-            toast?.success(response.message || 'Actividad actualizada correctamente.');
+            const mensaje = mensajeActivacion(id, nextActive, response.message);
+            status.textContent = mensaje;
+            toast?.success(mensaje);
         }
     } catch (error) {
         status.textContent = error?.message || 'No fue posible cambiar la actividad.';

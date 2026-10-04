@@ -204,7 +204,23 @@ try {
     test_same(401, test_publicacion_controller()->procesar('POST', [], [])['status'],
         'La creación de publicaciones exige una Persona autenticada');
 
-    echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo y validaciones.\n";
+    // Imagen de la publicación: solo URLs https; nada ejecutable llega a un <img>.
+    $imagen = [\Application\Controller\AnimalPublicacionController::class, 'imagenUrl'];
+    test_same(null, $imagen(null), 'Sin imagen la publicación sigue siendo válida');
+    test_same(null, $imagen('  '), 'Una imagen vacía equivale a no tener imagen');
+    test_same('https://upload.wikimedia.org/a.jpg', $imagen(' https://upload.wikimedia.org/a.jpg '),
+        'Una URL https se guarda recortada');
+    foreach (['http://example.com/a.jpg', 'javascript:alert(1)', 'data:image/png;base64,AAAA',
+        'https://usuario:clave@example.com/a.jpg', 'https://' . str_repeat('a', 500) . '.com/a.jpg', 'no es url'] as $mala) {
+        try {
+            $imagen($mala);
+            test_assert(false, "Debe rechazar la imagen {$mala}");
+        } catch (Application\HttpException $error) {
+            test_same(422, $error->estadoHttp, "La imagen {$mala} debe responder 422");
+        }
+    }
+
+    echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo, validaciones e imagen https.\n";
 } finally {
     limpiar_animales($animalIds);
     test_cleanup_productores($identificaciones);

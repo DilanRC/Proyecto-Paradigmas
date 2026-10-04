@@ -11,10 +11,10 @@
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/onboarding.css?v=signup-2">
+    <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=signup-2"></script>
+    <script type="module" src="js/registro.js?v=signup-4"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -109,8 +109,11 @@
                 <div class="business-note"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><p>Podrás activar o desactivar estas actividades más adelante sin borrar tu cuenta ni duplicar tu identidad.</p></div>
             </section>
 
-            <section class="onboarding-step" data-step="fincas" hidden>
-                <div class="step-heading"><span class="step-number">03</span><div><h2>Añade tus fincas</h2><p>Agrega una o varias fincas. El nombre y la dirección escrita son necesarios para continuar. El punto exacto en el mapa es opcional.</p></div></div>
+            <section class="onboarding-step signup" data-step="fincas" hidden>
+                <div class="signup-section signup-section--first">
+                    <h2 class="signup-title">Tus fincas</h2>
+                    <p class="signup-required"><span aria-hidden="true">*</span> campos obligatorios · el punto exacto en el mapa es opcional</p>
+                </div>
                 <div id="fincas-list" class="fincas-list"></div>
                 <button class="onboarding-add" id="agregar-finca" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Agregar otra finca</button>
                 <p class="auth-error onboarding-error" data-error-for="fincas"></p>
@@ -134,7 +137,7 @@
     <article class="finca-card" data-finca>
         <div class="finca-card__heading"><strong>Finca</strong><button type="button" data-remove-finca aria-label="Eliminar finca"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></div>
         <label class="auth-field"><span>Nombre de la finca *</span><input type="text" data-finca-nombre maxlength="150" required placeholder="Ej. Finca El Roble"></label>
-        <details class="finca-address"><summary><span class="finca-address__title">Agregar dirección *</span><span class="finca-address__meta">Necesaria para continuar</span></summary><p>Completa provincia, cantón, distrito, pueblo y señas. El punto exacto en el mapa es opcional.</p></details>
+        <div class="finca-address"></div>
         <small class="auth-error" data-finca-error></small>
     </article>
 </template>

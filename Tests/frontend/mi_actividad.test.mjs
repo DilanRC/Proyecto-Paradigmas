@@ -95,10 +95,21 @@ test('modal propio tiene foco, errores por campo y evita doble envío', () => {
     assert.ok(js.includes("event.key === 'Escape'") || js.includes("addEventListener('cancel'"));
 });
 
-test('el enlace de completar actividad se decide con el servidor y falla cerrado', () => {
-    assert.ok(publicUi.includes("request('api/v1/actividad'"));
-    assert.ok(publicUi.includes("register.hidden = true"));
-    assert.ok(publicUi.includes("detail?.estado === 'NO_CONFIGURADO'"));
+test('el menú de la cuenta ya no ofrece completar actividades: eso vive en Ajustes', () => {
+    assert.equal(publicUi.includes('data-profile-register'), false);
+    assert.equal(publicUi.includes('resolveProfileRegister'), false);
+    assert.ok(publicUi.includes('href="ajustes"'));
+});
+
+test('Ajustes activa Transportista ahí mismo y Vendedor abre solo su formulario', async () => {
+    const { necesitaFormulario, mensajeActivacion } = await import('../../Public/js/ajustes.js');
+    assert.equal(necesitaFormulario('PRODUCTOR'), true);
+    assert.equal(necesitaFormulario('TRANSPORTISTA'), false);
+    assert.equal(necesitaFormulario('COMPRADOR'), false);
+    assert.match(mensajeActivacion('TRANSPORTISTA', true), /ya ofreces fletes/);
+    assert.ok(ajustesJs.includes('href="registro/productor?next=ajustes">Configurar</a>'));
+    // Misma ampliación de cuenta que hacía el formulario, sin datos extra.
+    assert.ok(ajustesJs.includes("request(REGISTRO_API, { method: 'POST', body: JSON.stringify({ capacidades: [id], fincas: [] }) })"));
 });
 
 test('Mi actividad reutiliza el subflujo de fincas con dirección y mapa', () => {

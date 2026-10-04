@@ -418,3 +418,18 @@
     .settings-switch,
     .settings-switch::after { transition:none; }
 }
+
+/* Miniatura de la publicación en "Mis publicaciones". */
+.panel-row--media { justify-content:flex-start; }
+.panel-row--media > div:first-of-type { flex:1; }
+.panel-thumb {
+    display:grid;
+    flex:0 0 56px;
+    width:56px;
+    height:56px;
+    place-items:center;
+    border-radius:12px;
+    object-fit:cover;
+    color:var(--tc-primary-strong);
+    background:color-mix(in srgb,var(--tc-primary) 12%,transparent);
+}
