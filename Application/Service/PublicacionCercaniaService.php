@@ -77,7 +77,7 @@ final class PublicacionCercaniaService
         }
 
         $sentencia = $this->conexion->prepare(
-            'SELECT p.tbanimalpublicacionid AS publicacionId,
+            'SELECT p.tbanimalpublicacionid AS publicacionid,
                     d.tbdireccionlatitud AS latitud,
                     d.tbdireccionlongitud AS longitud
              FROM tbanimalpublicacion p
@@ -92,7 +92,7 @@ final class PublicacionCercaniaService
 
         $resultado = [];
         foreach ($sentencia->fetchAll() as $fila) {
-            $id = (int) $fila['publicacionId'];
+            $id = (int) $fila['publicacionid'];
             if (array_key_exists($id, $resultado)) {
                 throw new \RuntimeException(
                     'Una publicación resolvió más de una dirección de finca; revise la integridad de datos.'

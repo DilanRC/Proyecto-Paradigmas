@@ -104,7 +104,7 @@ final class Transportista
     public function buscarPorId(int $transportistaId): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT pe.tbpersonaidentificacionnumero AS identificacionNumero, pe.tbpersonanombre AS nombre,
+            'SELECT pe.tbpersonaidentificacionnumero AS identificacionnumero, pe.tbpersonanombre AS nombre,
                     t.tbtransportistaestado, pe.tbpersonaestado
              FROM tbtransportista t INNER JOIN tbpersona pe ON pe.tbpersonaid=t.tbpersonaid
              WHERE t.tbtransportistaid = :id'
@@ -112,7 +112,13 @@ final class Transportista
         $sentencia->execute(['id' => $transportistaId]);
         $fila = $sentencia->fetch();
 
-        return $fila === false ? null : $fila;
+        // Alias en minúscula: Postgres los pliega; la clave pública sigue en camelCase.
+        return $fila === false ? null : [
+            'identificacionNumero' => $fila['identificacionnumero'],
+            'nombre' => $fila['nombre'],
+            'tbtransportistaestado' => $fila['tbtransportistaestado'],
+            'tbpersonaestado' => $fila['tbpersonaestado'],
+        ];
     }
 
     public function bloquear(string $identificacionNumero): ?array

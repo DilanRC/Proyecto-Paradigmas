@@ -93,7 +93,7 @@ final class TransportistaVehiculo
     public function listarVehiculosPorTransportista(int $transportistaId): array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT v.tbvehiculoid AS vehiculoId, v.tbvehiculoplaca AS placa,
+            'SELECT v.tbvehiculoid AS vehiculoid, v.tbvehiculoplaca AS placa,
                     v.tbvehiculovin AS vin, v.tbvehiculomodelo AS modelo,
                     v.tbvehiculoestado AS estado
              FROM tbtransportistavehiculo tv
@@ -105,7 +105,7 @@ final class TransportistaVehiculo
 
         return array_map(
             fn (array $fila): array => [
-                'vehiculoId' => (int) $fila['vehiculoId'],
+                'vehiculoId' => (int) $fila['vehiculoid'],
                 'placa' => $fila['placa'],
                 'vin' => $fila['vin'],
                 'modelo' => $fila['modelo'],

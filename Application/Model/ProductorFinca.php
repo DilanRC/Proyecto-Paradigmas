@@ -112,7 +112,7 @@ final class ProductorFinca
     public function listarActivasConIds(int $productorId): array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbfincaid AS fincaId, tbfincanombre AS nombre
+            'SELECT tbfincaid AS fincaid, tbfincanombre AS nombre
              FROM tbfinca
              WHERE tbproductorid = :productorId
                AND tbfincaestado = 1
@@ -122,7 +122,7 @@ final class ProductorFinca
 
         return array_map(
             static fn (array $fila): array => [
-                'fincaId' => (int) $fila['fincaId'],
+                'fincaId' => (int) $fila['fincaid'],
                 'nombre' => $fila['nombre'],
             ],
             $sentencia->fetchAll(),
@@ -132,7 +132,7 @@ final class ProductorFinca
     public function bloquearPropia(int $fincaId, int $productorId): ?array
     {
         $sentencia = $this->conexion->prepare(
-            'SELECT tbfincaid AS fincaId, tbproductorid AS productorId,
+            'SELECT tbfincaid AS fincaid, tbproductorid AS productorid,
                     tbfincanombre AS nombre, tbfincaestado AS estado
              FROM tbfinca
              WHERE tbfincaid = :fincaId
@@ -143,8 +143,8 @@ final class ProductorFinca
         $fila = $sentencia->fetch();
 
         return $fila === false ? null : [
-            'fincaId' => (int) $fila['fincaId'],
-            'productorId' => (int) $fila['productorId'],
+            'fincaId' => (int) $fila['fincaid'],
+            'productorId' => (int) $fila['productorid'],
             'nombre' => $fila['nombre'],
             'estado' => (int) $fila['estado'],
         ];
