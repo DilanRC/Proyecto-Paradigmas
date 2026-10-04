@@ -59,7 +59,12 @@ final class RegistroPublicoController
     private function registrar(array $cuerpo): array
     {
         $errores = $this->rechazarCamposDesconocidos($cuerpo, ['persona', 'capacidades', 'fincas']);
-        $capacidades = $this->validarCapacidades($cuerpo['capacidades'] ?? null, $errores);
+        // En el alta inicial las actividades son opcionales: el servicio crea
+        // Comprador. Al ampliar una cuenta sí hay que indicar cuál se agrega.
+        $primeraAlta = $this->actor->personaId === null;
+        $capacidades = $primeraAlta && !array_key_exists('capacidades', $cuerpo)
+            ? []
+            : $this->validarCapacidades($cuerpo['capacidades'] ?? null, $errores);
         $fincas = $this->validarFincas($cuerpo['fincas'] ?? [], $errores);
         $personaDatos = $this->resolverDatosPersona($cuerpo['persona'] ?? null, $errores);
 

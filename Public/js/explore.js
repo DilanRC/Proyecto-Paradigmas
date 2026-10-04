@@ -176,9 +176,12 @@ function specEntry(icono, etiqueta, valor) {
 /**
  * Construye la tarjeta. Se usa createElement y textContent en vez de innerHTML:
  * título, descripción y nombres vienen de la base y podrían contener markup.
+ *
+ * `compacta` (portada): solo foto, nombre y precio; el resto se despliega con
+ * "Ver más información" y no lleva botones de acción.
  */
-export function buildCard(publicacion) {
-    const article = element('article', 'explore-card');
+export function buildCard(publicacion, { compacta = false } = {}) {
+    const article = element('article', compacta ? 'explore-card explore-card--compacta' : 'explore-card');
     const publicacionId = Number(publicacion?.publicacionId);
     const animalId = Number(publicacion?.animalId);
     if (Number.isInteger(publicacionId) && publicacionId > 0) {
@@ -235,6 +238,20 @@ export function buildCard(publicacion) {
         icon.setAttribute('aria-hidden', 'true');
         boton.append(icon, element('span', null, accion));
         acciones.append(boton);
+    }
+
+    if (compacta) {
+        const mas = element('details', 'explore-card__more');
+        mas.append(
+            element('summary', null, 'Ver más información'),
+            meta,
+            element('p', null, formatText(publicacion.descripcion)),
+            specs,
+            vendedor,
+        );
+        body.append(element('h2', null, formatText(publicacion.titulo)), precio, mas);
+        article.append(visual, body);
+        return article;
     }
 
     body.append(

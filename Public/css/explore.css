@@ -658,3 +658,51 @@
 @media (max-width:760px) {
     .explore-filters { grid-template-columns:minmax(0,1fr); }
 }
+
+/* ---------------------------------------------------------------------------
+ * Tarjeta compacta (portada): foto, nombre, precio y detalle desplegable.
+ * ------------------------------------------------------------------------- */
+
+.explore-card--compacta .explore-card__body { gap:6px; }
+.explore-card--compacta h2 { margin:0; font-size:22px; }
+.explore-card--compacta p.explore-card__price { margin:0; }
+
+.explore-card__more {
+    margin-top:8px;
+    border-top:1px solid var(--tc-line);
+    padding-top:10px;
+}
+
+.explore-card__more summary {
+    display:flex;
+    min-height:44px;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    border-radius:10px;
+    color:var(--tc-text);
+    font-size:15px;
+    font-weight:800;
+    cursor:pointer;
+    list-style:none;
+}
+
+.explore-card__more summary::-webkit-details-marker { display:none; }
+
+.explore-card__more summary::after {
+    content:"›";
+    font-size:22px;
+    line-height:1;
+    transition:transform .15s ease;
+}
+
+.explore-card__more[open] summary::after { transform:rotate(90deg); }
+.explore-card__more > .explore-card__meta { margin-top:6px; }
+.explore-card__more > p { margin:10px 0 0; }
+
+/* Al abrir el detalle de una tarjeta, las vecinas no se estiran. */
+.public-carousel__track { align-items:flex-start; }
+
+@media (prefers-reduced-motion:reduce) {
+    .explore-card__more summary::after { transition:none; }
+}

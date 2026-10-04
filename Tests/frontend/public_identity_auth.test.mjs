@@ -98,10 +98,18 @@ test('la portada sigue el orden hero, destacadas, cómo funciona', () => {
     assert.match(home, /<label for="hero-search-tipo">/);
     assert.match(home, /name="ubicacion"/);
     assert.match(home, /name="tipo"/);
-    // Sin publicaciones la portada invita a publicar; nunca dice "no encontramos".
-    assert.ok(home.includes('Sé el primero en publicar ganado en tu zona'));
+    // Sin publicaciones la portada da la bienvenida; nunca dice "no encontramos".
+    assert.ok(home.includes('Pronto verás aquí ganado cerca de ti'));
+    assert.ok(home.includes('Crear cuenta para publicar'));
     assert.equal(/No encontramos/i.test(home), false);
-    for (const destino of ['href="explorar"', 'href="publicar"']) assert.ok(home.includes(destino));
+    // Carrusel con flechas y puntos; la tarjeta es la misma de Explorar.
+    for (const marca of ['data-featured-carousel', 'data-carousel-track', 'data-carousel-prev', 'data-carousel-next', 'data-carousel-dots']) {
+        assert.ok(home.includes(marca), `falta ${marca}`);
+    }
+    const homeJs = read('../../Public/js/home.js');
+    assert.match(homeJs, /import \{ buildCard \} from '\.\/explore\.js'/);
+    assert.match(homeJs, /const FIJAS_HASTA = 4;/);
+    for (const destino of ['href="explorar"', 'href="registro"']) assert.ok(home.includes(destino));
     // Las formas de participar viven en Mi actividad, después de iniciar sesión.
     assert.equal(home.includes('id="participar"'), false);
     assert.equal(home.includes('data-public-carousel'), false);
@@ -239,6 +247,11 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.equal(resolveNext('?next=https://example.com'), 'explorar');
     assert.equal(resolveNext('?next=//example.com'), 'explorar');
     assert.equal(resolveNext('?next=../entrar'), 'explorar');
+    // Vuelve a la publicación o búsqueda de origen, solo con parámetros seguros.
+    assert.equal(resolveNext('?next=explorar%3Fpublicacion%3D5'), 'explorar?publicacion=5');
+    assert.equal(resolveNext('?next=explorar%3Fpublicacion%3D5%26x%3Djs'), 'explorar?publicacion=5');
+    assert.equal(resolveNext('?next=explorar%3Fpublicacion%3Dabc'), 'explorar');
+    assert.equal(resolveNext('?next=explorar%3Fq%3Dbrahman'), 'explorar?q=brahman');
     assert.equal(resolveAdminNext('?next=admin/productores'), 'admin/productores');
     assert.equal(resolveAdminNext('?next=https://example.com'), 'admin/dashboard');
     assert.equal(isAdminLogin({ pathname: '/admin/entrar', search: '?next=admin%2Fdashboard' }), true);
@@ -257,7 +270,9 @@ test('el estado de autenticación tiene contraste y tamaño legibles', () => {
 test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => {
     assert.match(publicUi, /readAuthSession/);
     assert.match(publicUi, /createAccountMenu/);
-    assert.match(publicUi, /Mi perfil y actividad/);
+    assert.match(publicUi, /href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"><\/i><span>Mi panel<\/span>/);
+    // Ajustes de cuenta vive en el menú del avatar.
+    assert.match(publicUi, /href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"><\/i><span>Ajustes de cuenta<\/span>/);
     assert.match(publicUi, /api\/v1\/admin\/status/);
     assert.doesNotMatch(publicUi, /sessionStorage\.setItem\(SESSION_KEY/);
 });
@@ -286,7 +301,7 @@ test('el alta muestra la misma guía clara sin confirmar si el correo está regi
     assert.match(supabaseAuth, /code === 'user_already_exists'/);
     assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
     assert.match(supabaseAuth, /Si el correo puede usarse para crear una cuenta, te enviaremos instrucciones/);
-    assert.match(registroJs, /SIGNUP_NEXT_STEPS_MESSAGE, 'info'/);
+    assert.match(registroJs, /window\.location\.assign\(loginPendiente\(\)\)/);
     assert.doesNotMatch(registroJs, /Ese correo ya tiene una cuenta/);
     assert.match(registroJs, /let submitInProgress = false/);
 });
@@ -369,14 +384,16 @@ test('las rutas públicas no redirigen al login por el gate administrativo', () 
 
 test('el shell privado distingue volver al sitio público de cerrar sesión', () => {
     assert.ok(authGate.includes("publicLink.textContent = 'Sitio público'"));
-    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión administrativa'"));
+    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión'"));
+    // Salir del panel cierra la sesión completa, no solo el permiso admin.
+    assert.ok(authGate.includes('void signOutEverywhere(storage)'));
     assert.ok(authGate.includes('clearAdminBrowserSession(storage)'));
 });
 
 test('los paneles privados fallan cerrados y comparten bootstrap de API', () => {
     assert.ok(baseCss.includes('body.rural-panel {\n    visibility:hidden;'));
     assert.ok(baseCss.includes("html[data-tc-auth='ready'] body.rural-panel"));
-    assert.ok(api.startsWith("import './auth-gate.js?v=auth-gate-2';\nimport './admin-ui.js';"));
+    assert.ok(api.startsWith("import './auth-gate.js?v=auth-gate-4';\nimport './admin-ui.js';"));
     for (const path of PRIVATE_MODULES) {
         const module = read(path);
         assert.ok(module.includes("from './shared/api.js'"));

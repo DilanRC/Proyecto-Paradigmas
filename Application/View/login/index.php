@@ -9,11 +9,11 @@
     <title>Entrar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-4">
+    <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/login.js?v=front-4"></script>
+    <script type="module" src="js/login.js?v=front-7"></script>
 </head>
 <body class="auth-page">
     <main class="auth-stage" aria-labelledby="login-title">
@@ -27,7 +27,7 @@
             </a>
             <div class="auth-header__actions">
                 <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar a modo claro" aria-pressed="true"><i class="theme-toggle__icon fa-solid fa-sun" aria-hidden="true"></i><span class="theme-toggle__label">Claro</span></button>
-                <a class="auth-back" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
+                <a class="auth-back" href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
             </div>
         </header>
 

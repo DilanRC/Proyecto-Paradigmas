@@ -236,6 +236,46 @@ try {
     $conteoProductorRollback->execute(['identificacion' => $idRollback]);
     test_same(0, (int) $conteoProductorRollback->fetchColumn(),
         'Un fallo tardío no debe dejar Productor parcial');
+
+    // 6) Alta inicial sin elegir actividades: el backend crea Comprador solo,
+    // aunque el formulario no lo envíe.
+    $idSinActividades = test_document();
+    $correoSinActividades = strtolower(test_token('nuevo')) . '@example.test';
+    $identificaciones[] = $idSinActividades;
+    $payloadSinActividades = registro_payload($idSinActividades, $correoSinActividades, []);
+    unset($payloadSinActividades['capacidades'], $payloadSinActividades['fincas']);
+    $sinActividades = registro_controlador(null, $correoSinActividades)->procesar('POST', $payloadSinActividades);
+    test_same(201, $sinActividades['status'], 'El alta inicial no debe exigir elegir actividades');
+    test_same(['COMPRADOR'], $sinActividades['body']['data']['capacidadesCreadas'],
+        'Toda cuenta nueva debe quedar como Comprador');
+    $personaSinActividades = registro_persona_id($idSinActividades);
+    test_same(1, registro_contar_contexto('tbcomprador', 'tbpersonaid', $personaSinActividades),
+        'El Comprador automático debe apuntar a la Persona creada');
+
+    // 7) Aunque un cliente pida otra actividad en el alta, también queda Comprador.
+    $idSoloFletes = test_document();
+    $correoSoloFletes = strtolower(test_token('fletes')) . '@example.test';
+    $identificaciones[] = $idSoloFletes;
+    $soloFletes = registro_controlador(null, $correoSoloFletes)->procesar(
+        'POST',
+        registro_payload($idSoloFletes, $correoSoloFletes, ['TRANSPORTISTA']),
+    );
+    test_same(['COMPRADOR', 'TRANSPORTISTA'], $soloFletes['body']['data']['capacidadesCreadas'],
+        'El alta inicial siempre incluye Comprador');
+
+    // 8) Ampliar una cuenta existente sigue exigiendo la actividad a agregar y
+    // nunca toca un Comprador existente (activo o inactivo).
+    $ampliacionVacia = registro_controlador($personaSinActividades, $correoSinActividades)->procesar(
+        'POST',
+        ['persona' => null],
+    );
+    test_same(422, $ampliacionVacia['status'], 'Ampliar una cuenta debe indicar la actividad');
+    test_same([], \Application\Service\RegistroPublicoService::capacidadesDeAlta([], false, false),
+        'Una ampliación no agrega Comprador por su cuenta');
+    test_same(['TRANSPORTISTA'], \Application\Service\RegistroPublicoService::capacidadesDeAlta(['TRANSPORTISTA'], true, true),
+        'Un Comprador ya existente (aunque esté inactivo) no se toca');
+    test_same(['COMPRADOR'], \Application\Service\RegistroPublicoService::capacidadesDeAlta([], true, false),
+        'El alta inicial sin Comprador previo lo crea');
 } finally {
     foreach ($periodosBasura as $periodoId) {
         test_db()->prepare(
@@ -245,4 +285,4 @@ try {
     registro_cleanup_contextos($identificaciones);
 }
 
-echo "OK registro_publico_test: Persona única, contextos independientes y rollback atómico.\n";
+echo "OK registro_publico_test: Persona única, contextos independientes, rollback atómico y alta inicial como Comprador.\n";

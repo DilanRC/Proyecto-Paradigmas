@@ -9,13 +9,14 @@
     <title>Ganado Cerca — Compra y vende ganado cerca de ti</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-4">
+    <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/public-v3.css?v=public-8">
-    <link rel="stylesheet" href="css/public-product.css?v=product-4">
+    <link rel="stylesheet" href="css/public-v3.css?v=public-10">
+    <link rel="stylesheet" href="css/public-product.css?v=product-7">
+    <link rel="stylesheet" href="css/explore.css?v=explore-7">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-5"></script>
-    <script type="module" src="js/home.js?v=home-1"></script>
+    <script type="module" src="js/public-ui.js?v=public-9"></script>
+    <script type="module" src="js/home.js?v=home-4"></script>
 </head>
 <body class="public-home">
     <div class="public-shell" id="inicio">
@@ -90,12 +91,19 @@
                     <a class="public-secondary" href="explorar" data-featured-more hidden><span>Ver todas</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                 </div>
                 <p class="featured__loading" data-featured-loading><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Cargando publicaciones…</p>
-                <div class="featured__grid" data-featured-grid hidden></div>
+                <div class="public-carousel featured-carousel" data-featured-carousel role="region" aria-roledescription="carrusel" aria-label="Publicaciones destacadas" hidden>
+                    <div class="public-carousel__viewport">
+                        <button class="public-carousel__arrow public-carousel__arrow--prev" type="button" data-carousel-prev aria-label="Publicaciones anteriores"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+                        <div class="public-carousel__track" data-carousel-track tabindex="0" aria-label="Publicaciones; usa las flechas para moverte"></div>
+                        <button class="public-carousel__arrow public-carousel__arrow--next" type="button" data-carousel-next aria-label="Publicaciones siguientes"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+                    </div>
+                    <div class="public-carousel__footer"><p data-carousel-status></p><div class="public-carousel__dots" data-carousel-dots role="group" aria-label="Posiciones del carrusel"></div></div>
+                </div>
                 <div class="featured__empty" data-featured-empty hidden>
                     <i class="fa-solid fa-cow" aria-hidden="true"></i>
-                    <h3>Sé el primero en publicar ganado en tu zona</h3>
-                    <p>Tus animales aparecerán aquí para compradores cercanos.</p>
-                    <a class="public-cta" href="publicar"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i><span>Publicar</span></a>
+                    <h3>Pronto verás aquí ganado cerca de ti</h3>
+                    <p>Las publicaciones de tu zona aparecerán en esta sección.</p>
+                    <a class="public-cta" href="registro" data-featured-empty-action><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Crear cuenta para publicar</span></a>
                 </div>
             </section>
 

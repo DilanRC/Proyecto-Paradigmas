@@ -9,12 +9,12 @@
     <title>Crear cuenta | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-4">
+    <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/onboarding.css?v=front-4">
+    <link rel="stylesheet" href="css/onboarding.css?v=signup-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=front-11"></script>
+    <script type="module" src="js/registro.js?v=signup-2"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -34,9 +34,9 @@
 
     <section class="onboarding-intro">
         <div>
-            <p class="section-kicker">Registro guiado</p>
-            <h1 id="registro-title">Cuéntanos cómo quieres usar Ganado Cerca.</h1>
-            <p>No vamos a obligarte a ser productor, comprador o transportista. Primero registramos tu identidad una sola vez y después preguntamos únicamente lo necesario para las actividades que elijas.</p>
+            <p class="section-kicker">Crear cuenta</p>
+            <h1 id="registro-title">Crea tu cuenta en Ganado Cerca.</h1>
+            <p>Te registras como comprador para explorar ganado cerca de ti. Si después quieres vender u ofrecer fletes, lo activas desde tu panel sin volver a registrarte.</p>
         </div>
         <ol class="onboarding-progress" aria-label="Progreso de registro">
             <li data-progress="persona" class="is-active"><span>1</span>Tus datos</li>
@@ -48,23 +48,53 @@
 
     <section class="onboarding-card">
         <form id="registro-form" novalidate aria-busy="false">
-            <section class="onboarding-step" data-step="persona">
-                <div class="step-heading"><span class="step-number">01</span><div><h2>Tu información</h2><p>Estos datos identifican a la persona. No se volverán a pedir por cada actividad.</p></div></div>
-                <div class="form-grid onboarding-grid">
-                    <label class="auth-field"><span>Tipo de identificación *</span><select name="identificacionTipo" required><option value="">Seleccione</option><option value="CEDULA_FISICA">Cédula física</option><option value="CEDULA_JURIDICA">Cédula jurídica</option><option value="DIMEX">DIMEX</option><option value="NITE">NITE</option><option value="PASAPORTE">Pasaporte</option></select><small class="auth-error" data-error-for="identificacionTipo"></small></label>
-                    <div class="auth-field"><span><label for="registro-identificacion-numero">Número de identificación *</label></span><input id="registro-identificacion-numero" name="identificacionNumero" type="text" maxlength="12" autocomplete="off" required aria-describedby="registro-identificacion-hint registro-identificacion-status"><small id="registro-identificacion-hint" class="field-help" data-identificacion-hint>Elige el tipo para conocer el formato.</small><small id="registro-identificacion-status" class="identity-check-status" data-identificacion-status data-state="idle" role="status" aria-live="polite"></small><button class="identity-check-retry" data-identificacion-retry type="button" hidden>Reintentar verificación</button><small class="auth-error" data-error-for="identificacionNumero"></small></div>
-                    <div class="identity-name-group auth-field--wide">
-                        <div class="identity-name-group__intro"><span>Tu nombre</span><small>Lo mostraremos en tu perfil y en tus actividades.</small></div>
-                        <div class="identity-name-group__fields">
-                            <label class="auth-field"><span>Nombres *</span><input name="nombres" type="text" minlength="2" maxlength="75" autocomplete="given-name" required placeholder="Ej. María Fernanda"><small class="auth-error" data-error-for="nombres"></small></label>
-                            <label class="auth-field"><span>Apellidos *</span><input name="apellidos" type="text" minlength="2" maxlength="75" autocomplete="family-name" required placeholder="Ej. Solano Vargas"><small class="auth-error" data-error-for="apellidos"></small></label>
-                        </div>
+            <section class="onboarding-step signup" data-step="persona">
+                <fieldset class="signup-type">
+                    <legend class="signup-type__title">Tipo de identificación</legend>
+                    <p class="signup-type__question" id="signup-type-question">¿Con qué documento te identificas?</p>
+                    <div class="signup-type__options" aria-describedby="signup-type-question">
+                        <label class="signup-radio"><input type="radio" name="identificacionTipo" value="CEDULA_FISICA" checked><span>Cédula física</span></label>
+                        <label class="signup-radio"><input type="radio" name="identificacionTipo" value="CEDULA_JURIDICA"><span>Cédula jurídica</span></label>
+                        <label class="signup-radio"><input type="radio" name="identificacionTipo" value="DIMEX"><span>DIMEX</span></label>
+                        <label class="signup-radio"><input type="radio" name="identificacionTipo" value="NITE"><span>NITE</span></label>
+                        <label class="signup-radio"><input type="radio" name="identificacionTipo" value="PASAPORTE"><span>Pasaporte</span></label>
                     </div>
-                    <label class="auth-field"><span>Alias <em>opcional</em></span><input name="alias" type="text" maxlength="150"><small class="auth-error" data-error-for="alias"></small></label>
-                    <label class="auth-field"><span>Teléfono *</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></label>
-                    <div class="auth-field"><label for="registro-correo-electronico">Correo electrónico *</label><input id="registro-correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="registro-correo-error"><small id="registro-correo-error" class="auth-error" data-error-for="correoElectronico"></small></div>
-                    <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="field-help">Usa una contraseña difícil de adivinar. Debe cumplir estos requisitos:</small><ul class="password-rules" data-password-rules aria-live="polite"><li data-rule="letter">Al menos una letra</li><li data-rule="uppercase">Al menos una letra en mayúscula</li><li data-rule="number">Al menos un número</li><li data-rule="length">Al menos 8 caracteres</li></ul><small class="auth-error" data-error-for="password"></small></label>
-                    <label class="auth-field"><span>Confirmar contraseña *</span><span class="auth-password-control"><input id="registro-password-confirmacion" name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password-confirmacion" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
+                    <small class="auth-error" data-error-for="identificacionTipo"></small>
+                </fieldset>
+
+                <div class="signup-section">
+                    <h2 class="signup-title">¿Quién va a usar la cuenta?</h2>
+                    <p class="signup-required"><span aria-hidden="true">*</span> campos obligatorios</p>
+                    <div class="signup-grid">
+                        <div class="auth-field"><label for="registro-identificacion-numero">Número de identificación *</label><input id="registro-identificacion-numero" name="identificacionNumero" type="text" maxlength="12" autocomplete="off" required aria-describedby="registro-identificacion-hint registro-identificacion-status"><small id="registro-identificacion-hint" class="field-help" data-identificacion-hint>Elige el tipo para conocer el formato.</small><small id="registro-identificacion-status" class="identity-check-status" data-identificacion-status data-state="idle" role="status" aria-live="polite"></small><button class="identity-check-retry" data-identificacion-retry type="button" hidden>Reintentar verificación</button><small class="auth-error" data-error-for="identificacionNumero"></small></div>
+                        <div class="auth-field"><label for="registro-correo-electronico">Correo electrónico *</label><input id="registro-correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="registro-correo-error"><small id="registro-correo-error" class="auth-error" data-error-for="correoElectronico"></small></div>
+                        <div class="auth-field"><label for="registro-nombres">Nombres *</label><input id="registro-nombres" name="nombres" type="text" minlength="2" maxlength="75" autocomplete="given-name" required placeholder="Ej. María Fernanda"><small class="auth-error" data-error-for="nombres"></small></div>
+                        <div class="auth-field"><label for="registro-apellidos">Apellidos *</label><input id="registro-apellidos" name="apellidos" type="text" minlength="2" maxlength="75" autocomplete="family-name" required placeholder="Ej. Solano Vargas"><small class="auth-error" data-error-for="apellidos"></small></div>
+                        <div class="auth-field"><label for="registro-telefono">Teléfono *</label><input id="registro-telefono" name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></div>
+                        <div class="auth-field"><label for="registro-alias">Alias <em>(opcional)</em></label><input id="registro-alias" name="alias" type="text" maxlength="150" aria-describedby="registro-alias-help"><small id="registro-alias-help" class="field-help">Así te saludaremos en tu panel.</small><small class="auth-error" data-error-for="alias"></small></div>
+                        <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required aria-describedby="registro-password-reglas"><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><ul class="password-rules" id="registro-password-reglas" data-password-rules aria-live="polite"><li data-rule="letter">Al menos una letra</li><li data-rule="uppercase">Al menos una letra en mayúscula</li><li data-rule="number">Al menos un número</li><li data-rule="length">Al menos 8 caracteres</li></ul><small class="auth-error" data-error-for="password"></small></label>
+                        <label class="auth-field"><span>Confirmar contraseña *</span><span class="auth-password-control"><input id="registro-password-confirmacion" name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password-confirmacion" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
+                    </div>
+                </div>
+
+                <div class="signup-accordions">
+                    <details class="signup-accordion">
+                        <summary>¿Qué puedo hacer con mi cuenta?</summary>
+                        <div class="signup-accordion__body">
+                            <ul>
+                                <li>Explorar ganado cerca de ti y guardar lo que te interesa.</li>
+                                <li>Contactar a quien vende y coordinar el flete.</li>
+                                <li>Si después quieres vender u ofrecer fletes, lo activas desde tu panel sin volver a registrarte.</li>
+                            </ul>
+                        </div>
+                    </details>
+                    <details class="signup-accordion">
+                        <summary>Cómo usamos tus datos</summary>
+                        <div class="signup-accordion__body">
+                            <p>Tu identidad se registra una sola vez y se comparte entre todas tus actividades. Tu contraseña la guarda solo el servicio de autenticación; nosotros nunca la vemos.</p>
+                            <p>Consulta la <a href="privacidad">política de privacidad</a> y los <a href="terminos">términos de uso</a>.</p>
+                        </div>
+                    </details>
                 </div>
             </section>
 
@@ -95,7 +125,7 @@
             <div class="onboarding-actions">
                 <button class="auth-back onboarding-back" id="registro-anterior" type="button" hidden><i class="fa-solid fa-arrow-left" aria-hidden="true"></i>Anterior</button>
                 <button class="auth-submit onboarding-next" id="registro-siguiente" type="button">Continuar<i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-                <button class="auth-submit onboarding-next" id="registro-finalizar" type="submit" hidden>Terminar registro<i class="fa-solid fa-check" aria-hidden="true"></i></button>
+                <button class="auth-submit onboarding-next signup-submit" id="registro-finalizar" type="submit" hidden><span data-finish-label>Registrar</span></button>
             </div>
         </form>
     </section>

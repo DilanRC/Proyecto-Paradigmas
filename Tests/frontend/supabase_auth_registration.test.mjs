@@ -52,6 +52,8 @@ test('el registro no expone un verificador público de correos existentes', () =
     assert.doesNotMatch(registration, /api\/v1\/registro\/correo|checkEmail|scheduleEmailCheck/);
     assert.doesNotMatch(rewriteRules, /api\/v1\/registro\/correo/);
     assert.doesNotMatch(registration, /emailState/);
-    assert.match(registration, /if \(error\?\.code === 'account_already_exists'\)[\s\S]*SIGNUP_NEXT_STEPS_MESSAGE/);
-    assert.match(registration, /if \(!auth\.session\)[\s\S]*SIGNUP_NEXT_STEPS_MESSAGE/);
+    // Correo nuevo y correo ya registrado van al mismo lugar con el mismo aviso
+    // neutro: el registro no revela qué correos existen.
+    assert.match(registration, /if \(error\?\.code === 'account_already_exists'\) \{[\s\S]*?window\.location\.assign\(loginPendiente\(\)\)/);
+    assert.match(registration, /if \(!auth\.session\) \{[\s\S]*?window\.location\.assign\(loginPendiente\(\)\)/);
 });

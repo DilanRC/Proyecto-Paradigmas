@@ -58,6 +58,12 @@ export function clearAuthSession(storage = storageAvailable()) {
     storage?.removeItem?.(SESSION_KEY);
 }
 
+/** Sesión vencida o rechazada por el servidor: se limpia y se vuelve a Inicio. */
+export function endExpiredSession(storage = storageAvailable()) {
+    clearAuthSession(storage);
+    globalThis.location?.assign('./');
+}
+
 async function readJsonResponse(response) {
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.toLowerCase().includes('application/json')) return null;

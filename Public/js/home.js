@@ -1,70 +1,28 @@
 // Publicaciones destacadas de la portada.
 //
-// Pide las más recientes (o cercanas, si ya conocemos la ubicación) y pinta de
-// 3 a 6 tarjetas. Sin publicaciones, o si la API falla, la sección invita a
-// publicar: la portada nunca dice "no encontramos" a quien no buscó nada.
+// Usa la tarjeta de Explorar en su variante compacta (foto, nombre, precio y
+// "Ver más información"), sin botones de acción. Con más de 4 publicaciones se
+// monta el carrusel automático; con 4 o menos quedan fijas. Sin publicaciones,
+// o si la API falla, la sección da la bienvenida en vez de decir "no hay".
 
 import { request } from './shared/api.js';
+import { readAuthSession } from './shared/supabase-auth.js';
 import { leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
-import { formatLocation, formatPrice, formatPurpose, formatText } from './explore.js';
+import { montarCarrusel } from './shared/carousel.js';
+import { buildCard } from './explore.js';
 
-const MAXIMO = 6;
-
-function element(tag, className, text) {
-    const node = document.createElement(tag);
-    if (className) node.className = className;
-    if (text !== undefined) node.textContent = text;
-    return node;
-}
-
-function icon(clase) {
-    const node = element('i', `fa-solid ${clase}`);
-    node.setAttribute('aria-hidden', 'true');
-    return node;
-}
-
-/** Tipo/raza en una línea: "Brahman · Engorde". */
-export function featuredType(animal) {
-    const partes = [animal?.raza, animal?.proposito ? formatPurpose(animal.proposito) : null]
-        .map((v) => String(v ?? '').trim())
-        .filter((v) => v !== '' && v !== '—');
-    return partes.length ? partes.join(' · ') : 'Ganado';
-}
-
-/** textContent en todo: los textos vienen de la base. */
-export function buildFeaturedCard(publicacion) {
-    const article = element('article', 'featured-card');
-    const visual = element('div', 'featured-card__visual');
-    visual.append(icon('fa-cow'));
-
-    const body = element('div', 'featured-card__body');
-    const ubicacion = element('p', 'featured-card__location');
-    ubicacion.append(icon('fa-location-dot'), ` ${formatLocation(publicacion?.direccion)}`);
-
-    const ver = element('a', 'public-secondary featured-card__action');
-    const id = Number(publicacion?.publicacionId);
-    ver.href = Number.isInteger(id) && id > 0 ? `explorar?publicacion=${id}` : 'explorar';
-    ver.append(element('span', null, 'Ver'), icon('fa-arrow-right'));
-    ver.setAttribute('aria-label', `Ver ${formatText(publicacion?.titulo)}`);
-
-    body.append(
-        element('span', 'featured-card__type', featuredType(publicacion?.animal)),
-        element('h3', null, formatText(publicacion?.titulo)),
-        ubicacion,
-        element('strong', 'featured-card__price', formatPrice(publicacion?.precio)),
-        ver,
-    );
-    article.append(visual, body);
-    return article;
-}
+const MAXIMO = 12;
+const FIJAS_HASTA = 4;
 
 async function cargarDestacadas() {
     const seccion = document.querySelector('[data-featured]');
     if (!seccion) return;
-    const grid = seccion.querySelector('[data-featured-grid]');
+    const carrusel = seccion.querySelector('[data-featured-carousel]');
+    const track = seccion.querySelector('[data-carousel-track]');
     const vacio = seccion.querySelector('[data-featured-empty]');
     const cargando = seccion.querySelector('[data-featured-loading]');
     const verTodas = seccion.querySelector('[data-featured-more]');
+    const conSesion = Boolean(readAuthSession());
 
     let publicaciones = [];
     try {
@@ -80,15 +38,28 @@ async function cargarDestacadas() {
         });
         publicaciones = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
     } catch {
-        // Un fallo de red no es "no hay ganado": se ofrece publicar igual.
+        // Un fallo de red no es "no hay ganado": se muestra la bienvenida.
     }
 
     cargando.hidden = true;
     const hay = publicaciones.length > 0;
-    grid.replaceChildren(...publicaciones.slice(0, MAXIMO).map(buildFeaturedCard));
-    grid.hidden = !hay;
+    carrusel.hidden = !hay;
     verTodas.hidden = !hay;
     vacio.hidden = hay;
+    if (!hay) {
+        // Sin sesión la invitación es crear cuenta; con sesión, publicar.
+        const accion = vacio.querySelector('[data-featured-empty-action]');
+        if (conSesion && accion) {
+            accion.href = 'publicar';
+            accion.querySelector('span').textContent = 'Publicar ganado';
+        }
+        return;
+    }
+
+    track.replaceChildren(...publicaciones.map((p) => buildCard(p, { compacta: true })));
+    const fijas = publicaciones.length <= FIJAS_HASTA;
+    carrusel.dataset.static = String(fijas);
+    if (!fijas) montarCarrusel(carrusel, { intervalo: 4000 });
 }
 
 if (typeof document !== 'undefined') {

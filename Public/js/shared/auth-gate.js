@@ -6,7 +6,7 @@
 // gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
 import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
-import { readAuthSession } from './supabase-auth.js';
+import { readAuthSession, signOut } from './supabase-auth.js';
 
 export const SESSION_KEY = 'tindercows:admin-session';
 
@@ -29,6 +29,19 @@ export function writeAdminBrowserSession(email, storage = globalThis.sessionStor
 
 export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
     storage?.removeItem?.(SESSION_KEY);
+}
+
+/**
+ * Cierre de sesión completo, igual desde el sitio público y desde el panel
+ * admin: revoca la sesión Supabase, borra el permiso admin del navegador y
+ * vuelve a Inicio. Si solo se borrara el permiso admin, el JWT seguiría vivo y
+ * el menú de cuenta volvería a ofrecer el panel sin pedir contraseña.
+ */
+export async function signOutEverywhere(storage = globalThis.sessionStorage) {
+    try { await signOut({ storage }); } finally {
+        clearAdminBrowserSession(storage);
+        globalThis.location?.assign('./');
+    }
 }
 
 const PRIVATE_ROUTES = new Set([
@@ -94,14 +107,15 @@ function wirePrivateShell(storage) {
         publicLink.title = 'Inicio público de TinderCows';
     }
 
-    const logoutLink = document.querySelector('.rural-panel__admin-link[href="admin/entrar"]');
+    // Todas las vistas admin traen el enlace de salida (algunas como "entrar",
+    // otras como "admin/entrar"): todas cierran la sesión completa.
+    const logoutLink = document.querySelector('.rural-panel__admin-link[href$="entrar"]');
     if (!logoutLink) return;
-    logoutLink.textContent = 'Cerrar sesión administrativa';
-    logoutLink.setAttribute('aria-label', 'Cerrar sesión administrativa');
+    logoutLink.textContent = 'Cerrar sesión';
+    logoutLink.setAttribute('aria-label', 'Cerrar sesión y volver al inicio');
     logoutLink.addEventListener('click', (event) => {
         event.preventDefault();
-        try { clearAdminBrowserSession(storage); }
-        finally { window.location.assign('admin/entrar'); }
+        void signOutEverywhere(storage);
     });
 }
 

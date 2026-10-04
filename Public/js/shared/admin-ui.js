@@ -1,4 +1,4 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-2';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-4';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';

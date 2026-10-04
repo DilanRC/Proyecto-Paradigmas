@@ -3,3 +3,189 @@
 .finca-card__heading{margin-bottom:14px}.finca-card__heading strong{font-size:1rem;letter-spacing:-.01em}.finca-card__heading button{display:grid;place-items:center;width:36px;height:36px;border:1px solid transparent;border-radius:10px;color:var(--tc-muted);transition:color .16s ease,background .16s ease,border-color .16s ease}.finca-card__heading button:hover{color:var(--tc-primary);border-color:var(--tc-line-strong);background:color-mix(in srgb,var(--tc-primary) 9%,transparent)}.finca-card__heading button:focus-visible{outline:0;color:var(--tc-primary);box-shadow:0 0 0 3px var(--tc-glow)}
 .finca-address{padding-top:12px;border-top:1px solid var(--tc-line)}.finca-address summary{display:flex;align-items:center;justify-content:space-between;gap:12px;list-style:none;color:var(--tc-text-soft);font-size:.88rem}.finca-address summary::-webkit-details-marker{display:none}.finca-address summary::after{content:'+';display:grid;place-items:center;width:26px;height:26px;border:1px solid var(--tc-line-strong);border-radius:50%;color:var(--tc-primary);font-size:1.1rem;line-height:1;transition:transform .16s ease,background .16s ease}.finca-address[open] summary::after{content:'−';background:color-mix(in srgb,var(--tc-primary) 10%,transparent)}.finca-address__meta{margin-left:auto;text-align:right}.onboarding-add{display:inline-flex;align-items:center;gap:8px;border-color:var(--tc-line-strong);color:var(--tc-text-soft);font-weight:760;transition:color .16s ease,border-color .16s ease,background .16s ease,transform .16s ease}.onboarding-add:hover{transform:translateY(-1px);border-color:var(--tc-primary);color:var(--tc-primary);background:color-mix(in srgb,var(--tc-primary) 7%,transparent)}
 .registration-ready{display:grid;justify-items:center;gap:10px;margin:10px 0 8px;padding:34px 24px;border:1px solid color-mix(in srgb,var(--tc-primary) 28%,transparent);border-radius:18px;background:color-mix(in srgb,var(--tc-primary) 7%,transparent);text-align:center}.registration-ready i{display:grid;place-items:center;width:52px;height:52px;border-radius:16px;color:#fff;background:var(--tc-primary);font-size:22px}.registration-ready strong{font-size:18px}.registration-ready span{color:var(--tc-muted);font-size:13px}
+
+
+/* ---------------------------------------------------------------------------
+ * Registro (alta inicial): formulario limpio en una sola página.
+ * Mismas variables de color del sitio; el acento es --tc-primary.
+ * ------------------------------------------------------------------------- */
+
+.signup {
+    display:grid;
+    gap:36px;
+}
+
+.signup-type {
+    margin:0;
+    padding:0;
+    border:0;
+}
+
+.signup-type__title {
+    padding:0;
+    color:var(--tc-text);
+    font-size:1.05rem;
+    font-weight:800;
+}
+
+.signup-type__question {
+    margin:4px 0 14px;
+    color:var(--tc-text-soft);
+    font-size:.95rem;
+}
+
+.signup-type__options {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+.signup-radio {
+    display:inline-flex;
+    min-height:44px;
+    align-items:center;
+    gap:10px;
+    padding:0 16px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:999px;
+    color:var(--tc-text);
+    background:var(--tc-bg);
+    font-size:.95rem;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.signup-radio input {
+    width:18px;
+    height:18px;
+    margin:0;
+    accent-color:var(--tc-primary);
+}
+
+.signup-radio:has(input:checked) {
+    border-color:var(--tc-primary);
+    background:color-mix(in srgb,var(--tc-primary) 10%,transparent);
+}
+
+.signup-radio:has(input:focus-visible) {
+    outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent);
+    outline-offset:2px;
+}
+
+.signup-type:has([aria-invalid="true"]) .signup-radio { border-color:var(--tc-danger); }
+
+.signup-section {
+    padding-top:32px;
+    border-top:1px solid var(--tc-line);
+}
+
+.signup-title {
+    margin:0;
+    color:var(--tc-text);
+    font-size:clamp(1.6rem,3vw,2.1rem);
+    letter-spacing:-.02em;
+}
+
+.signup-required {
+    margin:6px 0 24px;
+    color:var(--tc-text-soft);
+    font-size:.88rem;
+}
+
+.signup-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:start;
+    gap:20px 24px;
+}
+
+/* Etiquetas pequeñas y grises sobre cada campo. */
+.signup-grid .auth-field > label,
+.signup-grid .auth-field > span:not(.auth-password-control) {
+    color:var(--tc-text-soft);
+    font-size:.85rem;
+    font-weight:700;
+}
+
+.signup-grid .auth-field em {
+    font-style:normal;
+    font-weight:500;
+}
+
+.signup-grid .auth-field input[aria-invalid="true"] {
+    border-color:var(--tc-danger);
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--tc-danger) 18%,transparent);
+}
+
+.signup-grid .auth-error:empty,
+.signup-type .auth-error:empty { display:none; }
+
+.signup-accordions {
+    border-top:1px solid var(--tc-line);
+}
+
+.signup-accordion + .signup-accordion { border-top:1px solid var(--tc-line); }
+
+.signup-accordion summary {
+    display:flex;
+    min-height:56px;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border-radius:8px;
+    color:var(--tc-text);
+    font-weight:800;
+    cursor:pointer;
+    list-style:none;
+}
+
+.signup-accordion summary::-webkit-details-marker { display:none; }
+
+.signup-accordion summary::after {
+    content:"›";
+    font-size:1.5rem;
+    line-height:1;
+    transition:transform .15s ease;
+}
+
+.signup-accordion[open] summary::after { transform:rotate(90deg); }
+
+.signup-accordion summary:focus-visible {
+    outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent);
+    outline-offset:2px;
+}
+
+.signup-accordion__body {
+    padding:0 0 18px;
+    color:var(--tc-text-soft);
+    line-height:1.6;
+}
+
+.signup-accordion__body ul { margin:0; padding-left:18px; }
+.signup-accordion__body p { margin:0 0 8px; }
+.signup-accordion__body a { color:var(--tc-text); font-weight:700; }
+
+/* Pie: línea divisoria y botón "Registrar" tipo píldora a la derecha. */
+.onboarding-card:has(.signup:not([hidden])) .onboarding-actions {
+    justify-content:flex-end;
+    margin:0 34px;
+    padding:22px 0 34px;
+    border-top:1px solid var(--tc-line);
+}
+
+.signup-submit {
+    width:auto;
+    min-width:180px;
+    padding:0 32px;
+    border-radius:999px;
+}
+
+@media (max-width:640px) {
+    .signup-grid { grid-template-columns:minmax(0,1fr); }
+    .onboarding-card:has(.signup:not([hidden])) .onboarding-actions { margin:0 22px; padding-bottom:22px; }
+    .signup-submit { width:100%; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+    .signup-accordion summary::after { transition:none; }
+}

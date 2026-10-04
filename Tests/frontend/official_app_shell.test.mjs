@@ -60,7 +60,7 @@ test('login existe como entrada navegable, usa Supabase Auth y vuelve a Explorar
     assert.match(login, /type="password"/);
     assert.match(js, /signInWithPassword/);
     assert.doesNotMatch(js, /password[^;]*sessionStorage\.setItem/s);
-    assert.match(js, /: 'explorar';/);
+    assert.match(js, /return safeNext\(search\) \?\? 'explorar';/);
 });
 
 test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () => {
