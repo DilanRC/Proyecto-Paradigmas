@@ -147,6 +147,10 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 
 ## 5. Pendientes
 
+Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
+`Documentation/Sprints/Plan-Cliente-Admin-2026-10.md`. Los puntos de abajo
+están incluidos ahí.
+
 ### Backend (para el compañero de backend)
 - **Endpoint de "mis publicaciones".** Hoy `ownPublications()` en
   `mi-actividad.js` busca por nombre de finca y cruza finca + vendedor: dos
@@ -190,6 +194,10 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · jefersonbustamante · Plan de trabajo cliente y administrador
+- Nuevo `Documentation/Sprints/Plan-Cliente-Admin-2026-10.md`: lo que falta para el cliente y el administrador (Me interesa, fletes cercanos, solicitud de compra, fotos de perfil y vehículo, modelo de animal, verificación de identidad, moderación) más el issue de la reunión del 29/09, ordenado P0–P3 y repartido entre Carlos, Jeremi y Jeferson.
+- Sección 0 del plan: lo que el issue pide y choca con las reglas del proyecto (UNIQUE/FK, nombres de tablas, WebSockets en Vercel, tabla de guardados duplicada).
 
 ### 2026-10-04 · jefersonbustamante · Alias SQL en minúscula (fallo en producción)
 - Síntoma en producción (Postgres): Explorar e Inicio sin publicaciones ("El servidor no devolvió una respuesta válida"), Mi panel sin publicaciones ni fincas.
