@@ -1,11 +1,10 @@
-// Deck de Explorar contra el catálogo real de publicaciones.
+// Fila de tarjetas de Explorar contra el catálogo real de publicaciones.
 //
 // El orden y el filtrado los decide el backend (api/v1/publicaciones). Aquí no
 // hay recomendación ni ranking: este módulo formatea lo que llega y lo pinta.
 // Las funciones de formato se exportan puras para poder probarlas sin DOM.
 
 import { request } from './shared/api.js';
-import { montarInscripcion } from './shared/inscripcion.js';
 import {
     inicializarUbicacionAutomatica,
     leerUbicacionUsuario,
@@ -19,8 +18,11 @@ const TAMANO_PAGINA = 25;
 const state = {
     query: '',
     proposito: 'todos',
+    ubicacion: '',
+    precioMin: null,
+    precioMax: null,
+    enfocarId: null,
     items: [],
-    index: 0,
     cargando: false,
     error: null,
 };
@@ -111,6 +113,46 @@ export function normalizePurpose(proposito, disponibles) {
     if (!proposito || proposito === 'todos') return 'todos';
     const clave = String(proposito).toUpperCase();
     return disponibles.some((p) => String(p).toUpperCase() === clave) ? clave : 'todos';
+}
+
+/** Minúsculas y sin tildes: "San José" encuentra "san jose". */
+export function normalizeText(valor) {
+    return String(valor ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+}
+
+// ponytail: ubicación y precio filtran la página ya cargada (25); pasar a la
+// API cuando el catálogo supere una página.
+export function filterByLocation(items, texto) {
+    const buscado = normalizeText(texto);
+    if (buscado === '') return items;
+    return items.filter((item) => normalizeText(formatLocation(item?.direccion)).includes(buscado));
+}
+
+export function filterByPrice(items, minimo, maximo) {
+    if (minimo === null && maximo === null) return items;
+    return items.filter((item) => typeof item?.precio === 'number'
+        && (minimo === null || item.precio >= minimo)
+        && (maximo === null || item.precio <= maximo));
+}
+
+/** "engorde" o "Doble propósito" escritos a mano → clave del catálogo, o null. */
+export function purposeFromText(texto) {
+    const buscado = normalizeText(texto);
+    if (buscado === '') return null;
+    return Object.keys(ETIQUETAS_PROPOSITO)
+        .find((clave) => normalizeText(clave) === buscado || normalizeText(ETIQUETAS_PROPOSITO[clave]) === buscado) ?? null;
+}
+
+function parsePrice(valor) {
+    const texto = String(valor ?? '').trim();
+    if (texto === '') return null;
+    const numero = Number(texto);
+    return Number.isFinite(numero) && numero >= 0 ? numero : null;
+}
+
+function hasActiveFilters() {
+    return state.query !== '' || state.proposito !== 'todos' || state.ubicacion !== ''
+        || state.precioMin !== null || state.precioMax !== null;
 }
 
 function element(tag, className, text) {
@@ -210,23 +252,19 @@ export function buildCard(publicacion) {
 }
 
 function visibleItems() {
-    return filterByPurpose(state.items, state.proposito);
+    return filterByPrice(
+        filterByLocation(filterByPurpose(state.items, state.proposito), state.ubicacion),
+        state.precioMin,
+        state.precioMax,
+    );
 }
 
-function updatePosition(total) {
-    const label = document.querySelector('[data-explore-position]');
-    if (!label) return;
-    label.textContent = total === 0 ? '0 de 0' : `${state.index + 1} de ${total}`;
-}
-
-function scrollToCurrent() {
-    const deck = document.querySelector('[data-explore-deck]');
-    const current = deck?.children[state.index];
-    if (deck && current) {
-        const left = current.offsetLeft - Math.max(0, (deck.clientWidth - current.clientWidth) / 2);
-        deck.scrollTo({ left, behavior: 'smooth' });
-    }
-    updatePosition(visibleItems().length);
+/** Lleva a la tarjeta que se abrió con "Ver" desde la portada y la resalta. */
+function focusCard(publicacionId) {
+    const card = document.querySelector(`[data-explore-deck] [data-publicacion-id="${publicacionId}"]`);
+    if (!card) return;
+    card.classList.add('is-focused');
+    card.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
 }
 
 function showToast(message) {
@@ -244,6 +282,9 @@ function renderPurposeFilters() {
     const propositos = availablePurposes(state.items);
     state.proposito = normalizePurpose(state.proposito, propositos);
     contenedor.replaceChildren();
+    // "Todo" solo no filtra nada: sin propósitos no hay chips.
+    contenedor.hidden = propositos.length === 0;
+    if (propositos.length === 0) return;
     for (const [valor, etiqueta] of [['todos', 'Todo'], ...propositos.map((p) => [p, formatPurpose(p)])]) {
         const boton = element('button', 'explore-chip');
         boton.type = 'button';
@@ -253,7 +294,6 @@ function renderPurposeFilters() {
         boton.append(element('span', null, etiqueta));
         boton.addEventListener('click', () => {
             state.proposito = valor;
-            state.index = 0;
             render();
         });
         contenedor.append(boton);
@@ -263,36 +303,27 @@ function renderPurposeFilters() {
 function render() {
     const deck = document.querySelector('[data-explore-deck]');
     const empty = document.querySelector('[data-explore-empty]');
+    const emptyCatalog = document.querySelector('[data-explore-empty-catalog]');
+    const filterBar = document.querySelector('[data-explore-filterbar]');
     const loading = document.querySelector('[data-explore-loading]');
     const errorBox = document.querySelector('[data-explore-error]');
     const errorMessage = document.querySelector('[data-explore-error-message]');
     if (!deck) return;
 
     const items = visibleItems();
-    state.index = Math.min(state.index, Math.max(0, items.length - 1));
 
     if (loading) loading.hidden = !state.cargando;
     if (errorBox) errorBox.hidden = state.error === null;
     if (errorMessage && state.error) errorMessage.textContent = state.error;
-    if (empty) empty.hidden = state.cargando || state.error !== null || items.length > 0;
+    // "Prueba otra búsqueda" solo tiene sentido si la persona buscó o filtró;
+    // con el catálogo vacío se invita a publicar.
+    const sinResultados = !state.cargando && state.error === null && items.length === 0;
+    if (empty) empty.hidden = !(sinResultados && hasActiveFilters());
+    if (emptyCatalog) emptyCatalog.hidden = !(sinResultados && !hasActiveFilters());
+    if (filterBar) filterBar.hidden = state.items.length === 0 && !hasActiveFilters();
     deck.hidden = state.cargando || state.error !== null || items.length === 0;
 
     deck.replaceChildren(...items.map(buildCard));
-
-    document.querySelector('.explore-deck__navigation')
-        ?.toggleAttribute('hidden', items.length === 0);
-    updatePosition(items.length);
-}
-
-if (typeof window !== 'undefined') {
-    window.addEventListener('explore:interaction-saved', (event) => {
-        if (event.detail?.type !== 'PASAR') return;
-        const total = visibleItems().length;
-        if (total > 1) {
-            state.index = (state.index + 1) % total;
-            scrollToCurrent();
-        }
-    });
 }
 
 async function load() {
@@ -317,7 +348,6 @@ async function load() {
         });
         const lista = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
         state.items = lista;
-        state.index = 0;
     } catch (error) {
         state.items = [];
         state.error = error.message ?? 'No fue posible cargar las publicaciones.';
@@ -326,12 +356,50 @@ async function load() {
     }
     renderPurposeFilters();
     render();
+    if (state.enfocarId !== null) {
+        focusCard(state.enfocarId);
+        state.enfocarId = null;
+    }
+}
+
+/** Lee ?ubicacion, ?tipo y ?publicacion que llegan desde la portada. */
+function readUrlFilters(input) {
+    const parametros = new URLSearchParams(window.location.search);
+    state.ubicacion = (parametros.get('ubicacion') ?? '').trim();
+    const tipo = (parametros.get('tipo') ?? '').trim();
+    const proposito = purposeFromText(tipo);
+    if (proposito) state.proposito = proposito;
+    else if (tipo !== '' && state.query === '') {
+        // Una raza o texto libre lo busca la API (título, raza, finca, zona).
+        state.query = tipo;
+        if (input) input.value = tipo;
+    }
+    const enfocar = Number(parametros.get('publicacion'));
+    state.enfocarId = Number.isInteger(enfocar) && enfocar > 0 ? enfocar : null;
+}
+
+function initializeFilterBar() {
+    const ubicacion = document.querySelector('[data-explore-ubicacion]');
+    const minimo = document.querySelector('[data-explore-precio-min]');
+    const maximo = document.querySelector('[data-explore-precio-max]');
+    if (ubicacion) ubicacion.value = state.ubicacion;
+    const aplicar = () => {
+        state.ubicacion = ubicacion?.value.trim() ?? '';
+        state.precioMin = parsePrice(minimo?.value);
+        state.precioMax = parsePrice(maximo?.value);
+        render();
+    };
+    for (const campo of [ubicacion, minimo, maximo]) campo?.addEventListener('input', aplicar);
 }
 
 function initialize() {
+    // home.js importa los formateadores; sin deck no hay Explorar que iniciar.
+    if (!document.querySelector('[data-explore-deck]')) return;
     const input = document.querySelector('[data-explore-search]');
+    readUrlFilters(input);
+    initializeFilterBar();
     if (input) {
-        state.query = input.value.trim();
+        if (state.query === '') state.query = input.value.trim();
         let temporizador = null;
         input.addEventListener('input', () => {
             clearTimeout(temporizador);
@@ -342,23 +410,17 @@ function initialize() {
         });
     }
 
-    document.querySelector('[data-explore-prev]')?.addEventListener('click', () => {
-        const total = visibleItems().length;
-        if (total === 0) return;
-        state.index = (state.index - 1 + total) % total;
-        scrollToCurrent();
-    });
-    document.querySelector('[data-explore-next]')?.addEventListener('click', () => {
-        const total = visibleItems().length;
-        if (total === 0) return;
-        state.index = (state.index + 1) % total;
-        scrollToCurrent();
-    });
     document.querySelector('[data-explore-reset]')?.addEventListener('click', () => {
         state.proposito = 'todos';
         state.query = '';
-        const campo = document.querySelector('[data-explore-search]');
-        if (campo) campo.value = '';
+        state.ubicacion = '';
+        state.precioMin = null;
+        state.precioMax = null;
+        for (const selector of ['[data-explore-search]', '[data-explore-ubicacion]',
+            '[data-explore-precio-min]', '[data-explore-precio-max]']) {
+            const campo = document.querySelector(selector);
+            if (campo) campo.value = '';
+        }
         load();
     });
     document.querySelector('[data-explore-retry]')?.addEventListener('click', load);
@@ -373,12 +435,6 @@ function initialize() {
         else if (kind !== 'unsupported') showToast('No pudimos actualizar tu ubicación; Explorar sigue disponible.');
     });
 
-    // Tramo B: la vista pública permite inscribirse/abandonar/reactivar
-    // contextos sin entrar al CRUD administrativo.
-    const inscripcion = document.querySelector('[data-inscripcion-contextos]');
-    if (inscripcion) {
-        montarInscripcion({ contenedor: inscripcion, requestImpl: request, storage: globalThis.sessionStorage });
-    }
 
     load();
     inicializarUbicacionAutomatica();

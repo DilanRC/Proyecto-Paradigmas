@@ -11,7 +11,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-2';
+    link.href = 'css/public-product.css?v=product-4';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -231,13 +231,15 @@ function enhancePublicNavigation() {
         return;
     }
 
+    // Un solo botón principal: "Crear cuenta" relleno, "Entrar" con contorno.
+    login.classList.add('public-header__login--secondary');
     if (!actions.querySelector('[data-register-link]')) {
         const register = document.createElement('a');
         register.className = 'public-header__login';
         register.href = 'registro';
         register.dataset.registerLink = 'true';
         register.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Crear cuenta</span>';
-        actions.insertBefore(register, login);
+        login.after(register);
     }
 }
 

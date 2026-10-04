@@ -43,7 +43,7 @@
 @media (max-width:1280px) and (min-width:1051px) {
     .public-header--product { grid-template-columns:auto minmax(0,1fr) auto; }
     .public-header--product .public-nav--primary { justify-content:flex-start; }
-    .public-header--product .public-nav--primary a { padding-inline:8px; font-size:12px; }
+    .public-header--product .public-nav--primary a { padding-inline:8px; font-size:15px; }
     .public-header--product .public-header__actions { gap:5px; }
     .public-header--product .public-header__actions > .theme-toggle,
     .public-header--product .public-header__actions > .public-search { display:none; }
@@ -331,9 +331,9 @@
     }
 
     .public-nav--primary a {
-        min-height:38px;
+        min-height:44px;
         padding-inline:10px;
-        font-size:12px;
+        font-size:15px;
     }
 
     .public-hero__signals {
@@ -345,4 +345,261 @@
     .public-search__field {
         transition:none;
     }
+}
+
+/* ---------------------------------------------------------------------------
+ * Portada (Inicio) y escala legible del shell público.
+ * Solo reutiliza variables y mezclas de color ya existentes.
+ * ------------------------------------------------------------------------- */
+
+.public-header--product .public-nav--primary a {
+    min-height:44px;
+    font-size:16px;
+}
+
+.public-header--product .public-header__login,
+.public-header--product .theme-toggle,
+.public-search__toggle {
+    min-height:44px;
+    font-size:15px;
+}
+
+/* "Crear cuenta" es el único botón relleno; "Entrar" queda con contorno. */
+.public-header__login.public-header__login--secondary {
+    border-color:var(--tc-line-strong);
+    color:var(--tc-text);
+    background:transparent;
+    box-shadow:none;
+}
+
+.public-header__login.public-header__login--secondary:hover {
+    border-color:color-mix(in srgb,var(--tc-primary) 38%,var(--tc-line-strong));
+    background:color-mix(in srgb,var(--tc-secondary) 22%,transparent);
+}
+
+.public-hero__signals {
+    font-size:16px;
+}
+
+.public-hero--landing {
+    display:grid;
+    grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);
+    align-items:center;
+    gap:clamp(32px,5vw,80px);
+}
+
+.public-hero--landing h1 {
+    font-size:clamp(60px,7.6vw,120px);
+}
+
+.hero-search {
+    position:relative;
+    z-index:2;
+    display:grid;
+    gap:18px;
+    padding:clamp(22px,2.4vw,32px);
+    border:1px solid var(--tc-line-strong);
+    border-radius:24px;
+    background:var(--tc-bg-elevated);
+    box-shadow:var(--tc-shadow);
+}
+
+.hero-search h2 {
+    margin:0;
+    color:var(--tc-text);
+    font-size:clamp(24px,2.2vw,30px);
+    font-weight:840;
+    letter-spacing:-.03em;
+}
+
+.hero-search__field,
+.explore-filters__field {
+    display:grid;
+    gap:8px;
+}
+
+.hero-search label,
+.explore-filters label {
+    color:var(--tc-text-soft);
+    font-size:15px;
+    font-weight:750;
+}
+
+.hero-search input,
+.explore-filters input {
+    width:100%;
+    min-width:0;
+    min-height:52px;
+    box-sizing:border-box;
+    padding:0 16px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:12px;
+    color:var(--tc-text);
+    background:var(--tc-surface);
+    font:inherit;
+    font-size:16px;
+}
+
+.hero-search input::placeholder,
+.explore-filters input::placeholder {
+    color:var(--tc-muted);
+}
+
+.hero-search input:focus-visible,
+.explore-filters input:focus-visible,
+.text-link:focus-visible,
+.featured-card__action:focus-visible {
+    border-color:var(--tc-primary);
+    outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent);
+    outline-offset:2px;
+}
+
+.hero-search .public-cta {
+    width:100%;
+    font-size:16px;
+}
+
+.hero-search .text-link {
+    justify-self:center;
+    font-size:16px;
+}
+
+/* Publicaciones destacadas */
+.featured__loading {
+    margin:28px 0 0;
+    color:var(--tc-text-soft);
+    font-size:16px;
+}
+
+.featured__grid {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:18px;
+    margin-top:36px;
+}
+
+.featured-card {
+    display:grid;
+    grid-template-rows:160px 1fr;
+    overflow:hidden;
+    border:1px solid var(--tc-line);
+    border-radius:20px;
+    background:var(--tc-bg-elevated);
+}
+
+.featured-card__visual {
+    display:grid;
+    place-items:center;
+    color:var(--tc-primary-strong);
+    background:color-mix(in srgb,var(--tc-primary) 12%,transparent);
+    font-size:44px;
+}
+
+.featured-card__body {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    padding:20px;
+}
+
+.featured-card__type {
+    color:var(--tc-kicker);
+    font-size:13px;
+    font-weight:850;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.featured-card h3 {
+    margin:0;
+    color:var(--tc-text);
+    font-size:20px;
+    line-height:1.25;
+}
+
+.featured-card__location {
+    margin:0;
+    color:var(--tc-text-soft);
+    font-size:16px;
+}
+
+.featured-card__location i { color:var(--tc-primary-strong); }
+
+.featured-card__price {
+    color:var(--tc-text);
+    font-size:22px;
+    font-weight:850;
+}
+
+.featured-card__action {
+    align-self:flex-start;
+    min-height:44px;
+    margin-top:auto;
+    font-size:15px;
+}
+
+.featured__empty {
+    display:grid;
+    justify-items:center;
+    gap:14px;
+    margin-top:36px;
+    padding:56px 24px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:24px;
+    background:var(--tc-bg-elevated);
+    text-align:center;
+}
+
+.featured__empty > i {
+    font-size:34px;
+    color:var(--tc-primary-strong);
+}
+
+.featured__empty h3 {
+    margin:0;
+    color:var(--tc-text);
+    font-size:clamp(24px,3vw,34px);
+    letter-spacing:-.03em;
+}
+
+.featured__empty p {
+    margin:0;
+    color:var(--tc-text-soft);
+    font-size:17px;
+}
+
+/* Cómo funciona: pasos compactos y legibles */
+.use-steps--compact li { min-height:0; }
+.use-steps--compact li div { margin-top:28px; }
+.use-steps--compact strong { font-size:20px; }
+.use-steps--compact p { font-size:16px; }
+
+@media (max-width:900px) {
+    .public-hero--landing {
+        grid-template-columns:minmax(0,1fr);
+        min-height:0;
+    }
+
+    .use-steps--compact {
+        grid-template-columns:minmax(0,1fr);
+    }
+}
+
+.public-section .section-heading h2 { text-wrap:balance; }
+
+.public-cta,
+.public-secondary {
+    font-size:15px;
+}
+
+/* El encabezado de destacadas usa todo el ancho para llevar "Ver todas" al extremo. */
+.featured .section-heading--split { max-width:none; }
+.featured [data-featured-more] { flex:0 0 auto; white-space:nowrap; }
+
+@media (max-width:1050px) {
+    .featured__grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media (max-width:620px) {
+    .featured__grid { grid-template-columns:minmax(0,1fr); }
 }

@@ -15,14 +15,14 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <title>Explorar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=admin-public-4">
+    <link rel="stylesheet" href="css/base.css?v=product-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
-    <link rel="stylesheet" href="css/public-v3.css?v=public-4">
-    <link rel="stylesheet" href="css/public-product.css?v=product-1">
-    <link rel="stylesheet" href="css/explore.css?v=explore-1">
+    <link rel="stylesheet" href="css/public-v3.css?v=public-8">
+    <link rel="stylesheet" href="css/public-product.css?v=product-4">
+    <link rel="stylesheet" href="css/explore.css?v=explore-5">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-2"></script>
-    <script type="module" src="js/explore.js?v=explore-2"></script>
+    <script type="module" src="js/public-ui.js?v=public-5"></script>
+    <script type="module" src="js/explore.js?v=explore-6"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-1"></script>
 </head>
 <body class="public-home explore-page">
@@ -64,12 +64,25 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <div>
                     <p class="section-kicker">Explorar</p>
                     <h1 id="explore-title">Oportunidades para descubrir, comparar y decidir.</h1>
-                    <p>Desliza entre publicaciones de ganado, guarda lo que te interesa y registra tus acciones sobre cada oportunidad.</p>
-                </div>
-                <div class="explore-heading__controls" data-explore-filters aria-label="Filtrar por propósito">
-                    <button class="explore-chip is-active" type="button" data-explore-filter="todos"><span>Todo</span></button>
+                    <p>Compara publicaciones de ganado, guarda lo que te interesa y registra tus acciones sobre cada oportunidad.</p>
                 </div>
             </section>
+
+            <div class="explore-filters" data-explore-filterbar hidden>
+                <div class="explore-heading__controls" role="group" data-explore-filters aria-label="Tipo de ganado" hidden></div>
+                <div class="explore-filters__field">
+                    <label for="explore-filtro-ubicacion">Ubicación</label>
+                    <input id="explore-filtro-ubicacion" type="text" autocomplete="address-level2" placeholder="Provincia, cantón o pueblo" data-explore-ubicacion>
+                </div>
+                <div class="explore-filters__field">
+                    <label for="explore-filtro-precio-min">Precio mínimo (₡)</label>
+                    <input id="explore-filtro-precio-min" type="number" min="0" step="1000" inputmode="numeric" placeholder="0" data-explore-precio-min>
+                </div>
+                <div class="explore-filters__field">
+                    <label for="explore-filtro-precio-max">Precio máximo (₡)</label>
+                    <input id="explore-filtro-precio-max" type="number" min="0" step="1000" inputmode="numeric" placeholder="Sin límite" data-explore-precio-max>
+                </div>
+            </div>
 
             <section class="explore-deck" aria-label="Publicaciones para explorar">
                 <p class="explore-state" data-explore-loading hidden>
@@ -83,13 +96,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     <button type="button" data-explore-retry><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Reintentar</span></button>
                 </div>
 
-                <div class="explore-deck__viewport" data-explore-deck tabindex="0"></div>
-
-                <div class="explore-deck__navigation">
-                    <button type="button" data-explore-prev><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Anterior</span></button>
-                    <span data-explore-position aria-live="polite">0 de 0</span>
-                    <button type="button" data-explore-next><span>Siguiente</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
-                </div>
+                <div class="explore-deck__viewport" data-explore-deck role="region" aria-label="Publicaciones" tabindex="0"></div>
 
                 <div class="explore-empty" data-explore-empty hidden>
                     <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -97,16 +104,15 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     <p>Prueba otra búsqueda o vuelve a mostrar todas las publicaciones.</p>
                     <button type="button" data-explore-reset><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Restablecer</span></button>
                 </div>
+
+                <div class="explore-empty" data-explore-empty-catalog hidden>
+                    <i class="fa-solid fa-cow" aria-hidden="true"></i>
+                    <h2>Sé el primero en publicar ganado en tu zona</h2>
+                    <p>Todavía no hay publicaciones activas. Las nuevas aparecerán aquí.</p>
+                    <a class="public-cta" href="publicar"><i class="fa-solid fa-circle-plus" aria-hidden="true"></i><span>Publicar</span></a>
+                </div>
             </section>
 
-            <section class="inscripcion" aria-labelledby="inscripcion-title">
-                <div class="inscripcion__intro">
-                    <p class="section-kicker">Tu participación</p>
-                    <h2 id="inscripcion-title">Elige cómo quieres participar</h2>
-                    <p>¿Quieres explorar, vender u ofrecer transporte? Elige lo que necesitas y completa solo los datos necesarios para empezar.</p>
-                </div>
-                <div class="inscripcion__contextos" data-inscripcion-contextos aria-live="polite"></div>
-            </section>
         </main>
 
         <div class="explore-toast" role="status" aria-live="polite" data-explore-toast hidden></div>

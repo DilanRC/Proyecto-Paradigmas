@@ -27,7 +27,7 @@ test('la landing se comporta como producto y deriva la exploración a una ruta p
     const home = read('Application/View/home/index.php');
     const explore = read('Application/View/explorar/index.php');
 
-    assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('Compra y vende ganado cerca de ti.'));
     assert.ok(home.includes('href="explorar"'));
     assert.equal(home.includes('id="modulos"'), false);
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false);

@@ -56,7 +56,7 @@ test('la portada usa identidad Ganado Cerca y habla como producto', () => {
     assert.ok(home.includes('assets/logo_dark.png'));
     assert.ok(home.includes('assets/logo_light.png'));
     assert.ok(home.includes('rel="icon" href="favicon.svg"'));
-    assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('Compra y vende ganado cerca de ti.'));
     assert.ok(home.includes('Ganado<strong>Cerca</strong>'));
     assert.ok(home.includes('assets/hero-ganado-cerca.png'));
     assert.ok(statSync(new URL('../../Public/assets/hero-ganado-cerca.png', import.meta.url)).size > 10000);
@@ -87,29 +87,24 @@ test('la búsqueda pública permanece compacta y se expande bajo demanda', () =>
     assert.ok(publicUi.includes("event.key === 'Escape'"));
 });
 
-test('la portada muestra las seis escenas ganaderas en un carrusel navegable', () => {
-    assert.ok(home.includes('data-public-carousel'));
-    assert.ok(publicUi.includes('initializePublicCarousel'));
-    for (const asset of [
-        'finca-camino-costa-rica.png',
-        'finca-potrero-costa-rica.png',
-        'finca-bebedero-costa-rica.png',
-        'subasta-pasarela-costa-rica.png',
-        'subasta-corrales-costa-rica.png',
-        'subasta-rematador-costa-rica.png',
-    ]) assert.ok(home.includes(asset), `falta ${asset}`);
-    assert.ok(publicUi.includes('data-carousel-prev'));
-    assert.ok(publicUi.includes('data-carousel-next'));
-    assert.equal((home.match(/<figcaption>/g) || []).length, 0);
-    assert.equal((home.match(/public-carousel__slide/g) || []).length, 6);
-    assert.equal(home.includes('card-3d'), false);
-    assert.equal((home.match(/public-carousel__page/g) || []).length, 2);
-    assert.match(publicV3, /public-carousel__dots button \{[^}]*width:28px; height:28px/);
-    assert.match(publicV3, /touch-action:manipulation/);
-    assert.ok(publicV3.includes("button[aria-current='page']::before"));
-    assert.ok(home.includes('role="group" aria-label="Páginas de escenas del campo"'));
-    assert.ok(publicUi.includes("setAttribute('aria-current'"));
-    assert.equal(publicUi.includes("dot.role = 'tab'"), false);
+test('la portada sigue el orden hero, destacadas, cómo funciona', () => {
+    const orden = ['public-hero--landing', 'data-featured', 'id="como-funciona"', 'public-footer']
+        .map((marca) => home.indexOf(marca));
+    assert.ok(orden.every((pos) => pos >= 0), 'falta una sección de la portada');
+    assert.deepEqual([...orden].sort((a, b) => a - b), orden, 'las secciones no están en orden');
+    // El buscador del hero lleva a Explorar con ubicación y tipo etiquetados.
+    assert.match(home, /<form class="hero-search" action="explorar"/);
+    assert.match(home, /<label for="hero-search-ubicacion">/);
+    assert.match(home, /<label for="hero-search-tipo">/);
+    assert.match(home, /name="ubicacion"/);
+    assert.match(home, /name="tipo"/);
+    // Sin publicaciones la portada invita a publicar; nunca dice "no encontramos".
+    assert.ok(home.includes('Sé el primero en publicar ganado en tu zona'));
+    assert.equal(/No encontramos/i.test(home), false);
+    for (const destino of ['href="explorar"', 'href="publicar"']) assert.ok(home.includes(destino));
+    // Las formas de participar viven en Mi actividad, después de iniciar sesión.
+    assert.equal(home.includes('id="participar"'), false);
+    assert.equal(home.includes('data-public-carousel'), false);
 });
 
 test('Fletes comparte el shell público y no expone lenguaje técnico', () => {
@@ -136,11 +131,17 @@ test('la navegación accesible usa el mismo texto visible que anuncia', () => {
     assert.ok(publicUi.includes('href="admin/dashboard" data-admin-link'));
 });
 
-test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
+test('Explorar es una vista distinta con tarjetas completas y acciones icono más texto', () => {
     assert.ok(read('../../Public/explorar.php').includes("Application/View/explorar/index.php"));
     assert.ok(explore.includes('data-explore-deck'));
-    assert.ok(explore.includes('data-explore-prev'));
-    assert.ok(explore.includes('data-explore-next'));
+    // Sin flechas: el scroll inferior aparece solo con más de 4 tarjetas y el
+    // snap encaja tarjetas enteras, así que ninguna queda cortada.
+    assert.equal(explore.includes('data-explore-prev'), false);
+    assert.equal(explore.includes('data-explore-next'), false);
+    const css = read('../../Public/css/explore.css');
+    assert.match(css, /--explore-por-vista:4;/);
+    assert.match(css, /scroll-snap-align:start;/);
+    assert.match(css, /\.explore-card:first-child \{ margin-inline-start:auto; \}/);
     assert.ok(read('../../Public/js/explore.js').includes('aria-pressed'));
     // Las acciones viajan con la tarjeta, que ahora construye explore.js con lo
     // que devuelve api/publicaciones.php; la escritura requiere sesión y se

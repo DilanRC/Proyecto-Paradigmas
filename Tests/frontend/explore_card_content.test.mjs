@@ -17,6 +17,7 @@ const exploreSource = read('Public/js/explore.js');
 const {
     formatPrice, formatLocation, formatAge, formatWeight, formatText, formatSeller,
     formatPurpose, availablePurposes, filterByPurpose, normalizePurpose,
+    filterByLocation, filterByPrice, purposeFromText,
 } = await import('../../Public/js/explore.js');
 
 test('el proposito se escribe bien en pantalla aunque la base lo guarde gritado', () => {
@@ -126,4 +127,35 @@ test('normalizePurpose vuelve a todos cuando el filtro ya no existe', () => {
     assert.equal(normalizePurpose('ENGORDE', []), 'todos');
     assert.equal(normalizePurpose('todos', ['CRIA']), 'todos');
     assert.equal(normalizePurpose('', ['CRIA']), 'todos');
+});
+
+test('los filtros de ubicación y precio ignoran tildes y respetan el rango', () => {
+    const items = [
+        { precio: 500000, direccion: { canton: 'San José', provincia: 'San José' } },
+        { precio: 900000, direccion: { canton: 'Grecia', provincia: 'Alajuela' } },
+        { precio: null, direccion: { provincia: 'Alajuela' } },
+    ];
+    assert.equal(filterByLocation(items, 'san jose').length, 1);
+    assert.equal(filterByLocation(items, 'ALAJUELA').length, 2);
+    assert.equal(filterByLocation(items, '  ').length, 3);
+    assert.equal(filterByPrice(items, null, null).length, 3);
+    assert.equal(filterByPrice(items, 600000, null).length, 1);
+    assert.equal(filterByPrice(items, null, 500000).length, 1, 'el máximo es inclusivo');
+    assert.equal(filterByPrice(items, 0, null).length, 2, 'sin precio no entra en un rango');
+});
+
+test('el tipo escrito en la portada se traduce al propósito del catálogo', () => {
+    assert.equal(purposeFromText('engorde'), 'ENGORDE');
+    assert.equal(purposeFromText('Doble propósito'), 'DOBLE PROPOSITO');
+    assert.equal(purposeFromText('cria'), 'CRIA');
+    assert.equal(purposeFromText('Brahman'), null, 'una raza la busca la API');
+    assert.equal(purposeFromText(''), null);
+});
+
+test('Explorar solo dice "prueba otra búsqueda" si la persona buscó o filtró', () => {
+    const vista = read('Application/View/explorar/index.php');
+    assert.match(vista, /data-explore-empty-catalog/);
+    assert.match(vista, /Sé el primero en publicar ganado en tu zona/);
+    assert.doesNotMatch(vista, /data-explore-filter="todos"/, 'el chip "Todo" no se escribe a mano');
+    assert.match(exploreSource, /empty\.hidden = !\(sinResultados && hasActiveFilters\(\)\)/);
 });

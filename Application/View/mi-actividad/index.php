@@ -9,15 +9,15 @@
     <title>Mi actividad | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=admin-public-4">
+    <link rel="stylesheet" href="css/base.css?v=product-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-4">
-    <link rel="stylesheet" href="css/public-product.css?v=product-2">
+    <link rel="stylesheet" href="css/public-product.css?v=product-4">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=front-2">
     <link rel="stylesheet" href="css/mi-actividad.css?v=activity-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-3"></script>
+    <script type="module" src="js/public-ui.js?v=public-5"></script>
     <script type="module" src="js/mi-actividad.js?v=activity-1"></script>
 </head>
 <body class="public-home activity-page">

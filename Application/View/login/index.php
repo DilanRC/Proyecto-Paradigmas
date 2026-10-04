@@ -9,7 +9,7 @@
     <title>Entrar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=admin-public-4">
+    <link rel="stylesheet" href="css/base.css?v=product-4">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>

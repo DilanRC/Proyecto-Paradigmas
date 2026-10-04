@@ -76,7 +76,8 @@ $finca = $conexion->query(
 if ($finca === false) {
     // Sin finca ubicada no hay dónde publicar: se crea el vendedor de
     // demostración con su finca y la dirección de esa finca.
-    $identificacion = 'DEMO' . strtoupper(bin2hex(random_bytes(4)));
+    // El pasaporte admite hasta 9 caracteres: DEMO + 5 hexadecimales.
+    $identificacion = 'DEMO' . strtoupper(substr(bin2hex(random_bytes(3)), 0, 5));
     $productores = new ProductorController($conexion, 'seed-publicaciones-demo');
     $creado = $productores->procesar('POST', [], [
         'identificacion' => ['tipoCodigo' => 'PASAPORTE', 'numero' => $identificacion],
@@ -130,6 +131,15 @@ $catalogo = [
     ['titulo' => 'Toro reproductor Gyr', 'raza' => 'Gyr', 'sexo' => 'MACHO', 'precio' => 2450000,
         'edad' => 48, 'peso' => 780.0, 'proposito' => 'CRIA',
         'descripcion' => 'Reproductor con registro, apto para monta directa.'],
+    ['titulo' => 'Terneros destetados', 'raza' => 'Nelore', 'sexo' => 'MACHO', 'precio' => 680000,
+        'edad' => 8, 'peso' => 210.0, 'proposito' => 'ENGORDE',
+        'descripcion' => 'Lote recién destetado, vacunado y acostumbrado a potrero.'],
+    ['titulo' => 'Vaquillas Holstein', 'raza' => 'Holstein', 'sexo' => 'HEMBRA', 'precio' => 1050000,
+        'edad' => 20, 'peso' => 380.0, 'proposito' => 'LECHE',
+        'descripcion' => 'Vaquillas de reemplazo para lechería, manejo tranquilo.'],
+    ['titulo' => 'Vaca de cría Simmental', 'raza' => 'Simmental', 'sexo' => 'HEMBRA', 'precio' => 1380000,
+        'edad' => 54, 'peso' => 560.0, 'proposito' => 'CRIA',
+        'descripcion' => 'Buena madre, con cría al pie y partos sin asistencia.'],
 ];
 
 $animales = new AnimalComercial($conexion);

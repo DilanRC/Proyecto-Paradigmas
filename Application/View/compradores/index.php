@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,600;0,700;1,600&display=swap">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=official-shell-2">
+    <link rel="stylesheet" href="css/base.css?v=product-4">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
