@@ -121,9 +121,13 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
    compartido gana un `export`, versiona su `import` donde se usa (ya pasa con
    `explore.js?v=foto-1`, `business-rules.js?v=panel-2`,
    `supabase-auth.js?v=session-2`, `auth-gate.js?v=auth-gate-4`).
-3. **Alias SQL en camelCase** (`AS imagenUrl`) siguen el patrón existente de
-   `listarPublicaciones`; Postgres pasa a minúsculas los alias sin comillas.
-   Si producción devuelve claves en minúscula, revisar todo ese SELECT junto.
+3. **Alias SQL siempre en minúscula** (`AS publicacionid`, nunca
+   `AS publicacionId`). Postgres (producción) pasa a minúscula los alias sin
+   comillas; MySQL (local) no, así que el error solo aparece en producción:
+   PHP imprime `Warning: Undefined array key` antes del JSON y el navegador
+   muestra "El servidor no devolvió una respuesta válida". La clave pública
+   camelCase se arma en PHP al mapear la fila. `Tests/sql_alias_minuscula_test.php`
+   falla si vuelve a aparecer un alias con mayúsculas.
 4. **Finales de línea:** `git stash` puede reescribir archivos con CRLF en
    Windows. Las pruebas que buscan `\n` en `Public/css/base.css` y
    `Public/js/shared/api.js` fallan con CRLF; normalizar con
@@ -168,7 +172,6 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ### Frontend
 - "Pasar" en Explorar solo guarda la acción (antes avanzaba el carrusel).
 - `renderSummary()` en `registro.js` es código muerto anterior.
-- Llevar `jefersonbustamante` a `dev` con un PR cuando el equipo lo apruebe.
 
 ## 6. Estado de pruebas
 
@@ -181,9 +184,22 @@ de trabajo** (no son regresiones):
 
 Cualquier otro fallo es una regresión.
 
+`Tests/registro_publico_test.php` falló una vez (201 esperado, 200 recibido) y
+pasó al repetirla: parece intermitente, no relacionada con los alias.
+
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · jefersonbustamante · Alias SQL en minúscula (fallo en producción)
+- Síntoma en producción (Postgres): Explorar e Inicio sin publicaciones ("El servidor no devolvió una respuesta válida"), Mi panel sin publicaciones ni fincas.
+- Causa: alias camelCase (`AS publicacionId`, `AS fincaId`…) que Postgres pliega a minúscula; PHP no encontraba la clave e imprimía avisos antes del JSON. Reproducido con Postgres 16 + `schema.sql`.
+- Arreglo: alias en minúscula y lectura en minúscula; la API mantiene las mismas claves camelCase (sin cambio de contrato).
+- Archivos: `AnimalComercial.php`, `ProductorFinca.php`, `TransportistaVehiculo.php`, `Transportista.php`, `PublicacionCercaniaService.php`, nueva prueba `Tests/sql_alias_minuscula_test.php`.
+
+### 2026-10-04 · jefersonbustamante · Sincronización con dev (PR #33)
+- `dev` ya incluye todo el trabajo de esta rama (merge `a1ac1e3`, PR #33); la rama se actualizó con `dev` por fast-forward, sin cambios de código.
+- Se quitó el pendiente "Llevar `jefersonbustamante` a `dev`". Los próximos cambios van en nuevos PR desde esta rama.
 
 ### 2026-10-04 · jefersonbustamante · Fotos en publicaciones y página Publicar
 - Columna `tbanimalpublicacionimagenurl` en MySQL y Postgres; `imagenUrl` en la API con validación https.
