@@ -168,7 +168,6 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ### Frontend
 - "Pasar" en Explorar solo guarda la acción (antes avanzaba el carrusel).
 - `renderSummary()` en `registro.js` es código muerto anterior.
-- Llevar `jefersonbustamante` a `dev` con un PR cuando el equipo lo apruebe.
 
 ## 6. Estado de pruebas
 
@@ -184,6 +183,10 @@ Cualquier otro fallo es una regresión.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · jefersonbustamante · Sincronización con dev (PR #33)
+- `dev` ya incluye todo el trabajo de esta rama (merge `a1ac1e3`, PR #33); la rama se actualizó con `dev` por fast-forward, sin cambios de código.
+- Se quitó el pendiente "Llevar `jefersonbustamante` a `dev`". Los próximos cambios van en nuevos PR desde esta rama.
 
 ### 2026-10-04 · jefersonbustamante · Fotos en publicaciones y página Publicar
 - Columna `tbanimalpublicacionimagenurl` en MySQL y Postgres; `imagenUrl` en la API con validación https.
