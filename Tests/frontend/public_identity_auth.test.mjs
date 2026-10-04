@@ -56,7 +56,7 @@ test('la portada usa identidad Ganado Cerca y habla como producto', () => {
     assert.ok(home.includes('assets/logo_dark.png'));
     assert.ok(home.includes('assets/logo_light.png'));
     assert.ok(home.includes('rel="icon" href="favicon.svg"'));
-    assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('Compra y vende ganado cerca de ti.'));
     assert.ok(home.includes('Ganado<strong>Cerca</strong>'));
     assert.ok(home.includes('assets/hero-ganado-cerca.png'));
     assert.ok(statSync(new URL('../../Public/assets/hero-ganado-cerca.png', import.meta.url)).size > 10000);
@@ -87,29 +87,32 @@ test('la búsqueda pública permanece compacta y se expande bajo demanda', () =>
     assert.ok(publicUi.includes("event.key === 'Escape'"));
 });
 
-test('la portada muestra las seis escenas ganaderas en un carrusel navegable', () => {
-    assert.ok(home.includes('data-public-carousel'));
-    assert.ok(publicUi.includes('initializePublicCarousel'));
-    for (const asset of [
-        'finca-camino-costa-rica.png',
-        'finca-potrero-costa-rica.png',
-        'finca-bebedero-costa-rica.png',
-        'subasta-pasarela-costa-rica.png',
-        'subasta-corrales-costa-rica.png',
-        'subasta-rematador-costa-rica.png',
-    ]) assert.ok(home.includes(asset), `falta ${asset}`);
-    assert.ok(publicUi.includes('data-carousel-prev'));
-    assert.ok(publicUi.includes('data-carousel-next'));
-    assert.equal((home.match(/<figcaption>/g) || []).length, 0);
-    assert.equal((home.match(/public-carousel__slide/g) || []).length, 6);
-    assert.equal(home.includes('card-3d'), false);
-    assert.equal((home.match(/public-carousel__page/g) || []).length, 2);
-    assert.match(publicV3, /public-carousel__dots button \{[^}]*width:28px; height:28px/);
-    assert.match(publicV3, /touch-action:manipulation/);
-    assert.ok(publicV3.includes("button[aria-current='page']::before"));
-    assert.ok(home.includes('role="group" aria-label="Páginas de escenas del campo"'));
-    assert.ok(publicUi.includes("setAttribute('aria-current'"));
-    assert.equal(publicUi.includes("dot.role = 'tab'"), false);
+test('la portada sigue el orden hero, destacadas, cómo funciona', () => {
+    const orden = ['public-hero--landing', 'data-featured', 'id="como-funciona"', 'public-footer']
+        .map((marca) => home.indexOf(marca));
+    assert.ok(orden.every((pos) => pos >= 0), 'falta una sección de la portada');
+    assert.deepEqual([...orden].sort((a, b) => a - b), orden, 'las secciones no están en orden');
+    // El buscador del hero lleva a Explorar con ubicación y tipo etiquetados.
+    assert.match(home, /<form class="hero-search" action="explorar"/);
+    assert.match(home, /<label for="hero-search-ubicacion">/);
+    assert.match(home, /<label for="hero-search-tipo">/);
+    assert.match(home, /name="ubicacion"/);
+    assert.match(home, /name="tipo"/);
+    // Sin publicaciones la portada da la bienvenida; nunca dice "no encontramos".
+    assert.ok(home.includes('Pronto verás aquí ganado cerca de ti'));
+    assert.ok(home.includes('Crear cuenta para publicar'));
+    assert.equal(/No encontramos/i.test(home), false);
+    // Carrusel con flechas y puntos; la tarjeta es la misma de Explorar.
+    for (const marca of ['data-featured-carousel', 'data-carousel-track', 'data-carousel-prev', 'data-carousel-next', 'data-carousel-dots']) {
+        assert.ok(home.includes(marca), `falta ${marca}`);
+    }
+    const homeJs = read('../../Public/js/home.js');
+    assert.match(homeJs, /import \{ buildCard \} from '\.\/explore\.js(\?v=[a-z0-9-]+)?'/);
+    assert.match(homeJs, /const FIJAS_HASTA = 4;/);
+    for (const destino of ['href="explorar"', 'href="registro"']) assert.ok(home.includes(destino));
+    // Las formas de participar viven en Mi actividad, después de iniciar sesión.
+    assert.equal(home.includes('id="participar"'), false);
+    assert.equal(home.includes('data-public-carousel'), false);
 });
 
 test('Fletes comparte el shell público y no expone lenguaje técnico', () => {
@@ -136,11 +139,17 @@ test('la navegación accesible usa el mismo texto visible que anuncia', () => {
     assert.ok(publicUi.includes('href="admin/dashboard" data-admin-link'));
 });
 
-test('Explorar es una vista distinta con deck deslizable y acciones icono más texto', () => {
+test('Explorar es una vista distinta con tarjetas completas y acciones icono más texto', () => {
     assert.ok(read('../../Public/explorar.php').includes("Application/View/explorar/index.php"));
     assert.ok(explore.includes('data-explore-deck'));
-    assert.ok(explore.includes('data-explore-prev'));
-    assert.ok(explore.includes('data-explore-next'));
+    // Sin flechas: el scroll inferior aparece solo con más de 4 tarjetas y el
+    // snap encaja tarjetas enteras, así que ninguna queda cortada.
+    assert.equal(explore.includes('data-explore-prev'), false);
+    assert.equal(explore.includes('data-explore-next'), false);
+    const css = read('../../Public/css/explore.css');
+    assert.match(css, /--explore-por-vista:4;/);
+    assert.match(css, /scroll-snap-align:start;/);
+    assert.match(css, /\.explore-card:first-child \{ margin-inline-start:auto; \}/);
     assert.ok(read('../../Public/js/explore.js').includes('aria-pressed'));
     // Las acciones viajan con la tarjeta, que ahora construye explore.js con lo
     // que devuelve api/publicaciones.php; la escritura requiere sesión y se
@@ -238,6 +247,11 @@ test('el acceso público valida con Supabase y vuelve a Explorar por defecto', (
     assert.equal(resolveNext('?next=https://example.com'), 'explorar');
     assert.equal(resolveNext('?next=//example.com'), 'explorar');
     assert.equal(resolveNext('?next=../entrar'), 'explorar');
+    // Vuelve a la publicación o búsqueda de origen, solo con parámetros seguros.
+    assert.equal(resolveNext('?next=explorar%3Fpublicacion%3D5'), 'explorar?publicacion=5');
+    assert.equal(resolveNext('?next=explorar%3Fpublicacion%3D5%26x%3Djs'), 'explorar?publicacion=5');
+    assert.equal(resolveNext('?next=explorar%3Fpublicacion%3Dabc'), 'explorar');
+    assert.equal(resolveNext('?next=explorar%3Fq%3Dbrahman'), 'explorar?q=brahman');
     assert.equal(resolveAdminNext('?next=admin/productores'), 'admin/productores');
     assert.equal(resolveAdminNext('?next=https://example.com'), 'admin/dashboard');
     assert.equal(isAdminLogin({ pathname: '/admin/entrar', search: '?next=admin%2Fdashboard' }), true);
@@ -256,7 +270,9 @@ test('el estado de autenticación tiene contraste y tamaño legibles', () => {
 test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => {
     assert.match(publicUi, /readAuthSession/);
     assert.match(publicUi, /createAccountMenu/);
-    assert.match(publicUi, /Mi perfil y actividad/);
+    assert.match(publicUi, /href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"><\/i><span>Mi panel<\/span>/);
+    // Ajustes de cuenta vive en el menú del avatar.
+    assert.match(publicUi, /href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"><\/i><span>Ajustes de cuenta<\/span>/);
     assert.match(publicUi, /api\/v1\/admin\/status/);
     assert.doesNotMatch(publicUi, /sessionStorage\.setItem\(SESSION_KEY/);
 });
@@ -285,7 +301,7 @@ test('el alta muestra la misma guía clara sin confirmar si el correo está regi
     assert.match(supabaseAuth, /code === 'user_already_exists'/);
     assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
     assert.match(supabaseAuth, /Si el correo puede usarse para crear una cuenta, te enviaremos instrucciones/);
-    assert.match(registroJs, /SIGNUP_NEXT_STEPS_MESSAGE, 'info'/);
+    assert.match(registroJs, /window\.location\.assign\(loginPendiente\(\)\)/);
     assert.doesNotMatch(registroJs, /Ese correo ya tiene una cuenta/);
     assert.match(registroJs, /let submitInProgress = false/);
 });
@@ -368,14 +384,16 @@ test('las rutas públicas no redirigen al login por el gate administrativo', () 
 
 test('el shell privado distingue volver al sitio público de cerrar sesión', () => {
     assert.ok(authGate.includes("publicLink.textContent = 'Sitio público'"));
-    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión administrativa'"));
+    assert.ok(authGate.includes("logoutLink.textContent = 'Cerrar sesión'"));
+    // Salir del panel cierra la sesión completa, no solo el permiso admin.
+    assert.ok(authGate.includes('void signOutEverywhere(storage)'));
     assert.ok(authGate.includes('clearAdminBrowserSession(storage)'));
 });
 
 test('los paneles privados fallan cerrados y comparten bootstrap de API', () => {
     assert.ok(baseCss.includes('body.rural-panel {\n    visibility:hidden;'));
     assert.ok(baseCss.includes("html[data-tc-auth='ready'] body.rural-panel"));
-    assert.ok(api.startsWith("import './auth-gate.js?v=auth-gate-2';\nimport './admin-ui.js';"));
+    assert.ok(api.startsWith("import './auth-gate.js?v=auth-gate-4';\nimport './admin-ui.js';"));
     for (const path of PRIVATE_MODULES) {
         const module = read(path);
         assert.ok(module.includes("from './shared/api.js'"));

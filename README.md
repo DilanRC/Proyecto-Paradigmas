@@ -73,6 +73,17 @@ Todos los valores, incluida la fecha de bitácora y los estados iniciales, se
 envían desde PHP mediante `PDO::prepare()` y parámetros enlazados. MySQL solo
 almacena los datos.
 
+## Antes de trabajar (personas y agentes de IA)
+
+Lee primero [AGENTS.md](AGENTS.md) (reglas de trabajo, compatible con cualquier
+agente de IA) y después [MEMORIA.md](MEMORIA.md) (decisiones, cuidados y
+pendientes). Actualiza `MEMORIA.md` con cada cambio.
+
+## Estructura del proyecto
+
+Mapa de carpetas, flujo de rutas → vistas → lógica y cómo agregar pantallas,
+endpoints o WebSockets: [Documentation/Arquitectura.md](Documentation/Arquitectura.md).
+
 ## Requisitos e inicio
 
 - Docker

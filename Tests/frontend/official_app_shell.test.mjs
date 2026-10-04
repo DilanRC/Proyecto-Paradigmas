@@ -27,7 +27,7 @@ test('la landing se comporta como producto y deriva la exploración a una ruta p
     const home = read('Application/View/home/index.php');
     const explore = read('Application/View/explorar/index.php');
 
-    assert.ok(home.includes('El ganado que buscas, más cerca de ti.'));
+    assert.ok(home.includes('Compra y vende ganado cerca de ti.'));
     assert.ok(home.includes('href="explorar"'));
     assert.equal(home.includes('id="modulos"'), false);
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false);
@@ -60,7 +60,7 @@ test('login existe como entrada navegable, usa Supabase Auth y vuelve a Explorar
     assert.match(login, /type="password"/);
     assert.match(js, /signInWithPassword/);
     assert.doesNotMatch(js, /password[^;]*sessionStorage\.setItem/s);
-    assert.match(js, /: 'explorar';/);
+    assert.match(js, /return safeNext\(search\) \?\? 'explorar';/);
 });
 
 test('admin mantiene ancho útil, sidebar colapsable y paginación al pie', () => {

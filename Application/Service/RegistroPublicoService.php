@@ -92,9 +92,16 @@ final class RegistroPublicoService
     {
         $this->conexion->beginTransaction();
         try {
+            // La sesión aún no está vinculada a una Persona: es el alta inicial.
+            $primeraAlta = $this->actor->personaId === null;
             $persona = $this->resolverPersona($personaDatos);
             $personaId = (int) $persona['tbpersonaid'];
             $identificacion = (string) $persona['tbpersonaidentificacionnumero'];
+            $capacidades = self::capacidadesDeAlta(
+                $capacidades,
+                $primeraAlta,
+                $this->comprador->buscar($identificacion) !== null,
+            );
 
             $actorVinculado = ActorContext::personaAutenticada(
                 $personaId,
@@ -173,6 +180,22 @@ final class RegistroPublicoService
             }
             throw $excepcion;
         }
+    }
+
+    /**
+     * Toda cuenta nueva empieza como Comprador, sin depender del formulario.
+     * Si la Persona ya tenía Comprador (activo o inactivo) no se toca: una
+     * cuenta existente nunca cambia de estado por registrarse.
+     *
+     * @param list<string> $capacidades
+     * @return list<string>
+     */
+    public static function capacidadesDeAlta(array $capacidades, bool $primeraAlta, bool $compradorExiste): array
+    {
+        if (!$primeraAlta || $compradorExiste || in_array('COMPRADOR', $capacidades, true)) {
+            return $capacidades;
+        }
+        return ['COMPRADOR', ...$capacidades];
     }
 
     private function resolverPersona(array $datos): array

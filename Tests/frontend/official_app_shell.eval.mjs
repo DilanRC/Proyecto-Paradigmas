@@ -11,7 +11,7 @@ const adminJs = read('Public/js/shared/admin-ui.js');
 const collapseCss = read('Public/css/admin-sidebar-collapse.css');
 
 const checks = [
-    ['landing_producto', home.includes('El ganado que buscas, más cerca de ti.') && home.includes('href="explorar"')],
+    ['landing_producto', home.includes('Compra y vende ganado cerca de ti.') && home.includes('href="explorar"')],
     ['sin_lenguaje_academico', !/EIF400|acad[eé]mic/i.test(home + explore + login)],
     ['explorar_independiente', explore.includes('data-explore-deck') && explore.includes('js/explore.js')],
     ['cabecera_ancho_completo', home.includes('public-header--product') && home.includes('css/public-product.css')],

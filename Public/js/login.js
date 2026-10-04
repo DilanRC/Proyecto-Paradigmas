@@ -1,15 +1,15 @@
 import { request } from './shared/api.js?v=api-2';
 import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-2';
+import { safeNext } from './shared/next.js';
+import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-4';
 
-const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar']);
 const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago']);
 
-export function resolveNext(search = '', hasProfile = false) {
-    const requested = new URLSearchParams(search).get('next');
-    if (requested && PUBLIC_DESTINATIONS.has(requested)) return requested;
-    return hasProfile ? 'mi-actividad' : 'explorar';
+/** Después de entrar: el destino de origen si es seguro; si no, Explorar. */
+export function resolveNext(search = '') {
+    return safeNext(search) ?? 'explorar';
 }
 
 export function resolveAdminNext(search = '') {
@@ -83,6 +83,14 @@ function initialize() {
         setStatus(status, '');
     });
 
+    // Recién registrado con confirmación de correo pendiente.
+    if (new URLSearchParams(window.location.search).get('registro') === 'confirmar') {
+        setStatus(status, CONFIRMACION_PENDIENTE_MESSAGE, 'info');
+        const correo = leerBorradorRegistro()?.persona?.correoElectronico;
+        const campo = form.elements.namedItem('email');
+        if (correo && campo instanceof HTMLInputElement && campo.value === '') campo.value = correo;
+    }
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!validate(form) || submit.disabled) return;
@@ -111,6 +119,18 @@ function initialize() {
                         return;
                     }
                     if (error?.status === 409) {
+                        // Correo recién confirmado: se termina el registro con
+                        // los datos que la persona ya llenó.
+                        try {
+                            if (await completarRegistroPendiente(email)) {
+                                setStatus(status, 'Cuenta confirmada. Terminando tu registro…', 'success');
+                                await loadBusinessProfile();
+                                window.location.assign(resolveNext(window.location.search));
+                                return;
+                            }
+                        } catch {
+                            // Si falla, el formulario de registro conserva el borrador.
+                        }
                         setStatus(status, 'La cuenta está validada. Completa ahora tu registro guiado para crear tu perfil.', 'info');
                         window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
                         return;
@@ -138,7 +158,7 @@ function initialize() {
             }
 
             setStatus(status, 'Acceso confirmado. Abriendo TinderCows…', 'success');
-            window.location.assign(resolveNext(window.location.search, Boolean(profile?.persona)));
+            window.location.assign(resolveNext(window.location.search));
         } catch (error) {
             setStatus(status, error?.message || 'No fue posible iniciar sesión. Revise sus datos e intente nuevamente.', 'error');
         } finally {

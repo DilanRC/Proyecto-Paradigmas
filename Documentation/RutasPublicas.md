@@ -17,7 +17,8 @@ servidor.
 | `/registro/comprador` | Pública | Registro guiado con Comprador preseleccionado |
 | `/registro/transportista` | Pública | Registro guiado con Transportista preseleccionado |
 | `/fletes` | Pública | Oferta de transporte |
-| `/mi-actividad` | Privada de Persona | Dashboard de identidad, actividades, fincas y vehículos propios |
+| `/mi-actividad` | Privada de Persona | Mi panel: publicaciones, fincas y vehículos propios |
+| `/ajustes` | Privada de Persona | Ajustes de cuenta: perfil y actividades (activar/desactivar) |
 | `/publicar` | Privada de Persona | Publicar ganado |
 | `/sobre-nosotros` | Informativa | Información del producto |
 | `/como-usar` | Informativa | Guía de uso |

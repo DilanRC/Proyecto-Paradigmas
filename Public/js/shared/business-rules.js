@@ -1,18 +1,21 @@
 export const BUSINESS_CAPABILITIES = Object.freeze({
     COMPRADOR: Object.freeze({
         id: 'COMPRADOR',
+        shortLabel: 'Comprador',
         label: 'Explorar como comprador',
         description: 'Explorar y guardar oportunidades de ganado.',
         requiredSections: [],
     }),
     PRODUCTOR: Object.freeze({
         id: 'PRODUCTOR',
+        shortLabel: 'Vendedor',
         label: 'Vender o publicar ganado',
         description: 'Publicar ganado y administrar una o más fincas.',
         requiredSections: ['fincas'],
     }),
     TRANSPORTISTA: Object.freeze({
         id: 'TRANSPORTISTA',
+        shortLabel: 'Transportista',
         label: 'Ofrecer fletes',
         description: 'Ofrecer servicios de transporte y asociar vehículos después del registro.',
         requiredSections: [],

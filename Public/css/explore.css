@@ -12,10 +12,21 @@
 
 .explore-heading {
     display:flex;
+    min-height:360px;
     align-items:end;
     justify-content:space-between;
     gap:30px;
+    padding:clamp(28px,5vw,64px);
+    border-radius:28px;
+    background:
+        linear-gradient(90deg,rgba(10,16,14,.94) 0%,rgba(10,16,14,.78) 38%,rgba(10,16,14,.34) 72%,rgba(10,16,14,.2) 100%),
+        url('../assets/fondo-para-publicaciones.jpg') center 40% / cover no-repeat;
 }
+
+/* Sobre la foto el texto siempre es claro, también en tema claro. */
+.explore-heading .section-kicker { color:var(--tc-primary-strong); }
+.explore-heading h1,
+.explore-heading p:not(.section-kicker) { color:var(--tc-cream) !important; }
 
 .explore-heading > div:first-child {
     max-width:760px;
@@ -44,7 +55,6 @@
 }
 
 .explore-chip,
-.explore-deck__navigation button,
 .explore-empty button {
     display:inline-flex;
     min-height:40px;
@@ -64,8 +74,6 @@
 .explore-chip:hover,
 .explore-chip:focus-visible,
 .explore-chip.is-active,
-.explore-deck__navigation button:hover,
-.explore-deck__navigation button:focus-visible,
 .explore-empty button:hover,
 .explore-empty button:focus-visible {
     color:var(--tc-text);
@@ -105,39 +113,68 @@
     color:var(--tc-primary-strong);
 }
 
+/* Fila de tarjetas completas: hasta 4 a la vista. Con pocas se centran; con
+   más aparece el scroll inferior, y el snap deja cada tarjeta entera. */
 .explore-deck__viewport {
+    --explore-por-vista:4;
+    --explore-gap:20px;
     display:flex;
-    gap:18px;
+    gap:var(--explore-gap);
+    margin-top:24px;
+    padding:8px 4px 22px;
     overflow-x:auto;
     overscroll-behavior-inline:contain;
-    padding:8px 2px 20px;
     scroll-behavior:smooth;
     scroll-snap-type:x mandatory;
-    scrollbar-width:none;
+    scroll-padding-inline:4px;
+    scrollbar-width:thin;
+    scrollbar-color:var(--tc-primary) var(--tc-surface);
 }
 
-.explore-deck__viewport::-webkit-scrollbar {
-    display:none;
+.explore-deck__viewport > .explore-card {
+    flex:0 0 calc((100% - (var(--explore-por-vista) - 1) * var(--explore-gap)) / var(--explore-por-vista));
+    min-width:0;
+    scroll-snap-align:start;
 }
+
+/* Márgenes automáticos en los extremos: centran cuando sobra espacio y, a
+   diferencia de justify-content:center, no esconden tarjetas al desbordar. */
+.explore-deck__viewport > .explore-card:first-child { margin-inline-start:auto; }
+.explore-deck__viewport > .explore-card:last-child { margin-inline-end:auto; }
+
+.explore-deck__viewport::-webkit-scrollbar { height:10px; }
+.explore-deck__viewport::-webkit-scrollbar-track { border-radius:999px; background:var(--tc-surface); }
+.explore-deck__viewport::-webkit-scrollbar-thumb { border-radius:999px; background:var(--tc-primary); }
+
+.explore-deck__viewport:focus-visible {
+    border-radius:18px;
+    outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent);
+    outline-offset:3px;
+}
+
+@media (max-width:1280px) { .explore-deck__viewport { --explore-por-vista:3; } }
+@media (max-width:900px) { .explore-deck__viewport { --explore-por-vista:2; } }
+@media (max-width:620px) { .explore-deck__viewport { --explore-por-vista:1; --explore-gap:14px; } }
 
 .explore-card {
     display:grid;
-    min-width:min(92vw,560px);
-    max-width:560px;
-    min-height:760px;
-    grid-template-rows:210px 1fr;
+    grid-template-rows:180px 1fr;
     overflow:hidden;
     border:1px solid var(--tc-line-strong);
     border-radius:28px;
     background:var(--tc-bg-elevated);
     box-shadow:var(--tc-shadow-soft);
-    scroll-snap-align:center;
+    scroll-margin-top:110px;
     transition:transform .18s ease,border-color .18s ease,opacity .18s ease;
 }
 
 .explore-card:hover {
     border-color:color-mix(in srgb,var(--tc-primary) 30%,var(--tc-line-strong));
     transform:translateY(-3px);
+}
+
+.explore-card.is-focused {
+    border-color:var(--tc-primary);
 }
 
 .explore-card[hidden] {
@@ -307,6 +344,7 @@
     flex-wrap:wrap;
     gap:8px;
     margin-top:auto;
+    padding-top:18px;
 }
 
 .explore-card__actions button {
@@ -336,21 +374,6 @@
     color:#fff;
     border-color:transparent;
     background:var(--tc-primary);
-}
-
-.explore-deck__navigation {
-    display:grid;
-    grid-template-columns:auto 1fr auto;
-    align-items:center;
-    gap:12px;
-    margin-top:4px;
-}
-
-.explore-deck__navigation > span {
-    justify-self:center;
-    color:var(--tc-muted);
-    font-size:11px;
-    font-weight:800;
 }
 
 .explore-empty {
@@ -420,9 +443,7 @@
     }
 
     .explore-card {
-        min-width:calc(100vw - 34px);
-        min-height:740px;
-        grid-template-rows:170px 1fr;
+        grid-template-rows:150px 1fr;
     }
 
     .explore-card__specs {
@@ -435,16 +456,9 @@
         flex:1 1 calc(50% - 8px);
     }
 
-    .explore-deck__navigation button span {
-        display:none;
-    }
 }
 
 @media (prefers-reduced-motion:reduce) {
-    .explore-deck__viewport {
-        scroll-behavior:auto;
-    }
-
     .explore-card {
         transition:none;
     }
@@ -606,4 +620,99 @@
     background:var(--tc-primary-strong);
     outline:2px solid var(--tc-primary);
     outline-offset:2px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Filtros útiles: tipo (chips de propósito), ubicación y rango de precio.
+ * ------------------------------------------------------------------------- */
+
+.explore-filters {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    align-items:end;
+    gap:16px;
+    margin-top:28px;
+    padding:20px;
+    border:1px solid var(--tc-line);
+    border-radius:20px;
+    background:var(--tc-bg-elevated);
+}
+
+.explore-filters .explore-heading__controls {
+    grid-column:1 / -1;
+    justify-content:flex-start;
+}
+
+.explore-heading p:not(.section-kicker) { font-size:17px; }
+
+.explore-chip,
+.explore-empty button {
+    min-height:44px;
+    padding:0 16px;
+    font-size:15px;
+}
+
+.explore-empty .public-cta { margin-top:8px; }
+
+
+@media (max-width:760px) {
+    .explore-filters { grid-template-columns:minmax(0,1fr); }
+}
+
+/* ---------------------------------------------------------------------------
+ * Tarjeta compacta (portada): foto, nombre, precio y detalle desplegable.
+ * ------------------------------------------------------------------------- */
+
+.explore-card--compacta .explore-card__body { gap:6px; }
+.explore-card--compacta h2 { margin:0; font-size:22px; }
+.explore-card--compacta p.explore-card__price { margin:0; }
+
+.explore-card__more {
+    margin-top:8px;
+    border-top:1px solid var(--tc-line);
+    padding-top:10px;
+}
+
+.explore-card__more summary {
+    display:flex;
+    min-height:44px;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    border-radius:10px;
+    color:var(--tc-text);
+    font-size:15px;
+    font-weight:800;
+    cursor:pointer;
+    list-style:none;
+}
+
+.explore-card__more summary::-webkit-details-marker { display:none; }
+
+.explore-card__more summary::after {
+    content:"›";
+    font-size:22px;
+    line-height:1;
+    transition:transform .15s ease;
+}
+
+.explore-card__more[open] summary::after { transform:rotate(90deg); }
+.explore-card__more > .explore-card__meta { margin-top:6px; }
+.explore-card__more > p { margin:10px 0 0; }
+
+/* Al abrir el detalle de una tarjeta, las vecinas no se estiran. */
+.public-carousel__track { align-items:flex-start; }
+
+@media (prefers-reduced-motion:reduce) {
+    .explore-card__more summary::after { transition:none; }
+}
+
+/* Foto de la publicación: cubre el recuadro; el ícono queda debajo por si falla. */
+.explore-card__visual { position:relative; }
+.explore-card__photo {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
 }

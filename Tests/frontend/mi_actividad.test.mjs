@@ -10,12 +10,59 @@ const api = readFileSync('Public/api/mi-vehiculos.php', 'utf8');
 const publicUi = readFileSync('Public/js/public-ui.js', 'utf8');
 const farmsController = readFileSync('Application/Controller/MiFincasController.php', 'utf8');
 const farmsApi = readFileSync('Public/api/mi-fincas.php', 'utf8');
+const ajustesView = readFileSync('Application/View/ajustes/index.php', 'utf8');
+const ajustesJs = readFileSync('Public/js/ajustes.js', 'utf8');
+const htaccess = readFileSync('Public/.htaccess', 'utf8');
 
-test('Mi actividad usa el shell público y cubre el dashboard completo', () => {
-    for (const value of ['public-header--product', 'Inicio', 'Explorar', 'Nosotros', 'Cómo funciona', 'public-ui.js', 'activity-summary', 'activity-list', 'profile-list', 'farms-list', 'vehicles-list', 'vehicle-modal']) {
+test('Mi panel usa el shell público y muestra solo lo operativo', () => {
+    for (const value of ['public-header--product', 'Inicio', 'Explorar', 'Nosotros', 'Cómo funciona', 'public-ui.js', 'panel-hello', 'panel-roles', 'panel-actions', 'publications-list', 'farms-list', 'vehicles-list', 'vehicle-modal', 'href="ajustes"']) {
         assert.ok(view.includes(value), `falta ${value}`);
     }
     assert.equal(view.includes('auth-header'), false);
+    // Resumen de 4 tarjetas, "Cómo participas" e identidad completa salen del panel.
+    for (const removed of ['activity-summary', 'summary-card', 'activity-list', 'profile-list']) {
+        assert.equal(view.includes(removed), false, `${removed} ya no vive en el panel`);
+    }
+});
+
+test('Ajustes de cuenta concentra perfil y actividades con la lógica existente', () => {
+    for (const value of ['activity-list', 'profile-list', 'id="perfil"', 'id="participacion"', 'js/ajustes.js', 'Si desactivas una actividad, tus otros datos no se borran.']) {
+        assert.ok(ajustesView.includes(value), `falta ${value}`);
+    }
+    // Mismo endpoint y mismo cuerpo que antes; solo cambia el lugar.
+    assert.ok(ajustesJs.includes("const ACTIVITY_API = 'api/v1/actividad'"));
+    assert.ok(ajustesJs.includes("method: 'PATCH', body: JSON.stringify({ contexto: id, activo: nextActive })"));
+    assert.ok(ajustesJs.includes('window.confirm'), 'desactivar pide confirmación');
+    assert.ok(ajustesJs.includes('role="switch"'));
+    assert.match(htaccess, /RewriteRule \^ajustes\/\?\$ ajustes\.php \[END\]/);
+    assert.equal(js.includes('data-toggle-capability'), false, 'el panel ya no cambia actividades');
+});
+
+test('Ajustes enmascara identificación y teléfono', async () => {
+    const { maskTail } = await import('../../Public/js/ajustes.js');
+    assert.equal(maskTail('112340817'), '•••• 0817');
+    assert.equal(maskTail('+506 8823 8236'), '•••• 8236');
+    assert.equal(maskTail(''), 'Sin completar');
+    assert.equal(maskTail(null), 'Sin completar');
+});
+
+test('el panel muestra solo las acciones de actividades activas y una sola principal', async () => {
+    const { panelActions, ownPublications } = await import('../../Public/js/mi-actividad.js');
+    const activo = (destinoActivo) => ({ estado: 'ACTIVO', destinoActivo });
+    const todas = panelActions({ COMPRADOR: activo('explorar'), PRODUCTOR: activo('publicar'), TRANSPORTISTA: activo('fletes') });
+    assert.deepEqual(todas.map((a) => a.label), ['Explorar ganado', 'Ver fletes', 'Publicar ganado']);
+    assert.equal(todas.filter((a) => a.primary).length, 1);
+    assert.equal(todas.find((a) => a.primary).label, 'Publicar ganado');
+    assert.deepEqual(panelActions({ COMPRADOR: activo('explorar'), PRODUCTOR: { estado: 'INACTIVO' } }).map((a) => a.label), ['Explorar ganado']);
+
+    const publicaciones = [
+        { publicacionId: 1, finca: { nombre: 'La Esperanza' }, vendedor: { nombre: 'Ana Rojas' } },
+        { publicacionId: 1, finca: { nombre: 'La Esperanza' }, vendedor: { nombre: 'Ana Rojas' } },
+        { publicacionId: 2, finca: { nombre: 'La Esperanza' }, vendedor: { nombre: 'Otra Persona' } },
+        { publicacionId: 3, finca: { nombre: 'Ajena' }, vendedor: { nombre: 'Ana Rojas' } },
+    ];
+    assert.deepEqual(ownPublications(publicaciones, [{ nombre: 'La Esperanza' }], 'Ana Rojas').map((p) => p.publicacionId), [1],
+        'solo mis fincas a mi nombre, sin duplicados');
 });
 
 test('Mi actividad conserva estados parciales y reintentos sin bloquear la pantalla', () => {
@@ -48,10 +95,21 @@ test('modal propio tiene foco, errores por campo y evita doble envío', () => {
     assert.ok(js.includes("event.key === 'Escape'") || js.includes("addEventListener('cancel'"));
 });
 
-test('el enlace de completar actividad se decide con el servidor y falla cerrado', () => {
-    assert.ok(publicUi.includes("request('api/v1/actividad'"));
-    assert.ok(publicUi.includes("register.hidden = true"));
-    assert.ok(publicUi.includes("detail?.estado === 'NO_CONFIGURADO'"));
+test('el menú de la cuenta ya no ofrece completar actividades: eso vive en Ajustes', () => {
+    assert.equal(publicUi.includes('data-profile-register'), false);
+    assert.equal(publicUi.includes('resolveProfileRegister'), false);
+    assert.ok(publicUi.includes('href="ajustes"'));
+});
+
+test('Ajustes activa Transportista ahí mismo y Vendedor abre solo su formulario', async () => {
+    const { necesitaFormulario, mensajeActivacion } = await import('../../Public/js/ajustes.js');
+    assert.equal(necesitaFormulario('PRODUCTOR'), true);
+    assert.equal(necesitaFormulario('TRANSPORTISTA'), false);
+    assert.equal(necesitaFormulario('COMPRADOR'), false);
+    assert.match(mensajeActivacion('TRANSPORTISTA', true), /ya ofreces fletes/);
+    assert.ok(ajustesJs.includes('href="registro/productor?next=ajustes">Configurar</a>'));
+    // Misma ampliación de cuenta que hacía el formulario, sin datos extra.
+    assert.ok(ajustesJs.includes("request(REGISTRO_API, { method: 'POST', body: JSON.stringify({ capacidades: [id], fincas: [] }) })"));
 });
 
 test('Mi actividad reutiliza el subflujo de fincas con dirección y mapa', () => {

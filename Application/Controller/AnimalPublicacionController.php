@@ -141,6 +141,7 @@ final class AnimalPublicacionController
                 'titulo' => $datos['titulo'],
                 'descripcion' => $datos['descripcion'],
                 'precio' => $datos['precio'],
+                'imagenUrl' => $datos['imagenUrl'],
             ]),
         );
 
@@ -199,7 +200,35 @@ final class AnimalPublicacionController
             'titulo' => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
             'descripcion' => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
             'precio' => $numero($cuerpo['precio'] ?? null, 'precio'),
+            'imagenUrl' => self::imagenUrl($cuerpo['imagenUrl'] ?? null),
         ];
+    }
+
+    /**
+     * Imagen opcional: solo URLs https absolutas, sin credenciales embebidas.
+     * Vale para Supabase Storage y para direcciones externas; un esquema como
+     * javascript: o data: nunca llega a la base ni a un <img>.
+     */
+    public static function imagenUrl(mixed $valor): ?string
+    {
+        if ($valor === null || trim((string) $valor) === '') {
+            return null;
+        }
+        $url = trim((string) $valor);
+        $partes = parse_url($url);
+        $valida = mb_strlen($url) <= 500
+            && filter_var($url, FILTER_VALIDATE_URL) !== false
+            && is_array($partes)
+            && strtolower((string) ($partes['scheme'] ?? '')) === 'https'
+            && ($partes['host'] ?? '') !== ''
+            && !isset($partes['user'])
+            && !isset($partes['pass']);
+        if (!$valida) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [
+                'imagenUrl' => 'Usa una dirección https válida de hasta 500 caracteres.',
+            ]);
+        }
+        return $url;
     }
 
     private function consultar(array $consulta): array

@@ -1,8 +1,7 @@
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
-import { readAuthSession, signOut, getAccessToken } from './shared/supabase-auth.js';
+import { readAuthSession, getAccessToken } from './shared/supabase-auth.js';
 import { readPublicProfile } from './shared/public-profile.js';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-3';
-import { request } from './shared/api.js';
+import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-4';
 
 const SESSION_KEY = 'tindercows:login';
 const PROFILE_KEY = 'tindercows:profile';
@@ -11,7 +10,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-2';
+    link.href = 'css/public-product.css?v=product-7';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -59,50 +58,6 @@ function initializePublicSearch() {
     }
 }
 
-function initializePublicCarousel() {
-    for (const root of document.querySelectorAll('[data-public-carousel]')) {
-        if (root.dataset.ready === 'true') continue;
-        const track = root.querySelector('[data-carousel-track]');
-        const pages = [...root.querySelectorAll('.public-carousel__page')];
-        const dots = root.querySelector('.public-carousel__dots');
-        const status = root.querySelector('[data-carousel-status]');
-        if (!track || pages.length < 2 || !dots) continue;
-        root.dataset.ready = 'true';
-        let index = 0;
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const render = () => {
-            index = (index + pages.length) % pages.length;
-            pages.forEach((page, pageIndex) => page.classList.toggle('is-active', pageIndex === index));
-            if (status) status.textContent = index === 0 ? 'Escenas 1–3 de 6' : 'Escenas 4–6 de 6';
-            dots.querySelectorAll('button').forEach((dot, dotIndex) => {
-                dot.setAttribute('aria-current', dotIndex === index ? 'page' : 'false');
-            });
-        };
-        pages.forEach((page, pageIndex) => {
-            const dot = document.createElement('button');
-            dot.type = 'button';
-            dot.ariaLabel = `Ver página ${pageIndex + 1} de escenas`;
-            dot.addEventListener('click', () => { index = pageIndex; render(); });
-            dots.append(dot);
-        });
-        root.querySelector('[data-carousel-prev]')?.addEventListener('click', () => { index -= 1; render(); });
-        root.querySelector('[data-carousel-next]')?.addEventListener('click', () => { index += 1; render(); });
-        track.addEventListener('keydown', (event) => {
-            if (event.key === 'ArrowLeft') { event.preventDefault(); index -= 1; render(); }
-            if (event.key === 'ArrowRight') { event.preventDefault(); index += 1; render(); }
-        });
-        let timer = null;
-        const stop = () => { if (timer) { window.clearInterval(timer); timer = null; } };
-        const start = () => { if (!reducedMotion && !timer) timer = window.setInterval(() => { index += 1; render(); }, 5000); };
-        track.addEventListener('pointerenter', stop);
-        track.addEventListener('pointerleave', start);
-        track.addEventListener('focusin', stop);
-        track.addEventListener('focusout', (event) => { if (!track.contains(event.relatedTarget)) start(); });
-        render();
-        start();
-    }
-}
-
 function addNavLink(nav, href, icon, label) {
     if (!nav || nav.querySelector(`a[href="${href}"]`)) return;
     const link = document.createElement('a');
@@ -135,8 +90,8 @@ function createAccountMenu(actions, session, profile) {
         </button>
         <div class="public-account-menu__panel" id="public-account-panel" hidden>
             <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
-            <a href="mi-actividad"><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>Mi perfil y actividad</span></a>
-            <a href="registro" data-profile-register><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar actividades</span></a>
+            <a href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"></i><span>Mi panel</span></a>
+            <a href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Ajustes de cuenta</span></a>
             <a href="admin/dashboard" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
             <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
         </div>`;
@@ -155,12 +110,7 @@ function createAccountMenu(actions, session, profile) {
             panel.hidden = true;
         }
     });
-    menu.querySelector('[data-public-logout]')?.addEventListener('click', async () => {
-        try { await signOut(); } finally {
-            clearAdminBrowserSession();
-            window.location.assign('explorar');
-        }
-    });
+    menu.querySelector('[data-public-logout]')?.addEventListener('click', () => signOutEverywhere());
     return menu;
 }
 
@@ -192,59 +142,90 @@ async function resolveAdminLink(menu) {
     }
 }
 
-async function resolveProfileRegister(menu) {
-    const register = menu?.querySelector('[data-profile-register]');
-    if (!register) return;
-    register.hidden = true;
+/** Páginas que solo tienen sentido con sesión iniciada. */
+export const PRIVATE_PAGES = Object.freeze(['explorar', 'publicar', 'fletes']);
+
+/** Nombre de página de un href o pathname: "/explorar?q=x" → "explorar". */
+export function pageName(href, base = 'http://localhost/') {
     try {
-        const response = await request('api/v1/actividad', { timeoutMs: 10000 });
-        const capacidades = response.data?.capacidades ?? {};
-        const pendientes = Object.entries(capacidades)
-            .filter(([, detail]) => detail?.estado === 'NO_CONFIGURADO')
-            .map(([id]) => id);
-        if (pendientes.length === 0) return;
-        register.hidden = false;
-        register.href = pendientes.length === 1
-            ? `registro?capacidad=${encodeURIComponent(pendientes[0])}&next=mi-actividad`
-            : 'mi-actividad#actividades';
-        const label = register.querySelector('span');
-        if (label) label.textContent = pendientes.length === 1 ? 'Completar actividad' : 'Agregar actividad';
+        const url = new URL(href, base);
+        return url.pathname.replace(/\/+$/, '').split('/').pop().replace(/\.php$/, '');
     } catch {
-        // La acción opcional falla cerrada si no se puede consultar el estado.
+        return '';
     }
+}
+
+/** Sin sesión, ir a una página privada pasa por Entrar y vuelve al mismo destino. */
+export function loginFor(href, base = 'http://localhost/') {
+    const url = new URL(href, base);
+    const destino = `${pageName(url.href)}${url.search}`;
+    return `entrar?next=${encodeURIComponent(destino)}`;
+}
+
+function hideAnonymousLinks() {
+    const selector = PRIVATE_PAGES.map((page) => `a[href="${page}"]`).join(', ');
+    document.querySelectorAll('.public-nav--primary, .public-footer').forEach((zona) => {
+        zona.querySelectorAll(selector).forEach((link) => link.remove());
+    });
+    // Sin sesión el header queda en logo, tema, Entrar y Crear cuenta: el logo
+    // ya lleva a Inicio y buscar exige cuenta.
+    const nav = document.querySelector('.public-nav--primary');
+    nav?.querySelectorAll('a[href="./"], a[href="#inicio"]').forEach((link) => link.remove());
+    if (nav && !nav.querySelector('a')) nav.hidden = true;
+    document.querySelectorAll('.public-header [data-public-search]').forEach((buscar) => buscar.remove());
+}
+
+/** Enlaces y búsquedas hacia páginas privadas: sin sesión, primero Entrar. */
+function initializeAnonymousGate() {
+    document.addEventListener('click', (event) => {
+        const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+        if (!link || !PRIVATE_PAGES.includes(pageName(link.href, document.baseURI))) return;
+        event.preventDefault();
+        window.location.assign(loginFor(link.href, document.baseURI));
+    }, true);
+    document.addEventListener('submit', (event) => {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) || !PRIVATE_PAGES.includes(pageName(form.action, document.baseURI))) return;
+        event.preventDefault();
+        const url = new URL(form.action, document.baseURI);
+        for (const [clave, valor] of new FormData(form)) {
+            if (String(valor).trim() !== '') url.searchParams.set(clave, String(valor).trim());
+        }
+        window.location.assign(loginFor(url.href, document.baseURI));
+    }, true);
 }
 
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
-    addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
-    addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
+    const session = readSession();
+    if (session?.authenticated === true) {
+        addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
+        addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
+    } else {
+        hideAnonymousLinks();
+        initializeAnonymousGate();
+    }
 
     const actions = document.querySelector('.public-header__actions');
     const login = actions?.querySelector('.public-header__login');
     if (!actions || !login) return;
 
-    const session = readSession();
     if (session?.authenticated === true) {
         const menu = createAccountMenu(actions, session, readPublicProfile());
         void resolveAdminLink(menu);
-        void resolveProfileRegister(menu);
         return;
     }
 
+    // Un solo botón principal: "Crear cuenta" relleno, "Entrar" con contorno.
+    login.classList.add('public-header__login--secondary');
     if (!actions.querySelector('[data-register-link]')) {
         const register = document.createElement('a');
         register.className = 'public-header__login';
         register.href = 'registro';
         register.dataset.registerLink = 'true';
         register.innerHTML = '<i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>Crear cuenta</span>';
-        actions.insertBefore(register, login);
+        login.after(register);
     }
-}
-
-if (typeof document !== 'undefined') {
-    const initialize = () => initializePublicCarousel();
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
-    else initialize();
 }
 
 function initializeBusinessActionGate() {
@@ -259,7 +240,8 @@ function initializeBusinessActionGate() {
         let destination = null;
 
         if (!session?.authenticated) {
-            destination = 'entrar?next=explorar';
+            const id = Number(button.closest('.explore-card')?.dataset.publicacionId);
+            destination = `entrar?next=${encodeURIComponent(Number.isInteger(id) && id > 0 ? `explorar?publicacion=${id}` : 'explorar')}`;
         } else if (!profile?.persona) {
             destination = 'registro?next=explorar';
         }
@@ -278,6 +260,12 @@ function initialize() {
     // Explorar coordina su propia recarga al recibir la ubicación. El resto del
     // sitio público inicia la captura aquí para que la sesión ya conozca la zona.
     if (!document.body.classList.contains('explore-page')) inicializarUbicacionAutomatica();
+}
+
+if (typeof document !== 'undefined'
+    && ['explorar', 'fletes'].includes(pageName(window.location.href))
+    && !readSession()) {
+    window.location.replace('./');
 }
 
 if (typeof document !== 'undefined') {

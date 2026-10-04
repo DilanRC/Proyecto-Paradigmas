@@ -85,7 +85,7 @@ const EXPECTED_COLUMNS = [
     'tbanimalpublicacion' => [
         'tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid', 'tbfincaid',
         'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio', 'tbanimalpublicaciontitulo',
-        'tbanimalpublicaciondescripcion', 'tbanimalpublicacionorigen',
+        'tbanimalpublicaciondescripcion', 'tbanimalpublicacionimagenurl', 'tbanimalpublicacionorigen',
     ],
     'tbanimalpublicacionestadoperiodo' => [
         'tbanimalpublicacionestadoperiodoid', 'tbanimalpublicacionid',
@@ -327,7 +327,9 @@ function ensureCurrentColumns(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbpersonaalias VARCHAR(150) NULL;
         ALTER TABLE public.tbdireccion
         ADD COLUMN IF NOT EXISTS tbdireccionlatitud NUMERIC(10,7) NULL,
-        ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL');
+        ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL;
+        ALTER TABLE public.tbanimalpublicacion
+        ADD COLUMN IF NOT EXISTS tbanimalpublicacionimagenurl VARCHAR(500) NULL');
 }
 
 /**

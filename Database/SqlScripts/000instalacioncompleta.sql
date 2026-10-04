@@ -235,6 +235,7 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacion (
     tbanimalpublicacionprecio DECIMAL(12,2) NULL,
     tbanimalpublicaciontitulo VARCHAR(150) NULL,
     tbanimalpublicaciondescripcion VARCHAR(500) NULL,
+    tbanimalpublicacionimagenurl VARCHAR(500) NULL,
     tbanimalpublicacionorigen VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 

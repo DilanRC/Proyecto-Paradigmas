@@ -1,7 +1,8 @@
 import { request } from './shared/api.js';
-import { BUSINESS_CAPABILITIES } from './shared/business-rules.js';
-import { readAuthSession } from './shared/supabase-auth.js';
+import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
+import { safeImageUrl } from './explore.js?v=foto-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
@@ -9,6 +10,7 @@ import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared
 const ACTIVITY_API = 'api/v1/actividad';
 const VEHICLES_API = 'api/v1/mi-vehiculos';
 const FARMS_API = 'api/v1/mi-fincas';
+const PUBLICATIONS_API = 'api/v1/publicaciones';
 let activityData = null;
 let vehiclesData = [];
 let farmsData = [];
@@ -17,7 +19,6 @@ let editingFarmId = null;
 let lastVehicleTrigger = null;
 let lastFarmTrigger = null;
 let farmEditor = null;
-const pendingChanges = new Set();
 let toast = null;
 
 function escapeHtml(value) {
@@ -41,73 +42,60 @@ function setActivityView(view, message = '') {
     if (errorMessage && message) errorMessage.textContent = message;
 }
 
-function renderProfile(persona = {}) {
-    const target = document.querySelector('#profile-list');
-    if (!target) return;
-    target.innerHTML = `
-        <div><dt>Nombre</dt><dd>${escapeHtml(persona.nombre || 'Sin completar')}</dd></div>
-        <div><dt>Alias</dt><dd>${escapeHtml(persona.alias || 'No definido')}</dd></div>
-        <div><dt>Identificación</dt><dd>${escapeHtml(persona.identificacionNumero || 'Sin completar')}</dd></div>
-        <div><dt>Teléfono</dt><dd>${escapeHtml(persona.telefono || 'Sin completar')}</dd></div>
-        <div><dt>Correo</dt><dd>${escapeHtml(persona.correoElectronico || 'Sin completar')}</dd></div>`;
+/** Acciones del encabezado: solo las de actividades activas; Publicar es la principal. */
+export function panelActions(capacidades = {}) {
+    const activa = (id) => capacidades[id]?.estado === 'ACTIVO';
+    return [
+        activa('COMPRADOR') && { label: 'Explorar ganado', href: capacidades.COMPRADOR.destinoActivo || 'explorar', primary: false },
+        activa('TRANSPORTISTA') && { label: 'Ver fletes', href: capacidades.TRANSPORTISTA.destinoActivo || 'fletes', primary: false },
+        activa('PRODUCTOR') && { label: 'Publicar ganado', href: capacidades.PRODUCTOR.destinoActivo || 'publicar', primary: true },
+    ].filter(Boolean);
 }
 
-function renderSummary(data) {
-    const resumen = data?.resumen ?? {};
+function isActive(id) {
+    return activityData?.capacidades?.[id]?.estado === 'ACTIVO';
+}
+
+function renderHello(data) {
+    const persona = data?.persona ?? {};
     const capacidades = data?.capacidades ?? {};
-    const value = (id, fallback) => { const node = document.querySelector(id); if (node) node.textContent = String(resumen[fallback] ?? 0); };
-    value('#summary-active', 'actividadesActivas');
-    value('#summary-pending', 'actividadesPendientes');
-    value('#summary-farms', 'fincas');
-    value('#summary-vehicles', 'vehiculos');
-    if (!data?.resumen) {
-        const active = Object.values(capacidades).filter((detail) => detail?.estado === 'ACTIVO').length;
-        const pending = Object.values(capacidades).filter((detail) => detail?.estado === 'NO_CONFIGURADO').length;
-        document.querySelector('#summary-active').textContent = String(active);
-        document.querySelector('#summary-pending').textContent = String(pending);
-    }
+    const saludo = String(persona.alias || persona.nombre || '').trim().split(/\s+/)[0];
+    document.querySelector('#panel-alias').textContent = saludo ? `, ${saludo}` : '';
+
+    const activas = Object.keys(BUSINESS_CAPABILITIES).filter((id) => capacidades[id]?.estado === 'ACTIVO');
+    const roles = document.querySelector('#panel-roles');
+    roles.innerHTML = activas.map((id) => `<span class="activity-state" data-state="ACTIVO">${BUSINESS_CAPABILITIES[id].shortLabel}</span>`).join('')
+        + '<a class="panel-link" href="ajustes#participacion">Gestionar</a>';
+    document.querySelector('#panel-no-activity').hidden = activas.length > 0;
+
+    document.querySelector('#panel-actions').innerHTML = panelActions(capacidades)
+        .map((action) => `<a class="activity-button${action.primary ? ' activity-button--primary' : ''}" href="${escapeHtml(action.href)}">${action.primary ? '<i class="fa-solid fa-plus" aria-hidden="true"></i>' : ''}${action.label}</a>`)
+        .join('');
 }
 
-function renderProfileAndSummary(data) {
+function renderProfileCard(persona = {}) {
+    const nombre = persona.nombre || 'Tu perfil';
+    document.querySelector('#profile-avatar').textContent = String(nombre).trim().charAt(0).toUpperCase() || 'U';
+    document.querySelector('#profile-title').textContent = nombre;
+    document.querySelector('#profile-alias').textContent = persona.alias ? `Alias: ${persona.alias}` : 'Sin alias';
+}
+
+function setCount(id, total) {
+    const node = document.querySelector(id);
+    if (node) node.textContent = String(total);
+}
+
+function renderPanel(data) {
     activityData = data;
-    renderProfile(data?.persona ?? {});
-    renderSummary(data);
-    renderActivities(data?.capacidades ?? {});
-    renderFarms(data?.capacidades?.PRODUCTOR?.fincas ?? []);
+    renderHello(data);
+    renderProfileCard(data?.persona ?? {});
+    document.querySelector('#farms-panel').hidden = !isActive('PRODUCTOR');
+    document.querySelector('#publications-panel').hidden = !isActive('PRODUCTOR');
+    document.querySelector('#vehicles-panel').hidden = !isActive('TRANSPORTISTA');
+    // Sin actividad de vendedor la columna principal queda vacía: el lateral ocupa todo.
+    document.querySelector('.panel-grid').classList.toggle('panel-grid--sin-principal', !isActive('PRODUCTOR'));
     syncPublicProfile(data);
     setActivityView('content');
-}
-
-function toggleLabel(id, state) {
-    if (state === 'ACTIVO') return id === 'PRODUCTOR' ? 'Dejar de vender' : id === 'TRANSPORTISTA' ? 'Dejar de ofrecer fletes' : 'Desactivar';
-    return id === 'PRODUCTOR' ? 'Volver a vender' : id === 'TRANSPORTISTA' ? 'Volver a ofrecer fletes' : 'Reactivar';
-}
-
-function businessLink(id, detail) {
-    if (detail?.estado !== 'ACTIVO' || !detail?.destinoActivo) return '';
-    const label = id === 'PRODUCTOR' ? 'Publicar ganado' : id === 'COMPRADOR' ? 'Explorar ganado' : 'Ver fletes';
-    return `<a class="activity-button activity-button--primary" href="${escapeHtml(detail.destinoActivo)}">${label}</a>`;
-}
-
-function setupAction(id, detail) {
-    const state = detail?.estado ?? 'NO_CONFIGURADO';
-    if (state === 'NO_CONFIGURADO') {
-        return `<a class="activity-button activity-button--primary" href="${escapeHtml(detail?.destinoConfiguracion || `registro?capacidad=${id}&next=mi-actividad`)}">Configurar</a>`;
-    }
-    if (detail?.escrituraDisponible !== true) return `<p class="activity-note">${escapeHtml(detail?.motivoBloqueo || 'La actividad está administrada por el sistema.')}</p>${businessLink(id, detail)}`;
-    const nextActive = state !== 'ACTIVO';
-    return `<button class="activity-button${nextActive ? ' activity-button--primary' : ''}" type="button" data-toggle-capability="${id}" data-next-active="${nextActive}">${toggleLabel(id, state)}</button>${businessLink(id, detail)}`;
-}
-
-function renderActivities(capacidades = {}) {
-    const target = document.querySelector('#activity-list');
-    if (!target) return;
-    target.innerHTML = Object.entries(BUSINESS_CAPABILITIES).map(([id, capability]) => {
-        const detail = capacidades[id] ?? { estado: 'NO_CONFIGURADO', escrituraDisponible: false };
-        const state = detail.estado ?? 'NO_CONFIGURADO';
-        return `<article class="activity-card"><div><h3>${capability.label}</h3><p>${capability.description}</p><span class="activity-state" data-state="${state}">${state === 'NO_CONFIGURADO' ? 'Aún no configurado' : state}</span></div><div class="activity-actions">${setupAction(id, detail)}</div></article>`;
-    }).join('');
-    target.querySelectorAll('[data-toggle-capability]').forEach((button) => button.addEventListener('click', () => changeCapability(button)));
 }
 
 function renderFarms(fincas = []) {
@@ -116,9 +104,9 @@ function renderFarms(fincas = []) {
     farmsData = Array.isArray(fincas) ? fincas : [];
     const empty = document.querySelector('#farms-empty');
     if (empty) empty.hidden = farmsData.length !== 0;
-    target.innerHTML = farmsData.map((finca) => `<article class="resource-item"><div class="resource-item__top"><h3>${escapeHtml(finca.nombre || 'Finca sin nombre')}</h3><span class="resource-badge">Activa</span></div><p>${finca.direccion ? 'Tiene dirección registrada.' : 'Dirección pendiente de completar.'}</p><div class="resource-item__actions"><button class="activity-button" type="button" data-edit-farm="${Number(finca.fincaId)}">Editar</button><button class="activity-button" type="button" data-remove-farm="${Number(finca.fincaId)}">Desactivar</button></div></article>`).join('');
+    setCount('#farms-count', farmsData.length);
+    target.innerHTML = farmsData.map((finca) => `<article class="panel-row"><div><h3>${escapeHtml(finca.nombre || 'Finca sin nombre')}</h3><p>${finca.direccion ? 'Dirección registrada' : 'Dirección pendiente'}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="ACTIVO">Activa</span><button class="activity-button activity-button--text" type="button" data-edit-farm="${Number(finca.fincaId)}" aria-label="Editar ${escapeHtml(finca.nombre || 'finca')}">Editar</button></div></article>`).join('');
     target.querySelectorAll('[data-edit-farm]').forEach((button) => button.addEventListener('click', () => openFarmModal(Number(button.dataset.editFarm), button)));
-    target.querySelectorAll('[data-remove-farm]').forEach((button) => button.addEventListener('click', () => changeFarmState(Number(button.dataset.removeFarm), false)));
 }
 
 function setFarmView(view, message = '') {
@@ -135,7 +123,7 @@ function setFarmView(view, message = '') {
 async function loadFarms() {
     const producer = activityData?.capacidades?.PRODUCTOR;
     const add = document.querySelector('#farm-add');
-    if (!producer || producer.estado === 'NO_CONFIGURADO') {
+    if (!isActive('PRODUCTOR')) {
         if (add) add.hidden = true;
         setFarmView('content');
         renderFarms([]);
@@ -146,11 +134,10 @@ async function loadFarms() {
     try {
         const response = await request(FARMS_API);
         renderFarms(response.data?.fincas ?? []);
-        const summary = document.querySelector('#summary-farms');
-        if (summary) summary.textContent = String(response.data?.fincas?.length ?? 0);
         setFarmView('content');
+        await loadPublications();
     } catch (error) {
-        if (error?.status === 401) window.location.assign('entrar?next=mi-actividad');
+        if (error?.status === 401) endExpiredSession();
         else setFarmView('error', error?.message || 'No pudimos cargar tus fincas.');
     }
 }
@@ -163,7 +150,11 @@ function renderVehicles(vehiculos = []) {
     if (!target || !empty || !content) return;
     content.hidden = false;
     empty.hidden = vehiclesData.length !== 0;
-    target.innerHTML = vehiclesData.map((vehicle) => `<article class="resource-item"><div class="resource-item__top"><h3>${escapeHtml(vehicle.placa)}</h3><span class="activity-state" data-state="${escapeHtml(vehicle.estado)}">${escapeHtml(vehicle.estado)}</span></div><p>${escapeHtml(vehicle.modelo)} · VIN ${escapeHtml(vehicle.vin)}</p><div class="resource-item__actions"><button class="activity-button" type="button" data-edit-vehicle="${vehicle.vehiculoId}" ${vehicle.estado !== 'ACTIVO' ? 'disabled' : ''}>Editar</button>${vehicle.estado === 'ACTIVO' ? `<button class="activity-button" type="button" data-remove-vehicle="${vehicle.vehiculoId}">Desactivar</button>` : `<button class="activity-button activity-button--primary" type="button" data-restore-vehicle="${vehicle.vehiculoId}">Reactivar</button>`}</div></article>`).join('');
+    // Sin vehículos el aviso ya trae su propio "Agregar vehículo".
+    const add = document.querySelector('#vehicle-add');
+    if (add && vehiclesData.length === 0) add.hidden = true;
+    setCount('#vehicles-count', vehiclesData.length);
+    target.innerHTML = vehiclesData.map((vehicle) => `<article class="panel-row"><div><h3>${escapeHtml(vehicle.placa)}</h3><p>${escapeHtml(vehicle.modelo)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(vehicle.estado)}">${vehicle.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}</span>${vehicle.estado === 'ACTIVO' ? `<button class="activity-button activity-button--text" type="button" data-edit-vehicle="${vehicle.vehiculoId}">Editar</button><button class="activity-button activity-button--text" type="button" data-remove-vehicle="${vehicle.vehiculoId}">Desactivar</button>` : `<button class="activity-button activity-button--text" type="button" data-restore-vehicle="${vehicle.vehiculoId}">Reactivar</button>`}</div></article>`).join('');
     target.querySelectorAll('[data-edit-vehicle]').forEach((button) => button.addEventListener('click', () => openVehicleModal(Number(button.dataset.editVehicle), button)));
     target.querySelectorAll('[data-remove-vehicle]').forEach((button) => button.addEventListener('click', () => changeVehicleState(Number(button.dataset.removeVehicle), false)));
     target.querySelectorAll('[data-restore-vehicle]').forEach((button) => button.addEventListener('click', () => changeVehicleState(Number(button.dataset.restoreVehicle), true)));
@@ -183,7 +174,7 @@ function setVehicleView(view, message = '') {
 async function loadVehicles() {
     const transportista = activityData?.capacidades?.TRANSPORTISTA;
     const add = document.querySelector('#vehicle-add');
-    if (!transportista || transportista.estado === 'NO_CONFIGURADO') {
+    if (!isActive('TRANSPORTISTA')) {
         if (add) add.hidden = true;
         setVehicleView('content');
         renderVehicles([]);
@@ -194,11 +185,9 @@ async function loadVehicles() {
     try {
         const response = await request(VEHICLES_API);
         renderVehicles(response.data?.vehiculos ?? []);
-        const summary = document.querySelector('#summary-vehicles');
-        if (summary) summary.textContent = String(response.data?.vehiculos?.length ?? 0);
         setVehicleView('content');
     } catch (error) {
-        if (error?.status === 401) window.location.assign('entrar?next=mi-actividad');
+        if (error?.status === 401) endExpiredSession();
         else setVehicleView('error', error?.message || 'No pudimos cargar tus vehículos.');
     }
 }
@@ -207,14 +196,84 @@ async function loadActivity({ quiet = false } = {}) {
     if (!quiet) setActivityView('loading');
     try {
         const response = await request(ACTIVITY_API);
-        renderProfileAndSummary(response.data);
+        renderPanel(response.data);
         await loadFarms();
         await loadVehicles();
         return response.data;
     } catch (error) {
-        if (error?.status === 401) window.location.assign('entrar?next=mi-actividad');
+        if (error?.status === 401) endExpiredSession();
         else setActivityView('error', error?.message || 'No fue posible consultar tu actividad.');
         return null;
+    }
+}
+
+/**
+ * Publicaciones propias: las de mis fincas publicadas a mi nombre.
+ *
+ * ponytail: la API pública no filtra por vendedor, así que se consulta por el
+ * nombre de cada finca y se cruza finca + vendedor. Dos personas homónimas con
+ * fincas homónimas se confundirían; agregar un filtro "mías" a
+ * api/v1/publicaciones cuando Backend lo exponga.
+ */
+export function ownPublications(publicaciones = [], fincas = [], nombrePersona = '') {
+    const misFincas = new Set(fincas.map((finca) => String(finca?.nombre ?? '').trim()).filter(Boolean));
+    const vistas = new Set();
+    return publicaciones.filter((item) => {
+        const id = Number(item?.publicacionId);
+        const propia = misFincas.has(String(item?.finca?.nombre ?? '').trim())
+            && String(item?.vendedor?.nombre ?? '').trim() === String(nombrePersona).trim();
+        if (!propia || vistas.has(id)) return false;
+        vistas.add(id);
+        return true;
+    });
+}
+
+function formatColones(precio) {
+    if (typeof precio !== 'number' || !Number.isFinite(precio)) return 'Precio a convenir';
+    return `₡${String(Math.round(precio)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+}
+
+function miniatura(item) {
+    const url = safeImageUrl(item?.imagenUrl);
+    return url
+        ? `<img class="panel-thumb" src="${escapeHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : '<span class="panel-thumb panel-thumb--empty" aria-hidden="true"><i class="fa-solid fa-cow"></i></span>';
+}
+
+function setPublicationsView(view, message = '') {
+    document.querySelector('#publications-loading').hidden = view !== 'loading';
+    document.querySelector('#publications-error').hidden = view !== 'error';
+    const errorMessage = document.querySelector('#publications-error-message');
+    if (errorMessage && message) errorMessage.textContent = message;
+}
+
+function renderPublications(publicaciones) {
+    const list = document.querySelector('#publications-list');
+    const empty = document.querySelector('#publications-empty');
+    setCount('#publications-count', publicaciones.length);
+    list.innerHTML = publicaciones.map((item) => `<article class="panel-row panel-row--media">${miniatura(item)}<div><h3>${escapeHtml(item.titulo || 'Publicación')}</h3><p>${escapeHtml(item.finca?.nombre || '')} · ${formatColones(item.precio)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(item.estado)}">${item.estado === 'ACTIVO' ? 'Activa' : escapeHtml(String(item.estado ?? '').toLowerCase())}</span>${item.estado === 'ACTIVO' ? `<a class="activity-button activity-button--text" href="explorar?publicacion=${Number(item.publicacionId)}">Ver</a>` : ''}</div></article>`).join('');
+    empty.hidden = publicaciones.length > 0;
+    if (publicaciones.length > 0) return;
+    // Sin fincas no se puede publicar: el siguiente paso es registrar una.
+    empty.innerHTML = farmsData.length > 0
+        ? '<strong>Aún no has publicado ganado</strong><p>Ya tienes una finca registrada, así que puedes publicar tu primer lote ahora.</p><a class="activity-button activity-button--sm" href="publicar">Publicar ganado</a>'
+        : '<strong>Aún no has publicado ganado</strong><p>Primero registra una finca: tus publicaciones salen desde ahí.</p><button class="activity-button activity-button--sm" type="button" data-empty-add-farm>Agregar finca</button>';
+    empty.querySelector('[data-empty-add-farm]')?.addEventListener('click', (event) => openFarmModal(null, event.currentTarget));
+}
+
+async function loadPublications() {
+    if (!isActive('PRODUCTOR')) return;
+    setPublicationsView('loading');
+    try {
+        const respuestas = await Promise.all(farmsData.map((finca) => request(PUBLICATIONS_API, {
+            method: 'POST',
+            body: JSON.stringify({ consulta: { estado: 'TODOS', q: String(finca.nombre ?? ''), pagina: '1', tamanoPagina: '100' } }),
+        })));
+        const todas = respuestas.flatMap((respuesta) => respuesta.data?.publicaciones ?? []);
+        renderPublications(ownPublications(todas, farmsData, activityData?.persona?.nombre));
+        setPublicationsView('content');
+    } catch (error) {
+        setPublicationsView('error', error?.message || 'No pudimos cargar tus publicaciones.');
     }
 }
 
@@ -233,6 +292,7 @@ function openFarmModal(id = null, trigger = null) {
     lastFarmTrigger = trigger;
     const farm = farmsData.find((item) => Number(item.fincaId) === id);
     document.querySelector('#farm-modal-title').textContent = farm ? 'Editar finca' : 'Agregar finca';
+    document.querySelector('#farm-deactivate').hidden = !farm;
     form.elements.nombreFinca.value = farm?.nombre ?? '';
     setFarmErrors({});
     document.querySelector('#farm-form-status').textContent = '';
@@ -353,36 +413,13 @@ async function changeFarmState(id, activo) {
     if (!id || !window.confirm(activo ? '¿Reactivar esta finca?' : '¿Desactivar esta finca?')) return;
     try {
         const response = await request(FARMS_API, { method: activo ? 'PATCH' : 'DELETE', body: JSON.stringify({ fincaId: id }) });
+        closeFarmModal();
         await loadFarms();
         document.querySelector('#activity-status').textContent = response.message || 'Estado de la finca actualizado.';
         toast?.success(response.message || 'Estado de la finca actualizado.');
     } catch (error) {
         document.querySelector('#activity-status').textContent = error?.message || 'No fue posible actualizar la finca.';
         toast?.error(error?.message || 'No fue posible actualizar la finca.');
-    }
-}
-
-async function changeCapability(button) {
-    const id = button.dataset.toggleCapability;
-    const nextActive = button.dataset.nextActive === 'true';
-    if (!id || pendingChanges.has(id)) return;
-    pendingChanges.add(id);
-    button.disabled = true;
-    const status = document.querySelector('#activity-status');
-    if (status) status.textContent = nextActive ? 'Reactivando actividad…' : 'Desactivando actividad…';
-    try {
-        const response = await request(ACTIVITY_API, { method: 'PATCH', body: JSON.stringify({ contexto: id, activo: nextActive }) });
-        const refreshed = await loadActivity({ quiet: true });
-        if (status && refreshed) status.textContent = response.message || 'Actividad actualizada correctamente.';
-        if (refreshed) toast?.success(response.message || 'Actividad actualizada correctamente.');
-    } catch (error) {
-        if (status) status.textContent = error?.message || 'No fue posible cambiar la actividad.';
-        toast?.error(error?.message || 'No fue posible cambiar la actividad.');
-        renderActivities(activityData?.capacidades ?? {});
-    } finally {
-        pendingChanges.delete(id);
-        const current = [...document.querySelectorAll('[data-toggle-capability]')].find((node) => node.dataset.toggleCapability === id);
-        if (current) current.disabled = false;
     }
 }
 
@@ -466,6 +503,7 @@ async function changeVehicleState(id, activo) {
 
 function initializeVehicleUi() {
     document.querySelector('#vehicle-add')?.addEventListener('click', () => openVehicleModal());
+    document.querySelector('#vehicle-add-empty')?.addEventListener('click', (event) => openVehicleModal(null, event.currentTarget));
     document.querySelector('#vehicles-retry')?.addEventListener('click', loadVehicles);
     document.querySelector('#vehicle-form')?.addEventListener('submit', saveVehicle);
     document.querySelector('#vehicle-close')?.addEventListener('click', closeVehicleModal);
@@ -475,6 +513,8 @@ function initializeVehicleUi() {
 
 function initializeFarmUi() {
     document.querySelector('#farm-add')?.addEventListener('click', () => openFarmModal());
+    document.querySelector('#farm-deactivate')?.addEventListener('click', () => changeFarmState(editingFarmId, false));
+    document.querySelector('#publications-retry')?.addEventListener('click', loadPublications);
     document.querySelector('#farms-retry')?.addEventListener('click', loadFarms);
     document.querySelector('#farm-form')?.addEventListener('submit', saveFarm);
     document.querySelector('#farm-close')?.addEventListener('click', closeFarmModal);

@@ -8,13 +8,13 @@ async function source(path) {
     return readFile(new URL(path, root), 'utf8');
 }
 
-test('la dirección de la finca empieza cerrada y con lenguaje de usuario', async () => {
+test('la dirección de la finca se ve completa, sin tener que desplegarla', async () => {
     const view = await source('Application/View/registro/index.php');
     const script = await source('Public/js/registro.js');
 
-    assert.doesNotMatch(view, /<details class="finca-address" open>/);
-    assert.match(view, /Agregar dirección/);
-    assert.match(script, /finca-address__title/);
+    assert.doesNotMatch(view, /<details class="finca-address"/);
+    assert.match(view, /<div class="finca-address"><\/div>/);
+    assert.match(script, /finca-address__title">Dirección de la finca \*/);
     assert.match(script, /finca-address__meta/);
 });
 

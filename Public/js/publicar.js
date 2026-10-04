@@ -1,7 +1,11 @@
 import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
 import { request } from './shared/api.js';
+import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
+import { safeImageUrl } from './explore.js?v=foto-1';
 
 const DRAFT_KEY = 'tindercows:publish-draft';
+// La foto elegida no viaja en el borrador: un File no se puede guardar.
+const CAMPOS_FUERA_DEL_ENVIO = new Set(['imagenModo']);
 
 function readStored(key) {
     try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
@@ -20,16 +24,16 @@ function setGate(title, message, actions = []) {
     gate.innerHTML = '';
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'flow-gate';
+    wrapper.className = 'publish-gate__body';
     const heading = document.createElement('h2');
     heading.textContent = title;
     const copy = document.createElement('p');
     copy.textContent = message;
     const buttons = document.createElement('div');
-    buttons.className = 'flow-gate__actions';
+    buttons.className = 'publish-gate__actions';
     actions.forEach(({ label, href, primary = false }) => {
         const link = document.createElement('a');
-        link.className = `flow-button${primary ? ' flow-button--primary' : ''}`;
+        link.className = primary ? 'public-cta' : 'public-secondary';
         link.href = href;
         link.textContent = label;
         buttons.append(link);
@@ -52,14 +56,16 @@ function showWorkspace(profile) {
         .filter(Boolean);
     select.replaceChildren(new Option('Seleccione una finca', ''));
     options.forEach((name) => select.append(new Option(name, name)));
+    // Con una sola finca no hay nada que elegir.
+    if (options.length === 1) select.value = options[0];
 
     if (options.length === 0) {
         setGate(
             'Falta una finca para publicar',
-            'La actividad Productor está activa, pero este perfil no tiene una finca disponible. Completa esa información antes de preparar la publicación.',
+            'Tu actividad de vendedor está activa, pero no tienes una finca disponible. Agrégala antes de publicar.',
             [
-                { label: 'Completar datos de productor', href: 'registro/productor?next=publicar', primary: true },
-                { label: 'Volver a Mi actividad', href: 'mi-actividad' },
+                { label: 'Agregar finca', href: 'registro/productor?next=publicar', primary: true },
+                { label: 'Volver a Mi panel', href: 'mi-actividad' },
             ],
         );
     }
@@ -70,18 +76,30 @@ function restoreDraft(form) {
     if (!draft || !form) return;
     for (const [name, value] of Object.entries(draft)) {
         const control = form.elements.namedItem(name);
-        if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement) {
+        if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+            || control instanceof HTMLSelectElement || control instanceof RadioNodeList) {
             control.value = value ?? '';
         }
     }
 }
 
-function serialize(form) {
+/** Campos de texto del formulario; los archivos nunca se serializan. */
+export function serialize(form) {
     const data = new FormData(form);
-    return Object.fromEntries([...data.entries()].map(([key, value]) => [key, String(value).trim()]));
+    return Object.fromEntries([...data.entries()]
+        .filter(([, value]) => typeof value === 'string')
+        .map(([key, value]) => [key, value.trim()]));
 }
 
-function setStatus(kind, title, message) {
+/** Cuerpo para la API: sin el modo de imagen y con imagenUrl solo si aplica. */
+export function cuerpoPublicacion(draft, imagenUrl) {
+    const cuerpo = Object.fromEntries(Object.entries(draft).filter(([key]) => !CAMPOS_FUERA_DEL_ENVIO.has(key)));
+    if (imagenUrl) cuerpo.imagenUrl = imagenUrl;
+    else delete cuerpo.imagenUrl;
+    return cuerpo;
+}
+
+function setStatus(kind, title, message, enlace = null) {
     const target = document.querySelector('#publish-status');
     if (!target) return;
     target.hidden = false;
@@ -92,6 +110,12 @@ function setStatus(kind, title, message) {
     const copy = document.createElement('p');
     copy.textContent = message;
     target.append(heading, copy);
+    if (enlace) {
+        const link = document.createElement('a');
+        link.href = enlace.href;
+        link.textContent = enlace.label;
+        target.append(link);
+    }
 }
 
 function validate(form) {
@@ -125,6 +149,93 @@ async function crearPublicacion(draft) {
     return payload.data;
 }
 
+/**
+ * Foto de la publicación: archivo del dispositivo (clic o arrastrar) o URL
+ * https. Devuelve cómo leer la imagen elegida al publicar.
+ */
+function montarFoto(form) {
+    const archivoInput = form.querySelector('#publish-imagen-archivo');
+    const urlInput = form.querySelector('#publish-imagen-url');
+    const zona = form.querySelector('.publish-dropzone');
+    const vista = form.querySelector('[data-imagen-preview]');
+    const vistaImg = form.querySelector('[data-imagen-preview-img]');
+    const error = form.querySelector('[data-error-for="imagenUrl"]');
+    let archivo = null;
+    let vistaUrl = null;
+
+    const modo = () => form.elements.namedItem('imagenModo')?.value || 'archivo';
+    const mostrarError = (mensaje = '') => { if (error) error.textContent = mensaje; };
+    const mostrarVista = (src) => {
+        if (vistaUrl) URL.revokeObjectURL(vistaUrl);
+        vistaUrl = src?.startsWith('blob:') ? src : null;
+        vista.hidden = !src;
+        if (src) vistaImg.src = src;
+        else vistaImg.removeAttribute('src');
+    };
+    const elegir = (nuevo) => {
+        const problema = validarImagen(nuevo);
+        if (problema) { mostrarError(problema); return; }
+        mostrarError();
+        archivo = nuevo;
+        mostrarVista(URL.createObjectURL(nuevo));
+    };
+    const sincronizarModo = () => {
+        form.querySelectorAll('[data-imagen-panel]').forEach((panel) => { panel.hidden = panel.dataset.imagenPanel !== modo(); });
+        mostrarError();
+        if (modo() === 'archivo') mostrarVista(archivo ? URL.createObjectURL(archivo) : null);
+        else mostrarVista(safeImageUrl(urlInput.value));
+    };
+
+    archivoInput.addEventListener('change', () => { if (archivoInput.files?.[0]) elegir(archivoInput.files[0]); });
+    for (const tipo of ['dragenter', 'dragover']) {
+        zona.addEventListener(tipo, (event) => { event.preventDefault(); zona.classList.add('is-dragging'); });
+    }
+    for (const tipo of ['dragleave', 'drop']) {
+        zona.addEventListener(tipo, () => zona.classList.remove('is-dragging'));
+    }
+    zona.addEventListener('drop', (event) => {
+        event.preventDefault();
+        const soltado = event.dataTransfer?.files?.[0];
+        if (soltado) elegir(soltado);
+    });
+    urlInput.addEventListener('input', () => {
+        mostrarError();
+        mostrarVista(safeImageUrl(urlInput.value));
+    });
+    // Una URL que no carga se avisa antes de publicar, no después.
+    vistaImg.addEventListener('error', () => {
+        if (modo() === 'url' && urlInput.value.trim()) mostrarError('No pudimos cargar esa imagen. Revisa que el enlace sea directo a la foto.');
+    });
+    form.querySelectorAll('input[name="imagenModo"]').forEach((radio) => radio.addEventListener('change', sincronizarModo));
+    form.querySelector('[data-imagen-quitar]').addEventListener('click', () => {
+        archivo = null;
+        archivoInput.value = '';
+        urlInput.value = '';
+        mostrarVista(null);
+        mostrarError();
+    });
+    sincronizarModo();
+
+    return {
+        /** URL final de la foto (subiendo el archivo si hace falta) o null. */
+        async resolver() {
+            if (modo() === 'archivo') return archivo ? subirImagenPublicacion(archivo) : null;
+            const texto = urlInput.value.trim();
+            if (!texto) return null;
+            const segura = safeImageUrl(texto);
+            if (!segura) throw new Error('Usa una dirección de imagen que empiece con https://.');
+            return segura;
+        },
+        reiniciar() {
+            archivo = null;
+            archivoInput.value = '';
+            urlInput.value = '';
+            mostrarVista(null);
+        },
+        mostrarError,
+    };
+}
+
 async function initialize() {
     const form = document.querySelector('#publish-form');
     const submit = document.querySelector('#publish-submit');
@@ -133,10 +244,10 @@ async function initialize() {
     if (!isAuthenticated()) {
         setGate(
             'Entra para publicar',
-            'Publicar ganado requiere una Persona autenticada para poder continuar con su contexto de productor.',
+            'Para publicar ganado necesitas una cuenta con la actividad de vendedor.',
             [
                 { label: 'Entrar', href: 'entrar?next=publicar', primary: true },
-                { label: 'Crear cuenta', href: 'registro/productor?next=publicar' },
+                { label: 'Crear cuenta', href: 'registro' },
             ],
         );
         return;
@@ -148,8 +259,8 @@ async function initialize() {
     } catch (error) {
         setGate(
             'No pudimos comprobar tu actividad',
-            error?.message || 'No fue posible consultar el estado del productor. Inténtalo nuevamente desde Mi actividad.',
-            [{ label: 'Ir a Mi actividad', href: 'mi-actividad', primary: true }],
+            error?.message || 'No fue posible consultar tu cuenta. Inténtalo nuevamente desde Mi panel.',
+            [{ label: 'Ir a Mi panel', href: 'mi-actividad', primary: true }],
         );
         return;
     }
@@ -157,8 +268,8 @@ async function initialize() {
     if (!activity?.persona) {
         setGate(
             'Completa tu cuenta antes de publicar',
-            'Todavía no existe una Persona registrada en este prototipo. El registro reutilizará esa identidad para todas las actividades futuras.',
-            [{ label: 'Completar registro', href: 'registro/productor?next=publicar', primary: true }],
+            'Todavía no terminamos tu registro. Complétalo y vuelve a publicar.',
+            [{ label: 'Completar registro', href: 'registro?next=publicar', primary: true }],
         );
         return;
     }
@@ -167,17 +278,17 @@ async function initialize() {
     const state = capacidades.PRODUCTOR?.estado ?? 'NO_CONFIGURADO';
     if (state === 'NO_CONFIGURADO') {
         setGate(
-            'Activa tu participación como productor',
-            'Solo faltan los datos propios de vender o publicar. No volveremos a pedir tu identidad personal.',
-            [{ label: 'Completar datos de productor', href: 'registro/productor?next=publicar', primary: true }],
+            'Activa tu cuenta de vendedor',
+            'Solo falta registrar una finca. No volveremos a pedir tus datos personales.',
+            [{ label: 'Activar vendedor', href: 'registro/productor?next=publicar', primary: true }],
         );
         return;
     }
     if (state === 'INACTIVO') {
         setGate(
-            'Tu actividad de productor está inactiva',
-            'La identidad y las fincas se conservan. Reactiva la actividad desde Mi actividad antes de publicar de nuevo.',
-            [{ label: 'Ir a Mi actividad', href: 'mi-actividad', primary: true }],
+            'Tu actividad de vendedor está inactiva',
+            'Tus fincas se conservan. Reactívala desde Ajustes de cuenta para volver a publicar.',
+            [{ label: 'Ir a Ajustes', href: 'ajustes#participacion', primary: true }],
         );
         return;
     }
@@ -187,6 +298,7 @@ async function initialize() {
         fincas: capacidades.PRODUCTOR?.fincas ?? [],
     });
     restoreDraft(form);
+    const foto = montarFoto(form);
 
     form.addEventListener('input', () => {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(serialize(form)));
@@ -204,11 +316,22 @@ async function initialize() {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
 
         try {
-            const resultado = await crearPublicacion(draft);
+            let imagenUrl = null;
+            try {
+                imagenUrl = await foto.resolver();
+            } catch (error) {
+                foto.mostrarError(error.message);
+                throw error;
+            }
+            const resultado = await crearPublicacion(cuerpoPublicacion(draft, imagenUrl));
             sessionStorage.removeItem(DRAFT_KEY);
+            form.reset();
+            foto.reiniciar();
             setStatus('success', 'Publicación guardada',
-                `Tu publicación quedó activa. Código de publicación: ${resultado.publicacionId}.`);
+                'Tu publicación ya está activa y la verán compradores cercanos.',
+                { href: `explorar?publicacion=${Number(resultado.publicacionId)}`, label: 'Ver mi publicación' });
         } catch (error) {
+            if (error?.fieldErrors?.imagenUrl) foto.mostrarError(error.fieldErrors.imagenUrl);
             setStatus('error', 'No se guardó la publicación', error.message);
         } finally {
             form.setAttribute('aria-busy', 'false');
@@ -217,5 +340,7 @@ async function initialize() {
     });
 }
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
-else initialize();
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
+    else initialize();
+}
