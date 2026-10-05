@@ -43,17 +43,20 @@ test('el alta traduce respuestas variantes de correo ya registrado', async () =>
     }
 });
 
-test('el registro no expone un verificador público de correos existentes', () => {
+// P2-1 (2026-10-04, DEC-REG-001) reabre, por decisión del equipo, la consulta
+// del correo que se había retirado el 29/09 (d7b5a88). Ahora solo existe en el
+// endpoint con límite por IP; no vuelve el endpoint propio sin límite.
+test('el registro solo consulta correos por el endpoint con límite por IP', () => {
     const registration = readFileSync(new URL('../../Public/js/registro.js', import.meta.url), 'utf8');
-    const view = readFileSync(new URL('../../Application/View/registro/index.php', import.meta.url), 'utf8');
     const rewriteRules = readFileSync(new URL('../../Public/.htaccess', import.meta.url), 'utf8');
+    const endpoint = readFileSync(new URL('../../Public/api/registro-validar-identificacion.php', import.meta.url), 'utf8');
 
-    assert.doesNotMatch(view, /data-correo-status|data-correo-retry/);
-    assert.doesNotMatch(registration, /api\/v1\/registro\/correo|checkEmail|scheduleEmailCheck/);
+    assert.doesNotMatch(registration, /api\/v1\/registro\/correo/);
     assert.doesNotMatch(rewriteRules, /api\/v1\/registro\/correo/);
-    assert.doesNotMatch(registration, /emailState/);
-    // Correo nuevo y correo ya registrado van al mismo lugar con el mismo aviso
-    // neutro: el registro no revela qué correos existen.
+    assert.match(endpoint, /RegistroConsulta::ipCliente/);
+    assert.match(endpoint, /\], 429\);/);
+    // Al crear la cuenta en Supabase, correo nuevo y correo ya registrado
+    // siguen yendo al mismo lugar con el mismo aviso neutro.
     assert.match(registration, /if \(error\?\.code === 'account_already_exists'\) \{[\s\S]*?window\.location\.assign\(loginPendiente\(\)\)/);
     assert.match(registration, /if \(!auth\.session\) \{[\s\S]*?window\.location\.assign\(loginPendiente\(\)\)/);
 });

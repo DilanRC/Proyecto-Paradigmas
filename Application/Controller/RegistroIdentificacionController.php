@@ -25,6 +25,11 @@ final class RegistroIdentificacionController
             return $this->respuesta(false, 'Método no permitido.', null, 405);
         }
 
+        // Un dato por consulta: la identificación (tipo + número) o el correo.
+        if (array_key_exists('correoElectronico', $cuerpo)) {
+            return $this->disponibilidadCorreo($cuerpo);
+        }
+
         $permitidos = ['identificacionTipo', 'identificacionNumero'];
         $errores = [];
         foreach (array_diff(array_keys($cuerpo), $permitidos) as $campo) {
@@ -61,6 +66,35 @@ final class RegistroIdentificacionController
         return $this->respuesta(
             true,
             $disponible ? 'Identificación disponible.' : 'La identificación ya está registrada.',
+            ['disponible' => $disponible],
+        );
+    }
+
+    private function disponibilidadCorreo(array $cuerpo): array
+    {
+        $errores = [];
+        foreach (array_diff(array_keys($cuerpo), ['correoElectronico']) as $campo) {
+            $errores[$campo] = 'Consulte la identificación o el correo, no ambos.';
+        }
+        // validarCorreo() quita espacios y pasa a minúscula antes de buscar.
+        $correo = $this->validacion->validarCorreo($cuerpo['correoElectronico'], $errores);
+        if ($errores !== []) {
+            return [
+                'status' => 422,
+                'body' => [
+                    'success' => false,
+                    'message' => 'Revise el correo electrónico.',
+                    'data' => null,
+                    'errors' => $errores,
+                ],
+            ];
+        }
+
+        $disponible = !$this->persona->existeCorreo($correo);
+
+        return $this->respuesta(
+            true,
+            $disponible ? 'Correo disponible.' : 'El correo ya está registrado.',
             ['disponible' => $disponible],
         );
     }

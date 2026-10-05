@@ -159,6 +159,17 @@ try {
     ]);
     test_same(200, $identificacionRegistrada['status'], 'La verificación debe consultar identificaciones existentes');
     test_same(false, $identificacionRegistrada['body']['data']['disponible'], 'La verificación debe detectar una identificación registrada');
+    // P2-1: disponibilidad del correo, normalizado (espacios y mayúsculas) antes de buscar.
+    $verificador = new RegistroIdentificacionController(test_db());
+    $correoTomado = $verificador->procesar('POST', ['correoElectronico' => '  ' . strtoupper($correoCompleto) . ' ']);
+    test_same(200, $correoTomado['status'], 'La verificación debe consultar correos existentes');
+    test_same(false, $correoTomado['body']['data']['disponible'], 'Un correo registrado no está disponible, sin importar mayúsculas ni espacios');
+    $correoLibre = $verificador->procesar('POST', ['correoElectronico' => strtolower(test_token('libre')) . '@example.test']);
+    test_same(true, $correoLibre['body']['data']['disponible'], 'Un correo nuevo está disponible');
+    test_same(422, $verificador->procesar('POST', ['correoElectronico' => 'no-es-correo'])['status'], 'Un correo inválido responde 422');
+    $ambos = $verificador->procesar('POST', ['correoElectronico' => $correoCompleto, 'identificacionNumero' => $idCompleto]);
+    test_same(422, $ambos['status'], 'Se consulta un dato a la vez');
+    test_assert(isset($ambos['body']['errors']['identificacionNumero']), 'El campo sobrante se reporta');
     foreach (['tbproductor', 'tbcomprador', 'tbtransportista'] as $tabla) {
         test_same(1, registro_contar_contexto($tabla, 'tbpersonaid', $personaCompleta),
             "{$tabla} debe reutilizar la misma Persona");

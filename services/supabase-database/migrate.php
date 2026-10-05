@@ -46,6 +46,7 @@ const EXPECTED_COLUMNS = [
     ],
     'tbvehiculo' => [
         'tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado',
+        'tbvehiculofotourl',
     ],
     'tbtransportistavehiculo' => [
         'tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid',
@@ -153,6 +154,9 @@ const EXPECTED_COLUMNS = [
         'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
         'tbtransportistaresenaorigen',
     ],
+    'tbregistroconsulta' => [
+        'tbregistroconsultaid', 'tbregistroconsultaclave', 'tbregistroconsultafecha',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -241,7 +245,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 34 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 35 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -327,6 +331,8 @@ function ensureCurrentColumns(PDO $connection): void
     $connection->exec('ALTER TABLE public.tbpersona
         ADD COLUMN IF NOT EXISTS tbpersonaalias VARCHAR(150) NULL,
         ADD COLUMN IF NOT EXISTS tbpersonafotourl VARCHAR(500) NULL;
+        ALTER TABLE public.tbvehiculo
+        ADD COLUMN IF NOT EXISTS tbvehiculofotourl VARCHAR(500) NULL;
         ALTER TABLE public.tbdireccion
         ADD COLUMN IF NOT EXISTS tbdireccionlatitud NUMERIC(10,7) NULL,
         ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL;
@@ -472,7 +478,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=34 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=35 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

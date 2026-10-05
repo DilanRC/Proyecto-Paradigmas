@@ -119,6 +119,7 @@ Capacidad logística de una persona. Conserva su identificador histórico.
 | `tbvehiculovin` | `VARCHAR(50) NOT NULL` | No | VIN del vehículo. Sin unicidad en el motor. | Usuario | - |
 | `tbvehiculomodelo` | `VARCHAR(100) NOT NULL` | No | Modelo del vehículo. | Usuario | - |
 | `tbvehiculoestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. Propuesta de modelado, no dato confirmado: sigue el patrón del resto de tablas. | Aplicación | - |
+| `tbvehiculofotourl` | `VARCHAR(500) NULL` | Sí | URL https de la foto del vehículo (Supabase Storage o externa). NULL = sin foto. | Usuario | - |
 
 Datos confirmados: placa, vin y modelo. `tbvehiculoestado` es una propuesta de
 modelado.
@@ -484,6 +485,18 @@ Reseña histórica de transportista. No almacena promedio; se deriva con `AVG`.
 | `tbtransportistaresenacalificacion` | `INT NOT NULL` | No | Calificación validada por PHP. | Usuario | - |
 | `tbtransportistaresenacomentario` | `VARCHAR(500) NULL` | Sí | Comentario opcional. | Usuario | - |
 | `tbtransportistaresenaorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
+
+## tbregistroconsulta
+
+Límite de consultas de disponibilidad del registro (cédula y correo) por IP
+(DEC-REG-001). Una fila por consulta; PHP borra en cada consulta las filas con
+más de 60 segundos, así que la tabla no guarda historia.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbregistroconsultaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbregistroconsultaclave` | `CHAR(64) NOT NULL` | No | Hash SHA-256 de la IP del cliente. Nunca se guarda la IP. | Aplicación | - |
+| `tbregistroconsultafecha` | `DATETIME NOT NULL` | No | Fecha UTC de la consulta, asignada por PHP. | Aplicación | - |
 
 ## Histórico transversal (Tramo 12/13 y avance 3)
 

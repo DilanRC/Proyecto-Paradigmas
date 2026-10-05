@@ -126,6 +126,7 @@ erDiagram
         VARCHAR tbvehiculovin
         VARCHAR tbvehiculomodelo
         TINYINT tbvehiculoestado
+        VARCHAR tbvehiculofotourl
     }
 
     tbtransportistavehiculo {
@@ -299,6 +300,12 @@ erDiagram
         INT tbtransportistaresenacalificacion
         VARCHAR tbtransportistaresenacomentario
         VARCHAR tbtransportistaresenaorigen
+    }
+
+    tbregistroconsulta {
+        INT tbregistroconsultaid
+        CHAR tbregistroconsultaclave
+        DATETIME tbregistroconsultafecha
     }
 
     tbbitacora {

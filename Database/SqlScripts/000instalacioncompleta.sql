@@ -134,7 +134,8 @@ CREATE TABLE IF NOT EXISTS tbvehiculo (
     tbvehiculoplaca VARCHAR(20) NOT NULL,
     tbvehiculovin VARCHAR(50) NOT NULL,
     tbvehiculomodelo VARCHAR(100) NOT NULL,
-    tbvehiculoestado TINYINT(1) NOT NULL
+    tbvehiculoestado TINYINT(1) NOT NULL,
+    tbvehiculofotourl VARCHAR(500) NULL
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -376,6 +377,15 @@ CREATE TABLE IF NOT EXISTS tbtransportistaresena (
     tbtransportistaresenacalificacion INT NOT NULL,
     tbtransportistaresenacomentario VARCHAR(500) NULL,
     tbtransportistaresenaorigen VARCHAR(100) NOT NULL
+) ENGINE=InnoDB;
+
+-- Límite de consultas de disponibilidad del registro (P2-1). Una fila por
+-- consulta, con el hash SHA-256 de la IP (nunca la IP). PHP borra las filas
+-- fuera de la ventana en cada consulta, así que la tabla siempre es pequeña.
+CREATE TABLE IF NOT EXISTS tbregistroconsulta (
+    tbregistroconsultaid INT NOT NULL,
+    tbregistroconsultaclave CHAR(64) NOT NULL,
+    tbregistroconsultafecha DATETIME NOT NULL
 ) ENGINE=InnoDB;
 
 -- fin del script de instalación completa

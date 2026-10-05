@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS public.tbvehiculo (
     tbvehiculoplaca VARCHAR(20) NOT NULL,
     tbvehiculovin VARCHAR(50) NOT NULL,
     tbvehiculomodelo VARCHAR(100) NOT NULL,
-    tbvehiculoestado SMALLINT NOT NULL
+    tbvehiculoestado SMALLINT NOT NULL,
+    tbvehiculofotourl VARCHAR(500) NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistavehiculo (
@@ -296,6 +297,12 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaresena (
     tbtransportistaresenaorigen VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbregistroconsulta (
+    tbregistroconsultaid INTEGER NOT NULL,
+    tbregistroconsultaclave CHAR(64) NOT NULL,
+    tbregistroconsultafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionestadoperiodo (
     tbanimalpublicacionestadoperiodoid INTEGER NOT NULL,
     tbanimalpublicacionid INTEGER NOT NULL,
@@ -361,3 +368,4 @@ ALTER TABLE public.tbtransportistaresena ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalpublicacionestadoperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcarritoestadoperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistahorario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbregistroconsulta ENABLE ROW LEVEL SECURITY;

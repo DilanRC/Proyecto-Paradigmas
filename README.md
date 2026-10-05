@@ -5,7 +5,7 @@ Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 34 tablas:
+La base `bdmercadoganadero` contiene exactamente 35 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -39,6 +39,9 @@ La base `bdmercadoganadero` contiene exactamente 34 tablas:
 30. `tbtransportistaresena`
 31. `tbcompradorpersonatelefonohistorico`
 32. `tbproductorpersonatelefonohistorico`
+33. `tbadministrador`
+34. `tbanimalpublicacioninteraccion`
+35. `tbregistroconsulta`
 
 `tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
 y `tbtransportista` son contextos de esa misma persona (DEC-28): cada perfil de
@@ -206,7 +209,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 34 tablas, incluida la identidad compartida en
+El migrador crea y valida las 35 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -419,7 +422,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 34 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 35 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 

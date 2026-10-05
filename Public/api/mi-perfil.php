@@ -18,7 +18,6 @@ require_once $raiz . '/Application/Service/AuthGuard.php';
 foreach (['NamedLock', 'Persona', 'Bitacora'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
-require_once $raiz . '/Application/Controller/AnimalPublicacionController.php';
 require_once $raiz . '/Application/Controller/MiPerfilController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');

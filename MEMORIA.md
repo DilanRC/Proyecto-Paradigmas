@@ -80,6 +80,23 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     siempre, sin datos extra) y muestra una notificación.
   - Activar/desactivar algo ya configurado: `PATCH api/v1/actividad` con
     `{ contexto, activo }` (sin cambios de lógica).
+- **Disponibilidad en tiempo real (P2-1):** `POST api/v1/registro/identificacion` acepta **o**
+  `{ identificacionTipo, identificacionNumero }` **o** `{ correoElectronico }` (los dos juntos → 422) y responde
+  `{ disponible }`. El correo se normaliza con `ValidacionService::validarCorreo` (trim + minúscula) y se busca sin
+  distinguir mayúsculas (`Persona::existeCorreo`). Al enviar el registro se vuelve a validar todo bajo `NamedLock`
+  (`RegistroPublicoService::resolverPersona` y `Persona::obtenerOCrear`); esto ya existía.
+- **Límite por IP (DEC-REG-001):** el endpoint de disponibilidad permite 20 consultas por IP cada 60 s
+  (`RegistroConsulta::LIMITE` y `VENTANA_SEGUNDOS`); la siguiente responde **429** con `Retry-After: 60`. Tabla
+  `tbregistroconsulta` (hash SHA-256 de la IP, nunca la IP; se limpia sola). La IP sale de `X-Real-IP` (proxy de
+  Vercel) o de `REMOTE_ADDR`. El esquema ahora tiene **35 tablas**.
+- **Correo en el formulario (P2-1):** `registro.js` consulta el correo 400 ms después de dejar de escribir
+  (`scheduleEmailCheck` / `checkEmail`, mensaje en `[data-correo-status]`), solo en el alta **sin sesión**. Solo
+  bloquea "Siguiente" y "Registrar" si el correo ya está registrado; si la consulta falla, deja seguir (el servidor
+  revalida). Un 429 muestra el mensaje del servidor ("Espera un minuto…"), también en la cédula.
+- **Ojo, decisión revertida:** el 29/09 Dilan había retirado esta consulta del correo para no revelar qué correos
+  existen (`d7b5a88`). Se reabrió el 04/10 por decisión del equipo, con el límite por IP (DEC-REG-001). La prueba
+  que lo prohibía ahora exige que la consulta pase por el endpoint con límite. El aviso neutro al crear la cuenta en
+  Supabase sigue igual.
 - `registro.js` lee la actividad pedida también de la ruta bonita
   (`/registro/productor`), porque Apache agrega `?capacidad=` solo por dentro.
 
@@ -129,6 +146,14 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   (imagen solo si es https; si falla, vuelve la inicial).
 - Ajustes → Perfil: foto (reutiliza `shared/storage.js`, mismo bucket `publicaciones`), "Quitar foto" y "Editar datos"
   (alias y teléfono). El avatar del encabezado se actualiza al recargar la página.
+
+### Foto del vehículo
+- Columna `tbvehiculofotourl VARCHAR(500) NULL` (migración `014vehiculofoto.sql`, en los 4 lugares + diccionario/DER/PDF).
+  Una sola foto por vehículo; los vehículos anteriores quedan en NULL.
+- `api/v1/mi-vehiculos` acepta `fotoUrl` en `POST` y `PUT` y lo devuelve en `vehiculo` y `vehiculos[]`. Misma validación que la
+  foto de perfil (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
+- En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
+  admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
 
 ### Administrador: moderar publicaciones
 - `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
@@ -224,6 +249,15 @@ están incluidos ahí.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
+### Pendiente de P2-1
+- Revisar que las máscaras de cédula y teléfono coincidan entre frontend y `ValidacionService`.
+- Verificar en un preview de Vercel que llega `X-Real-IP` (si no llegara, todas las consultas compartirían la IP del
+  proxy y el límite sería global).
+
+### Frontend (pendiente de P1-5)
+- Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
+  `fotoUrl`. El API ya está listo (ver "Foto del vehículo"). Mostrarla en las tarjetas de fletes cuando exista P1-2.
+
 ### Configuración de Supabase (panel, no código)
 - ~~Bucket `publicaciones` público + política de subida~~: **resuelto** (el bucket ya existe en Supabase; lo usan las fotos de publicaciones y de perfil). Si hubiera que recrearlo:
   ```sql
@@ -255,6 +289,30 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · backend · P2-1 Correo en tiempo real en el registro (frontend)
+- `registro.js` consulta el correo como ya lo hacía con la cédula y muestra el 429 con el mensaje del servidor (ver "Correo en el formulario"). Vista con `[data-correo-status]`; caché `registro.js?v=signup-6`.
+- Revierte, por decisión del equipo, el retiro de `d7b5a88` (Dilan, 29/09). Se ajustó su prueba en `supabase_auth_registration.test.mjs`: ahora exige que no vuelva `api/v1/registro/correo` y que el endpoint tenga límite y 429. Nueva prueba en `public_identity_auth.test.mjs`. DEC-REG-001 ampliada.
+- Cuidado: sin captcha, el límite por IP solo frena la enumeración de correos, no la impide.
+
+### 2026-10-04 · backend · P2-1 Disponibilidad de cédula y correo con límite por IP (API)
+- `api/v1/registro/identificacion` ahora también consulta el correo (ver "Disponibilidad en tiempo real"). Sin cambio para quien ya lo usa con la cédula.
+- Tabla nueva `tbregistroconsulta` (DEC-REG-001) en `000instalacioncompleta.sql`, `015registroconsulta.sql`, `schema.sql` (con RLS) y `migrate.php`; diccionario, DER, Decisiones y PDF regenerados. El esquema pasa de 34 a 35 tablas: se actualizaron las pruebas y documentos que fijaban el número (`schema_manifest_test`, `naming_eval`, `db_ready_test`, `instalacion_limpia_test`, `supabase .../schema_test` y `schema_eval`, `personacapacidades_gate`, `comprobacionestructura.sql`, README, GuiaDefensa, Respaldos). La lista de tablas del README tenía 32; se completó.
+- Archivos: `RegistroIdentificacionController.php`, `Persona.php` (`existeCorreo`), nuevo `Application/Model/RegistroConsulta.php`, `Public/api/registro-validar-identificacion.php`.
+- Pruebas: nueva `Tests/registro_consulta_test.php`; ampliada `Tests/registro_publico_test.php`. `migrate.php` probado dos veces contra Postgres 16 (35 tablas, RLS) y el límite también en Postgres.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/015registroconsulta.sql`. Producción la crea con `schema.sql` al arrancar. Una tabla nueva cambia el conteo de tablas en todas las pruebas y documentos de arriba.
+
+### 2026-10-04 · backend · Arreglo de carga en mi-perfil.php (P1-4)
+- `Tests/api_requires_test.php` fallaba: `mi-perfil.php` cargaba `AnimalPublicacionController` antes que su controlador, y la prueba revisa el primer controlador del endpoint (le exigía `AnimalComercial`).
+- Ahora `MiPerfilController.php` hace `require_once` de `AnimalPublicacionController.php` (solo usa su `imagenUrl()` estático) y el endpoint ya no lo carga. Igual que `MiVehiculosController`.
+- Cuidado: si un controlador solo usa un método estático de otro controlador, que lo cargue el propio controlador, no el endpoint.
+
+### 2026-10-04 · backend · P1-5 Fotos de vehículos (API)
+- Columna nueva `tbvehiculofotourl` en los 4 lugares (`000instalacioncompleta.sql`, `014vehiculofoto.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF regenerados.
+- `fotoUrl` en `api/v1/mi-vehiculos` (crear, editar y lectura) con validación https (ver "Foto del vehículo"). Sin cambios de pantalla: la parte de Mi panel queda para frontend.
+- Archivos: `MiVehiculosController.php`, `Vehiculo.php` (`crear`, `actualizar`, `mapear`), `TransportistaVehiculo.php` (`listarVehiculosPorTransportista`).
+- Pruebas: ampliada `Tests/mi_vehiculos_test.php` (foto en alta y edición, conservación sin la clave, quitar con null, rechazo de http/javascript:/data:).
+- Cuidado: en una base MySQL ya creada hay que aplicar `Database/Migrations/014vehiculofoto.sql` (producción lo hace `migrate.php` al arrancar).
 
 ### 2026-10-04 · fix/vercel-ramas-y-poda · Política de ramas de Vercel y poda automática del registro
 - El registro de imágenes llegó a 50 y los despliegues de `dev` y `backend` fallaron al publicar. Causa: `services.app.ignoreCommand` nunca se ejecutó en Vercel (el log de build no lo muestra y `backend` y `jefersonbustamante` construían con el mismo script que debía omitirlas), así que ni la guarda de ramas ni la poda que vivía dentro corrieron.

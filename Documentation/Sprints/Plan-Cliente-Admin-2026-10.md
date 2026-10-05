@@ -47,9 +47,9 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-2 | Fletes cercanos (los fletes funcionan como publicaciones) | **Lidera** (API) | | **Lidera** (pantalla) |
 | P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
 | P1-4 | Foto de perfil y edición de datos personales — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
-| P1-5 | Fotos de vehículos | | **Lidera** (API) | **Lidera** (pantalla) |
+| P1-5 | Fotos de vehículos — **API HECHA** (falta pantalla) | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
-| P2-1 | Validación en tiempo real de cédula y correo | | **Lidera** | Apoya |
+| P2-1 | Validación en tiempo real de cédula y correo — **HECHO** (falta revisar máscaras) | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
 | P2-3 | Historial de vacunación | **Lidera** | | Apoya |
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
@@ -201,10 +201,12 @@ animal con flete.
 
 ### P1-5 · Fotos de vehículos · Jeremi (API) + Jeferson (pantalla)
 
-- [ ] Columna `tbvehiculofotourl VARCHAR(500) NULL` en los 4 lugares (una sola
+**Estado (2026-10-04): API hecha por Jeremi en la rama `backend`** (detalle en `MEMORIA.md`). Falta la pantalla. Las bases MySQL existentes necesitan la migración `014vehiculofoto.sql`.
+
+- [x] Columna `tbvehiculofotourl VARCHAR(500) NULL` en los 4 lugares (una sola
       foto para empezar; varias fotos necesitarían una tabla aparte).
-- [ ] Aceptar y devolver `fotoUrl` en `api/v1/mi-vehiculos` (crear y editar),
-      con la misma validación `https://`.
+- [x] Aceptar y devolver `fotoUrl` en `api/v1/mi-vehiculos` (crear y editar),
+      con la misma validación `https://`. En `PUT`, sin `fotoUrl` la foto se conserva.
 - [ ] Mi panel → Mis vehículos: subir la foto con vista previa (mismo
       componente que en Publicar).
 - [ ] La foto se muestra en las tarjetas de fletes (P1-2).
@@ -214,14 +216,18 @@ animal con flete.
 Es el punto 2 del issue. Ya existe `POST api/v1/registro/identificacion`, que
 valida el **formato** de la cédula.
 
-- [ ] Ampliarlo, o crear `api/v1/registro/disponibilidad`, para responder solo
+**Estado (2026-10-04): hecho por Jeremi en la rama `backend`**, API y pantalla (detalle en `MEMORIA.md` y DEC-REG-001). Reabre la consulta del correo que `d7b5a88` había retirado, ahora con límite por IP. Falta revisar las máscaras de cédula y teléfono. Las bases MySQL existentes necesitan la migración `015registroconsulta.sql`.
+
+- [x] Ampliarlo, o crear `api/v1/registro/disponibilidad`, para responder solo
       `{ disponible: bool }` para la cédula y para el correo. Normalizar antes de
       buscar: correo en minúscula y sin espacios, cédula solo con dígitos.
-- [ ] Límite de consultas por IP para evitar que se use para averiguar quién
+      (Se amplió el endpoint existente: `{ correoElectronico }` o la cédula.)
+- [x] Límite de consultas por IP para evitar que se use para averiguar quién
       está registrado. Hoy no hay infraestructura para esto: proponer una tabla
-      de conteo o usar el límite de Vercel.
-- [ ] Al enviar el registro se vuelve a validar en PHP con `NamedLock` (sin
-      `UNIQUE`; ver la sección 0).
+      de conteo o usar el límite de Vercel. (Tabla `tbregistroconsulta`: 20 por
+      minuto por IP, 429 después.)
+- [x] Al enviar el registro se vuelve a validar en PHP con `NamedLock` (sin
+      `UNIQUE`; ver la sección 0). (Ya existía.)
 - [ ] Frontend: consulta 400 ms después de que se deja de escribir; el mensaje
       va debajo del campo (`field-errors.js`). Máscaras de cédula y teléfono
       iguales en el frontend y en el backend.

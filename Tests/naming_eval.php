@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('treinta_y_cuatro_tablas', $manifest['table_count'] === 34,
-    'SQL crea exactamente treinta y cuatro tablas, incluida la política administrativa e históricos de teléfono');
+$evaluate('treinta_y_cinco_tablas', $manifest['table_count'] === 35,
+    'SQL crea exactamente treinta y cinco tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -83,7 +83,7 @@ $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador'
     'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
     'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
-    'tbproductorubicacion',
+    'tbproductorubicacion', 'tbregistroconsulta',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
     'tbtransportistahorario', 'tbtransportistaresena', 'tbtransportistavehiculo',
     'tbvehiculo', 'tbventa'],

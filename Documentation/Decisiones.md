@@ -1112,3 +1112,29 @@ conserva sus valores. Ninguna de ellas crea restricciones, índices, triggers,
 procedimientos ni datos históricos inventados. La base persistente debe
 respaldarse antes de aplicarlas y después verificarse con `schema_test.php` e
 `instalacion_limpia_test.php`.
+
+## DEC-REG-001 - Límite de consultas de disponibilidad del registro
+
+`POST api/v1/registro/identificacion` responde si una cédula o un correo ya
+están registrados. Sin límite, cualquiera podría recorrer la base averiguando
+quién tiene cuenta. El esquema pasa a 35 tablas con `tbregistroconsulta`: una
+fila por consulta con el hash SHA-256 de la IP (nunca la IP) y la fecha UTC.
+
+La regla vive en PHP (`Application/Model/RegistroConsulta.php`), igual que el
+resto: bajo `NamedLock` borra las filas fuera de la ventana de 60 segundos,
+cuenta las de esa IP y, a partir de 20, responde 429 con `Retry-After`. La
+tabla no tiene PK, índices ni defaults, y siempre es pequeña porque se limpia
+en cada consulta. La IP sale de `X-Real-IP`, que escribe el proxy de Vercel, o
+de `REMOTE_ADDR` cuando no hay proxy.
+
+Se descartó la regla de rate limit del firewall de Vercel porque no funciona en
+local y depende del plan del proyecto.
+
+Esto **reabre** la consulta pública del correo que el commit `d7b5a88`
+(29/09/2026, "Elimina enumeracion publica de correos") había retirado. El
+issue de la reunión del 29/09 la pide (P2-1), y el equipo decidió volver a
+tenerla con el límite por IP como protección. El registro la consulta 400 ms
+después de dejar de escribir y solo bloquea si el correo ya está registrado.
+Al crear la cuenta en Supabase se mantiene el aviso neutro de `d7b5a88`. El
+límite no elimina la enumeración, solo la vuelve lenta: si se necesita más,
+el siguiente paso es exigir un captcha o retirar otra vez la consulta.

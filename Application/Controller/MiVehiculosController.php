@@ -13,6 +13,8 @@ use Application\Model\Vehiculo;
 use PDO;
 use Throwable;
 
+require_once __DIR__ . '/AnimalPublicacionController.php';
+
 final class MiVehiculosController
 {
     private Transportista $transportista;
@@ -90,7 +92,6 @@ final class MiVehiculosController
 
     private function actualizar(array $cuerpo): array
     {
-        $this->rechazarCamposDesconocidos($cuerpo, ['vehiculoId', 'placa', 'vin', 'modelo']);
         $datos = $this->validarVehiculo($cuerpo, true);
         $transportista = $this->transportistaAutenticado();
         $this->exigirEscritura($transportista);
@@ -193,7 +194,7 @@ final class MiVehiculosController
 
     private function validarVehiculo(array $cuerpo, bool $actualizacion = false): array
     {
-        $permitidos = $actualizacion ? ['vehiculoId', 'placa', 'vin', 'modelo'] : ['placa', 'vin', 'modelo'];
+        $permitidos = $actualizacion ? ['vehiculoId', 'placa', 'vin', 'modelo', 'fotoUrl'] : ['placa', 'vin', 'modelo', 'fotoUrl'];
         $this->rechazarCamposDesconocidos($cuerpo, $permitidos);
         $errores = [];
         $resultado = [
@@ -203,6 +204,10 @@ final class MiVehiculosController
         ];
         if ($actualizacion) $resultado['vehiculoId'] = $this->enteroCampo($cuerpo['vehiculoId'] ?? null, 'vehiculoId', $errores);
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
+        // Sin `fotoUrl` en un PUT la foto se conserva; `null` o "" la quita.
+        if (array_key_exists('fotoUrl', $cuerpo)) {
+            $resultado['fotoUrl'] = AnimalPublicacionController::imagenUrl($cuerpo['fotoUrl'], 'fotoUrl');
+        }
         return $resultado;
     }
 

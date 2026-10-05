@@ -10,7 +10,7 @@ use function Configuration\sendJsonResponse;
 $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
-foreach (['Persona'] as $modelo) {
+foreach (['NamedLock', 'Persona', 'RegistroConsulta'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 foreach (['ValidacionService'] as $servicio) {
@@ -41,7 +41,17 @@ if ($tipoContenido !== 'application/json') {
 }
 
 try {
-    $controlador = new RegistroIdentificacionController(Database::getConnection());
+    $conexion = Database::getConnection();
+    $limite = new Application\Model\RegistroConsulta($conexion);
+    if (!$limite->permitir(Application\Model\RegistroConsulta::ipCliente($_SERVER))) {
+        header('Retry-After: ' . Application\Model\RegistroConsulta::VENTANA_SEGUNDOS);
+        sendJsonResponse([
+            'success' => false,
+            'message' => 'Demasiadas consultas seguidas. Espera un minuto e intenta de nuevo.',
+            'data' => null,
+        ], 429);
+    }
+    $controlador = new RegistroIdentificacionController($conexion);
     $respuesta = $controlador->procesar($metodo, readJsonBody());
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {

@@ -298,6 +298,20 @@ test('el registro verifica la identificación antes de avanzar y de crear la cue
     assert.match(read('../../Application/View/registro/index.php'), /data-identificacion-status[^>]*role="status"/);
 });
 
+test('el registro verifica el correo en tiempo real (P2-1) y trata el límite por IP', () => {
+    assert.match(registroJs, /JSON\.stringify\(\{ correoElectronico: valor \}\)/);
+    assert.match(registroJs, /correoElectronico\?\.addEventListener\('input', scheduleEmailCheck\)/);
+    assert.match(registroJs, /setTimeout\(\(\) => \{ emailTimer = null; void checkEmail\(\); \}, 400\)/);
+    // Solo en el alta sin sesión, y solo bloquea si el correo ya está registrado.
+    assert.match(registroJs, /const emailCheckEnabled = !extending && !authSession/);
+    assert.match(registroJs, /emailState === 'taken'/);
+    assert.match(registroJs, /if \(!\(await checkEmail\(\)\)\) \{/);
+    assert.match(registroJs, /error\?\.status === 429/);
+    // En el alta de un solo paso el botón es Registrar: también se bloquea, salvo durante el envío.
+    assert.match(registroJs, /if \(!submitInProgress\) finishButton\.disabled = bloqueado;/);
+    assert.match(read('../../Application/View/registro/index.php'), /data-correo-status[^>]*role="status"/);
+});
+
 test('el alta muestra la misma guía clara sin confirmar si el correo está registrado', () => {
     assert.match(supabaseAuth, /code === 'user_already_exists'/);
     assert.match(supabaseAuth, /providerMessage\.includes\('already registered'\)/);
