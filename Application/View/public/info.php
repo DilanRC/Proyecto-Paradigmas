@@ -49,7 +49,7 @@ $page = $pages[$pageKey] ?? $pages['about'];
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-11"></script>
+    <script type="module" src="js/public-ui.js?v=public-12"></script>
 </head>
 <body class="public-info-page">
     <div class="public-shell">

@@ -25,6 +25,7 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 | `tbpersonatelefono` | `VARCHAR(20) NOT NULL` | No | Teléfono compartido por todos los perfiles. | Usuario | - |
 | `tbpersonacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo compartido por todos los perfiles. | Usuario | - |
 | `tbpersonaestado` | `TINYINT(1) NOT NULL` | No | Disponibilidad global de la identidad. | Aplicación | - |
+| `tbpersonafotourl` | `VARCHAR(500) NULL` | Sí | URL https de la foto de perfil (Supabase Storage o externa). NULL = avatar con iniciales. | Usuario | - |
 
 ## tbproductor
 

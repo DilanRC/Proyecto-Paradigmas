@@ -82,9 +82,10 @@ function createAccountMenu(actions, session, profile) {
     menu.dataset.publicAccount = 'true';
     const name = profile?.persona?.nombre || session.email || 'Mi cuenta';
     const initial = String(name).trim().charAt(0).toUpperCase() || 'U';
+    const photo = safeHttpsUrl(profile?.persona?.fotoUrl);
     menu.innerHTML = `
         <button class="public-account-menu__trigger" type="button" aria-expanded="false" aria-controls="public-account-panel">
-            <span class="public-account-menu__avatar" aria-hidden="true">${initial}</span>
+            <span class="public-account-menu__avatar" aria-hidden="true">${photo ? `<img src="${escapeHtml(photo)}" alt="" referrerpolicy="no-referrer">` : initial}</span>
             <span class="public-account-menu__label">Mi perfil</span>
             <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
         </button>
@@ -98,6 +99,9 @@ function createAccountMenu(actions, session, profile) {
         </div>`;
 
     login.replaceWith(menu);
+    // Si la foto ya no existe, vuelve la inicial.
+    const avatarImg = menu.querySelector('.public-account-menu__avatar img');
+    avatarImg?.addEventListener('error', () => { avatarImg.parentElement.textContent = initial; }, { once: true });
     const trigger = menu.querySelector('.public-account-menu__trigger');
     const panel = menu.querySelector('.public-account-menu__panel');
     trigger.addEventListener('click', () => {
@@ -113,6 +117,16 @@ function createAccountMenu(actions, session, profile) {
     });
     menu.querySelector('[data-public-logout]')?.addEventListener('click', () => signOutEverywhere());
     return menu;
+}
+
+/** Solo https: la foto de perfil llega del servidor, pero nunca se confía en el esquema. */
+function safeHttpsUrl(value) {
+    try {
+        const url = new URL(String(value ?? ''));
+        return url.protocol === 'https:' ? url.href : '';
+    } catch {
+        return '';
+    }
 }
 
 function escapeHtml(value) {

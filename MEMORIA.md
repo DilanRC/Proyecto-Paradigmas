@@ -31,6 +31,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 | Carrusel | `Public/js/shared/carousel.js` |
 | Mi panel (`/mi-actividad`) | `Application/View/mi-actividad/` + `Public/js/mi-actividad.js` |
 | Ajustes de cuenta (`/ajustes`) | `Application/View/ajustes/` + `Public/js/ajustes.js` |
+| Foto, alias y teléfono propios (Ajustes → Perfil) | `Public/js/ajustes.js` + API `Public/api/mi-perfil.php` (`MiPerfilController`) |
 | Admin: moderar publicaciones (`/admin/publicaciones`) | `Application/View/publicaciones/` + `Public/js/publicaciones.js` + API `Public/api/admin-publicaciones.php` |
 | Me interesa (`/me-interesa`) | `Application/View/me-interesa/` + `Public/js/me-interesa.js` |
 | Registro / ampliación | `Application/View/registro/` + `Public/js/registro.js` |
@@ -116,6 +117,19 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   solo toca las claves presentes; una publicación ajena responde 404. `mias=true` (en GET o en
   `consulta` del POST) exige sesión (401) y por defecto trae todos los estados.
 
+### Foto de perfil y datos propios
+- Columna `tbpersonafotourl VARCHAR(500) NULL` (migración `013personafoto.sql`, en los 4 lugares + diccionario/DER/PDF).
+  Las cuentas anteriores quedan en NULL y muestran el avatar con iniciales.
+- `PATCH api/v1/mi-perfil` `{ alias?, telefono?, fotoUrl? }` (sesión): solo cambian las claves enviadas; `alias: ""` o
+  `fotoUrl: null` las dejan en NULL. El nombre, la identificación y el correo **no** se editan (422). La foto exige
+  `https://` (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`) y el teléfono usa `ValidacionService`. Un teléfono
+  nuevo deja histórico (`Persona::actualizarPerfil`); la bitácora (`PERSONA`, `API_MI_PERFIL`) **no guarda el teléfono**,
+  solo `telefonoCambiado`.
+- `api/v1/actividad` devuelve `persona.fotoUrl`; de ahí sale el perfil en caché del navegador y el avatar del encabezado
+  (imagen solo si es https; si falla, vuelve la inicial).
+- Ajustes → Perfil: foto (reutiliza `shared/storage.js`, mismo bucket `publicaciones`), "Quitar foto" y "Editar datos"
+  (alias y teléfono). El avatar del encabezado se actualiza al recargar la página.
+
 ### Administrador: moderar publicaciones
 - `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
   filtro por estado) y permite **Pausar**, **Retirar** (ambos con motivo obligatorio) y **Reactivar**.
@@ -192,15 +206,14 @@ Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
 están incluidos ahí.
 
 ### Backend (para el compañero de backend)
-- **Edición de identidad.** No existe endpoint para que la persona edite su
-  nombre, alias o teléfono; Ajustes → Perfil es solo lectura.
+- Editar **nombre, identificación o correo**: sigue sin existir (solo alias, teléfono y foto, ver "Foto de perfil y datos propios").
 - **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
 ### Configuración de Supabase (panel, no código)
-- Bucket `publicaciones` público + política de subida:
+- ~~Bucket `publicaciones` público + política de subida~~: **resuelto** (el bucket ya existe en Supabase; lo usan las fotos de publicaciones y de perfil). Si hubiera que recrearlo:
   ```sql
   create policy "Subir imágenes propias" on storage.objects
     for insert to authenticated
@@ -230,6 +243,14 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · jefersonbustamante · P1-4 Foto de perfil y edición de datos personales
+- Columna nueva `tbpersonafotourl` en los 4 lugares (`000instalacioncompleta.sql`, `013personafoto.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF regenerados. Las bases MySQL existentes necesitan la migración 013.
+- API `PATCH api/v1/mi-perfil` y `fotoUrl` en `api/v1/actividad` (ver "Foto de perfil y datos propios"). Ajustes → Perfil con foto, quitar foto y edición de alias y teléfono; avatar con foto en el encabezado.
+- Archivos: `MiPerfilController.php`, `Persona.php` (`actualizarPerfil`), `Public/api/mi-perfil.php`, `ajustes.js` (`ajustes-4`), `public-ui.js` (`public-12`), `mi-actividad.css` (`panel-4`), `public-product.css` (`product-8`), vista de Ajustes, `Public/.htaccess`.
+- Pruebas: nueva `Tests/api_mi_perfil_test.php` y `Tests/frontend/perfil.test.mjs`; `schema_test.php` y `api_auth_admin_http_test.php` ajustadas.
+- Cuidado: en una base MySQL ya creada hay que aplicar `Database/Migrations/013personafoto.sql` (producción lo hace `migrate.php` al arrancar).
+- Bucket `publicaciones` de Supabase: ya existe y tiene política (resuelto); sin él, la subida de foto falla con mensaje amable.
 
 ### 2026-10-04 · jefersonbustamante · P1-6 Admin: moderar publicaciones
 - Pantalla `/admin/publicaciones` (lista, buscador, filtro de estado, Pausar/Retirar con motivo, Reactivar) y API `api/v1/admin/publicaciones` (ver "Administrador: moderar publicaciones"). Sin columnas nuevas: no toca esquema ni PDF.

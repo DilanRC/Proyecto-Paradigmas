@@ -84,6 +84,7 @@ final class MiActividadController
                 'alias' => $persona['tbpersonaalias'],
                 'telefono' => $persona['tbpersonatelefono'],
                 'correoElectronico' => $persona['tbpersonacorreoelectronico'],
+                'fotoUrl' => $persona['tbpersonafotourl'] ?? null,
             ],
             'capacidades' => $capacidades,
             'resumen' => $this->resumen($capacidades),

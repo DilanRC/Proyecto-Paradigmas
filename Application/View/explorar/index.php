@@ -18,10 +18,10 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-7">
+    <link rel="stylesheet" href="css/public-product.css?v=product-8">
     <link rel="stylesheet" href="css/explore.css?v=explore-8">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-11"></script>
+    <script type="module" src="js/public-ui.js?v=public-12"></script>
     <script type="module" src="js/explore.js?v=explore-9"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-2"></script>
 </head>

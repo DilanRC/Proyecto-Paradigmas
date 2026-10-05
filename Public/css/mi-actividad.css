@@ -433,3 +433,36 @@
     color:var(--tc-primary-strong);
     background:color-mix(in srgb,var(--tc-primary) 12%,transparent);
 }
+
+/* Foto de perfil en Ajustes */
+.profile-photo {
+    display:flex;
+    align-items:center;
+    gap:16px;
+    margin-bottom:16px;
+}
+
+.profile-photo__avatar {
+    display:grid;
+    width:72px;
+    height:72px;
+    flex:none;
+    place-items:center;
+    overflow:hidden;
+    border-radius:50%;
+    color:var(--tc-primary-strong);
+    background:color-mix(in srgb,var(--tc-primary) 12%,transparent);
+    font-size:1.8rem;
+    font-weight:800;
+}
+
+.profile-photo__avatar img { width:100%; height:100%; object-fit:cover; }
+.profile-photo__actions { min-width:0; }
+.profile-photo__actions .settings-hint { margin:6px 0 0; }
+.profile-form { display:grid; gap:14px; margin-top:16px; }
+.profile-form__actions { display:flex; justify-content:flex-end; gap:10px; }
+
+@media (max-width:560px) {
+    .profile-form__actions { flex-direction:column-reverse; }
+    .profile-form__actions .activity-button { width:100%; }
+}

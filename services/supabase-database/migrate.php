@@ -9,6 +9,7 @@ const EXPECTED_COLUMNS = [
     'tbpersona' => [
         'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
         'tbpersonanombre', 'tbpersonaalias', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
+        'tbpersonafotourl',
     ],
     'tbproductor' => [
         'tbproductorid', 'tbpersonaid',
@@ -324,7 +325,8 @@ function normalizePersonCapabilities(PDO $connection): void
 function ensureCurrentColumns(PDO $connection): void
 {
     $connection->exec('ALTER TABLE public.tbpersona
-        ADD COLUMN IF NOT EXISTS tbpersonaalias VARCHAR(150) NULL;
+        ADD COLUMN IF NOT EXISTS tbpersonaalias VARCHAR(150) NULL,
+        ADD COLUMN IF NOT EXISTS tbpersonafotourl VARCHAR(500) NULL;
         ALTER TABLE public.tbdireccion
         ADD COLUMN IF NOT EXISTS tbdireccionlatitud NUMERIC(10,7) NULL,
         ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL;

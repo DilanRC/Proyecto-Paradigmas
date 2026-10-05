@@ -46,7 +46,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-1 | Página "Me interesa" (guardados) — **HECHO** (falta "Ver fletes cercanos") | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-2 | Fletes cercanos (los fletes funcionan como publicaciones) | **Lidera** (API) | | **Lidera** (pantalla) |
 | P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
-| P1-4 | Foto de perfil y edición de datos personales | | **Lidera** (API) | **Lidera** (pantalla) |
+| P1-4 | Foto de perfil y edición de datos personales — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-5 | Fotos de vehículos | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo | | **Lidera** | Apoya |
@@ -186,15 +186,17 @@ animal con flete.
 
 ### P1-4 · Foto de perfil y edición de datos personales · Jeremi (API) + Jeferson (pantalla)
 
-- [ ] Columna `tbpersonafotourl VARCHAR(500) NULL` en los 4 lugares.
+**Estado (2026-10-04): hecho por Jeferson en la rama `jefersonbustamante`**, API y pantalla (detalle en `MEMORIA.md`). Jeremi: solo falta tu revisión. Las bases MySQL existentes necesitan la migración `013personafoto.sql`.
+
+- [x] Columna `tbpersonafotourl VARCHAR(500) NULL` en los 4 lugares.
       **No afecta a las cuentas que ya existen:** quedan en `NULL` y se sigue
       mostrando el avatar con iniciales.
-- [ ] Endpoint para editar los datos propios: foto, alias y teléfono (es el
+- [x] Endpoint para editar los datos propios: foto, alias y teléfono (es el
       pendiente "Edición de identidad" de `MEMORIA.md`). La foto se valida igual
       que la de las publicaciones: solo `https://` y hasta 500 caracteres.
-- [ ] Subida desde el dispositivo con `Public/js/shared/storage.js` (bucket
+- [x] Subida desde el dispositivo con `Public/js/shared/storage.js` (bucket
       `publicaciones` o un bucket `perfiles` con la misma política).
-- [ ] Ajustes → Perfil: cambiar o quitar la foto y editar alias y teléfono.
+- [x] Ajustes → Perfil: cambiar o quitar la foto y editar alias y teléfono.
       La foto aparece en el avatar del encabezado.
 
 ### P1-5 · Fotos de vehículos · Jeremi (API) + Jeferson (pantalla)

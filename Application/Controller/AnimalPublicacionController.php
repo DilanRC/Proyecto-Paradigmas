@@ -291,7 +291,7 @@ final class AnimalPublicacionController
      * Vale para Supabase Storage y para direcciones externas; un esquema como
      * javascript: o data: nunca llega a la base ni a un <img>.
      */
-    public static function imagenUrl(mixed $valor): ?string
+    public static function imagenUrl(mixed $valor, string $campo = 'imagenUrl'): ?string
     {
         if ($valor === null || trim((string) $valor) === '') {
             return null;
@@ -307,7 +307,7 @@ final class AnimalPublicacionController
             && !isset($partes['pass']);
         if (!$valida) {
             throw new HttpException('Revise los campos indicados.', 422, null, [
-                'imagenUrl' => 'Usa una dirección https válida de hasta 500 caracteres.',
+                $campo => 'Usa una dirección https válida de hasta 500 caracteres.',
             ]);
         }
         return $url;

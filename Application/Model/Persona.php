@@ -155,6 +155,48 @@ final class Persona
         ]);
     }
 
+    /**
+     * Edición que hace la propia persona: alias, teléfono y foto. Solo cambian
+     * las claves presentes en $cambios (alias, telefono, fotoUrl). Un teléfono
+     * nuevo deja su histórico, igual que actualizar(). Debe correr dentro de una
+     * transacción (bloquea la fila y toma NamedLock para el histórico).
+     */
+    public function actualizarPerfil(int $personaId, array $cambios): array
+    {
+        $sentencia = $this->conexion->prepare('SELECT * FROM tbpersona WHERE tbpersonaid = :personaId FOR UPDATE');
+        $sentencia->execute(['personaId' => $personaId]);
+        $persona = $sentencia->fetch();
+        if ($persona === false) {
+            throw new PersonaConflictException('La persona no existe.');
+        }
+
+        if (array_key_exists('telefono', $cambios) && $persona['tbpersonatelefono'] !== $cambios['telefono']) {
+            $this->telefonoHistorico->registrarCambio($personaId, $cambios['telefono'], gmdate('Y-m-d H:i:s'));
+        }
+
+        $columnas = [
+            'alias' => 'tbpersonaalias',
+            'telefono' => 'tbpersonatelefono',
+            'fotoUrl' => 'tbpersonafotourl',
+        ];
+        $asignaciones = [];
+        $parametros = ['personaId' => $personaId];
+        foreach ($columnas as $clave => $columna) {
+            if (array_key_exists($clave, $cambios)) {
+                $asignaciones[] = "{$columna} = :{$clave}";
+                $parametros[$clave] = $cambios[$clave];
+            }
+        }
+        if ($asignaciones !== []) {
+            $this->conexion->prepare(
+                'UPDATE tbpersona SET ' . implode(', ', $asignaciones) . ' WHERE tbpersonaid = :personaId'
+            )->execute($parametros);
+        }
+
+        return $this->buscarPorId($personaId)
+            ?? throw new \RuntimeException('No fue posible leer la persona actualizada.');
+    }
+
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
         NamedLock::acquire($this->conexion, 'tindercows_persona_alta');
