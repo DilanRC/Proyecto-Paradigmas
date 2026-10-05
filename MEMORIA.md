@@ -130,6 +130,14 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Ajustes → Perfil: foto (reutiliza `shared/storage.js`, mismo bucket `publicaciones`), "Quitar foto" y "Editar datos"
   (alias y teléfono). El avatar del encabezado se actualiza al recargar la página.
 
+### Foto del vehículo
+- Columna `tbvehiculofotourl VARCHAR(500) NULL` (migración `014vehiculofoto.sql`, en los 4 lugares + diccionario/DER/PDF).
+  Una sola foto por vehículo; los vehículos anteriores quedan en NULL.
+- `api/v1/mi-vehiculos` acepta `fotoUrl` en `POST` y `PUT` y lo devuelve en `vehiculo` y `vehiculos[]`. Misma validación que la
+  foto de perfil (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
+- En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
+  admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
+
 ### Administrador: moderar publicaciones
 - `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
   filtro por estado) y permite **Pausar**, **Retirar** (ambos con motivo obligatorio) y **Reactivar**.
@@ -212,6 +220,10 @@ están incluidos ahí.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
+### Frontend (pendiente de P1-5)
+- Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
+  `fotoUrl`. El API ya está listo (ver "Foto del vehículo"). Mostrarla en las tarjetas de fletes cuando exista P1-2.
+
 ### Configuración de Supabase (panel, no código)
 - ~~Bucket `publicaciones` público + política de subida~~: **resuelto** (el bucket ya existe en Supabase; lo usan las fotos de publicaciones y de perfil). Si hubiera que recrearlo:
   ```sql
@@ -243,6 +255,13 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · backend · P1-5 Fotos de vehículos (API)
+- Columna nueva `tbvehiculofotourl` en los 4 lugares (`000instalacioncompleta.sql`, `014vehiculofoto.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF regenerados.
+- `fotoUrl` en `api/v1/mi-vehiculos` (crear, editar y lectura) con validación https (ver "Foto del vehículo"). Sin cambios de pantalla: la parte de Mi panel queda para frontend.
+- Archivos: `MiVehiculosController.php`, `Vehiculo.php` (`crear`, `actualizar`, `mapear`), `TransportistaVehiculo.php` (`listarVehiculosPorTransportista`).
+- Pruebas: ampliada `Tests/mi_vehiculos_test.php` (foto en alta y edición, conservación sin la clave, quitar con null, rechazo de http/javascript:/data:).
+- Cuidado: en una base MySQL ya creada hay que aplicar `Database/Migrations/014vehiculofoto.sql` (producción lo hace `migrate.php` al arrancar).
 
 ### 2026-10-04 · jefersonbustamante · P1-4 Foto de perfil y edición de datos personales
 - Columna nueva `tbpersonafotourl` en los 4 lugares (`000instalacioncompleta.sql`, `013personafoto.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF regenerados. Las bases MySQL existentes necesitan la migración 013.

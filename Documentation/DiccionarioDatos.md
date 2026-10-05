@@ -119,6 +119,7 @@ Capacidad logística de una persona. Conserva su identificador histórico.
 | `tbvehiculovin` | `VARCHAR(50) NOT NULL` | No | VIN del vehículo. Sin unicidad en el motor. | Usuario | - |
 | `tbvehiculomodelo` | `VARCHAR(100) NOT NULL` | No | Modelo del vehículo. | Usuario | - |
 | `tbvehiculoestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. Propuesta de modelado, no dato confirmado: sigue el patrón del resto de tablas. | Aplicación | - |
+| `tbvehiculofotourl` | `VARCHAR(500) NULL` | Sí | URL https de la foto del vehículo (Supabase Storage o externa). NULL = sin foto. | Usuario | - |
 
 Datos confirmados: placa, vin y modelo. `tbvehiculoestado` es una propuesta de
 modelado.

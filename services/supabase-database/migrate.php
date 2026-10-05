@@ -46,6 +46,7 @@ const EXPECTED_COLUMNS = [
     ],
     'tbvehiculo' => [
         'tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado',
+        'tbvehiculofotourl',
     ],
     'tbtransportistavehiculo' => [
         'tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid',
@@ -327,6 +328,8 @@ function ensureCurrentColumns(PDO $connection): void
     $connection->exec('ALTER TABLE public.tbpersona
         ADD COLUMN IF NOT EXISTS tbpersonaalias VARCHAR(150) NULL,
         ADD COLUMN IF NOT EXISTS tbpersonafotourl VARCHAR(500) NULL;
+        ALTER TABLE public.tbvehiculo
+        ADD COLUMN IF NOT EXISTS tbvehiculofotourl VARCHAR(500) NULL;
         ALTER TABLE public.tbdireccion
         ADD COLUMN IF NOT EXISTS tbdireccionlatitud NUMERIC(10,7) NULL,
         ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL;

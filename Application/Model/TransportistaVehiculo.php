@@ -95,7 +95,7 @@ final class TransportistaVehiculo
         $sentencia = $this->conexion->prepare(
             'SELECT v.tbvehiculoid AS vehiculoid, v.tbvehiculoplaca AS placa,
                     v.tbvehiculovin AS vin, v.tbvehiculomodelo AS modelo,
-                    v.tbvehiculoestado AS estado
+                    v.tbvehiculoestado AS estado, v.tbvehiculofotourl AS fotourl
              FROM tbtransportistavehiculo tv
              INNER JOIN tbvehiculo v ON v.tbvehiculoid = tv.tbvehiculoid
              WHERE tv.tbtransportistaid = :transportistaId
@@ -110,6 +110,7 @@ final class TransportistaVehiculo
                 'vin' => $fila['vin'],
                 'modelo' => $fila['modelo'],
                 'estado' => (int) $fila['estado'] === 1 ? 'ACTIVO' : 'INACTIVO',
+                'fotoUrl' => $fila['fotourl'],
             ],
             $sentencia->fetchAll(),
         );

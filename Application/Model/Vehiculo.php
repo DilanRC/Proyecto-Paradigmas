@@ -78,8 +78,8 @@ final class Vehiculo
     {
         $vehiculoId = $this->siguienteId();
         $sentencia = $this->conexion->prepare(
-            'INSERT INTO tbvehiculo (tbvehiculoid, tbvehiculoplaca, tbvehiculovin, tbvehiculomodelo, tbvehiculoestado)
-             VALUES (:vehiculoId, :placa, :vin, :modelo, :estado)'
+            'INSERT INTO tbvehiculo (tbvehiculoid, tbvehiculoplaca, tbvehiculovin, tbvehiculomodelo, tbvehiculoestado, tbvehiculofotourl)
+             VALUES (:vehiculoId, :placa, :vin, :modelo, :estado, :fotoUrl)'
         );
         $sentencia->execute([
             'vehiculoId' => $vehiculoId,
@@ -87,6 +87,7 @@ final class Vehiculo
             'vin' => $datos['vin'],
             'modelo' => $datos['modelo'],
             'estado' => 1,
+            'fotoUrl' => $datos['fotoUrl'] ?? null,
         ]);
 
         return $vehiculoId;
@@ -100,19 +101,26 @@ final class Vehiculo
         return (int) $sentencia->fetchColumn();
     }
 
+    /** Sin la clave `fotoUrl` la foto se conserva; con `null` se quita. */
     public function actualizar(int $id, array $datos): void
     {
-        $sentencia = $this->conexion->prepare(
-            'UPDATE tbvehiculo
-             SET tbvehiculoplaca = :placa, tbvehiculovin = :vin, tbvehiculomodelo = :modelo
-             WHERE tbvehiculoid = :id'
-        );
-        $sentencia->execute([
+        $parametros = [
             'id' => $id,
             'placa' => $datos['placa'],
             'vin' => $datos['vin'],
             'modelo' => $datos['modelo'],
-        ]);
+        ];
+        $foto = '';
+        if (array_key_exists('fotoUrl', $datos)) {
+            $foto = ', tbvehiculofotourl = :fotoUrl';
+            $parametros['fotoUrl'] = $datos['fotoUrl'];
+        }
+        $sentencia = $this->conexion->prepare(
+            "UPDATE tbvehiculo
+             SET tbvehiculoplaca = :placa, tbvehiculovin = :vin, tbvehiculomodelo = :modelo{$foto}
+             WHERE tbvehiculoid = :id"
+        );
+        $sentencia->execute($parametros);
     }
 
     public function cambiarEstado(int $id, bool $activo): void
@@ -153,6 +161,7 @@ final class Vehiculo
             'vin' => $fila['tbvehiculovin'],
             'modelo' => $fila['tbvehiculomodelo'],
             'estado' => (int) $fila['tbvehiculoestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
+            'fotoUrl' => $fila['tbvehiculofotourl'] ?? null,
         ];
     }
 }

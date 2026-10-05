@@ -126,6 +126,7 @@ erDiagram
         VARCHAR tbvehiculovin
         VARCHAR tbvehiculomodelo
         TINYINT tbvehiculoestado
+        VARCHAR tbvehiculofotourl
     }
 
     tbtransportistavehiculo {

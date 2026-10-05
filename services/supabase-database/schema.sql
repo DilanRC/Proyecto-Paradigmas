@@ -98,7 +98,8 @@ CREATE TABLE IF NOT EXISTS public.tbvehiculo (
     tbvehiculoplaca VARCHAR(20) NOT NULL,
     tbvehiculovin VARCHAR(50) NOT NULL,
     tbvehiculomodelo VARCHAR(100) NOT NULL,
-    tbvehiculoestado SMALLINT NOT NULL
+    tbvehiculoestado SMALLINT NOT NULL,
+    tbvehiculofotourl VARCHAR(500) NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistavehiculo (

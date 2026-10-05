@@ -74,7 +74,29 @@ try {
     $vehiculoIds[] = $creado['body']['data']['vehiculo']['vehiculoId'];
     test_same(1, count($creado['body']['data']['vehiculos']), 'El vehículo nuevo debe quedar enlazado al dueño autenticado');
 
-    $camposAjeno = $controllerA->procesar('POST', ['placa' => 'X', 'vin' => 'Y', 'modelo' => 'Z', 'transportistaId' => 999]);
+    test_same(null, $creado['body']['data']['vehiculo']['fotoUrl'], 'Un vehículo sin foto queda en NULL');
+
+    // P1-5: foto del vehículo (solo https; sin la clave en PUT se conserva; null la quita).
+    $vehiculoA = $creado['body']['data']['vehiculo'];
+    $foto = 'https://example.test/camion.jpg';
+    $base = ['vehiculoId' => $vehiculoA['vehiculoId'], 'placa' => $vehiculoA['placa'], 'vin' => $vehiculoA['vin'], 'modelo' => $vehiculoA['modelo']];
+    $conFoto = $controllerA->procesar('PUT', $base + ['fotoUrl' => $foto]);
+    test_same(200, $conFoto['status'], 'El dueño puede poner foto a su vehículo');
+    test_same($foto, $conFoto['body']['data']['vehiculo']['fotoUrl'], 'La foto se devuelve en el vehículo');
+    test_same($foto, $conFoto['body']['data']['vehiculos'][0]['fotoUrl'], 'La foto se devuelve en la lista propia');
+    test_same($foto, $controllerA->procesar('PUT', $base)['body']['data']['vehiculo']['fotoUrl'], 'Un PUT sin fotoUrl conserva la foto');
+    foreach (['http://example.test/a.jpg', 'javascript:alert(1)', 'data:image/png;base64,AA'] as $mala) {
+        $rechazo = $controllerA->procesar('PUT', $base + ['fotoUrl' => $mala]);
+        test_same(422, $rechazo['status'], "fotoUrl {$mala} debe rechazarse");
+        test_assert(isset($rechazo['body']['errors']['fotoUrl']), 'El error se reporta en fotoUrl');
+    }
+    test_same(null, $controllerA->procesar('PUT', $base + ['fotoUrl' => null])['body']['data']['vehiculo']['fotoUrl'], 'fotoUrl null quita la foto');
+    $creadoConFoto = $controllerA->procesar('POST', ['placa' => 'AUTO-F-' . strtoupper(bin2hex(random_bytes(2))), 'vin' => 'VIN-F-' . bin2hex(random_bytes(4)), 'modelo' => 'Camión F', 'fotoUrl' => $foto]);
+    test_same(201, $creadoConFoto['status'], 'Se puede crear un vehículo con foto');
+    $vehiculoIds[] = $creadoConFoto['body']['data']['vehiculo']['vehiculoId'];
+    test_same($foto, $creadoConFoto['body']['data']['vehiculo']['fotoUrl'], 'La foto del alta se guarda');
+
+    $camposAjeno = $controllerA->procesar('POST',['placa' => 'X', 'vin' => 'Y', 'modelo' => 'Z', 'transportistaId' => 999]);
     test_same(422, $camposAjeno['status'], 'No se puede elegir dueño por JSON');
 
     $idB = test_document();

@@ -134,7 +134,8 @@ CREATE TABLE IF NOT EXISTS tbvehiculo (
     tbvehiculoplaca VARCHAR(20) NOT NULL,
     tbvehiculovin VARCHAR(50) NOT NULL,
     tbvehiculomodelo VARCHAR(100) NOT NULL,
-    tbvehiculoestado TINYINT(1) NOT NULL
+    tbvehiculoestado TINYINT(1) NOT NULL,
+    tbvehiculofotourl VARCHAR(500) NULL
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;

@@ -47,7 +47,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-2 | Fletes cercanos (los fletes funcionan como publicaciones) | **Lidera** (API) | | **Lidera** (pantalla) |
 | P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
 | P1-4 | Foto de perfil y edición de datos personales — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
-| P1-5 | Fotos de vehículos | | **Lidera** (API) | **Lidera** (pantalla) |
+| P1-5 | Fotos de vehículos — **API HECHA** (falta pantalla) | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
@@ -201,10 +201,12 @@ animal con flete.
 
 ### P1-5 · Fotos de vehículos · Jeremi (API) + Jeferson (pantalla)
 
-- [ ] Columna `tbvehiculofotourl VARCHAR(500) NULL` en los 4 lugares (una sola
+**Estado (2026-10-04): API hecha por Jeremi en la rama `backend`** (detalle en `MEMORIA.md`). Falta la pantalla. Las bases MySQL existentes necesitan la migración `014vehiculofoto.sql`.
+
+- [x] Columna `tbvehiculofotourl VARCHAR(500) NULL` en los 4 lugares (una sola
       foto para empezar; varias fotos necesitarían una tabla aparte).
-- [ ] Aceptar y devolver `fotoUrl` en `api/v1/mi-vehiculos` (crear y editar),
-      con la misma validación `https://`.
+- [x] Aceptar y devolver `fotoUrl` en `api/v1/mi-vehiculos` (crear y editar),
+      con la misma validación `https://`. En `PUT`, sin `fotoUrl` la foto se conserva.
 - [ ] Mi panel → Mis vehículos: subir la foto con vista previa (mismo
       componente que en Publicar).
 - [ ] La foto se muestra en las tarjetas de fletes (P1-2).
