@@ -46,6 +46,17 @@ final class Persona
         return $sentencia->fetchColumn() !== false;
     }
 
+    /** Sin distinguir mayúsculas, igual que RegistroPublicoService al registrar. */
+    public function existeCorreo(string $correoElectronico): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT 1 FROM tbpersona WHERE LOWER(tbpersonacorreoelectronico) = LOWER(:correo) LIMIT 1'
+        );
+        $sentencia->execute(['correo' => $correoElectronico]);
+
+        return $sentencia->fetchColumn() !== false;
+    }
+
     /**
      * Resuelve una Persona por su identificador interno. Esta vía existe para
      * procesos autenticados: SupabaseActorResolver ya vinculó el JWT con

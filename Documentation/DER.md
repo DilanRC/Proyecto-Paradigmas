@@ -302,6 +302,12 @@ erDiagram
         VARCHAR tbtransportistaresenaorigen
     }
 
+    tbregistroconsulta {
+        INT tbregistroconsultaid
+        CHAR tbregistroconsultaclave
+        DATETIME tbregistroconsultafecha
+    }
+
     tbbitacora {
         BIGINT tbbitacoraid
         VARCHAR tbbitacoraentidad

@@ -154,6 +154,9 @@ const EXPECTED_COLUMNS = [
         'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
         'tbtransportistaresenaorigen',
     ],
+    'tbregistroconsulta' => [
+        'tbregistroconsultaid', 'tbregistroconsultaclave', 'tbregistroconsultafecha',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -242,7 +245,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 34 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 35 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -475,7 +478,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=34 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=35 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

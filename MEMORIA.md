@@ -80,6 +80,15 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     siempre, sin datos extra) y muestra una notificación.
   - Activar/desactivar algo ya configurado: `PATCH api/v1/actividad` con
     `{ contexto, activo }` (sin cambios de lógica).
+- **Disponibilidad en tiempo real (P2-1):** `POST api/v1/registro/identificacion` acepta **o**
+  `{ identificacionTipo, identificacionNumero }` **o** `{ correoElectronico }` (los dos juntos → 422) y responde
+  `{ disponible }`. El correo se normaliza con `ValidacionService::validarCorreo` (trim + minúscula) y se busca sin
+  distinguir mayúsculas (`Persona::existeCorreo`). Al enviar el registro se vuelve a validar todo bajo `NamedLock`
+  (`RegistroPublicoService::resolverPersona` y `Persona::obtenerOCrear`); esto ya existía.
+- **Límite por IP (DEC-REG-001):** el endpoint de disponibilidad permite 20 consultas por IP cada 60 s
+  (`RegistroConsulta::LIMITE` y `VENTANA_SEGUNDOS`); la siguiente responde **429** con `Retry-After: 60`. Tabla
+  `tbregistroconsulta` (hash SHA-256 de la IP, nunca la IP; se limpia sola). La IP sale de `X-Real-IP` (proxy de
+  Vercel) o de `REMOTE_ADDR`. El esquema ahora tiene **35 tablas**.
 - `registro.js` lee la actividad pedida también de la ruta bonita
   (`/registro/productor`), porque Apache agrega `?capacidad=` solo por dentro.
 
@@ -220,6 +229,13 @@ están incluidos ahí.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
+### Pendiente de P2-1
+- Frontend: consultar el **correo** en tiempo real en el registro (como ya se hace con la cédula en `registro.js`, con
+  `{ correoElectronico }`), mostrar el mensaje bajo el campo y tratar el 429 con un mensaje propio (hoy cae en
+  "No se pudo verificar"). Revisar que las máscaras de cédula y teléfono coincidan entre frontend y `ValidacionService`.
+- Verificar en un preview de Vercel que llega `X-Real-IP` (si no llegara, todas las consultas compartirían la IP del
+  proxy y el límite sería global).
+
 ### Frontend (pendiente de P1-5)
 - Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
   `fotoUrl`. El API ya está listo (ver "Foto del vehículo"). Mostrarla en las tarjetas de fletes cuando exista P1-2.
@@ -255,6 +271,13 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · backend · P2-1 Disponibilidad de cédula y correo con límite por IP (API)
+- `api/v1/registro/identificacion` ahora también consulta el correo (ver "Disponibilidad en tiempo real"). Sin cambio para quien ya lo usa con la cédula.
+- Tabla nueva `tbregistroconsulta` (DEC-REG-001) en `000instalacioncompleta.sql`, `015registroconsulta.sql`, `schema.sql` (con RLS) y `migrate.php`; diccionario, DER, Decisiones y PDF regenerados. El esquema pasa de 34 a 35 tablas: se actualizaron las pruebas y documentos que fijaban el número (`schema_manifest_test`, `naming_eval`, `db_ready_test`, `instalacion_limpia_test`, `supabase .../schema_test` y `schema_eval`, `personacapacidades_gate`, `comprobacionestructura.sql`, README, GuiaDefensa, Respaldos). La lista de tablas del README tenía 32; se completó.
+- Archivos: `RegistroIdentificacionController.php`, `Persona.php` (`existeCorreo`), nuevo `Application/Model/RegistroConsulta.php`, `Public/api/registro-validar-identificacion.php`.
+- Pruebas: nueva `Tests/registro_consulta_test.php`; ampliada `Tests/registro_publico_test.php`. `migrate.php` probado dos veces contra Postgres 16 (35 tablas, RLS) y el límite también en Postgres.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/015registroconsulta.sql`. Producción la crea con `schema.sql` al arrancar. Una tabla nueva cambia el conteo de tablas en todas las pruebas y documentos de arriba.
 
 ### 2026-10-04 · backend · Arreglo de carga en mi-perfil.php (P1-4)
 - `Tests/api_requires_test.php` fallaba: `mi-perfil.php` cargaba `AnimalPublicacionController` antes que su controlador, y la prueba revisa el primer controlador del endpoint (le exigía `AnimalComercial`).
