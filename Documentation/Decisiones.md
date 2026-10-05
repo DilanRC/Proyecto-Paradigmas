@@ -1129,3 +1129,12 @@ de `REMOTE_ADDR` cuando no hay proxy.
 
 Se descartó la regla de rate limit del firewall de Vercel porque no funciona en
 local y depende del plan del proyecto.
+
+Esto **reabre** la consulta pública del correo que el commit `d7b5a88`
+(29/09/2026, "Elimina enumeracion publica de correos") había retirado. El
+issue de la reunión del 29/09 la pide (P2-1), y el equipo decidió volver a
+tenerla con el límite por IP como protección. El registro la consulta 400 ms
+después de dejar de escribir y solo bloquea si el correo ya está registrado.
+Al crear la cuenta en Supabase se mantiene el aviso neutro de `d7b5a88`. El
+límite no elimina la enumeración, solo la vuelve lenta: si se necesita más,
+el siguiente paso es exigir un captcha o retirar otra vez la consulta.

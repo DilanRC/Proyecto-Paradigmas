@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=signup-4"></script>
+    <script type="module" src="js/registro.js?v=signup-5"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -67,7 +67,7 @@
                     <p class="signup-required"><span aria-hidden="true">*</span> campos obligatorios</p>
                     <div class="signup-grid">
                         <div class="auth-field"><label for="registro-identificacion-numero">Número de identificación *</label><input id="registro-identificacion-numero" name="identificacionNumero" type="text" maxlength="12" autocomplete="off" required aria-describedby="registro-identificacion-hint registro-identificacion-status"><small id="registro-identificacion-hint" class="field-help" data-identificacion-hint>Elige el tipo para conocer el formato.</small><small id="registro-identificacion-status" class="identity-check-status" data-identificacion-status data-state="idle" role="status" aria-live="polite"></small><button class="identity-check-retry" data-identificacion-retry type="button" hidden>Reintentar verificación</button><small class="auth-error" data-error-for="identificacionNumero"></small></div>
-                        <div class="auth-field"><label for="registro-correo-electronico">Correo electrónico *</label><input id="registro-correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="registro-correo-error"><small id="registro-correo-error" class="auth-error" data-error-for="correoElectronico"></small></div>
+                        <div class="auth-field"><label for="registro-correo-electronico">Correo electrónico *</label><input id="registro-correo-electronico" name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="registro-correo-status registro-correo-error"><small id="registro-correo-status" class="identity-check-status" data-correo-status data-state="idle" role="status" aria-live="polite"></small><small id="registro-correo-error" class="auth-error" data-error-for="correoElectronico"></small></div>
                         <div class="auth-field"><label for="registro-nombres">Nombres *</label><input id="registro-nombres" name="nombres" type="text" minlength="2" maxlength="75" autocomplete="given-name" required placeholder="Ej. María Fernanda"><small class="auth-error" data-error-for="nombres"></small></div>
                         <div class="auth-field"><label for="registro-apellidos">Apellidos *</label><input id="registro-apellidos" name="apellidos" type="text" minlength="2" maxlength="75" autocomplete="family-name" required placeholder="Ej. Solano Vargas"><small class="auth-error" data-error-for="apellidos"></small></div>
                         <div class="auth-field"><label for="registro-telefono">Teléfono *</label><input id="registro-telefono" name="telefono" type="tel" maxlength="20" autocomplete="tel" placeholder="+506 8888 8888" required><small class="auth-error" data-error-for="telefono"></small></div>

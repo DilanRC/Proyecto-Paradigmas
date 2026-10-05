@@ -89,6 +89,14 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   (`RegistroConsulta::LIMITE` y `VENTANA_SEGUNDOS`); la siguiente responde **429** con `Retry-After: 60`. Tabla
   `tbregistroconsulta` (hash SHA-256 de la IP, nunca la IP; se limpia sola). La IP sale de `X-Real-IP` (proxy de
   Vercel) o de `REMOTE_ADDR`. El esquema ahora tiene **35 tablas**.
+- **Correo en el formulario (P2-1):** `registro.js` consulta el correo 400 ms después de dejar de escribir
+  (`scheduleEmailCheck` / `checkEmail`, mensaje en `[data-correo-status]`), solo en el alta **sin sesión**. Solo
+  bloquea "Siguiente" y "Registrar" si el correo ya está registrado; si la consulta falla, deja seguir (el servidor
+  revalida). Un 429 muestra el mensaje del servidor ("Espera un minuto…"), también en la cédula.
+- **Ojo, decisión revertida:** el 29/09 Dilan había retirado esta consulta del correo para no revelar qué correos
+  existen (`d7b5a88`). Se reabrió el 04/10 por decisión del equipo, con el límite por IP (DEC-REG-001). La prueba
+  que lo prohibía ahora exige que la consulta pase por el endpoint con límite. El aviso neutro al crear la cuenta en
+  Supabase sigue igual.
 - `registro.js` lee la actividad pedida también de la ruta bonita
   (`/registro/productor`), porque Apache agrega `?capacidad=` solo por dentro.
 
@@ -230,9 +238,7 @@ están incluidos ahí.
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
 ### Pendiente de P2-1
-- Frontend: consultar el **correo** en tiempo real en el registro (como ya se hace con la cédula en `registro.js`, con
-  `{ correoElectronico }`), mostrar el mensaje bajo el campo y tratar el 429 con un mensaje propio (hoy cae en
-  "No se pudo verificar"). Revisar que las máscaras de cédula y teléfono coincidan entre frontend y `ValidacionService`.
+- Revisar que las máscaras de cédula y teléfono coincidan entre frontend y `ValidacionService`.
 - Verificar en un preview de Vercel que llega `X-Real-IP` (si no llegara, todas las consultas compartirían la IP del
   proxy y el límite sería global).
 
@@ -271,6 +277,11 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · backend · P2-1 Correo en tiempo real en el registro (frontend)
+- `registro.js` consulta el correo como ya lo hacía con la cédula y muestra el 429 con el mensaje del servidor (ver "Correo en el formulario"). Vista con `[data-correo-status]`; caché `registro.js?v=signup-5`.
+- Revierte, por decisión del equipo, el retiro de `d7b5a88` (Dilan, 29/09). Se ajustó su prueba en `supabase_auth_registration.test.mjs`: ahora exige que no vuelva `api/v1/registro/correo` y que el endpoint tenga límite y 429. Nueva prueba en `public_identity_auth.test.mjs`. DEC-REG-001 ampliada.
+- Cuidado: sin captcha, el límite por IP solo frena la enumeración de correos, no la impide.
 
 ### 2026-10-04 · backend · P2-1 Disponibilidad de cédula y correo con límite por IP (API)
 - `api/v1/registro/identificacion` ahora también consulta el correo (ver "Disponibilidad en tiempo real"). Sin cambio para quien ya lo usa con la cédula.
