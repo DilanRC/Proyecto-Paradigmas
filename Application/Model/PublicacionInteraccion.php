@@ -10,7 +10,7 @@ use PDO;
 final class PublicacionInteraccion
 {
     private const TIPOS = ['ME_INTERESA', 'PASAR', 'CONTACTAR'];
-    private const ACCIONES = ['REGISTRAR'];
+    private const ACCIONES = ['REGISTRAR', 'RETIRAR'];
 
     public function __construct(private readonly PDO $conexion) {}
 
@@ -24,12 +24,15 @@ final class PublicacionInteraccion
         }
     }
 
-    public function registrar(int $personaId, int $publicacionId, string $tipo, string $origen): int
+    public function registrar(int $personaId, int $publicacionId, string $tipo, string $origen,
+        string $accion = 'REGISTRAR'): int
     {
         if (!in_array($tipo, self::TIPOS, true)) {
             throw new \InvalidArgumentException('Tipo de interacción no aprobado.');
         }
-        $accion = self::ACCIONES[0];
+        if (!in_array($accion, self::ACCIONES, true)) {
+            throw new \InvalidArgumentException('Acción de interacción no aprobada.');
+        }
         $this->exigirTransaccion();
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbanimalpublicacioninteraccion
@@ -50,6 +53,24 @@ final class PublicacionInteraccion
         ]);
 
         return $id;
+    }
+
+    /**
+     * El historial solo crece: la marca vigente es la última acción del par
+     * (persona, publicación, tipo). REGISTRAR la deja marcada y RETIRAR la quita.
+     */
+    public function estaMarcada(int $personaId, int $publicacionId, string $tipo): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbanimalpublicacioninteraccionaccion
+             FROM tbanimalpublicacioninteraccion
+             WHERE tbpersonaid = :personaId AND tbanimalpublicacionid = :publicacionId
+               AND tbanimalpublicacioninteracciontipo = :tipo
+             ORDER BY tbanimalpublicacioninteraccionid DESC LIMIT 1'
+        );
+        $sentencia->execute(['personaId' => $personaId, 'publicacionId' => $publicacionId, 'tipo' => $tipo]);
+
+        return $sentencia->fetchColumn() === 'REGISTRAR';
     }
 
     private function siguienteId(): int

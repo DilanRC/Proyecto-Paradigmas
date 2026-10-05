@@ -22,27 +22,40 @@ require_once $raiz . '/Application/Controller/AnimalPublicacionController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, POST, OPTIONS');
+    header('Allow: GET, POST, PATCH, OPTIONS');
     http_response_code(204);
     exit;
 }
-if (!in_array($metodo, ['GET', 'POST'], true)) {
-    header('Allow: GET, POST, OPTIONS');
+if (!in_array($metodo, ['GET', 'POST', 'PATCH'], true)) {
+    header('Allow: GET, POST, PATCH, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
 }
 
-if ($metodo === 'POST' && strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0])) !== 'application/json') {
+if ($metodo !== 'GET' && strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0])) !== 'application/json') {
     sendJsonResponse(['success' => false, 'message' => 'El cuerpo debe usar Content-Type: application/json.', 'data' => null], 415);
 }
 
 try {
     $conexion = Database::getConnection();
-    $cuerpo = $metodo === 'POST' ? readJsonBody() : [];
+    $cuerpo = $metodo !== 'GET' ? readJsonBody() : [];
     $esConsultaPrivada = $metodo === 'POST' && array_key_exists('consulta', $cuerpo);
     if ($esConsultaPrivada && !is_array($cuerpo['consulta'])) {
         sendJsonResponse(['success' => false, 'message' => 'La consulta debe ser un objeto JSON.', 'data' => null], 400);
     }
-    $actor = $metodo === 'POST' && !$esConsultaPrivada ? SupabaseActorResolver::fromGlobals($conexion) : null;
+    // La lectura pública no pide sesión; crear, editar y "mias" sí.
+    $consultaPlana = $esConsultaPrivada ? $cuerpo['consulta'] : ($metodo === 'GET' ? $_GET : []);
+    $pideMias = filter_var($consultaPlana['mias'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    $requiereActor = $pideMias || $metodo === 'PATCH' || ($metodo === 'POST' && !$esConsultaPrivada);
+    // En la lectura pública la sesión es opcional: si llega, la lista trae meInteresa.
+    $hayToken = ($_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '') !== '';
+    $actor = null;
+    if ($requiereActor || $hayToken) {
+        try {
+            $actor = SupabaseActorResolver::fromGlobals($conexion);
+        } catch (Application\HttpException $sesion) {
+            if ($requiereActor) throw $sesion; // lectura pública: un token vencido no la rompe
+        }
+    }
     $controlador = new AnimalPublicacionController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,

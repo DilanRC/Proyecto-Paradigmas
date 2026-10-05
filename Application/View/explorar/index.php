@@ -21,9 +21,9 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/public-product.css?v=product-7">
     <link rel="stylesheet" href="css/explore.css?v=explore-8">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-10"></script>
-    <script type="module" src="js/explore.js?v=explore-7"></script>
-    <script type="module" src="js/explore-interactions.js?v=interactions-1"></script>
+    <script type="module" src="js/public-ui.js?v=public-11"></script>
+    <script type="module" src="js/explore.js?v=explore-9"></script>
+    <script type="module" src="js/explore-interactions.js?v=interactions-2"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">

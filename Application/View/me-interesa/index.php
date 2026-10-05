@@ -4,9 +4,9 @@
     <base href="<?= tc_public_base_attribute() ?>">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Ajustes de tu cuenta en Ganado Cerca: perfil y formas de participar.">
+    <meta name="description" content="Las publicaciones de ganado que marcaste con Me interesa en Ganado Cerca.">
     <meta name="theme-color" content="#151a18">
-    <title>Ajustes de cuenta | Ganado Cerca</title>
+    <title>Me interesa | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=product-7">
@@ -16,11 +16,12 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-3">
+    <link rel="stylesheet" href="css/explore.css?v=explore-8">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-11"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-3"></script>
+    <script type="module" src="js/me-interesa.js?v=interesa-2"></script>
 </head>
-<body class="public-home activity-page settings-page">
+<body class="public-home activity-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
             <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
@@ -36,34 +37,15 @@
         </header>
 
         <main class="activity-main">
-            <section id="activity-loading" class="activity-panel" role="status" aria-live="polite"><div class="purchase-loader"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Cargando tus ajustes…</span></div></section>
-            <section id="activity-error" class="activity-panel" hidden role="alert"><div class="purchase-result"><h2>No pudimos cargar tus ajustes</h2><p id="activity-error-message">Intenta nuevamente.</p><button id="activity-retry" class="activity-button activity-button--primary" type="button">Reintentar</button></div></section>
-
-            <div id="activity-content" class="settings-layout" hidden>
-                <nav class="settings-nav" aria-label="Secciones de ajustes">
-                    <a href="ajustes#perfil" data-settings-link="perfil"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Perfil</a>
-                    <a href="ajustes#participacion" data-settings-link="participacion"><i class="fa-solid fa-route" aria-hidden="true"></i>Cómo participo</a>
-                </nav>
-                <div class="settings-sections">
-                    <div class="settings-heading">
-                        <a class="panel-link" href="mi-actividad"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Mi panel</a>
-                        <h1 id="settings-title">Ajustes de cuenta</h1>
-                    </div>
-
-                    <section class="activity-panel" id="perfil" aria-labelledby="perfil-title" tabindex="-1">
-                        <div class="panel-head"><h2 id="perfil-title">Perfil</h2></div>
-                        <dl id="profile-list" class="settings-profile"></dl>
-                        <p class="settings-hint">Tu perfil es uno solo y se usa igual cuando compras, vendes o transportas.</p>
-                    </section>
-
-                    <section class="activity-panel" id="participacion" aria-labelledby="participacion-title" tabindex="-1">
-                        <div class="panel-head"><h2 id="participacion-title">Cómo participo</h2></div>
-                        <div id="activity-list" class="settings-toggles" aria-live="polite"></div>
-                        <p class="settings-hint">Si desactivas una actividad, tus otros datos no se borran.</p>
-                    </section>
-                </div>
+            <div class="settings-heading">
+                <a class="panel-link" href="mi-actividad"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Mi panel</a>
+                <h1 id="saved-title">Me interesa</h1>
+                <p class="settings-hint">Las publicaciones que marcaste. Si una se vende o se pausa, sigue aquí como “No disponible” hasta que la quites.</p>
             </div>
-            <p id="activity-status" class="auth-status" role="status" aria-live="polite"></p>
+            <div id="saved-loading" class="resource-state" role="status" aria-live="polite">Cargando tus publicaciones…</div>
+            <div id="saved-error" class="resource-state resource-state--error" role="alert" hidden><p id="saved-error-message">No pudimos cargar tus publicaciones.</p><button id="saved-retry" class="activity-button" type="button">Reintentar</button></div>
+            <div id="saved-empty" class="panel-empty" hidden><strong>Aún no marcaste ninguna publicación</strong><p>Toca “Me interesa” en Explorar y las verás aquí.</p><a class="activity-button activity-button--sm" href="explorar">Explorar ganado</a></div>
+            <div id="saved-list" class="explore-deck__viewport" role="region" aria-label="Publicaciones que me interesan" aria-live="polite" tabindex="0" hidden></div>
         </main>
         <footer class="public-footer public-footer--complete">
             <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>

@@ -3,7 +3,6 @@ import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
 const API_URL = 'api/v1/publicaciones/interacciones';
 const ACTION_TYPES = {
     'Me interesa': 'ME_INTERESA',
-    Pasar: 'PASAR',
     Contactar: 'CONTACTAR',
 };
 
@@ -59,7 +58,7 @@ async function save(button, type) {
 
         button.dataset.saved = 'true';
         button.setAttribute('aria-label', `${button.textContent.trim()} guardado`);
-        toast(type === 'PASAR' ? 'Listo. Guardamos que pasaste esta publicación.' : 'Listo. Tu acción quedó guardada.');
+        toast(type === 'ME_INTERESA' ? 'Listo. La encontrarás en Me interesa.' : 'Listo. Tu acción quedó guardada.');
         window.dispatchEvent(new CustomEvent('explore:interaction-saved', {
             detail: { type, card: context.card },
         }));

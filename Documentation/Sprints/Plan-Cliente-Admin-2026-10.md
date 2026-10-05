@@ -42,8 +42,8 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | Prioridad | Tarea | Carlos | Jeremi | Jeferson |
 |---|---|---|---|---|
 | P0-1 | Acceso en producción (confirmación de correo y unión por ID de Supabase) | **Lidera** | | Apoya |
-| P0-2 | Mis publicaciones: listar, editar, pausar y cerrar | **Lidera** (API) | | **Lidera** (pantalla) |
-| P1-1 | Página "Me interesa" (guardados) | | **Lidera** (API) | **Lidera** (pantalla) |
+| P0-2 | Mis publicaciones: listar, editar, pausar y cerrar — **HECHO** (falta foto en el diálogo) | **Lidera** (API) | | **Lidera** (pantalla) |
+| P1-1 | Página "Me interesa" (guardados) — **HECHO** (falta "Ver fletes cercanos") | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-2 | Fletes cercanos (los fletes funcionan como publicaciones) | **Lidera** (API) | | **Lidera** (pantalla) |
 | P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
 | P1-4 | Foto de perfil y edición de datos personales | | **Lidera** (API) | **Lidera** (pantalla) |
@@ -102,33 +102,37 @@ exige confirmar el correo y los correos no llegan (no hay servidor de correo pro
 
 ### P0-2 · Mis publicaciones: listar, editar, pausar y cerrar · Carlos (API) + Jeferson (pantalla)
 
+**Estado (2026-10-04): hecho por Jeferson en la rama `jefersonbustamante`**, API y pantalla (detalle en `MEMORIA.md`). Carlos: solo falta tu revisión. El estado "cerrado" quedó como `RETIRADO`.
+
 Hoy una publicación se crea y nunca se cierra: `tbanimalpublicacionestadoperiodo`
 se abre al publicar y nada lo cierra. Y "Mis publicaciones" se arma en el
 navegador buscando por nombre de finca, lo que confunde a homónimos.
 
-- [ ] `GET api/v1/publicaciones` con `mias=true` (solo con sesión): devuelve
+- [x] `GET api/v1/publicaciones` con `mias=true` (solo con sesión): devuelve
       las publicaciones del vendedor autenticado en todos sus estados.
-- [ ] `PATCH api/v1/publicaciones`: editar precio, título, descripción y foto
-      de una publicación propia.
-- [ ] Cambio de estado (`ACTIVO`, `PAUSADO`, `VENDIDO`, `CERRADO`): cerrar el
+- [x] `PATCH api/v1/publicaciones`: editar precio, título, descripción y foto
+      de una publicación propia (el API acepta la foto; el diálogo de Mi panel aún no la muestra).
+- [x] Cambio de estado (`ACTIVO`, `PAUSADO`, `VENDIDO`, `RETIRADO`): cerrar el
       periodo vigente y abrir otro; dejar registro en `tbbitacora`.
-- [ ] Mi panel usa `mias=true` en lugar de la búsqueda por nombre de finca
+- [x] Mi panel usa `mias=true` en lugar de la búsqueda por nombre de finca
       (`ownPublications()` en `mi-actividad.js`).
-- [ ] Botones Editar, Pausar y Marcar como vendida en cada tarjeta de Mi panel.
+- [x] Botones Editar, Pausar y Marcar como vendida en cada tarjeta de Mi panel.
 
 ### P1-1 · Página "Me interesa" (guardados) · Jeremi (API) + Jeferson (pantalla)
+
+**Estado (2026-10-04): hecho por Jeferson en la rama `jefersonbustamante`**, API y pantalla (detalle en `MEMORIA.md`). Jeremi: solo falta tu revisión. Queda pendiente el botón "Ver fletes cercanos" (depende de P1-3).
 
 Cubre el punto 8 del issue ("Me encanta"). **Ya existe** la tabla
 `tbanimalpublicacioninteraccion` con el tipo `ME_INTERESA`; hoy solo se escribe
 (`POST api/v1/publicaciones/interacciones`) y nadie la lee.
 
-- [ ] `GET api/v1/publicaciones/interacciones?tipo=ME_INTERESA` paginado: las
+- [x] `GET api/v1/publicaciones/interacciones?tipo=ME_INTERESA` paginado: las
       publicaciones que la persona autenticada marcó, con todos los datos de la tarjeta.
-- [ ] Quitar de "Me interesa": registrar la acción `RETIRAR` (hoy solo existe
+- [x] Quitar de "Me interesa": registrar la acción `RETIRAR` (hoy solo existe
       `REGISTRAR`), así se conserva el historial. Debe ser idempotente.
-- [ ] Agregar `meInteresa: true|false` a cada publicación del listado cuando hay sesión.
-- [ ] Una publicación vendida o cerrada aparece como **"No disponible"** (no desaparece).
-- [ ] Página nueva `/me-interesa`, enlazada desde el menú del avatar y desde
+- [x] Agregar `meInteresa: true|false` a cada publicación del listado cuando hay sesión.
+- [x] Una publicación vendida o cerrada aparece como **"No disponible"** (no desaparece).
+- [x] Página nueva `/me-interesa`, enlazada desde el menú del avatar y desde
       Mi panel. Usa `buildCard()` de `explore.js`.
 - [ ] Botón para quitar la publicación de la lista y botón "Ver fletes cercanos"
       (lleva a P1-3).

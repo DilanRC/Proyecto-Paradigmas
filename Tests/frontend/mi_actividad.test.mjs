@@ -47,7 +47,7 @@ test('Ajustes enmascara identificación y teléfono', async () => {
 });
 
 test('el panel muestra solo las acciones de actividades activas y una sola principal', async () => {
-    const { panelActions, ownPublications } = await import('../../Public/js/mi-actividad.js');
+    const { panelActions } = await import('../../Public/js/mi-actividad.js');
     const activo = (destinoActivo) => ({ estado: 'ACTIVO', destinoActivo });
     const todas = panelActions({ COMPRADOR: activo('explorar'), PRODUCTOR: activo('publicar'), TRANSPORTISTA: activo('fletes') });
     assert.deepEqual(todas.map((a) => a.label), ['Explorar ganado', 'Ver fletes', 'Publicar ganado']);
@@ -55,14 +55,10 @@ test('el panel muestra solo las acciones de actividades activas y una sola princ
     assert.equal(todas.find((a) => a.primary).label, 'Publicar ganado');
     assert.deepEqual(panelActions({ COMPRADOR: activo('explorar'), PRODUCTOR: { estado: 'INACTIVO' } }).map((a) => a.label), ['Explorar ganado']);
 
-    const publicaciones = [
-        { publicacionId: 1, finca: { nombre: 'La Esperanza' }, vendedor: { nombre: 'Ana Rojas' } },
-        { publicacionId: 1, finca: { nombre: 'La Esperanza' }, vendedor: { nombre: 'Ana Rojas' } },
-        { publicacionId: 2, finca: { nombre: 'La Esperanza' }, vendedor: { nombre: 'Otra Persona' } },
-        { publicacionId: 3, finca: { nombre: 'Ajena' }, vendedor: { nombre: 'Ana Rojas' } },
-    ];
-    assert.deepEqual(ownPublications(publicaciones, [{ nombre: 'La Esperanza' }], 'Ana Rojas').map((p) => p.publicacionId), [1],
-        'solo mis fincas a mi nombre, sin duplicados');
+    // Mis publicaciones las filtra el servidor (mias); ya no se cruzan nombres de finca en el navegador.
+    assert.ok(js.includes('mias: true'));
+    assert.ok(!js.includes('ownPublications'));
+    for (const accion of ['editar', 'PAUSADO', 'VENDIDO']) assert.ok(js.includes(`'${accion}'`), `falta la acción ${accion}`);
 });
 
 test('Mi actividad conserva estados parciales y reintentos sin bloquear la pantalla', () => {

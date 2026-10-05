@@ -12,7 +12,7 @@ $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
-foreach (['NamedLock', 'Bitacora', 'PublicacionInteraccion'] as $modelo) {
+foreach (['NamedLock', 'Bitacora', 'AnimalComercial', 'PublicacionInteraccion'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Auth/ActorContext.php';
@@ -21,16 +21,16 @@ require_once $raiz . '/Application/Controller/PublicacionInteraccionController.p
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if ($metodo === 'OPTIONS') {
-    header('Allow: POST, OPTIONS');
+    header('Allow: GET, POST, OPTIONS');
     http_response_code(204);
     exit;
 }
-if ($metodo !== 'POST') {
-    header('Allow: POST, OPTIONS');
+if (!in_array($metodo, ['GET', 'POST'], true)) {
+    header('Allow: GET, POST, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
 }
 $tipoContenido = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
-if ($tipoContenido !== 'application/json') {
+if ($metodo === 'POST' && $tipoContenido !== 'application/json') {
     sendJsonResponse(['success' => false, 'message' => 'El cuerpo debe usar Content-Type: application/json.', 'data' => null], 415);
 }
 
@@ -42,7 +42,7 @@ try {
         $actor,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
     );
-    $respuesta = $controlador->procesar($metodo, readJsonBody());
+    $respuesta = $controlador->procesar($metodo, $metodo === 'POST' ? readJsonBody() : [], $_GET);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);

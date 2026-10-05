@@ -303,13 +303,37 @@ final class AnimalComercial
      *
      * @return array{publicaciones:array<int,array<string,mixed>>,total:int}
      */
-    public function listarPublicaciones(string $busqueda, string $estado, int $pagina, int $tamano): array
+    /** Marca vigente de ME_INTERESA: la última acción del par persona/publicación es REGISTRAR. */
+    private const SQL_ME_INTERESA = "EXISTS (SELECT 1 FROM tbanimalpublicacioninteraccion i
+        WHERE i.tbpersonaid = %s AND i.tbanimalpublicacionid = p.tbanimalpublicacionid
+          AND i.tbanimalpublicacioninteracciontipo = 'ME_INTERESA'
+          AND i.tbanimalpublicacioninteraccionaccion = 'REGISTRAR'
+          AND i.tbanimalpublicacioninteraccionid = (
+              SELECT MAX(j.tbanimalpublicacioninteraccionid) FROM tbanimalpublicacioninteraccion j
+              WHERE j.tbpersonaid = i.tbpersonaid
+                AND j.tbanimalpublicacionid = i.tbanimalpublicacionid
+                AND j.tbanimalpublicacioninteracciontipo = 'ME_INTERESA'))";
+
+    /**
+     * $personaId agrega meInteresa a cada fila; con $soloMarcadas devuelve solo
+     * las publicaciones que esa persona tiene en "Me interesa" (sea cual sea su estado).
+     */
+    public function listarPublicaciones(string $busqueda, string $estado, int $pagina, int $tamano,
+        ?int $productorVendedorId = null, ?int $personaId = null, bool $soloMarcadas = false): array
     {
         $condiciones = ['ep.tbanimalpublicacionestadoperiodofechafin IS NULL'];
         $parametros = [];
+        if ($productorVendedorId !== null) {
+            $condiciones[] = 'p.tbproductorvendedorid = :productorVendedorId';
+            $parametros[':productorVendedorId'] = $productorVendedorId;
+        }
         if ($estado !== 'TODOS') {
             $condiciones[] = 'ep.tbanimalpublicacionestadoperiodoestado = :estado';
             $parametros[':estado'] = $estado;
+        }
+        if ($soloMarcadas && $personaId !== null) {
+            $condiciones[] = sprintf(self::SQL_ME_INTERESA, ':guardadaPersona');
+            $parametros[':guardadaPersona'] = $personaId;
         }
         if ($busqueda !== '') {
             $condiciones[] = '(p.tbanimalpublicaciontitulo LIKE :busquedaTitulo'
@@ -354,6 +378,8 @@ final class AnimalComercial
         $conteo->execute($parametros);
         $total = (int) $conteo->fetchColumn();
 
+        $columnaMarca = $personaId === null ? '' : ', CASE WHEN '
+            . sprintf(self::SQL_ME_INTERESA, ':marcaPersona') . ' THEN 1 ELSE 0 END AS meinteresa';
         $sentencia = $this->conexion->prepare(
             "SELECT p.tbanimalpublicacionid AS publicacionid,
                     p.tbanimalpublicaciontitulo AS titulo,
@@ -376,13 +402,16 @@ final class AnimalComercial
                     d.tbdireccionprovincia AS provincia,
                     d.tbdireccioncanton AS canton,
                     d.tbdirecciondistrito AS distrito,
-                    d.tbdireccionpueblo AS pueblo
+                    d.tbdireccionpueblo AS pueblo{$columnaMarca}
              {$desde}
              ORDER BY p.tbanimalpublicacionfecha DESC, p.tbanimalpublicacionid DESC
              LIMIT :limite OFFSET :desplazamiento"
         );
         foreach ($parametros as $nombre => $valor) {
             $sentencia->bindValue($nombre, $valor);
+        }
+        if ($personaId !== null) {
+            $sentencia->bindValue(':marcaPersona', $personaId, PDO::PARAM_INT);
         }
         $sentencia->bindValue(':limite', $tamano, PDO::PARAM_INT);
         $sentencia->bindValue(':desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
@@ -397,10 +426,86 @@ final class AnimalComercial
         ];
     }
 
+    private const COLUMNAS_PUBLICACION_EDITABLES = [
+        'titulo' => 'tbanimalpublicaciontitulo',
+        'descripcion' => 'tbanimalpublicaciondescripcion',
+        'precio' => 'tbanimalpublicacionprecio',
+        'imagenUrl' => 'tbanimalpublicacionimagenurl',
+    ];
+
+    /** Publicación del vendedor con su estado vigente, o null si no existe o es de otro. */
+    public function buscarPublicacionPropia(int $publicacionId, int $productorVendedorId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT p.tbanimalpublicacionid AS publicacionid,
+                    p.tbanimalpublicaciontitulo AS titulo,
+                    p.tbanimalpublicaciondescripcion AS descripcion,
+                    p.tbanimalpublicacionprecio AS precio,
+                    p.tbanimalpublicacionimagenurl AS imagenurl,
+                    ep.tbanimalpublicacionestadoperiodoestado AS estado
+             FROM tbanimalpublicacion p
+             INNER JOIN tbanimalpublicacionestadoperiodo ep
+                ON ep.tbanimalpublicacionid = p.tbanimalpublicacionid
+               AND ep.tbanimalpublicacionestadoperiodofechafin IS NULL
+             WHERE p.tbanimalpublicacionid = :id AND p.tbproductorvendedorid = :vendedorId'
+        );
+        $sentencia->execute(['id' => $publicacionId, 'vendedorId' => $productorVendedorId]);
+        $fila = $sentencia->fetch();
+        if ($fila === false) {
+            return null;
+        }
+
+        return [
+            'publicacionId' => (int) $fila['publicacionid'],
+            'titulo' => $fila['titulo'],
+            'descripcion' => $fila['descripcion'],
+            'precio' => $fila['precio'] === null ? null : (float) $fila['precio'],
+            'imagenUrl' => $fila['imagenurl'],
+            'estado' => $fila['estado'],
+        ];
+    }
+
+    /** @param array<string,mixed> $campos claves de COLUMNAS_PUBLICACION_EDITABLES */
+    public function actualizarPublicacion(int $publicacionId, array $campos): void
+    {
+        $asignaciones = [];
+        $parametros = ['id' => $publicacionId];
+        foreach (self::COLUMNAS_PUBLICACION_EDITABLES as $clave => $columna) {
+            if (array_key_exists($clave, $campos)) {
+                $asignaciones[] = "{$columna} = :{$clave}";
+                $parametros[$clave] = $campos[$clave];
+            }
+        }
+        if ($asignaciones === []) {
+            return;
+        }
+        $this->conexion->prepare(
+            'UPDATE tbanimalpublicacion SET ' . implode(', ', $asignaciones)
+            . ' WHERE tbanimalpublicacionid = :id'
+        )->execute($parametros);
+    }
+
+    /** Cierra el periodo vigente y abre otro con el estado nuevo (la historia se conserva). */
+    public function cambiarEstadoPublicacion(int $publicacionId, string $estado, ?string $motivo,
+        string $origen): void
+    {
+        $this->ejecutarConBloqueoAlta('tbanimalpublicacionestadoperiodo', function () use ($publicacionId, $estado, $motivo, $origen): void {
+            $this->conexion->prepare(
+                'UPDATE tbanimalpublicacionestadoperiodo
+                 SET tbanimalpublicacionestadoperiodofechafin = :fin
+                 WHERE tbanimalpublicacionid = :id AND tbanimalpublicacionestadoperiodofechafin IS NULL'
+            )->execute(['fin' => date('Y-m-d H:i:s'), 'id' => $publicacionId]);
+            $this->insertarEstadoPeriodo(
+                'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacionid',
+                $publicacionId, $estado, $origen, $motivo
+            );
+        });
+    }
+
     /** Normaliza tipos: PDO devuelve DECIMAL e INT como texto en MySQL. */
     private static function mapearPublicacion(array $fila): array
     {
-        return [
+        $publicacion = [
             'publicacionId' => (int) $fila['publicacionid'],
             'animalId' => (int) $fila['animalid'],
             'titulo' => $fila['titulo'],
@@ -428,6 +533,11 @@ final class AnimalComercial
                 'pueblo' => $fila['pueblo'],
             ],
         ];
+        if (array_key_exists('meinteresa', $fila)) {
+            $publicacion['meInteresa'] = (int) $fila['meinteresa'] === 1;
+        }
+
+        return $publicacion;
     }
 
     /**
@@ -438,25 +548,33 @@ final class AnimalComercial
     private function abrirEstadoPeriodo(string $tabla, string $columnaEntidad, int $entidadId,
         string $estado, string $origen): int
     {
-        return $this->ejecutarConBloqueoAlta($tabla, function () use ($tabla, $columnaEntidad, $entidadId, $estado, $origen): int {
-            $this->exigirLock($tabla);
-            $periodoId = $this->siguienteId($tabla, "{$tabla}id");
-            $sentencia = $this->conexion->prepare(
-                "INSERT INTO {$tabla}
-                 ({$tabla}id, {$columnaEntidad}, {$tabla}estado,
-                  {$tabla}fechainicio, {$tabla}fechafin, {$tabla}motivo, {$tabla}origen)
-                 VALUES (:id, :entidadId, :estado, :fechaInicio, NULL, NULL, :origen)"
-            );
-            $sentencia->execute([
-                'id' => $periodoId,
-                'entidadId' => $entidadId,
-                'estado' => strtoupper(trim($estado)),
-                'fechaInicio' => date('Y-m-d H:i:s'),
-                'origen' => $origen,
-            ]);
+        return $this->ejecutarConBloqueoAlta($tabla, fn (): int => $this->insertarEstadoPeriodo(
+            $tabla, $columnaEntidad, $entidadId, $estado, $origen
+        ));
+    }
 
-            return $periodoId;
-        });
+    /** Requiere el lock de alta de $tabla (lo toma abrirEstadoPeriodo o el llamador). */
+    private function insertarEstadoPeriodo(string $tabla, string $columnaEntidad, int $entidadId,
+        string $estado, string $origen, ?string $motivo = null): int
+    {
+        $this->exigirLock($tabla);
+        $periodoId = $this->siguienteId($tabla, "{$tabla}id");
+        $sentencia = $this->conexion->prepare(
+            "INSERT INTO {$tabla}
+             ({$tabla}id, {$columnaEntidad}, {$tabla}estado,
+              {$tabla}fechainicio, {$tabla}fechafin, {$tabla}motivo, {$tabla}origen)
+             VALUES (:id, :entidadId, :estado, :fechaInicio, NULL, :motivo, :origen)"
+        );
+        $sentencia->execute([
+            'id' => $periodoId,
+            'entidadId' => $entidadId,
+            'estado' => strtoupper(trim($estado)),
+            'fechaInicio' => date('Y-m-d H:i:s'),
+            'motivo' => $motivo,
+            'origen' => $origen,
+        ]);
+
+        return $periodoId;
     }
 
     private function exigirLock(string $tabla): void

@@ -155,9 +155,10 @@ test('Explorar es una vista distinta con tarjetas completas y acciones icono má
     // que devuelve api/publicaciones.php; la escritura requiere sesión y se
     // realiza desde publicar.js con el bearer verificado.
     const moduloExplorar = read('../../Public/js/explore.js');
-    for (const action of ['Pasar', 'Me interesa', 'Contactar']) {
+    for (const action of ['Me interesa', 'Contactar']) {
         assert.ok(moduloExplorar.includes(`'${action}'`), `falta la acción ${action}`);
     }
+    assert.equal(moduloExplorar.includes("'Pasar'"), false, 'la tarjeta ya no ofrece Pasar');
     assert.ok(moduloExplorar.includes('api/v1/publicaciones'),
         'el deck debe leer el catálogo real, no contenido de muestra');
     assert.equal(/EIF400|acad[eé]mic/i.test(explore), false);
@@ -168,12 +169,12 @@ test('publicar persiste mediante el endpoint autenticado y limpia el borrador so
     assert.ok(publicarJs.includes("method: 'POST'"));
     assert.ok(publicarJs.includes("fetch('api/v1/publicaciones'"));
     assert.ok(publicarJs.includes("sessionStorage.removeItem(DRAFT_KEY)"));
-    assert.ok(publicarApi.includes("['GET', 'POST']"));
+    assert.ok(publicarApi.includes("['GET', 'POST', 'PATCH']"));
     assert.ok(publicarApi.includes('readJsonBody()'));
 });
 
-test('Explorar persiste Pasar, Me interesa y Contactar con la Persona autenticada', () => {
-    for (const type of ['ME_INTERESA', 'PASAR', 'CONTACTAR']) {
+test('Explorar persiste Me interesa y Contactar con la Persona autenticada', () => {
+    for (const type of ['ME_INTERESA', 'CONTACTAR']) {
         assert.ok(interactionJs.includes(`'${type}'`));
     }
     assert.ok(interactionJs.includes("fetch(API_URL"));

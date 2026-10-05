@@ -251,11 +251,14 @@ export function buildCard(publicacion, { compacta = false } = {}) {
     vendedor.append(persona, element('span', null, formatSeller(publicacion)));
 
     const acciones = element('div', 'explore-card__actions');
-    for (const [accion, icono] of [['Pasar', 'fa-xmark'], ['Me interesa', 'fa-heart'],
-        ['Contactar', 'fa-message']]) {
+    for (const [accion, icono] of [['Me interesa', 'fa-heart'], ['Contactar', 'fa-message']]) {
         const boton = element('button', null);
         boton.type = 'button';
         boton.dataset.exploreAction = accion;
+        if (accion === 'Me interesa' && publicacion?.meInteresa === true) {
+            boton.dataset.saved = 'true';
+            boton.setAttribute('aria-label', 'Me interesa guardado');
+        }
         const icon = element('i');
         icon.className = `fa-solid ${icono}`;
         icon.setAttribute('aria-hidden', 'true');
@@ -387,7 +390,8 @@ async function load() {
             body: JSON.stringify({ consulta: Object.fromEntries(parametros) }),
         });
         const lista = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
-        state.items = lista;
+        // Lo que ya marcaste con Me interesa vive en /me-interesa, no en el deck.
+        state.items = lista.filter((item) => item.meInteresa !== true);
     } catch (error) {
         state.items = [];
         state.error = error.message ?? 'No fue posible cargar las publicaciones.';
@@ -464,6 +468,13 @@ function initialize() {
         load();
     });
     document.querySelector('[data-explore-retry]')?.addEventListener('click', load);
+    window.addEventListener('explore:interaction-saved', (event) => {
+        if (event.detail?.type !== 'ME_INTERESA') return;
+        const id = Number(event.detail.card?.dataset.publicacionId);
+        state.items = state.items.filter((item) => Number(item.publicacionId) !== id);
+        renderPurposeFilters();
+        render();
+    });
 
     window.addEventListener(UBICACION_USUARIO_EVENT, () => {
         leerUbicacionUsuario();

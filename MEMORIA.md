@@ -31,6 +31,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 | Carrusel | `Public/js/shared/carousel.js` |
 | Mi panel (`/mi-actividad`) | `Application/View/mi-actividad/` + `Public/js/mi-actividad.js` |
 | Ajustes de cuenta (`/ajustes`) | `Application/View/ajustes/` + `Public/js/ajustes.js` |
+| Me interesa (`/me-interesa`) | `Application/View/me-interesa/` + `Public/js/me-interesa.js` |
 | Registro / ampliación | `Application/View/registro/` + `Public/js/registro.js` |
 | Publicar | `Application/View/publicar/` + `Public/js/publicar.js` |
 | Destino seguro `?next=` | `Public/js/shared/next.js` |
@@ -87,7 +88,9 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   tarjeta de perfil. "Desactivar finca" vive dentro de "Editar finca".
 - **Ajustes de cuenta** (`/ajustes`, en el menú del avatar): perfil con
   identificación y teléfono enmascarados, y "Cómo participo".
-- "Mis publicaciones" se arma en el navegador (ver Pendientes de backend).
+- "Mis publicaciones" sale de `api/v1/publicaciones` con `mias: true` (el servidor filtra por
+  el vendedor autenticado). Cada tarjeta permite Editar (título, precio, descripción), Pausar/Reactivar y
+  marcar como Vendida.
 
 ### Publicaciones e imágenes
 - Columna `tbanimalpublicacionimagenurl VARCHAR(500) NULL` (migración
@@ -103,6 +106,32 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   amable y la opción de URL sigue funcionando.
 - Las fotos de prueba vienen de Wikimedia Commons (licencias libres; créditos
   en `Tools/seed-publicaciones-demo.php`). No usar imágenes de Google.
+- **Estados de una publicación** (periodo abierto en `tbanimalpublicacionestadoperiodo`):
+  `ACTIVO`, `PAUSADO`, `VENDIDO`, `RETIRADO`. Solo ACTIVO se ve en Explorar. Desde ACTIVO o PAUSADO
+  se puede ir a cualquiera; VENDIDO y RETIRADO son finales (409). El plan decía `CERRADO`: se
+  usó `RETIRADO`, que ya existía en el filtro de la API. Cada cambio cierra el periodo vigente,
+  abre otro (con `motivo` opcional) y deja bitácora (`ACTUALIZAR`, entidad `PUBLICACION`).
+- `PATCH api/v1/publicaciones` `{ publicacionId, titulo?, descripcion?, precio?, imagenUrl?, estado?, motivo? }`:
+  solo toca las claves presentes; una publicación ajena responde 404. `mias=true` (en GET o en
+  `consulta` del POST) exige sesión (401) y por defecto trae todos los estados.
+
+### Me interesa (guardados)
+- No hay tabla nueva: se usa `tbanimalpublicacioninteraccion` (tipo `ME_INTERESA`). El historial solo
+  crece; la **marca vigente** es la última acción del par persona/publicación: `REGISTRAR` la marca y
+  `RETIRAR` la quita (`PublicacionInteraccion::estaMarcada()`).
+- `POST api/v1/publicaciones/interacciones` acepta `accion` (`REGISTRAR` por defecto, `RETIRAR` solo
+  con `ME_INTERESA`). `RETIRAR` es idempotente (200 con `cambiado:false` si ya no estaba) y se permite
+  aunque la publicación ya no esté activa; marcar una no activa sigue dando 409.
+- `GET api/v1/publicaciones/interacciones?tipo=ME_INTERESA&pagina&tamanoPagina` (sesión): trae las
+  marcadas con los datos de la tarjeta y **en cualquier estado** (la vendida o pausada sigue ahí; la
+  pantalla la muestra como "No disponible").
+- Con sesión, el listado público `api/v1/publicaciones` agrega `meInteresa` (bool) a cada publicación; sin
+  sesión (o con token vencido) la lista sigue pública y sin ese campo. El botón "Me interesa" de la
+  tarjeta sale con `data-saved="true"` cuando corresponde.
+- `/me-interesa` está en el menú del avatar y en Mi panel; usa la tarjeta **compacta** de la portada
+  (`buildCard(..., { compacta: true })`, con "Ver más información") y le agrega "Quitar de Me interesa".
+- En Explorar, al tocar "Me interesa" la tarjeta sale del deck, y lo ya marcado no vuelve a aparecer ahí
+  (`meInteresa !== true` al cargar): vive en `/me-interesa`.
 
 ### Portada, Explorar y tarjetas
 - Inicio: hero con buscador, carrusel de publicaciones (4/2/1 por vista,
@@ -152,16 +181,13 @@ Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
 están incluidos ahí.
 
 ### Backend (para el compañero de backend)
-- **Endpoint de "mis publicaciones".** Hoy `ownPublications()` en
-  `mi-actividad.js` busca por nombre de finca y cruza finca + vendedor: dos
-  personas homónimas con fincas homónimas se confundirían. Agregar un filtro
-  autenticado (p. ej. `consulta.mias = true`) a `api/v1/publicaciones` y
-  reemplazar esa heurística.
 - **Edición de identidad.** No existe endpoint para que la persona edite su
   nombre, alias o teléfono; Ajustes → Perfil es solo lectura.
 - **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
-- Cerrar/editar/despublicar una publicación propia (hoy solo se crea).
+- Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
+- "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
+- Admin: pausar/retirar publicaciones ajenas con motivo (P1-6); reutilizará `cambiarEstadoPublicacion()` de `AnimalComercial`.
 
 ### Configuración de Supabase (panel, no código)
 - Bucket `publicaciones` público + política de subida:
@@ -174,7 +200,7 @@ están incluidos ahí.
   (Resend/Brevo/SendGrid) y el Site URL para producción.
 
 ### Frontend
-- "Pasar" en Explorar solo guarda la acción (antes avanzaba el carrusel).
+- Se quitó el botón **Pasar** de las tarjetas (un toque accidental ocultaría la publicación para siempre; el scroll ya cumple esa función). El API sigue aceptando el tipo `PASAR`, pero ninguna pantalla lo envía.
 - `renderSummary()` en `registro.js` es código muerto anterior.
 
 ## 6. Estado de pruebas
@@ -194,6 +220,28 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · jefersonbustamante · Ajustes de P1-1: tarjeta compacta, ocultar marcadas y sin Pasar
+- `/me-interesa` usa la tarjeta compacta de la portada; Explorar oculta la tarjeta al marcar "Me interesa" y lo ya marcado; se eliminó el botón Pasar de `buildCard()`.
+- Caché: `explore.js` `explore-9` / import `foto-3`, `explore-interactions.js` `interactions-2`, `me-interesa.js` `interesa-2`, `home.js` `home-7`, `publicar.js` `publish-3`, `mi-actividad.js` `panel-7`.
+- Pruebas: `public_identity_auth.test.mjs` ya no exige Pasar; `me_interesa.test.mjs` cubre la tarjeta compacta y el ocultado.
+
+### 2026-10-04 · jefersonbustamante · P1-1 Página Me interesa (guardados)
+- API: `GET` de guardados, acción `RETIRAR` idempotente y `meInteresa` en el listado (ver "Me interesa (guardados)"). Sin columnas nuevas: no toca esquema ni PDF.
+- Página nueva `/me-interesa` (ruta en `Public/.htaccess`, vista, `me-interesa.js`), enlazada desde el menú del avatar y Mi panel.
+- Archivos: `PublicacionInteraccionController.php`, `PublicacionInteraccion.php`, `AnimalComercial.php` (`listarPublicaciones` con `personaId`/`soloMarcadas`), `Public/api/publicacion-interacciones.php` y `publicaciones.php`, `explore.js` (estado guardado en la tarjeta).
+- Caché: `explore.js` pasa a `explore-8` / import `foto-2` (home, Mi panel, Publicar y la página nueva); `public-ui.js` a `public-11` en todas las vistas; `mi-actividad.js` `panel-6`, `home.js` `home-6`, `publicar.js` `publish-2`.
+- Pruebas: ampliada `Tests/api_publicaciones_test.php`; nueva `Tests/frontend/me_interesa.test.mjs`.
+- Cuidado: `publicaciones.php` ahora resuelve la sesión también en la lectura pública si llega un token, pero un token inválido no la rompe.
+- Pendiente: botón "Ver fletes cercanos" (P1-3).
+
+### 2026-10-04 · jefersonbustamante · P0-2 Mis publicaciones: listar, editar, pausar y vender
+- API: `mias=true` en `api/v1/publicaciones`; `PATCH` para editar y cambiar de estado (ver "Estados de una publicación"). Sin columnas nuevas: no toca esquema ni PDF.
+- Mi panel: usa `mias: true` (se eliminó `ownPublications()`), con botones Editar (diálogo), Pausar/Reactivar y Vendida.
+- Archivos: `AnimalPublicacionController.php`, `AnimalComercial.php` (`buscarPublicacionPropia`, `actualizarPublicacion`, `cambiarEstadoPublicacion`; `abrirEstadoPeriodo` ahora delega en `insertarEstadoPeriodo`), `Public/api/publicaciones.php`, `mi-actividad.js` (`?v=panel-5`), vista `mi-actividad`.
+- Pruebas: ampliada `Tests/api_publicaciones_test.php`; `mi_actividad.test.mjs` y `public_identity_auth.test.mjs` ajustadas al nuevo contrato (`['GET', 'POST', 'PATCH']`).
+- Cuidado: el endpoint resuelve la sesión solo cuando hace falta (crear, PATCH o `mias`); la lectura pública sigue sin sesión.
+- Plan: P0-2 marcado en `Documentation/Sprints/Plan-Cliente-Admin-2026-10.md` (queda pendiente la foto en el diálogo).
 
 ### 2026-10-04 · jefersonbustamante · Plan de trabajo cliente y administrador
 - Nuevo `Documentation/Sprints/Plan-Cliente-Admin-2026-10.md`: lo que falta para el cliente y el administrador (Me interesa, fletes cercanos, solicitud de compra, fotos de perfil y vehículo, modelo de animal, verificación de identidad, moderación) más el issue de la reunión del 29/09, ordenado P0–P3 y repartido entre Carlos, Jeremi y Jeferson.

@@ -64,6 +64,7 @@ RewriteRule ^registro/(comprador|productor|transportista)/?$ registro.php?capaci
 RewriteRule ^fletes/?$ fletes.php [END]
 RewriteRule ^mi-actividad/?$ mi-actividad.php [END]
 RewriteRule ^ajustes/?$ ajustes.php [END]
+RewriteRule ^me-interesa/?$ me-interesa.php [END]
 RewriteRule ^publicar/?$ publicar.php [END]
 RewriteRule ^sobre-nosotros/?$ sobre-nosotros.php [END]
 RewriteRule ^como-usar/?$ como-usar.php [END]

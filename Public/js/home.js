@@ -9,7 +9,7 @@ import { request } from './shared/api.js';
 import { readAuthSession } from './shared/supabase-auth.js';
 import { leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
 import { montarCarrusel } from './shared/carousel.js';
-import { buildCard } from './explore.js?v=foto-1';
+import { buildCard } from './explore.js?v=foto-3';
 
 const MAXIMO = 12;
 const FIJAS_HASTA = 4;
