@@ -31,6 +31,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 | Carrusel | `Public/js/shared/carousel.js` |
 | Mi panel (`/mi-actividad`) | `Application/View/mi-actividad/` + `Public/js/mi-actividad.js` |
 | Ajustes de cuenta (`/ajustes`) | `Application/View/ajustes/` + `Public/js/ajustes.js` |
+| Admin: moderar publicaciones (`/admin/publicaciones`) | `Application/View/publicaciones/` + `Public/js/publicaciones.js` + API `Public/api/admin-publicaciones.php` |
 | Me interesa (`/me-interesa`) | `Application/View/me-interesa/` + `Public/js/me-interesa.js` |
 | Registro / ampliación | `Application/View/registro/` + `Public/js/registro.js` |
 | Publicar | `Application/View/publicar/` + `Public/js/publicar.js` |
@@ -115,6 +116,16 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   solo toca las claves presentes; una publicación ajena responde 404. `mias=true` (en GET o en
   `consulta` del POST) exige sesión (401) y por defecto trae todos los estados.
 
+### Administrador: moderar publicaciones
+- `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
+  filtro por estado) y permite **Pausar**, **Retirar** (ambos con motivo obligatorio) y **Reactivar**.
+- API `api/v1/admin/publicaciones` (solo administrador, igual que Métodos de pago): lectura con `POST {consulta}`
+  y `PATCH { publicacionId, estado: ACTIVO|PAUSADO|RETIRADO, motivo }`. El admin no marca VENDIDO. Solo se
+  modera lo ACTIVO o PAUSADO (VENDIDO/RETIRADO son finales, 409). Reutiliza `cambiarEstadoPublicacion()`; el
+  motivo queda en el periodo de estado y la bitácora registra `MODERAR` (origen `API_ADMIN_PUBLICACIONES`).
+- Si el admin retira una publicación, el vendedor ya no puede editarla (409). Si solo la pausa, la ve en Mi
+  panel como "Pausada".
+
 ### Me interesa (guardados)
 - No hay tabla nueva: se usa `tbanimalpublicacioninteraccion` (tipo `ME_INTERESA`). El historial solo
   crece; la **marca vigente** es la última acción del par persona/publicación: `REGISTRAR` la marca y
@@ -149,7 +160,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 2. **Versiones de caché `?v=`**: súbelas al cambiar CSS/JS. Si un módulo
    compartido gana un `export`, versiona su `import` donde se usa (ya pasa con
    `explore.js?v=foto-1`, `business-rules.js?v=panel-2`,
-   `supabase-auth.js?v=session-2`, `auth-gate.js?v=auth-gate-4`).
+   `supabase-auth.js?v=session-2`, `auth-gate.js?v=auth-gate-5`).
 3. **Alias SQL siempre en minúscula** (`AS publicacionid`, nunca
    `AS publicacionId`). Postgres (producción) pasa a minúscula los alias sin
    comillas; MySQL (local) no, así que el error solo aparece en producción:
@@ -187,7 +198,6 @@ están incluidos ahí.
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
-- Admin: pausar/retirar publicaciones ajenas con motivo (P1-6); reutilizará `cambiarEstadoPublicacion()` de `AnimalComercial`.
 
 ### Configuración de Supabase (panel, no código)
 - Bucket `publicaciones` público + política de subida:
@@ -220,6 +230,14 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · jefersonbustamante · P1-6 Admin: moderar publicaciones
+- Pantalla `/admin/publicaciones` (lista, buscador, filtro de estado, Pausar/Retirar con motivo, Reactivar) y API `api/v1/admin/publicaciones` (ver "Administrador: moderar publicaciones"). Sin columnas nuevas: no toca esquema ni PDF.
+- Cableado de una ruta admin nueva: `Public/.htaccess` (página y API), `PRIVATE_ROUTES` en `auth-gate.js`, `MODULES` en `admin-ui.js`, destinos de `login.js`, enlace en el menú de las 7 vistas admin e ícono en `admin-refinements.css`.
+- Caché: `auth-gate.js` `auth-gate-5` (en `login.js`, `public-ui.js`, `admin-ui.js`, `api.js`), `admin-refinements.css` `admin-6`, `login.js` `front-8`, `publicaciones.js` `moderacion-1`.
+- Pruebas: ampliada `Tests/api_publicaciones_test.php`; `Tests/api_auth_admin_http_test.php` incluye el endpoint nuevo; nueva `Tests/frontend/admin_publicaciones.test.mjs`.
+- Cuidado: toda ruta admin nueva debe agregarse en `PRIVATE_ROUTES` y exigir `AdminAuthorization::require` en su endpoint.
+- Cuidado (página en blanco): los paneles admin son `visibility:hidden` hasta que `auth-gate.js` los revela. Un `api.js` viejo en caché del navegador carga el `auth-gate` anterior, que no conoce una ruta nueva, y la página queda en blanco aunque la API responda. Por eso `publicaciones.js` importa `shared/api.js?v=auth-gate-5` (`moderacion-2`). Una ruta admin nueva debe versionar ese import.
 
 ### 2026-10-04 · jefersonbustamante · Ajustes de P1-1: tarjeta compacta, ocultar marcadas y sin Pasar
 - `/me-interesa` usa la tarjeta compacta de la portada; Explorar oculta la tarjeta al marcar "Me interesa" y lo ya marcado; se eliminó el botón Pasar de `buildCard()`.

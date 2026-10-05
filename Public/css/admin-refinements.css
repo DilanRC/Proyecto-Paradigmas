@@ -178,3 +178,6 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
         flex-wrap:nowrap !important;
     }
 }
+
+/* Moderación de publicaciones */
+.rural-panel__nav-item[href$='admin/publicaciones']::before { content:'\f46d'; } /* clipboard-list */

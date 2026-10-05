@@ -48,7 +48,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
 | P1-4 | Foto de perfil y edición de datos personales | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-5 | Fotos de vehículos | | **Lidera** (API) | **Lidera** (pantalla) |
-| P1-6 | Administrador: moderar publicaciones | Apoya | | **Lidera** |
+| P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
 | P2-3 | Historial de vacunación | **Lidera** | | Apoya |
@@ -343,9 +343,11 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 ### P1-6 · Moderar publicaciones · Jeferson (+ Carlos)
 
-- [ ] Pantalla `/admin/publicaciones`: todas las publicaciones con su estado,
+**Estado (2026-10-04): hecho por Jeferson en la rama `jefersonbustamante`**, API y pantalla (detalle en `MEMORIA.md`). Carlos: solo falta tu revisión.
+
+- [x] Pantalla `/admin/publicaciones`: todas las publicaciones con su estado,
       vendedor y finca, con buscador.
-- [ ] Pausar o retirar una publicación con un motivo (usa el cambio de estado de P0-2).
+- [x] Pausar o retirar una publicación con un motivo (usa el cambio de estado de P0-2).
 
 ### P2-6 · Catálogos, verificación de identidad y fletes · Jeremi (+ Jeferson)
 

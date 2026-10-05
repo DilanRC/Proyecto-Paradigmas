@@ -1,4 +1,4 @@
-import './auth-gate.js?v=auth-gate-4';
+import './auth-gate.js?v=auth-gate-5';
 import './admin-ui.js';
 import { getAccessToken, readAuthSession } from './supabase-auth.js';
 

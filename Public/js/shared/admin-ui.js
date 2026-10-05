@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-4';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-5';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-5';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-6';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -31,6 +31,11 @@ const MODULES = {
         icon: 'fa-truck-pickup',
         search: 'Placa, VIN o modelo',
         hint: 'Busca en placa, VIN y modelo.',
+    },
+    'admin/publicaciones': {
+        icon: 'fa-clipboard-list',
+        search: 'Título, raza, vendedor o finca',
+        hint: 'Busca en título, raza, vendedor, finca y zona.',
     },
     'admin/metodos-pago': {
         icon: 'fa-wallet',

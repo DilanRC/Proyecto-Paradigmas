@@ -436,6 +436,12 @@ final class AnimalComercial
     /** Publicación del vendedor con su estado vigente, o null si no existe o es de otro. */
     public function buscarPublicacionPropia(int $publicacionId, int $productorVendedorId): ?array
     {
+        return $this->buscarPublicacion($publicacionId, $productorVendedorId);
+    }
+
+    /** Igual, pero con $productorVendedorId = null busca de cualquier vendedor (moderación). */
+    public function buscarPublicacion(int $publicacionId, ?int $productorVendedorId = null): ?array
+    {
         $sentencia = $this->conexion->prepare(
             'SELECT p.tbanimalpublicacionid AS publicacionid,
                     p.tbanimalpublicaciontitulo AS titulo,
@@ -447,9 +453,11 @@ final class AnimalComercial
              INNER JOIN tbanimalpublicacionestadoperiodo ep
                 ON ep.tbanimalpublicacionid = p.tbanimalpublicacionid
                AND ep.tbanimalpublicacionestadoperiodofechafin IS NULL
-             WHERE p.tbanimalpublicacionid = :id AND p.tbproductorvendedorid = :vendedorId'
+             WHERE p.tbanimalpublicacionid = :id'
+            . ($productorVendedorId === null ? '' : ' AND p.tbproductorvendedorid = :vendedorId')
         );
-        $sentencia->execute(['id' => $publicacionId, 'vendedorId' => $productorVendedorId]);
+        $sentencia->execute(['id' => $publicacionId]
+            + ($productorVendedorId === null ? [] : ['vendedorId' => $productorVendedorId]));
         $fila = $sentencia->fetch();
         if ($fila === false) {
             return null;

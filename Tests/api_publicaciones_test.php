@@ -302,6 +302,45 @@ try {
     test_same(201, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR'])['status'], 'Se puede quitar una vendida');
     test_same(409, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA'])['status'], 'No se puede marcar una vendida');
 
+    // Moderación de administrador (P1-6): lista todo, pausa/retira con motivo, bitácora.
+    require_once dirname(__DIR__) . '/Application/Controller/AdminPublicacionController.php';
+    $modera = $publicador->procesar('POST', [], [
+        'fincaNombre' => 'Finca Publicaciones',
+        'animalIdentificacion' => 'API-' . test_token('animal'),
+        'titulo' => 'Para moderar ' . test_token('titulo'),
+        'precio' => 400000,
+    ]);
+    $moderarId = (int) $modera['body']['data']['publicacionId'];
+    $animalIds[] = (int) $modera['body']['data']['animalId'];
+    $admin = new Application\Controller\AdminPublicacionController($db, test_token('admin'), $actor);
+
+    $lista = $admin->procesar('GET', ['q' => 'Para moderar', 'estado' => 'TODOS'], []);
+    test_same(200, $lista['status'], 'El admin lista publicaciones');
+    test_same([$moderarId], array_column($lista['body']['data']['publicaciones'], 'publicacionId'), 'El buscador del admin encuentra la publicación');
+    test_assert(is_string($lista['body']['data']['publicaciones'][0]['vendedor']['nombre'] ?? null), 'La lista trae el vendedor');
+    test_same(422, $admin->procesar('GET', ['estado' => 'CERRADO'], [])['status'], 'Filtro de estado inválido es 422');
+
+    test_same(422, $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'PAUSADO'])['status'], 'Pausar exige motivo');
+    test_same(422, $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'VENDIDO', 'motivo' => 'x'])['status'], 'El admin no marca vendida');
+    test_same(404, $admin->procesar('PATCH', [], ['publicacionId' => 99999999, 'estado' => 'PAUSADO', 'motivo' => 'x'])['status'], 'Publicación inexistente es 404');
+    $pausadaAdmin = $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'PAUSADO', 'motivo' => 'Foto incorrecta']);
+    test_same('PAUSADO', $pausadaAdmin['body']['data']['publicacion']['estado'], 'El admin pausa con motivo');
+    $motivoGuardado = $db->prepare('SELECT tbanimalpublicacionestadoperiodomotivo FROM tbanimalpublicacionestadoperiodo
+        WHERE tbanimalpublicacionid = :id AND tbanimalpublicacionestadoperiodofechafin IS NULL');
+    $motivoGuardado->execute(['id' => $moderarId]);
+    test_same('Foto incorrecta', $motivoGuardado->fetchColumn(), 'El motivo queda en el periodo de estado');
+    $bitacoraAdmin = $db->prepare('SELECT tbbitacoraaccion, tbbitacoraorigen FROM tbbitacora
+        WHERE tbbitacoraregistroidentificacionnumero = :r ORDER BY tbbitacoraid DESC LIMIT 1');
+    $bitacoraAdmin->execute(['r' => 'PUBLICACION:' . $moderarId]);
+    $eventoAdmin = $bitacoraAdmin->fetch();
+    test_same('MODERAR', $eventoAdmin['tbbitacoraaccion'] ?? null, 'La moderación deja bitácora MODERAR');
+    test_same('API_ADMIN_PUBLICACIONES', $eventoAdmin['tbbitacoraorigen'] ?? null, 'La bitácora indica el origen admin');
+
+    test_same('ACTIVO', $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'ACTIVO'])['body']['data']['publicacion']['estado'], 'El admin reactiva sin motivo');
+    test_same('RETIRADO', $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'RETIRADO', 'motivo' => 'Incumple las reglas'])['body']['data']['publicacion']['estado'], 'El admin retira con motivo');
+    test_same(409, $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'ACTIVO'])['status'], 'Una retirada no se reabre');
+    test_same(409, $publicador->procesar('PATCH', [], ['publicacionId' => $moderarId, 'titulo' => 'x'])['status'], 'El vendedor tampoco edita una retirada');
+
     // Imagen de la publicación: solo URLs https; nada ejecutable llega a un <img>.
     $imagen = [\Application\Controller\AnimalPublicacionController::class, 'imagenUrl'];
     test_same(null, $imagen(null), 'Sin imagen la publicación sigue siendo válida');
@@ -318,7 +357,7 @@ try {
         }
     }
 
-    echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo, mis publicaciones (editar y cambiar estado), Me interesa, validaciones e imagen https.\n";
+    echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo, mis publicaciones (editar y cambiar estado), Me interesa, moderación admin, validaciones e imagen https.\n";
 } finally {
     if ($personaOtroId !== null) {
         test_db()->prepare('DELETE FROM tbanimalpublicacioninteraccion WHERE tbpersonaid = :id')->execute(['id' => $personaOtroId]);
