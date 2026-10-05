@@ -49,7 +49,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-4 | Foto de perfil y edición de datos personales — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-5 | Fotos de vehículos — **API HECHA** (falta pantalla) | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
-| P2-1 | Validación en tiempo real de cédula y correo — **HECHO** (falta revisar máscaras) | | **Lidera** | Apoya |
+| P2-1 | Validación en tiempo real de cédula y correo — **HECHO** | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
 | P2-3 | Historial de vacunación | **Lidera** | | Apoya |
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
@@ -216,7 +216,7 @@ animal con flete.
 Es el punto 2 del issue. Ya existe `POST api/v1/registro/identificacion`, que
 valida el **formato** de la cédula.
 
-**Estado (2026-10-04): hecho por Jeremi en la rama `backend`**, API y pantalla (detalle en `MEMORIA.md` y DEC-REG-001). Reabre la consulta del correo que `d7b5a88` había retirado, ahora con límite por IP. Falta revisar las máscaras de cédula y teléfono. Las bases MySQL existentes necesitan la migración `015registroconsulta.sql`.
+**Estado (2026-10-04): hecho por Jeremi en la rama `backend`**, API y pantalla (detalle en `MEMORIA.md` y DEC-REG-001). Reabre la consulta del correo que `d7b5a88` había retirado, ahora con límite por IP (comprobado en Vercel). Máscaras de cédula y teléfono iguales al servidor. Las bases MySQL existentes necesitan la migración `015registroconsulta.sql`.
 
 - [x] Ampliarlo, o crear `api/v1/registro/disponibilidad`, para responder solo
       `{ disponible: bool }` para la cédula y para el correo. Normalizar antes de
@@ -228,7 +228,7 @@ valida el **formato** de la cédula.
       minuto por IP, 429 después.)
 - [x] Al enviar el registro se vuelve a validar en PHP con `NamedLock` (sin
       `UNIQUE`; ver la sección 0). (Ya existía.)
-- [ ] Frontend: consulta 400 ms después de que se deja de escribir; el mensaje
+- [x] Frontend: consulta 400 ms después de que se deja de escribir; el mensaje
       va debajo del campo (`field-errors.js`). Máscaras de cédula y teléfono
       iguales en el frontend y en el backend.
 
