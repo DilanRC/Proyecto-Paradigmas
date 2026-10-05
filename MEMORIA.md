@@ -256,6 +256,11 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-04 · backend · Arreglo de carga en mi-perfil.php (P1-4)
+- `Tests/api_requires_test.php` fallaba: `mi-perfil.php` cargaba `AnimalPublicacionController` antes que su controlador, y la prueba revisa el primer controlador del endpoint (le exigía `AnimalComercial`).
+- Ahora `MiPerfilController.php` hace `require_once` de `AnimalPublicacionController.php` (solo usa su `imagenUrl()` estático) y el endpoint ya no lo carga. Igual que `MiVehiculosController`.
+- Cuidado: si un controlador solo usa un método estático de otro controlador, que lo cargue el propio controlador, no el endpoint.
+
 ### 2026-10-04 · backend · P1-5 Fotos de vehículos (API)
 - Columna nueva `tbvehiculofotourl` en los 4 lugares (`000instalacioncompleta.sql`, `014vehiculofoto.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF regenerados.
 - `fotoUrl` en `api/v1/mi-vehiculos` (crear, editar y lectura) con validación https (ver "Foto del vehículo"). Sin cambios de pantalla: la parte de Mi panel queda para frontend.

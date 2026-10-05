@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Application\Controller;
 
 require_once dirname(__DIR__) . '/Service/ValidacionService.php';
+// Solo se usa su validación estática imagenUrl(); no instancia sus modelos.
+require_once __DIR__ . '/AnimalPublicacionController.php';
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
