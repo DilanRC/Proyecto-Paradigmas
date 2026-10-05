@@ -199,6 +199,18 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
    acción principal; texto secundario con `--tc-text-soft` (con `--tc-muted`
    no llega a AA en tema claro sobre los paneles).
 
+10. **Vercel: ramas y registro de imágenes.** Solo `dev` y `main` despliegan
+    (`git.deploymentEnabled` con `"**": false` en `vercel.json`); no quites esa
+    regla ni vuelvas a `ignoreCommand`, que Vercel no ejecuta con `services`.
+    Vercel lee el `vercel.json` de la rama que recibe el push: una rama vieja
+    sigue desplegando hasta que incorpore `dev`. El registro admite 50
+    imágenes; `.github/workflows/vercel-prune-registry.yml` lo poda en cada
+    push a `dev` o `main`. Si ese workflow queda en rojo, el registro se vuelve
+    a llenar y los despliegues fallan al publicar la imagen. El workflow usa
+    el secreto `VERCEL_TOKEN` del entorno `vercel-registry` de GitHub; el
+    entorno, su límite a `dev` y `main` y el secreto se configuran en GitHub,
+    no en el repo.
+
 ## 5. Pendientes
 
 Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
@@ -243,6 +255,14 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-04 · fix/vercel-ramas-y-poda · Política de ramas de Vercel y poda automática del registro
+- El registro de imágenes llegó a 50 y los despliegues de `dev` y `backend` fallaron al publicar. Causa: `services.app.ignoreCommand` nunca se ejecutó en Vercel (el log de build no lo muestra y `backend` y `jefersonbustamante` construían con el mismo script que debía omitirlas), así que ni la guarda de ramas ni la poda que vivía dentro corrieron.
+- `vercel.json`: `git.deploymentEnabled` con `"**": false`, `dev` y `main`; se quita `ignoreCommand`. Comprobado con dos ramas de prueba (una con `/` y otra sin): ninguna creó despliegue.
+- Se borra `Tools/vercel-ignore-build.sh`. La poda pasa a `.github/workflows/vercel-prune-registry.yml` (push a `dev`/`main`, conserva 15 más las 3 últimas producciones listas).
+- `Tools/vercel-prune-registry.sh`: ya no oculta los errores de la CLI no borra nada si no encuentra una producción lista (antes una respuesta vacía dejaba sin protección la imagen de producción) y protege solo las 3 producciones más recientes (protegerlas todas habría vuelto a llenar el registro tras unos 35 pushes a `main`).
+- Pruebas: `Tests/deployment_test.php` y `Tests/deployment_eval.php` ajustadas; `Tests/vercel_prune_registry_test.php` ejecuta el envoltorio contra una CLI falsa.
+- Cuidado: ver "Cuidados" punto 10. La imagen de producción se protege por etiqueta (sha del commit); si `dev` y `main` despliegan el mismo commit, la etiqueta queda en una sola imagen y la otra cuenta como una más entre las recientes.
 
 ### 2026-10-04 · jefersonbustamante · P1-4 Foto de perfil y edición de datos personales
 - Columna nueva `tbpersonafotourl` en los 4 lugares (`000instalacioncompleta.sql`, `013personafoto.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF regenerados. Las bases MySQL existentes necesitan la migración 013.

@@ -12,7 +12,7 @@ $vercelConfiguration = json_decode($vercelConfigurationText, true, 512, JSON_THR
 $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
 $databaseConfiguration = file_get_contents("{$root}/Configuration/Database.php");
-$vercelIgnoreBuild = file_get_contents("{$root}/Tools/vercel-ignore-build.sh");
+$vercelPruneWorkflow = file_get_contents("{$root}/.github/workflows/vercel-prune-registry.yml");
 
 $checks = [
     'imagen_compose_autocontenida' => str_contains($dockerfile, 'COPY Public /var/www/html/Public'),
@@ -25,17 +25,14 @@ $checks = [
     'servicio_vercel_explicito' => ($vercelConfiguration['services']['app']['entrypoint'] ?? null) === 'Dockerfile.vercel',
     'preview_solo_dev' => ($vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null) === true
         && ($vercelConfiguration['git']['deploymentEnabled']['main'] ?? null) === true
-        && ($vercelConfiguration['services']['app']['ignoreCommand'] ?? null) === 'bash Tools/vercel-ignore-build.sh'
-        && !array_key_exists('ignoreCommand', $vercelConfiguration)
-        && str_contains($vercelIgnoreBuild, 'VERCEL_GIT_COMMIT_REF:-}" == "dev"')
-        && str_contains($vercelIgnoreBuild, 'VERCEL_ENV:-}" == "production"')
-        && str_contains($vercelIgnoreBuild, 'VERCEL_REGISTRY_AUTO_PRUNE')
-        && str_contains($vercelIgnoreBuild, 'Tools/vercel-prune-registry.sh'),
+        && ($vercelConfiguration['git']['deploymentEnabled']['**'] ?? null) === false
+        && !str_contains($vercelConfigurationText, 'ignoreCommand'),
     'registro_con_poda' => is_file("{$root}/Tools/vercel-prune-registry.sh")
         && is_file("{$root}/Tools/vercel-prune-registry.php")
         && str_contains(file_get_contents("{$root}/Tools/vercel-prune-registry.sh"), 'vcr image rm')
         && str_contains(file_get_contents("{$root}/Tools/vercel-prune-registry.php"), 'function vercel_registry_borrables')
-        && str_contains($readme, 'Tools/vercel-prune-registry.sh'),
+        && str_contains($readme, 'Tools/vercel-prune-registry.sh')
+        && str_contains($vercelPruneWorkflow, 'bash Tools/vercel-prune-registry.sh --conservar'),
     'phpmyadmin_local' => str_contains($compose, 'phpmyadmin:5.2.2-apache')
         && str_contains($compose, 'PMA_HOST: db')
         && str_contains($readme, 'phpMyAdmin: <http://localhost:8081>'),
