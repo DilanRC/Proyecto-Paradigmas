@@ -1,3 +1,8 @@
+// Versionados: errorIdentificacion es un export nuevo y un navegador con la
+// copia vieja en caché rompería la página (ver MEMORIA.md, Cuidados #2).
+import { errorIdentificacion } from './identificacion.js?v=mascaras-1';
+import { TITULO_TELEFONO, telefonoValido } from './telefono.js?v=mascaras-1';
+
 export const BUSINESS_CAPABILITIES = Object.freeze({
     COMPRADOR: Object.freeze({
         id: 'COMPRADOR',
@@ -87,10 +92,12 @@ export function validatePersonaDraft(persona = {}, { requirePassword = true } = 
         if (value.length > 75) errors[field] = 'No puede superar 75 caracteres.';
     }
 
-    const phoneDigits = String(persona.telefono ?? '').replace(/\D/g, '');
-    if (persona.telefono && (phoneDigits.length < 8 || phoneDigits.length > 15)) {
-        errors.telefono = 'Use entre 8 y 15 dígitos.';
-    }
+    // Mismas reglas que el servidor (ValidacionService), para no enterarse del
+    // error recién después de crear la cuenta en Supabase.
+    const errorId = errorIdentificacion(persona.identificacionTipo, persona.identificacionNumero);
+    if (errorId) errors.identificacionNumero = errorId;
+    const telefono = String(persona.telefono ?? '').trim();
+    if (telefono && !telefonoValido(telefono)) errors.telefono = TITULO_TELEFONO;
 
     if (persona.correoElectronico && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(persona.correoElectronico))) {
         errors.correoElectronico = 'Ingrese un correo válido.';

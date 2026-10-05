@@ -5,7 +5,7 @@ import {
     validateCapabilities,
     validateFincas,
     validatePersonaDraft,
-} from './shared/business-rules.js';
+} from './shared/business-rules.js?v=mascaras-1';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
@@ -14,7 +14,8 @@ import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { safeNext } from './shared/next.js';
 import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js';
-import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
+import { aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
+import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './shared/telefono.js?v=mascaras-1';
 
 const DRAFT_KEY = REGISTRATION_DRAFT_KEY;
 const PROFILE_KEY = 'tindercows:profile';
@@ -502,7 +503,9 @@ async function initialize() {
         if (!(identificacionNumero instanceof HTMLInputElement)) return false;
         const tipo = identificacionTipo?.value ?? '';
         const numero = identificacionNumero.value.trim();
-        if (!tipo || !numero || !identificacionNumero.validity.valid) {
+        // Un número que el servidor rechazaría no se consulta: su mensaje lo
+        // muestra validatePersonaDraft() bajo el campo.
+        if (!tipo || !numero || !identificacionNumero.validity.valid || errorIdentificacion(tipo, numero)) {
             setIdentityState('idle');
             return false;
         }
@@ -522,7 +525,10 @@ async function initialize() {
             setIdentityState('taken', 'La identificación ya está registrada.');
             return false;
         } catch (error) {
-            if (revision === identityRevision) setIdentityState('error', mensajeVerificacion(error, 'No se pudo verificar la identificación. Intenta de nuevo.'));
+            if (revision !== identityRevision) return false;
+            const formato = error?.status === 422 ? error.errors?.identificacionNumero : '';
+            if (formato) setIdentityState('taken', formato);
+            else setIdentityState('error', mensajeVerificacion(error, 'No se pudo verificar la identificación. Intenta de nuevo.'));
             return false;
         }
     };
@@ -587,7 +593,7 @@ async function initialize() {
         if (extending) return;
         const tipo = identificacionTipo?.value ?? '';
         const numero = identificacionNumero instanceof HTMLInputElement ? identificacionNumero.value.trim() : '';
-        if (!tipo || !numero || !identificacionNumero?.validity?.valid) {
+        if (!tipo || !numero || !identificacionNumero?.validity?.valid || errorIdentificacion(tipo, numero)) {
             setIdentityState('idle');
             return;
         }
@@ -657,6 +663,13 @@ async function initialize() {
     identificacionNumero?.addEventListener('input', scheduleIdentityCheck);
     identityRetry?.addEventListener('click', () => { void checkIdentity(); });
     actualizarIdentificacion();
+    // Mismo campo de teléfono que en los paneles admin: solo admite lo que acepta el servidor.
+    const telefono = form.elements.namedItem('telefono');
+    if (telefono instanceof HTMLInputElement) {
+        telefono.pattern = PATRON_TELEFONO;
+        telefono.title = TITULO_TELEFONO;
+        aplicarRestriccionTelefono(telefono);
+    }
     correoElectronico?.addEventListener('input', scheduleEmailCheck);
     scheduleEmailCheck();
     form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });

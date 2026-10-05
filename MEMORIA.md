@@ -88,11 +88,20 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - **Límite por IP (DEC-REG-001):** el endpoint de disponibilidad permite 20 consultas por IP cada 60 s
   (`RegistroConsulta::LIMITE` y `VENTANA_SEGUNDOS`); la siguiente responde **429** con `Retry-After: 60`. Tabla
   `tbregistroconsulta` (hash SHA-256 de la IP, nunca la IP; se limpia sola). La IP sale de `X-Real-IP` (proxy de
-  Vercel) o de `REMOTE_ADDR`. El esquema ahora tiene **35 tablas**.
+  Vercel) o de `REMOTE_ADDR`. El esquema ahora tiene **35 tablas**. **Comprobado en Vercel (05/10, preview de
+  `backend`):** con `X-Real-IP`/`X-Forwarded-For` inventadas todas las consultas cuentan como la IP real (no se puede
+  saltar el límite), y una segunda IP (celular con datos) seguía consultando mientras la primera tenía 429: el límite
+  es por IP, no global.
 - **Correo en el formulario (P2-1):** `registro.js` consulta el correo 400 ms después de dejar de escribir
   (`scheduleEmailCheck` / `checkEmail`, mensaje en `[data-correo-status]`), solo en el alta **sin sesión**. Solo
   bloquea "Siguiente" y "Registrar" si el correo ya está registrado; si la consulta falla, deja seguir (el servidor
   revalida). Un 429 muestra el mensaje del servidor ("Espera un minuto…"), también en la cédula.
+- **Máscaras iguales al servidor (P2-1):** `errorIdentificacion()` en `shared/identificacion.js` copia las reglas y
+  mensajes de `ValidacionService::validarIdentificacion()` (`REGLAS_SERVIDOR`), y el registro usa `telefono.js`
+  (`telefonoValido`, `PATRON_TELEFONO`, `aplicarRestriccionTelefono`), igual que los paneles admin. Ambas se aplican en
+  `validatePersonaDraft`. `Tests/frontend/mascaras.test.mjs` compara las reglas JS con las del PHP: **si cambias una
+  regla de identificación en PHP, cambia también `REGLAS_SERVIDOR`**. Ajustes → Perfil todavía no usa `telefono.js`
+  (el servidor sí valida).
 - **Ojo, decisión revertida:** el 29/09 Dilan había retirado esta consulta del correo para no revelar qué correos
   existen (`d7b5a88`). Se reabrió el 04/10 por decisión del equipo, con el límite por IP (DEC-REG-001). La prueba
   que lo prohibía ahora exige que la consulta pase por el endpoint con límite. El aviso neutro al crear la cuenta en
@@ -249,11 +258,6 @@ están incluidos ahí.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
-### Pendiente de P2-1
-- Revisar que las máscaras de cédula y teléfono coincidan entre frontend y `ValidacionService`.
-- Verificar en un preview de Vercel que llega `X-Real-IP` (si no llegara, todas las consultas compartirían la IP del
-  proxy y el límite sería global).
-
 ### Frontend (pendiente de P1-5)
 - Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
   `fotoUrl`. El API ya está listo (ver "Foto del vehículo"). Mostrarla en las tarjetas de fletes cuando exista P1-2.
@@ -289,6 +293,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · backend · P2-1 Máscaras de cédula y teléfono iguales al servidor; límite por IP comprobado en Vercel
+- El registro aceptaba cédulas que el servidor rechaza (`0-1234-5678`, 10 dígitos en una física) y mostraba "No se pudo verificar"; y teléfonos con letras, que fallaban recién después de crear la cuenta en Supabase. Ahora `validatePersonaDraft` aplica las reglas del servidor (ver "Máscaras iguales al servidor") y un 422 del servidor muestra su mensaje.
+- Archivos: `shared/identificacion.js` (`errorIdentificacion`, `REGLAS_SERVIDOR`), `shared/business-rules.js`, `registro.js`. Caché: `registro.js?v=signup-7`; imports `business-rules.js`, `identificacion.js` y `telefono.js` con `?v=mascaras-1`.
+- Pruebas: nueva `Tests/frontend/mascaras.test.mjs`.
+- `X-Real-IP` comprobado en el preview de Vercel (ver "Límite por IP"): no se puede falsificar y el límite es por IP.
 
 ### 2026-10-04 · backend · P2-1 Correo en tiempo real en el registro (frontend)
 - `registro.js` consulta el correo como ya lo hacía con la cédula y muestra el 429 con el mensaje del servidor (ver "Correo en el formulario"). Vista con `[data-correo-status]`; caché `registro.js?v=signup-6`.

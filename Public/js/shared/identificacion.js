@@ -1,7 +1,8 @@
 // Restricciones del campo de identificacion segun el tipo elegido.
 //
-// Los patrones son EXACTAMENTE los que aplica el backend en
-// Application/Controller/*Controller.php::validarIdentificacion():
+// El atributo `pattern` solo filtra caracteres; las longitudes y el "no inicia
+// con cero" de cada tipo los revisa errorIdentificacion(), que copia
+// ValidacionService::validarIdentificacion().
 //
 // Las longitudes se basan en los formatos oficiales consultados del TSE y del
 // Ministerio de Hacienda. El backend repite estas reglas; el navegador solo
@@ -27,6 +28,29 @@ const GUIA = {
     NITE: { ejemplo: '1111111111', formato: '10 dígitos, sin guiones.', minLength: 10, maxLength: 10 },
     PASAPORTE: { ejemplo: 'AB1234567', formato: 'Hasta 9 letras y dígitos, sin símbolos.', minLength: 1, maxLength: 9 },
 };
+
+// Copia exacta de las reglas de ValidacionService::validarIdentificacion() en
+// PHP, con sus mismos mensajes. Si cambia una, cambia la otra.
+export const REGLAS_SERVIDOR = {
+    CEDULA_FISICA: { patron: /^[1-9][0-9]{8}$/, mensaje: 'La cédula física debe tener 9 dígitos y no iniciar con cero.' },
+    CEDULA_JURIDICA: { patron: /^[1-9][0-9]{9}$/, mensaje: 'La cédula jurídica debe tener 10 dígitos.' },
+    DIMEX: { patron: /^[1-9][0-9]{10,11}$/, mensaje: 'El DIMEX debe tener 11 o 12 dígitos y no iniciar con cero.' },
+    NITE: { patron: /^[0-9]{10}$/, mensaje: 'El NITE debe tener 10 dígitos.' },
+    PASAPORTE: { patron: /^[A-Z0-9]{1,9}$/, mensaje: 'El pasaporte debe tener hasta 9 caracteres alfanuméricos.' },
+};
+
+/**
+ * Mismo juicio que el servidor: normaliza como normalizarIdentificacion() y
+ * devuelve su mensaje de error, o '' si el número es válido (o falta el tipo o
+ * el número, que se reportan aparte como obligatorios). Puro.
+ */
+export function errorIdentificacion(tipo, numero) {
+    const regla = REGLAS_SERVIDOR[tipo];
+    const texto = String(numero ?? '').trim();
+    if (!regla || texto === '') return '';
+    const normalizado = (TIPOS_NUMERICOS.includes(tipo) ? texto.replace(/[ -]+/g, '') : texto).toUpperCase();
+    return regla.patron.test(normalizado) ? '' : regla.mensaje;
+}
 
 /**
  * Regla aplicable al numero para un tipo dado.
