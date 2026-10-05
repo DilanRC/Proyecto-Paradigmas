@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 use Application\Auth\SupabaseActorResolver;
-use Application\Controller\PublicacionInteraccionController;
+use Application\Controller\MiPerfilController;
 use Configuration\Database;
 use function Configuration\readJsonBody;
 use function Configuration\sendJsonResponse;
@@ -12,45 +12,50 @@ $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
-foreach (['NamedLock', 'Bitacora', 'AnimalComercial', 'PublicacionInteraccion'] as $modelo) {
-    require_once $raiz . "/Application/Model/{$modelo}.php";
-}
 require_once $raiz . '/Application/Auth/ActorContext.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
-require_once $raiz . '/Application/Controller/PublicacionInteraccionController.php';
+require_once $raiz . '/Application/Service/AuthGuard.php';
+foreach (['NamedLock', 'Persona', 'Bitacora'] as $modelo) {
+    require_once $raiz . "/Application/Model/{$modelo}.php";
+}
+require_once $raiz . '/Application/Controller/AnimalPublicacionController.php';
+require_once $raiz . '/Application/Controller/MiPerfilController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, POST, OPTIONS');
+    header('Allow: PATCH, OPTIONS');
     http_response_code(204);
     exit;
 }
-if (!in_array($metodo, ['GET', 'POST'], true)) {
-    header('Allow: GET, POST, OPTIONS');
+if ($metodo !== 'PATCH') {
+    header('Allow: PATCH, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
 }
-$tipoContenido = strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0]));
-if ($metodo === 'POST' && $tipoContenido !== 'application/json') {
+if (strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0])) !== 'application/json') {
     sendJsonResponse(['success' => false, 'message' => 'El cuerpo debe usar Content-Type: application/json.', 'data' => null], 415);
 }
 
 try {
+    $cuerpo = readJsonBody();
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
-    $controlador = new PublicacionInteraccionController(
+    Application\Service\AuthGuard::requerirAutenticado($actor);
+    $controlador = new MiPerfilController(
         $conexion,
         $actor,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
     );
-    $respuesta = $controlador->procesar($metodo, $metodo === 'POST' ? readJsonBody() : [], $_GET);
+    $respuesta = $controlador->procesar($metodo, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
 } catch (Application\HttpException $excepcion) {
-    $body = ['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos];
-    if ($excepcion->errores !== []) $body['errors'] = $excepcion->errores;
-    sendJsonResponse($body, $excepcion->estadoHttp);
+    $cuerpoError = ['success' => false, 'message' => $excepcion->getMessage(), 'data' => $excepcion->datos];
+    if ($excepcion->errores !== []) {
+        $cuerpoError['errors'] = $excepcion->errores;
+    }
+    sendJsonResponse($cuerpoError, $excepcion->estadoHttp);
 } catch (Throwable $excepcion) {
     error_log(sprintf('[TinderCows] %s en %s:%d', $excepcion->getMessage(), $excepcion->getFile(), $excepcion->getLine()));
-    sendJsonResponse(['success' => false, 'message' => 'No fue posible guardar la interacción.', 'data' => null], 500);
+    sendJsonResponse(['success' => false, 'message' => 'No fue posible completar la solicitud.', 'data' => null], 500);
 }

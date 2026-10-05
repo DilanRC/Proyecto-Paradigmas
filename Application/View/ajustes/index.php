@@ -12,13 +12,13 @@
     <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-7">
+    <link rel="stylesheet" href="css/public-product.css?v=product-8">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-3">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-10"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-3"></script>
+    <script type="module" src="js/public-ui.js?v=public-12"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-4"></script>
 </head>
 <body class="public-home activity-page settings-page">
     <div class="public-shell" id="inicio">
@@ -51,9 +51,26 @@
                     </div>
 
                     <section class="activity-panel" id="perfil" aria-labelledby="perfil-title" tabindex="-1">
-                        <div class="panel-head"><h2 id="perfil-title">Perfil</h2></div>
+                        <div class="panel-head"><h2 id="perfil-title">Perfil</h2><button id="profile-edit" class="activity-button activity-button--sm" type="button">Editar datos</button></div>
+                        <div class="profile-photo">
+                            <span class="profile-photo__avatar" id="profile-avatar" aria-hidden="true"></span>
+                            <div class="profile-photo__actions">
+                                <input id="profile-photo-file" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                                <div>
+                                    <button id="profile-photo-change" class="activity-button activity-button--sm" type="button">Cambiar foto</button>
+                                    <button id="profile-photo-remove" class="activity-button activity-button--text" type="button" hidden>Quitar foto</button>
+                                </div>
+                                <p id="profile-photo-status" class="settings-hint" role="status" aria-live="polite">JPG, PNG o WebP de hasta 5 MB.</p>
+                            </div>
+                        </div>
                         <dl id="profile-list" class="settings-profile"></dl>
-                        <p class="settings-hint">Tu perfil es uno solo y se usa igual cuando compras, vendes o transportas.</p>
+                        <form id="profile-form" class="profile-form" novalidate hidden>
+                            <label class="field"><span>Alias <span class="label">opcional</span></span><input name="alias" maxlength="150" autocomplete="off" aria-describedby="profile-alias-error"><small id="profile-alias-error" class="field-error" data-profile-error="alias"></small></label>
+                            <label class="field"><span>Teléfono</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" required aria-describedby="profile-telefono-error"><small id="profile-telefono-error" class="field-error" data-profile-error="telefono"></small></label>
+                            <p id="profile-form-status" class="auth-status" role="status" aria-live="polite"></p>
+                            <div class="profile-form__actions"><button id="profile-cancel" class="activity-button" type="button">Cancelar</button><button id="profile-save" class="activity-button activity-button--primary" type="submit">Guardar</button></div>
+                        </form>
+                        <p class="settings-hint">Tu perfil es uno solo y se usa igual cuando compras, vendes o transportas. El nombre, la identificación y el correo no se editan aquí.</p>
                     </section>
 
                     <section class="activity-panel" id="participacion" aria-labelledby="participacion-title" tabindex="-1">

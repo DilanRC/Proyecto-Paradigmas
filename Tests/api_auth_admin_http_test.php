@@ -40,6 +40,8 @@ $admins = [
     'transportistas.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 'prohibido' => null],
     'vehiculos.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 'prohibido' => null],
     'pagometodos.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 'prohibido' => null],
+    'mi-perfil.php' => ['verbos' => ['PATCH'], 'prohibido' => 'GET'],
+    'admin-publicaciones.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
     'compradores.php' => ['verbos' => ['GET', 'POST', 'DELETE', 'PATCH'], 'prohibido' => 'PUT'],
     'fincas-direccion.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE'], 'prohibido' => 'PATCH'],
     'transportistas-vehiculos.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE'], 'prohibido' => 'PATCH'],

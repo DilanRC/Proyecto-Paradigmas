@@ -7,9 +7,12 @@ import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { createToast } from './shared/toast.js';
+import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
+import { safeImageUrl } from './explore.js?v=foto-3';
 
 const ACTIVITY_API = 'api/v1/actividad';
 const REGISTRO_API = 'api/v1/registro';
+const PERFIL_API = 'api/v1/mi-perfil';
 let activityData = null;
 const pendingChanges = new Set();
 let toast = null;
@@ -46,7 +49,133 @@ function sensitiveRow(label, value, key) {
     return `<div><dt>${label}</dt><dd><span data-sensitive="${key}" data-masked="${escapeHtml(maskTail(real))}" data-real="${escapeHtml(real)}">${escapeHtml(maskTail(real))}</span><button class="activity-button activity-button--text" type="button" data-reveal="${key}" aria-pressed="false" aria-label="Mostrar ${label.toLowerCase()}">Mostrar</button></dd></div>`;
 }
 
+/** Solo lo que cambió: el API no toca lo que no se envía. */
+export function cambiosPerfil(valores = {}, persona = {}) {
+    const cambios = {};
+    const alias = String(valores.alias ?? '').trim();
+    if (alias !== String(persona.alias ?? '')) cambios.alias = alias === '' ? null : alias;
+    const telefono = String(valores.telefono ?? '').trim();
+    if (telefono !== String(persona.telefono ?? '')) cambios.telefono = telefono;
+    return cambios;
+}
+
+function renderAvatar(persona = {}) {
+    const avatar = document.querySelector('#profile-avatar');
+    const foto = safeImageUrl(persona.fotoUrl);
+    const inicial = String(persona.nombre ?? '').trim().charAt(0).toUpperCase() || 'U';
+    avatar.replaceChildren();
+    if (foto) {
+        const img = document.createElement('img');
+        img.src = foto;
+        img.alt = '';
+        img.referrerPolicy = 'no-referrer';
+        // Si la imagen ya no existe, vuelve la inicial en vez de un recuadro roto.
+        img.addEventListener('error', () => { avatar.textContent = inicial; }, { once: true });
+        avatar.append(img);
+    } else {
+        avatar.textContent = inicial;
+    }
+    document.querySelector('#profile-photo-remove').hidden = !foto;
+}
+
+async function patchPerfil(cuerpo) {
+    const response = await request(PERFIL_API, { method: 'PATCH', body: JSON.stringify(cuerpo) });
+    activityData = { ...activityData, persona: { ...activityData.persona, ...response.data.persona } };
+    renderProfile(activityData.persona);
+    syncPublicProfile(activityData);
+    return response;
+}
+
+async function changePhoto(event) {
+    const archivo = event.target.files?.[0];
+    event.target.value = '';
+    const status = document.querySelector('#profile-photo-status');
+    const problema = archivo ? validarImagen(archivo) : null;
+    if (!archivo || problema) { if (problema) status.textContent = problema; return; }
+    const botones = document.querySelectorAll('#profile-photo-change, #profile-photo-remove');
+    botones.forEach((boton) => { boton.disabled = true; });
+    status.textContent = 'Subiendo foto…';
+    try {
+        const url = await subirImagenPublicacion(archivo);
+        await patchPerfil({ fotoUrl: url });
+        status.textContent = 'Foto actualizada. Se verá en el encabezado al recargar.';
+        toast?.success('Foto de perfil actualizada.');
+    } catch (error) {
+        status.textContent = error?.errors?.fotoUrl || error?.message || 'No pudimos cambiar la foto.';
+        toast?.error(status.textContent);
+    } finally {
+        botones.forEach((boton) => { boton.disabled = false; });
+    }
+}
+
+async function removePhoto() {
+    const status = document.querySelector('#profile-photo-status');
+    try {
+        await patchPerfil({ fotoUrl: null });
+        status.textContent = 'Quitamos tu foto.';
+        toast?.success('Foto de perfil quitada.');
+    } catch (error) {
+        status.textContent = error?.message || 'No pudimos quitar la foto.';
+        toast?.error(status.textContent);
+    }
+}
+
+function setProfileErrors(errors = {}) {
+    document.querySelectorAll('[data-profile-error]').forEach((node) => { node.textContent = ''; });
+    document.querySelectorAll('#profile-form [aria-invalid="true"]').forEach((node) => node.removeAttribute('aria-invalid'));
+    for (const [campo, mensaje] of Object.entries(errors)) {
+        const nodo = document.querySelector(`[data-profile-error="${campo}"]`);
+        const control = document.querySelector(`#profile-form [name="${campo}"]`);
+        if (nodo) nodo.textContent = String(mensaje);
+        if (control) control.setAttribute('aria-invalid', 'true');
+    }
+}
+
+function toggleProfileForm(abrir) {
+    const form = document.querySelector('#profile-form');
+    form.hidden = !abrir;
+    document.querySelector('#profile-edit').hidden = abrir;
+    if (!abrir) return;
+    form.elements.alias.value = activityData?.persona?.alias ?? '';
+    form.elements.telefono.value = activityData?.persona?.telefono ?? '';
+    setProfileErrors({});
+    document.querySelector('#profile-form-status').textContent = '';
+    form.elements.alias.focus();
+}
+
+async function saveProfile(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const status = document.querySelector('#profile-form-status');
+    const guardar = document.querySelector('#profile-save');
+    const cambios = cambiosPerfil(Object.fromEntries(new FormData(form).entries()), activityData?.persona);
+    if (Object.keys(cambios).length === 0) { toggleProfileForm(false); return; }
+    setProfileErrors({});
+    guardar.disabled = true;
+    status.textContent = 'Guardando…';
+    try {
+        const response = await patchPerfil(cambios);
+        toggleProfileForm(false);
+        toast?.success(response.message || 'Perfil actualizado.');
+    } catch (error) {
+        setProfileErrors(error?.errors ?? {});
+        status.textContent = error?.message || 'No pudimos guardar tus datos.';
+    } finally {
+        guardar.disabled = false;
+    }
+}
+
+function initializeProfileUi() {
+    document.querySelector('#profile-edit')?.addEventListener('click', () => toggleProfileForm(true));
+    document.querySelector('#profile-cancel')?.addEventListener('click', () => toggleProfileForm(false));
+    document.querySelector('#profile-form')?.addEventListener('submit', saveProfile);
+    document.querySelector('#profile-photo-change')?.addEventListener('click', () => document.querySelector('#profile-photo-file').click());
+    document.querySelector('#profile-photo-file')?.addEventListener('change', changePhoto);
+    document.querySelector('#profile-photo-remove')?.addEventListener('click', removePhoto);
+}
+
 function renderProfile(persona = {}) {
+    renderAvatar(persona);
     const target = document.querySelector('#profile-list');
     target.innerHTML = `
         <div><dt>Nombre</dt><dd>${escapeHtml(persona.nombre || 'Sin completar')}</dd></div>
@@ -169,6 +298,7 @@ function initialize() {
     document.querySelector('#activity-retry')?.addEventListener('click', () => loadActivity());
     window.addEventListener('hashchange', markCurrentSection);
     markCurrentSection();
+    initializeProfileUi();
     loadActivity().then(() => {
         // El contenido aparece después de cargar: recién ahí existe el ancla.
         const destino = document.getElementById(window.location.hash.slice(1));

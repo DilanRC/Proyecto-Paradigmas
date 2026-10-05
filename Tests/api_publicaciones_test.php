@@ -21,6 +21,7 @@ use Application\Model\AnimalComercial;
  */
 
 $identificaciones = [];
+$personaOtroId = null;
 $animalIds = [];
 
 /** Crea animal + observaciones + publicación activa, todo bajo lock y transacción. */
@@ -204,6 +205,142 @@ try {
     test_same(401, test_publicacion_controller()->procesar('POST', [], [])['status'],
         'La creación de publicaciones exige una Persona autenticada');
 
+    // Mis publicaciones: filtro mias, edición y cambio de estado (P0-2).
+    $miaId = (int) $publicadoPorApi['body']['data']['publicacionId'];
+    $propias = $publicador->procesar('GET', ['mias' => 'true'], []);
+    test_same(200, $propias['status'], 'mias=true con sesión debe responder 200');
+    test_same([$miaId], array_column($propias['body']['data']['publicaciones'], 'publicacionId'),
+        'mias=true solo devuelve las publicaciones del vendedor autenticado');
+    test_same(401, test_publicacion_controller()->procesar('GET', ['mias' => 'true'], [])['status'],
+        'mias=true sin sesión debe ser 401');
+    test_same(401, test_publicacion_controller()->procesar('PATCH', [], ['publicacionId' => $miaId, 'titulo' => 'x'])['status'],
+        'Editar sin sesión debe ser 401');
+
+    $editada = $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'titulo' => 'Título nuevo', 'precio' => 900000]);
+    test_same(200, $editada['status'], 'El dueño puede editar su publicación');
+    test_same('Título nuevo', $editada['body']['data']['publicacion']['titulo'], 'El título editado se guarda');
+    test_same(900000.0, $editada['body']['data']['publicacion']['precio'], 'El precio editado se guarda');
+    test_same(422, $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'titulo' => ' '])['status'],
+        'El título no puede quedar vacío');
+    test_same(422, $publicador->procesar('PATCH', [], ['publicacionId' => $miaId])['status'],
+        'Un PATCH sin cambios es 422');
+    test_same(422, $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'estado' => 'CERRADO'])['status'],
+        'Un estado fuera del catálogo es 422');
+
+    $pausada = $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'estado' => 'PAUSADO', 'motivo' => 'Revisión']);
+    test_same('PAUSADO', $pausada['body']['data']['publicacion']['estado'], 'Pausar cambia el estado vigente');
+    test_same(0, test_publicacion_controller()->procesar('GET', ['q' => 'Título nuevo'], [])['body']['data']['total'],
+        'Una publicación pausada no sale en Explorar');
+    $pausadas = $publicador->procesar('GET', ['mias' => 'true', 'estado' => 'PAUSADO'], []);
+    test_same(1, $pausadas['body']['data']['total'], 'La pausada sigue en mis publicaciones');
+    $abiertos = $db->prepare('SELECT COUNT(*) FROM tbanimalpublicacionestadoperiodo
+        WHERE tbanimalpublicacionid = :id AND tbanimalpublicacionestadoperiodofechafin IS NULL');
+    $abiertos->execute(['id' => $miaId]);
+    test_same(1, (int) $abiertos->fetchColumn(), 'Siempre hay exactamente un periodo abierto');
+
+    // Otro vendedor no puede tocar publicaciones ajenas (404, sin revelar que existen).
+    $otro = test_create_completo(['fincas' => [['nombre' => 'Finca Ajena']]]);
+    $identificaciones[] = $otro['identificacionNumero'];
+    $buscarPersona->execute(['identificacion' => $otro['identificacionNumero']]);
+    $personaOtro = $buscarPersona->fetch();
+    $ajeno = new Application\Controller\AnimalPublicacionController($db, test_token('ajeno'),
+        Application\Auth\ActorContext::usuarioVerificado((int) $personaOtro['tbpersonaid'],
+            'test-subject-' . test_token('subject'), $personaOtro['tbpersonacorreoelectronico'], null));
+    test_same(404, $ajeno->procesar('PATCH', [], ['publicacionId' => $miaId, 'titulo' => 'Robada'])['status'],
+        'Editar una publicación ajena debe ser 404');
+    test_same(0, $ajeno->procesar('GET', ['mias' => 'true'], [])['body']['data']['total'],
+        'mias=true no mezcla publicaciones de otros');
+
+    $vendida = $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'estado' => 'VENDIDO']);
+    test_same('VENDIDO', $vendida['body']['data']['publicacion']['estado'], 'Marcar como vendida cambia el estado');
+    test_same(409, $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'estado' => 'ACTIVO'])['status'],
+        'Una publicación vendida no se reabre');
+
+    // Me interesa (P1-1): lista propia, RETIRAR idempotente y marca meInteresa.
+    require_once dirname(__DIR__) . '/Application/Model/PublicacionInteraccion.php';
+    require_once dirname(__DIR__) . '/Application/Controller/PublicacionInteraccionController.php';
+    $segunda = $publicador->procesar('POST', [], [
+        'fincaNombre' => 'Finca Publicaciones',
+        'animalIdentificacion' => 'API-' . test_token('animal'),
+        'titulo' => 'Para guardar ' . test_token('titulo'),
+        'precio' => 500000,
+    ]);
+    test_same(201, $segunda['status'], 'La fixture de Me interesa debe publicar');
+    $guardableId = (int) $segunda['body']['data']['publicacionId'];
+    $animalIds[] = (int) $segunda['body']['data']['animalId'];
+    $personaOtroId = (int) $personaOtro['tbpersonaid'];
+    $comprador = new Application\Controller\PublicacionInteraccionController($db, Application\Auth\ActorContext::usuarioVerificado(
+        $personaOtroId, 'test-subject-' . test_token('subject'), $personaOtro['tbpersonacorreoelectronico'], null), test_token('interes'));
+    $ids = static fn (array $r): array => array_column($r['body']['data']['publicaciones'], 'publicacionId');
+
+    test_same(401, (new Application\Controller\PublicacionInteraccionController($db, Application\Auth\ActorContext::noAutenticado()))
+        ->procesar('GET', [], ['tipo' => 'ME_INTERESA'])['status'], 'Listar Me interesa exige sesión');
+    test_same([], $ids($comprador->procesar('GET', [], [])), 'Sin marcas la lista está vacía');
+
+    test_same(201, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA'])['status'], 'Marcar Me interesa');
+    test_same([$guardableId], $ids($comprador->procesar('GET', [], ['tipo' => 'ME_INTERESA'])), 'La marcada aparece en la lista');
+    $conMarca = $ajeno->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'];
+    test_same(true, $conMarca[0]['meInteresa'] ?? null, 'El listado trae meInteresa=true con sesión');
+    $propiaMarca = $publicador->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'];
+    test_same(false, $propiaMarca[0]['meInteresa'] ?? null, 'Otra persona ve meInteresa=false');
+    test_assert(!array_key_exists('meInteresa', test_publicacion_controller()->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'][0]),
+        'Sin sesión no hay campo meInteresa');
+
+    test_same(201, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR'])['status'], 'Retirar de Me interesa');
+    test_same([], $ids($comprador->procesar('GET', [], [])), 'Retirada ya no aparece');
+    $repetido = $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR']);
+    test_same(200, $repetido['status'], 'Retirar dos veces es idempotente');
+    test_same(false, $repetido['body']['data']['cambiado'], 'El segundo RETIRAR no escribe');
+    test_same(422, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'PASAR', 'accion' => 'RETIRAR'])['status'], 'RETIRAR solo vale para ME_INTERESA');
+    test_same(422, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'BORRAR'])['status'], 'Acción desconocida es 422');
+
+    // Una publicación vendida sigue en la lista (como "No disponible") y se puede quitar.
+    $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA']);
+    $publicador->procesar('PATCH', [], ['publicacionId' => $guardableId, 'estado' => 'VENDIDO']);
+    $lista = $comprador->procesar('GET', [], [])['body']['data']['publicaciones'];
+    test_same('VENDIDO', $lista[0]['estado'] ?? null, 'La vendida sigue en la lista con su estado');
+    test_same(201, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR'])['status'], 'Se puede quitar una vendida');
+    test_same(409, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA'])['status'], 'No se puede marcar una vendida');
+
+    // Moderación de administrador (P1-6): lista todo, pausa/retira con motivo, bitácora.
+    require_once dirname(__DIR__) . '/Application/Controller/AdminPublicacionController.php';
+    $modera = $publicador->procesar('POST', [], [
+        'fincaNombre' => 'Finca Publicaciones',
+        'animalIdentificacion' => 'API-' . test_token('animal'),
+        'titulo' => 'Para moderar ' . test_token('titulo'),
+        'precio' => 400000,
+    ]);
+    $moderarId = (int) $modera['body']['data']['publicacionId'];
+    $animalIds[] = (int) $modera['body']['data']['animalId'];
+    $admin = new Application\Controller\AdminPublicacionController($db, test_token('admin'), $actor);
+
+    $lista = $admin->procesar('GET', ['q' => 'Para moderar', 'estado' => 'TODOS'], []);
+    test_same(200, $lista['status'], 'El admin lista publicaciones');
+    test_same([$moderarId], array_column($lista['body']['data']['publicaciones'], 'publicacionId'), 'El buscador del admin encuentra la publicación');
+    test_assert(is_string($lista['body']['data']['publicaciones'][0]['vendedor']['nombre'] ?? null), 'La lista trae el vendedor');
+    test_same(422, $admin->procesar('GET', ['estado' => 'CERRADO'], [])['status'], 'Filtro de estado inválido es 422');
+
+    test_same(422, $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'PAUSADO'])['status'], 'Pausar exige motivo');
+    test_same(422, $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'VENDIDO', 'motivo' => 'x'])['status'], 'El admin no marca vendida');
+    test_same(404, $admin->procesar('PATCH', [], ['publicacionId' => 99999999, 'estado' => 'PAUSADO', 'motivo' => 'x'])['status'], 'Publicación inexistente es 404');
+    $pausadaAdmin = $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'PAUSADO', 'motivo' => 'Foto incorrecta']);
+    test_same('PAUSADO', $pausadaAdmin['body']['data']['publicacion']['estado'], 'El admin pausa con motivo');
+    $motivoGuardado = $db->prepare('SELECT tbanimalpublicacionestadoperiodomotivo FROM tbanimalpublicacionestadoperiodo
+        WHERE tbanimalpublicacionid = :id AND tbanimalpublicacionestadoperiodofechafin IS NULL');
+    $motivoGuardado->execute(['id' => $moderarId]);
+    test_same('Foto incorrecta', $motivoGuardado->fetchColumn(), 'El motivo queda en el periodo de estado');
+    $bitacoraAdmin = $db->prepare('SELECT tbbitacoraaccion, tbbitacoraorigen FROM tbbitacora
+        WHERE tbbitacoraregistroidentificacionnumero = :r ORDER BY tbbitacoraid DESC LIMIT 1');
+    $bitacoraAdmin->execute(['r' => 'PUBLICACION:' . $moderarId]);
+    $eventoAdmin = $bitacoraAdmin->fetch();
+    test_same('MODERAR', $eventoAdmin['tbbitacoraaccion'] ?? null, 'La moderación deja bitácora MODERAR');
+    test_same('API_ADMIN_PUBLICACIONES', $eventoAdmin['tbbitacoraorigen'] ?? null, 'La bitácora indica el origen admin');
+
+    test_same('ACTIVO', $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'ACTIVO'])['body']['data']['publicacion']['estado'], 'El admin reactiva sin motivo');
+    test_same('RETIRADO', $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'RETIRADO', 'motivo' => 'Incumple las reglas'])['body']['data']['publicacion']['estado'], 'El admin retira con motivo');
+    test_same(409, $admin->procesar('PATCH', [], ['publicacionId' => $moderarId, 'estado' => 'ACTIVO'])['status'], 'Una retirada no se reabre');
+    test_same(409, $publicador->procesar('PATCH', [], ['publicacionId' => $moderarId, 'titulo' => 'x'])['status'], 'El vendedor tampoco edita una retirada');
+
     // Imagen de la publicación: solo URLs https; nada ejecutable llega a un <img>.
     $imagen = [\Application\Controller\AnimalPublicacionController::class, 'imagenUrl'];
     test_same(null, $imagen(null), 'Sin imagen la publicación sigue siendo válida');
@@ -220,8 +357,11 @@ try {
         }
     }
 
-    echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo, validaciones e imagen https.\n";
+    echo "OK api_publicaciones_test: listado, observación vigente, estado por periodo, mis publicaciones (editar y cambiar estado), Me interesa, moderación admin, validaciones e imagen https.\n";
 } finally {
+    if ($personaOtroId !== null) {
+        test_db()->prepare('DELETE FROM tbanimalpublicacioninteraccion WHERE tbpersonaid = :id')->execute(['id' => $personaOtroId]);
+    }
     limpiar_animales($animalIds);
     test_cleanup_productores($identificaciones);
 }

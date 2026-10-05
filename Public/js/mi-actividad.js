@@ -2,7 +2,7 @@ import { request } from './shared/api.js';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
-import { safeImageUrl } from './explore.js?v=foto-1';
+import { safeImageUrl } from './explore.js?v=foto-3';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
@@ -14,6 +14,9 @@ const PUBLICATIONS_API = 'api/v1/publicaciones';
 let activityData = null;
 let vehiclesData = [];
 let farmsData = [];
+let publicationsData = [];
+let editingPublicationId = null;
+let lastPublicationTrigger = null;
 let editingVehicleId = null;
 let editingFarmId = null;
 let lastVehicleTrigger = null;
@@ -207,27 +210,6 @@ async function loadActivity({ quiet = false } = {}) {
     }
 }
 
-/**
- * Publicaciones propias: las de mis fincas publicadas a mi nombre.
- *
- * ponytail: la API pública no filtra por vendedor, así que se consulta por el
- * nombre de cada finca y se cruza finca + vendedor. Dos personas homónimas con
- * fincas homónimas se confundirían; agregar un filtro "mías" a
- * api/v1/publicaciones cuando Backend lo exponga.
- */
-export function ownPublications(publicaciones = [], fincas = [], nombrePersona = '') {
-    const misFincas = new Set(fincas.map((finca) => String(finca?.nombre ?? '').trim()).filter(Boolean));
-    const vistas = new Set();
-    return publicaciones.filter((item) => {
-        const id = Number(item?.publicacionId);
-        const propia = misFincas.has(String(item?.finca?.nombre ?? '').trim())
-            && String(item?.vendedor?.nombre ?? '').trim() === String(nombrePersona).trim();
-        if (!propia || vistas.has(id)) return false;
-        vistas.add(id);
-        return true;
-    });
-}
-
 function formatColones(precio) {
     if (typeof precio !== 'number' || !Number.isFinite(precio)) return 'Precio a convenir';
     return `₡${String(Math.round(precio)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
@@ -247,11 +229,22 @@ function setPublicationsView(view, message = '') {
     if (errorMessage && message) errorMessage.textContent = message;
 }
 
+const PUBLICATION_STATES = { ACTIVO: 'Activa', PAUSADO: 'Pausada', VENDIDO: 'Vendida', RETIRADO: 'Retirada' };
+
+function publicationActions(item) {
+    const id = Number(item.publicacionId);
+    const button = (action, label) => `<button class="activity-button activity-button--text" type="button" data-publication-action="${action}" data-publication-id="${id}">${label}</button>`;
+    if (item.estado === 'ACTIVO') return `<a class="activity-button activity-button--text" href="explorar?publicacion=${id}">Ver</a>${button('editar', 'Editar')}${button('PAUSADO', 'Pausar')}${button('VENDIDO', 'Vendida')}`;
+    if (item.estado === 'PAUSADO') return `${button('editar', 'Editar')}${button('ACTIVO', 'Reactivar')}${button('VENDIDO', 'Vendida')}`;
+    return '';
+}
+
 function renderPublications(publicaciones) {
+    publicationsData = publicaciones;
     const list = document.querySelector('#publications-list');
     const empty = document.querySelector('#publications-empty');
     setCount('#publications-count', publicaciones.length);
-    list.innerHTML = publicaciones.map((item) => `<article class="panel-row panel-row--media">${miniatura(item)}<div><h3>${escapeHtml(item.titulo || 'Publicación')}</h3><p>${escapeHtml(item.finca?.nombre || '')} · ${formatColones(item.precio)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(item.estado)}">${item.estado === 'ACTIVO' ? 'Activa' : escapeHtml(String(item.estado ?? '').toLowerCase())}</span>${item.estado === 'ACTIVO' ? `<a class="activity-button activity-button--text" href="explorar?publicacion=${Number(item.publicacionId)}">Ver</a>` : ''}</div></article>`).join('');
+    list.innerHTML = publicaciones.map((item) => `<article class="panel-row panel-row--media">${miniatura(item)}<div><h3>${escapeHtml(item.titulo || 'Publicación')}</h3><p>${escapeHtml(item.finca?.nombre || '')} · ${formatColones(item.precio)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(item.estado)}">${escapeHtml(PUBLICATION_STATES[item.estado] ?? String(item.estado ?? '').toLowerCase())}</span>${publicationActions(item)}</div></article>`).join('');
     empty.hidden = publicaciones.length > 0;
     if (publicaciones.length > 0) return;
     // Sin fincas no se puede publicar: el siguiente paso es registrar una.
@@ -265,16 +258,113 @@ async function loadPublications() {
     if (!isActive('PRODUCTOR')) return;
     setPublicationsView('loading');
     try {
-        const respuestas = await Promise.all(farmsData.map((finca) => request(PUBLICATIONS_API, {
+        const response = await request(PUBLICATIONS_API, {
             method: 'POST',
-            body: JSON.stringify({ consulta: { estado: 'TODOS', q: String(finca.nombre ?? ''), pagina: '1', tamanoPagina: '100' } }),
-        })));
-        const todas = respuestas.flatMap((respuesta) => respuesta.data?.publicaciones ?? []);
-        renderPublications(ownPublications(todas, farmsData, activityData?.persona?.nombre));
+            body: JSON.stringify({ consulta: { mias: true, estado: 'TODOS', pagina: '1', tamanoPagina: '100' } }),
+        });
+        renderPublications(response.data?.publicaciones ?? []);
         setPublicationsView('content');
     } catch (error) {
-        setPublicationsView('error', error?.message || 'No pudimos cargar tus publicaciones.');
+        if (error?.status === 401) endExpiredSession();
+        else setPublicationsView('error', error?.message || 'No pudimos cargar tus publicaciones.');
     }
+}
+
+async function patchPublication(cuerpo) {
+    return request(PUBLICATIONS_API, { method: 'PATCH', body: JSON.stringify(cuerpo) });
+}
+
+async function changePublicationState(id, estado) {
+    const preguntas = { PAUSADO: '¿Pausar esta publicación? Dejará de verse en Explorar.', ACTIVO: '¿Reactivar esta publicación?', VENDIDO: '¿Marcar como vendida? Ya no podrás reactivarla.' };
+    if (!id || !window.confirm(preguntas[estado] ?? '¿Cambiar el estado?')) return;
+    try {
+        const response = await patchPublication({ publicacionId: id, estado });
+        await loadPublications();
+        toast?.success(response.message || 'Publicación actualizada.');
+    } catch (error) {
+        toast?.error(error?.message || 'No fue posible actualizar la publicación.');
+    }
+}
+
+function setPublicationErrors(errors = {}) {
+    document.querySelectorAll('[data-publication-error]').forEach((node) => { node.textContent = ''; });
+    document.querySelectorAll('#publication-form [aria-invalid="true"]').forEach((node) => node.removeAttribute('aria-invalid'));
+    for (const [field, message] of Object.entries(errors)) {
+        const messageNode = document.querySelector(`[data-publication-error="${field}"]`);
+        const control = document.querySelector(`#publication-form [name="${field}"]`);
+        if (messageNode) messageNode.textContent = String(message);
+        if (control) control.setAttribute('aria-invalid', 'true');
+    }
+}
+
+function openPublicationModal(id, trigger = null) {
+    const dialog = document.querySelector('#publication-modal');
+    const form = document.querySelector('#publication-form');
+    const item = publicationsData.find((publicacion) => Number(publicacion.publicacionId) === id);
+    if (!dialog || !form || !item) return;
+    editingPublicationId = id;
+    lastPublicationTrigger = trigger;
+    form.elements.titulo.value = item.titulo ?? '';
+    form.elements.precio.value = item.precio ?? '';
+    form.elements.descripcion.value = item.descripcion ?? '';
+    setPublicationErrors({});
+    document.querySelector('#publication-form-status').textContent = '';
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else { dialog.hidden = false; dialog.setAttribute('open', ''); }
+    form.elements.titulo.focus();
+}
+
+function closePublicationModal() {
+    const dialog = document.querySelector('#publication-modal');
+    if (!dialog) return;
+    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
+    else { dialog.hidden = true; dialog.removeAttribute('open'); }
+    lastPublicationTrigger?.focus?.();
+    editingPublicationId = null;
+}
+
+async function savePublication(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const status = document.querySelector('#publication-form-status');
+    const save = document.querySelector('#publication-save');
+    const titulo = form.elements.titulo.value.trim();
+    if (!titulo) { setPublicationErrors({ titulo: 'Este dato es obligatorio.' }); status.textContent = 'Revise los datos señalados.'; return; }
+    setPublicationErrors({});
+    save.disabled = true;
+    form.setAttribute('aria-busy', 'true');
+    status.textContent = 'Guardando publicación…';
+    try {
+        const response = await patchPublication({
+            publicacionId: editingPublicationId,
+            titulo,
+            precio: form.elements.precio.value.trim() === '' ? null : Number(form.elements.precio.value),
+            descripcion: form.elements.descripcion.value.trim() || null,
+        });
+        closePublicationModal();
+        await loadPublications();
+        toast?.success(response.message || 'Publicación actualizada.');
+    } catch (error) {
+        setPublicationErrors(error?.errors ?? {});
+        status.textContent = error?.message || 'No fue posible guardar la publicación.';
+    } finally {
+        save.disabled = false;
+        form.setAttribute('aria-busy', 'false');
+    }
+}
+
+function initializePublicationUi() {
+    document.querySelector('#publications-list')?.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-publication-action]');
+        if (!button) return;
+        const id = Number(button.dataset.publicationId);
+        if (button.dataset.publicationAction === 'editar') openPublicationModal(id, button);
+        else changePublicationState(id, button.dataset.publicationAction);
+    });
+    document.querySelector('#publication-form')?.addEventListener('submit', savePublication);
+    document.querySelector('#publication-close')?.addEventListener('click', closePublicationModal);
+    document.querySelector('#publication-cancel')?.addEventListener('click', closePublicationModal);
+    document.querySelector('#publication-modal')?.addEventListener('cancel', (event) => { event.preventDefault(); closePublicationModal(); });
 }
 
 function disposeFarmEditor() {
@@ -527,6 +617,7 @@ function initialize() {
     toast = createToast({ polite: document.querySelector('#toast-status'), assertive: document.querySelector('#toast-alert') });
     initializeFarmUi();
     initializeVehicleUi();
+    initializePublicationUi();
     const params = new URLSearchParams(window.location.search);
     if (params.get('bienvenida') === '1') document.querySelector('#welcome-banner').hidden = false;
     document.querySelector('#activity-retry')?.addEventListener('click', () => loadActivity());

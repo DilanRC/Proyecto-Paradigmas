@@ -31,6 +31,7 @@
                 <a class="rural-panel__nav-item" href="admin/compradores">Compradores</a>
                 <a class="rural-panel__nav-item" href="admin/transportistas">Transportistas</a>
                 <a class="rural-panel__nav-item" href="admin/vehiculos">Vehículos</a>
+                <a class="rural-panel__nav-item" href="admin/publicaciones">Publicaciones</a>
                 <a class="rural-panel__nav-item rural-panel__nav-item--active" href="admin/metodos-pago">Métodos de pago<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
             </div>
         </nav>

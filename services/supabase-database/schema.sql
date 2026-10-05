@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonaalias VARCHAR(150) NULL,
     tbpersonatelefono VARCHAR(20) NOT NULL,
     tbpersonacorreoelectronico VARCHAR(150) NOT NULL,
-    tbpersonaestado SMALLINT NOT NULL
+    tbpersonaestado SMALLINT NOT NULL,
+    tbpersonafotourl VARCHAR(500) NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbadministrador (

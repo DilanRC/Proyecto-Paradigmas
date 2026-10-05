@@ -13,6 +13,7 @@ erDiagram
         VARCHAR tbpersonatelefono
         VARCHAR tbpersonacorreoelectronico
         TINYINT tbpersonaestado
+        VARCHAR tbpersonafotourl
     }
 
     tbproductor {

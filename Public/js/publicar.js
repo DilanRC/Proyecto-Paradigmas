@@ -1,7 +1,7 @@
 import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
 import { request } from './shared/api.js';
 import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
-import { safeImageUrl } from './explore.js?v=foto-1';
+import { safeImageUrl } from './explore.js?v=foto-3';
 
 const DRAFT_KEY = 'tindercows:publish-draft';
 // La foto elegida no viaja en el borrador: un File no se puede guardar.

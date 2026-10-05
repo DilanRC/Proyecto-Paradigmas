@@ -21,7 +21,9 @@ use Throwable;
 /** Lectura de publicaciones para la vista Explorar. */
 final class AnimalPublicacionController
 {
-    private const ESTADOS = ['TODOS', 'ACTIVO', 'VENDIDO', 'RETIRADO'];
+    private const ESTADOS = ['TODOS', 'ACTIVO', 'PAUSADO', 'VENDIDO', 'RETIRADO'];
+    /** Solo una publicación ACTIVA o PAUSADA se puede editar o cambiar de estado. */
+    private const ESTADOS_EDITABLES = ['ACTIVO', 'PAUSADO'];
 
     private readonly AnimalComercial $animales;
     private readonly PublicacionCercaniaService $cercania;
@@ -49,6 +51,7 @@ final class AnimalPublicacionController
             return match ($metodo) {
                 'GET' => $this->consultar($consulta),
                 'POST' => $this->crear($cuerpo),
+                'PATCH' => $this->actualizar($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
         } catch (HttpException $excepcion) {
@@ -116,6 +119,79 @@ final class AnimalPublicacionController
         return $this->respuesta(true, 'Publicación creada correctamente.', $resultado, 201);
     }
 
+    /**
+     * Edita precio, título, descripción y foto, y/o cambia el estado de una
+     * publicación propia. Solo se tocan las claves presentes en el cuerpo.
+     */
+    private function actualizar(array $cuerpo): array
+    {
+        $actor = $this->actor;
+        if (!$actor?->tienePersona()) {
+            throw new HttpException('Debe iniciar sesión para editar publicaciones.', 401);
+        }
+        $productor = $this->productor->buscarPorPersonaId((int) $actor->personaId);
+        if ($productor === null) {
+            throw new HttpException('La cuenta no tiene una actividad Productor configurada.', 409);
+        }
+
+        $publicacionId = $this->enteroConsulta($cuerpo['publicacionId'] ?? null, 'publicacionId');
+        $campos = [];
+        if (array_key_exists('titulo', $cuerpo)) $campos['titulo'] = self::texto($cuerpo['titulo'], 'titulo', 150, true);
+        if (array_key_exists('descripcion', $cuerpo)) $campos['descripcion'] = self::texto($cuerpo['descripcion'], 'descripcion', 500);
+        if (array_key_exists('precio', $cuerpo)) $campos['precio'] = self::numero($cuerpo['precio'], 'precio');
+        if (array_key_exists('imagenUrl', $cuerpo)) $campos['imagenUrl'] = self::imagenUrl($cuerpo['imagenUrl']);
+        $estado = null;
+        if (array_key_exists('estado', $cuerpo)) {
+            $estado = mb_strtoupper(trim((string) $cuerpo['estado']), 'UTF-8');
+            $validos = array_values(array_diff(self::ESTADOS, ['TODOS']));
+            if (!in_array($estado, $validos, true)) {
+                throw new HttpException('Revise los campos indicados.', 422, null, [
+                    'estado' => 'Use ' . implode(', ', $validos) . '.',
+                ]);
+            }
+        }
+        $motivo = self::texto($cuerpo['motivo'] ?? null, 'motivo', 250);
+        if ($campos === [] && $estado === null) {
+            throw new HttpException('Indique qué desea cambiar.', 422);
+        }
+
+        $vendedorId = (int) $productor['tbproductorid'];
+        $this->conexion->beginTransaction();
+        try {
+            $anterior = $this->animales->buscarPublicacionPropia($publicacionId, $vendedorId);
+            if ($anterior === null) {
+                throw new HttpException('La publicación no existe.', 404);
+            }
+            if (!in_array($anterior['estado'], self::ESTADOS_EDITABLES, true)) {
+                throw new HttpException('La publicación ya está cerrada y no admite cambios.', 409);
+            }
+            if ($campos !== []) {
+                $this->animales->actualizarPublicacion($publicacionId, $campos);
+            }
+            if ($estado !== null && $estado !== $anterior['estado']) {
+                $this->animales->cambiarEstadoPublicacion($publicacionId, $estado, $motivo, 'API_PUBLICACIONES');
+            }
+            $nueva = $this->animales->buscarPublicacionPropia($publicacionId, $vendedorId);
+            $this->bitacora->registrar(
+                'ACTUALIZAR',
+                'PUBLICACION:' . $publicacionId,
+                $anterior,
+                $nueva,
+                $this->solicitudId,
+                entidad: 'PUBLICACION',
+                origen: 'API_PUBLICACIONES',
+            );
+            $this->conexion->commit();
+        } catch (Throwable $error) {
+            if ($this->conexion->inTransaction()) {
+                $this->conexion->rollBack();
+            }
+            throw $error;
+        }
+
+        return $this->respuesta(true, 'Publicación actualizada correctamente.', ['publicacion' => $nueva]);
+    }
+
     private function crearPublicacionCompleta(int $productorId, int $fincaId, array $datos): array
     {
         $animalId = $this->animales->crearAnimal(
@@ -163,31 +239,37 @@ final class AnimalPublicacionController
         return $filas[0] ?? null;
     }
 
+    private static function texto(mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string
+    {
+        if ($valor === null || trim((string) $valor) === '') {
+            if ($obligatorio) {
+                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Este campo es obligatorio.']);
+            }
+            return null;
+        }
+        $valor = trim((string) $valor);
+        if (mb_strlen($valor) > $maximo) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => "No puede superar {$maximo} caracteres."]);
+        }
+        return $valor;
+    }
+
+    private static function numero(mixed $valor, string $campo, bool $entero = false): ?float
+    {
+        if ($valor === null || $valor === '') return null;
+        if (!is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número no negativo.']);
+        }
+        if ($entero && floor((float) $valor) !== (float) $valor) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un entero no negativo.']);
+        }
+        return (float) $valor;
+    }
+
     private function validarPublicacion(array $cuerpo): array
     {
-        $texto = static function (mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string {
-            if ($valor === null || trim((string) $valor) === '') {
-                if ($obligatorio) {
-                    throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Este campo es obligatorio.']);
-                }
-                return null;
-            }
-            $valor = trim((string) $valor);
-            if (mb_strlen($valor) > $maximo) {
-                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => "No puede superar {$maximo} caracteres."]);
-            }
-            return $valor;
-        };
-        $numero = static function (mixed $valor, string $campo, bool $entero = false): ?float {
-            if ($valor === null || $valor === '') return null;
-            if (!is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {
-                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número no negativo.']);
-            }
-            if ($entero && floor((float) $valor) !== (float) $valor) {
-                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un entero no negativo.']);
-            }
-            return (float) $valor;
-        };
+        $texto = self::texto(...);
+        $numero = self::numero(...);
 
         return [
             'fincaNombre' => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
@@ -209,7 +291,7 @@ final class AnimalPublicacionController
      * Vale para Supabase Storage y para direcciones externas; un esquema como
      * javascript: o data: nunca llega a la base ni a un <img>.
      */
-    public static function imagenUrl(mixed $valor): ?string
+    public static function imagenUrl(mixed $valor, string $campo = 'imagenUrl'): ?string
     {
         if ($valor === null || trim((string) $valor) === '') {
             return null;
@@ -225,7 +307,7 @@ final class AnimalPublicacionController
             && !isset($partes['pass']);
         if (!$valida) {
             throw new HttpException('Revise los campos indicados.', 422, null, [
-                'imagenUrl' => 'Usa una dirección https válida de hasta 500 caracteres.',
+                $campo => 'Usa una dirección https válida de hasta 500 caracteres.',
             ]);
         }
         return $url;
@@ -234,7 +316,19 @@ final class AnimalPublicacionController
     private function consultar(array $consulta): array
     {
         $busqueda = $this->textoConsulta($consulta['q'] ?? '', 150);
-        $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? 'ACTIVO', 10), 'UTF-8');
+        // mias=true: solo las publicaciones del vendedor autenticado, en todos sus estados.
+        $mias = filter_var($consulta['mias'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $vendedorId = null;
+        if ($mias) {
+            if (!$this->actor?->tienePersona()) {
+                throw new HttpException('Debe iniciar sesión para ver sus publicaciones.', 401);
+            }
+            $productor = $this->productor->buscarPorPersonaId((int) $this->actor->personaId);
+            $vendedorId = $productor === null ? 0 : (int) $productor['tbproductorid'];
+        }
+        // Con sesión, cada publicación trae meInteresa (ver api/v1/publicaciones/interacciones).
+        $personaId = $this->actor?->tienePersona() ? (int) $this->actor->personaId : null;
+        $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? ($mias ? 'TODOS' : 'ACTIVO'), 10), 'UTF-8');
         if (!in_array($estado, self::ESTADOS, true)) {
             throw new HttpException('El filtro de estado no es válido.', 422, null, [
                 'estado' => 'Use ' . implode(', ', self::ESTADOS) . '.',
@@ -252,18 +346,18 @@ final class AnimalPublicacionController
         $ubicacion = $this->ubicacionConsulta($consulta);
 
         if ($ubicacion === null) {
-            $resultado = $this->animales->listarPublicaciones($busqueda, $estado, $pagina, $tamano);
+            $resultado = $this->animales->listarPublicaciones($busqueda, $estado, $pagina, $tamano, $vendedorId, $personaId);
             $resultado['ranking'] = 'RECIENTE';
         } else {
             // La capa de datos conserva su paginación tradicional. Para ordenar
             // correctamente por distancia antes de paginar se obtiene el total
             // filtrado y el servicio aplica Haversine en PHP. Si el catálogo
             // crece de forma sustancial deberá evolucionar a candidatos por zona.
-            $conteo = $this->animales->listarPublicaciones($busqueda, $estado, 1, 1);
+            $conteo = $this->animales->listarPublicaciones($busqueda, $estado, 1, 1, $vendedorId);
             $total = (int) ($conteo['total'] ?? 0);
             $todas = $total === 0
                 ? []
-                : $this->animales->listarPublicaciones($busqueda, $estado, 1, $total)['publicaciones'];
+                : $this->animales->listarPublicaciones($busqueda, $estado, 1, $total, $vendedorId, $personaId)['publicaciones'];
             $resultado = $this->cercania->ordenarYPaginar(
                 $todas,
                 $ubicacion['latitud'],
