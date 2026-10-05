@@ -307,6 +307,8 @@ test('el registro verifica el correo en tiempo real (P2-1) y trata el límite po
     assert.match(registroJs, /emailState === 'taken'/);
     assert.match(registroJs, /if \(!\(await checkEmail\(\)\)\) \{/);
     assert.match(registroJs, /error\?\.status === 429/);
+    // En el alta de un solo paso el botón es Registrar: también se bloquea, salvo durante el envío.
+    assert.match(registroJs, /if \(!submitInProgress\) finishButton\.disabled = bloqueado;/);
     assert.match(read('../../Application/View/registro/index.php'), /data-correo-status[^>]*role="status"/);
 });
 

@@ -445,8 +445,12 @@ async function initialize() {
     const computeSteps = () => registrationSteps(selectedCapabilities(form), extending, solicitada);
     let steps = computeSteps();
     const syncNextButton = () => {
-        nextButton.disabled = steps[stepIndex] === 'persona'
+        const bloqueado = steps[stepIndex] === 'persona'
             && (['checking', 'taken', 'error'].includes(identityState) || emailState === 'taken');
+        nextButton.disabled = bloqueado;
+        // El alta inicial tiene un solo paso: su botón es Registrar, no Siguiente.
+        // Durante el envío el submit controla el botón (evita el doble envío).
+        if (!submitInProgress) finishButton.disabled = bloqueado;
     };
 
     const sync = () => {
@@ -684,7 +688,7 @@ async function initialize() {
             setStatus(status, identityStatus?.textContent || 'Verifique la identificación antes de terminar.', 'error');
             identificacionNumero?.focus?.();
             submitInProgress = false;
-            finishButton.disabled = false;
+            syncNextButton();
             return;
         }
         if (!(await checkEmail())) {
@@ -693,7 +697,7 @@ async function initialize() {
             setStatus(status, emailStatus?.textContent || 'Revise el correo antes de terminar.', 'error');
             correoElectronico?.focus?.();
             submitInProgress = false;
-            finishButton.disabled = false;
+            syncNextButton();
             return;
         }
         if (!(await validateCurrent())) {

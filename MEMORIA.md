@@ -279,7 +279,7 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
 ### 2026-10-04 · backend · P2-1 Correo en tiempo real en el registro (frontend)
-- `registro.js` consulta el correo como ya lo hacía con la cédula y muestra el 429 con el mensaje del servidor (ver "Correo en el formulario"). Vista con `[data-correo-status]`; caché `registro.js?v=signup-5`.
+- `registro.js` consulta el correo como ya lo hacía con la cédula y muestra el 429 con el mensaje del servidor (ver "Correo en el formulario"). Vista con `[data-correo-status]`; caché `registro.js?v=signup-6`.
 - Revierte, por decisión del equipo, el retiro de `d7b5a88` (Dilan, 29/09). Se ajustó su prueba en `supabase_auth_registration.test.mjs`: ahora exige que no vuelva `api/v1/registro/correo` y que el endpoint tenga límite y 429. Nueva prueba en `public_identity_auth.test.mjs`. DEC-REG-001 ampliada.
 - Cuidado: sin captcha, el límite por IP solo frena la enumeración de correos, no la impide.
 
