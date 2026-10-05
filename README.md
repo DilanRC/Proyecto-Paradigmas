@@ -166,18 +166,23 @@ para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
 aplicación PHP y adapta Apache al puerto indicado por `PORT`. `vercel.json`
 declara el contenedor como servicio `app` y dirige todas las rutas hacia él.
 
-`services.app.ignoreCommand` ejecuta `Tools/vercel-ignore-build.sh`: conserva
-`main` para producción, permite previews automáticos únicamente desde `dev` y
-omite la construcción en cualquier otra rama. Como el entrypoint pertenece al
-servicio `app`, Vercel exige que esta propiedad viva dentro de ese servicio.
-`git.deploymentEnabled` solo acepta
-nombres de rama; no admite comodines, así que un `"*": false` no bloquea nada.
+`git.deploymentEnabled` decide qué ramas despliegan: `"**": false` bloquea
+todas y `dev` y `main` quedan en `true` (si una rama coincide con varias
+reglas, basta una en `true`). Sin la regla `"**"`, Vercel despliega por omisión
+cualquier rama no listada. Vercel lee `vercel.json` de la rama que recibe el
+push, así que una rama creada antes de este cambio sigue desplegando hasta que
+incorpore `dev`. No use `ignoreCommand`: en la raíz es inválido cuando existe
+`services`, y dentro de `services.app` Vercel no lo ejecuta.
 
 Cada commit a `main` o `dev` empuja una imagen al Container Registry, que tiene
-un tope por repositorio. Al llenarse, el push se rechaza con `repository has
-reached the maximum allowed number of images` y todo despliegue queda en ERROR
-aunque la build haya salido bien. `Tools/vercel-prune-registry.sh` poda el
-registro: conserva las más recientes y las que sirven producción.
+un tope de 50 por repositorio. Al llenarse, el push se rechaza con `repository
+has reached the maximum allowed number of images` y todo despliegue queda en
+ERROR aunque la build haya salido bien. `Tools/vercel-prune-registry.sh` poda
+el registro: conserva las más recientes y las 3 últimas producciones listas.
+`.github/workflows/vercel-prune-registry.yml` lo ejecuta en cada push a `dev`
+o `main` con el secreto `VERCEL_TOKEN` del entorno `vercel-registry` de GitHub.
+Si ese token se revoca, el workflow falla y hay que crear otro
+(`vercel tokens create`) y guardarlo en ese entorno. A mano:
 
 ```bash
 bash Tools/vercel-prune-registry.sh --simular

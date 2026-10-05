@@ -3,6 +3,7 @@
   "framework": null,
   "git": {
     "deploymentEnabled": {
+      "**": false,
       "dev": true,
       "main": true
     }
@@ -10,8 +11,7 @@
   "services": {
     "app": {
       "root": ".",
-      "entrypoint": "Dockerfile.vercel",
-      "ignoreCommand": "bash Tools/vercel-ignore-build.sh"
+      "entrypoint": "Dockerfile.vercel"
     }
   },
   "rewrites": [

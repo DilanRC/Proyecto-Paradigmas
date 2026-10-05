@@ -1,0 +1,31 @@
+name: Poda del registro de Vercel
+
+# Cada push a dev o main empuja una imagen al Container Registry de Vercel,
+# que rechaza el push al llegar a su tope. La poda corre aquí y no dentro de la
+# build de Vercel: allá no hay PHP ni credenciales para borrar imágenes.
+on:
+  push:
+    branches: [dev, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vercel-prune-registry
+  cancel-in-progress: false
+
+jobs:
+  podar:
+    runs-on: ubuntu-latest
+    # El token vive en este entorno, limitado a dev y main, para que un
+    # workflow de otra rama no pueda leerlo.
+    environment: vercel-registry
+    steps:
+      - uses: actions/checkout@v4
+      - name: Podar imágenes antiguas
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: team_WAu7otjg9qGPWVgqgL5kv7M1
+          VERCEL_PROJECT_ID: prj_ZMpRm2m6uFpCzENo94BfmoJLQ51s
+        run: bash Tools/vercel-prune-registry.sh --conservar 15
