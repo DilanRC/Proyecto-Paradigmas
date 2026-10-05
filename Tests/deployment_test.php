@@ -12,7 +12,7 @@ $databaseSchema = file_get_contents("{$root}/Database/SqlScripts/000instalacionc
 $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
 $databaseConfiguration = file_get_contents("{$root}/Configuration/Database.php");
-$vercelIgnoreBuild = file_get_contents("{$root}/Tools/vercel-ignore-build.sh");
+$vercelPruneWorkflow = file_get_contents("{$root}/.github/workflows/vercel-prune-registry.yml");
 $publicHtaccess = file_get_contents("{$root}/Public/.htaccess");
 $vercelConfiguration = json_decode(file_get_contents("{$root}/vercel.json"), true, 512, JSON_THROW_ON_ERROR);
 
@@ -50,20 +50,18 @@ test_same(true, $vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null,
     'Vercel debe crear previews automáticos únicamente desde dev');
 test_same(true, $vercelConfiguration['git']['deploymentEnabled']['main'] ?? null,
     'Vercel debe conservar los despliegues de producción desde main');
-test_assert(!array_key_exists('*', $vercelConfiguration['git']['deploymentEnabled'] ?? []),
-    'deploymentEnabled no admite comodines: "*" no bloquea nada y deja construir cualquier rama');
-test_same('bash Tools/vercel-ignore-build.sh', $vercelConfiguration['services']['app']['ignoreCommand'] ?? null,
-    'ignoreCommand debe pertenecer al servicio que posee el entrypoint');
-test_assert(!array_key_exists('ignoreCommand', $vercelConfiguration),
-    'ignoreCommand no debe quedar en la raíz cuando existe services');
-test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_ENV:-}" == "production"'),
-    'La política debe conservar los despliegues de producción');
-test_assert(str_contains($vercelIgnoreBuild, '"${VERCEL_GIT_COMMIT_REF:-}" == "dev"'),
-    'La política debe permitir previews únicamente desde dev');
-test_assert(str_contains($vercelIgnoreBuild, 'VERCEL_REGISTRY_AUTO_PRUNE'),
-    'La política debe podar el registro antes de publicar la imagen');
-test_assert(str_contains($vercelIgnoreBuild, 'Tools/vercel-prune-registry.sh'),
-    'La política debe reutilizar la poda determinista del registro');
+test_same(false, $vercelConfiguration['git']['deploymentEnabled']['**'] ?? null,
+    'Las ramas no listadas se bloquean con "**": sin esa regla Vercel las despliega por omisión');
+test_assert(!str_contains(json_encode($vercelConfiguration), 'ignoreCommand'),
+    'ignoreCommand no se ejecuta con services: la política de ramas vive en deploymentEnabled');
+test_assert(str_contains($vercelPruneWorkflow, 'branches: [dev, main]'),
+    'La poda debe correr en cada push a las ramas que empujan imagen');
+test_assert(str_contains($vercelPruneWorkflow, 'bash Tools/vercel-prune-registry.sh --conservar'),
+    'El workflow debe reutilizar la poda determinista del registro');
+test_assert(str_contains($vercelPruneWorkflow, 'VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}'),
+    'El token de Vercel debe llegar como secreto, nunca escrito en el repositorio');
+test_assert(str_contains($vercelPruneWorkflow, 'environment: vercel-registry'),
+    'El secreto debe vivir en el entorno limitado a dev y main');
 test_assert(str_contains($compose, 'phpmyadmin:5.2.2-apache'),
     'Compose debe ofrecer phpMyAdmin para inspeccionar MySQL');
 test_assert(str_contains($compose, 'PMA_HOST: db'),
@@ -75,25 +73,5 @@ test_assert(str_contains($environmentExample, 'DB_HOST_PORT=3309'),
     'MySQL debe usar el puerto local documentado');
 test_assert(str_contains($databaseConfiguration, "'bdmercadoganadero'"),
     'El fallback de conexión debe usar el nuevo nombre de base');
-
-// La política de ramas es determinista: se ejecuta, no se infiere del texto.
-$politica = static function (array $entorno) use ($root): int {
-    $asignaciones = '';
-    foreach ($entorno as $clave => $valor) {
-        $asignaciones .= sprintf('%s=%s ', $clave, escapeshellarg($valor));
-    }
-    exec(sprintf('cd %s && %sbash Tools/vercel-ignore-build.sh > /dev/null 2>&1',
-        escapeshellarg($root), $asignaciones), $salida, $codigo);
-
-    return $codigo;
-};
-
-test_same(1, $politica(['VERCEL_ENV' => 'production', 'VERCEL_GIT_COMMIT_REF' => 'main']),
-    'main en producción debe construir');
-test_same(1, $politica(['VERCEL_ENV' => 'preview', 'VERCEL_GIT_COMMIT_REF' => 'dev']),
-    'dev debe construir su preview');
-test_same(0, $politica(['VERCEL_ENV' => 'preview', 'VERCEL_GIT_COMMIT_REF' => 'feat/explore-mode']),
-    'una rama de trabajo no debe construir ni empujar imagen al registro');
-test_same(0, $politica([]), 'sin entorno Vercel la política debe omitir la construcción');
 
 echo "OK deployment_test: despliegue por rama, phpMyAdmin y base bdmercadoganadero configurados.\n";

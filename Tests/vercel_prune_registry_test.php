@@ -75,4 +75,50 @@ test_assert(str_contains($envoltorio, '--simular'),
 test_assert(str_contains($envoltorio, '"READY"'),
     'El envoltorio debe proteger solo producciones listas');
 
+// El envoltorio se ejecuta de verdad contra una CLI falsa (VERCEL_CLI), sin red.
+$temporal = sys_get_temp_dir() . '/vercel_prune_' . bin2hex(random_bytes(4));
+mkdir($temporal);
+$cliFalsa = <<<'SH'
+#!/usr/bin/env bash
+case "$*" in
+    ls*) cat "$FALSA/produccion.json" ;;
+    "vcr image ls"*) cat "$FALSA/imagenes.json" ;;
+    "vcr image rm"*) echo "$5" >> "$FALSA/borradas.txt" ;;
+    *) exit 64 ;;
+esac
+SH;
+file_put_contents("{$temporal}/cli.sh", $cliFalsa);
+file_put_contents("{$temporal}/imagenes.json", json_encode(['images' => $catalogo], JSON_THROW_ON_ERROR));
+$podar = static function (array $produccion, string $argumentos = '') use ($root, $temporal): int {
+    @unlink("{$temporal}/borradas.txt");
+    file_put_contents("{$temporal}/produccion.json", json_encode(['deployments' => $produccion], JSON_THROW_ON_ERROR));
+    exec(sprintf('FALSA=%s VERCEL_CLI=%s bash %s --conservar 2 %s > /dev/null 2>&1',
+        escapeshellarg($temporal), escapeshellarg("bash {$temporal}/cli.sh"),
+        escapeshellarg("{$root}/Tools/vercel-prune-registry.sh"), $argumentos), $salida, $codigo);
+
+    return $codigo;
+};
+$borradas = static fn (): array => is_file("{$temporal}/borradas.txt")
+    ? file("{$temporal}/borradas.txt", FILE_IGNORE_NEW_LINES)
+    : [];
+$produccionLista = [['state' => 'READY', 'meta' => ['githubCommitSha' => '6895951ad745aaaaaaaa']]];
+
+test_same(0, $podar($produccionLista), 'La poda con producción lista debe terminar bien');
+test_same(['img_media'], $borradas(), 'La poda debe borrar solo lo que no es reciente ni sirve producción');
+test_same(0, $podar($produccionLista, '--simular'), 'La simulación debe terminar bien');
+test_same([], $borradas(), 'La simulación no debe borrar nada');
+test_same(1, $podar([]), 'Sin producción lista la poda debe fallar');
+test_same([], $borradas(), 'Sin producción lista no se debe borrar ninguna imagen');
+test_same(1, $podar([['state' => 'ERROR', 'meta' => ['githubCommitSha' => '6895951ad745aaaaaaaa']]]),
+    'Una producción en ERROR no cuenta como protegida');
+
+$nueva = static fn (string $sha): array => ['state' => 'READY', 'meta' => ['githubCommitSha' => $sha]];
+test_same(0, $podar([$nueva('aaaaaaaaaaaa'), $nueva('bbbbbbbbbbbb'), $nueva('cccccccccccc'), ...$produccionLista]),
+    'La poda con varias producciones debe terminar bien');
+test_same(['img_media', 'img_vieja'], $borradas(),
+    'Solo se protegen las 3 producciones más recientes; protegerlas todas llenaría el registro');
+
+array_map('unlink', glob("{$temporal}/*"));
+rmdir($temporal);
+
 echo "OK vercel_prune_registry_test: poda determinista con producción protegida.\n";
