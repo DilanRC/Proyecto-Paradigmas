@@ -1,3 +1,5 @@
+import { PROFILE_KEY } from './public-profile.js';
+
 export const SESSION_KEY = 'tindercows:login';
 export const SIGNUP_NEXT_STEPS_MESSAGE = 'Si el correo puede usarse para crear una cuenta, te enviaremos instrucciones. Si ya tienes acceso, inicia sesión.';
 
@@ -54,8 +56,16 @@ function writeAuthSession(session, storage = storageAvailable()) {
     return session;
 }
 
+/**
+ * Toda salida de sesión pasa por aquí (menú, panel admin, sesión vencida, login
+ * rechazado). Se borra también el perfil en caché: con nombre, cédula, teléfono y
+ * correo, no debe quedar para la próxima persona que use el dispositivo (el
+ * registro lo usaba para rellenar el formulario). El borrador del registro NO se
+ * borra: se necesita cuando Supabase pide confirmar el correo.
+ */
 export function clearAuthSession(storage = storageAvailable()) {
     storage?.removeItem?.(SESSION_KEY);
+    storage?.removeItem?.(PROFILE_KEY);
 }
 
 /** Sesión vencida o rechazada por el servidor: se limpia y se vuelve a Inicio. */

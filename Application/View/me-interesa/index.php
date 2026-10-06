@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-12"></script>
-    <script type="module" src="js/me-interesa.js?v=interesa-2"></script>
+    <script type="module" src="js/me-interesa.js?v=interesa-3"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">

@@ -4,7 +4,7 @@
 
 import { request } from './shared/api.js';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { createToast } from './shared/toast.js';
 import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-2';

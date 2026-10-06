@@ -59,6 +59,10 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Al entrar por `/entrar` sin Persona (409), `login.js` termina **primero** el registro pendiente de la pestaña
   y **después** revisa si la cuenta es admin. Antes iba al panel y un administrador nunca podía crear su perfil de
   usuario. Por `/admin/entrar` sigue mandando al panel.
+- **Toda salida de sesión borra el perfil en caché** (`tindercows:profile`, con cédula, teléfono y correo):
+  `clearAuthSession()` en `supabase-auth.js`, por donde pasan el menú, el panel admin, la sesión vencida y el login
+  rechazado. Antes quedaba en el navegador y el registro lo usaba para rellenar el formulario de la siguiente
+  persona. El borrador del registro se conserva a propósito (se necesita si Supabase pide confirmar el correo).
 - Iniciar sesión lleva a **Explorar** salvo que `next` traiga un destino
   seguro (por ejemplo `explorar?publicacion=6`).
 
@@ -400,6 +404,10 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · backend · Cerrar sesión borra el perfil en caché
+- Al cerrar sesión y pulsar "Crear cuenta", el registro aparecía con los datos de la cuenta anterior (menos contraseña y documento). Causa: `clearAuthSession()` no borraba `tindercows:profile` y `registro.js` usa ese perfil cuando no hay sesión. Ahora se borra en toda salida de sesión (ver "Navegación y sesión").
+- Caché: imports `supabase-auth.js?v=session-3` en `ajustes.js` (`ajustes-9`), `me-interesa.js` (`interesa-3`) y `mi-actividad.js` (`panel-8`). Prueba nueva `Tests/frontend/cerrar_sesion.test.mjs`.
 
 ### 2026-10-06 · backend · Lectura automática del número, cámara en celulares y documento en el registro (P2-5/P2-6)
 - Ver "Documento de identidad (P2-5)": lectura en el dispositivo con Tesseract.js, resultado calculado en PHP, "Tomar foto" solo en celulares, paso opcional en el registro y la lectura visible para el admin en `/admin/documentos`.
