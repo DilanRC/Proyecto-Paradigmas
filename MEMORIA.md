@@ -56,6 +56,9 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   revoca la sesión de Supabase, borra el permiso admin y lleva a Inicio. Una
   sesión vencida (401) en Mi panel o Ajustes usa `endExpiredSession()` y
   también va a Inicio.
+- Al entrar por `/entrar` sin Persona (409), `login.js` termina **primero** el registro pendiente de la pestaña
+  y **después** revisa si la cuenta es admin. Antes iba al panel y un administrador nunca podía crear su perfil de
+  usuario. Por `/admin/entrar` sigue mandando al panel.
 - Iniciar sesión lleva a **Explorar** salvo que `next` traiga un destino
   seguro (por ejemplo `explorar?publicacion=6`).
 
@@ -164,6 +167,25 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
   admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
 
+### Documento de identidad (P2-5)
+- La persona sube la foto o el PDF de su documento en Ajustes → Perfil (opcional). El navegador lo sube directo al
+  bucket **privado** `documentos` de Supabase Storage, en su carpeta `<id de usuario>/` (`subirDocumentoIdentidad` en
+  `shared/storage.js`: JPG, PNG, WebP o PDF, hasta 5 MB). No hay URL pública.
+- `PATCH api/v1/mi-perfil` `{ documentoRuta }`: PHP solo acepta `<sub del JWT>/<uuid>.(jpg|png|webp|pdf)` (otra carpeta,
+  `..`, una URL o `null` → 422), guarda la ruta y deja el estado en `PENDIENTE` con la fecha UTC. Un documento nuevo
+  **siempre** vuelve a `PENDIENTE`, aunque el anterior estuviera verificado. Columnas `tbpersonadocumentoruta`,
+  `tbpersonadocumentoestado` y `tbpersonadocumentofecha` (migración `016personadocumento.sql`, en los 4 lugares).
+- El tipo de documento es el de la identificación (`tbpersonaidentificaciontipo`); no hay columna aparte.
+- `api/v1/actividad` y la respuesta del PATCH devuelven `persona.documento = { estado, fecha }` o `null`, **nunca la
+  ruta** (`Persona::documentoPublico`). La bitácora guarda solo el estado anterior y el nuevo.
+- **Aviso al crear la cuenta:** `registro.js` (alta con sesión) y `login.js` (alta al confirmar el correo) marcan la
+  pestaña (`shared/aviso-documento.js`, `sessionStorage`) y Explorar muestra **una vez** un aviso con enlace a
+  Ajustes → Perfil. No hay paso de documento en el registro: al registrarse no hay sesión mientras Supabase exija
+  confirmar el correo. Si se quita la confirmación (P0-1) se puede agregar el paso, pero debe ocultarse solo si
+  vuelve la confirmación y no debe impedir crear la cuenta si la subida falla.
+- Verificar o rechazar, ver el documento con enlace firmado y borrar las fotos 90 días después de verificadas es
+  **P2-6** y necesita `SUPABASE_SECRET_KEY` en el servidor.
+
 ### Administrador: moderar publicaciones
 - `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
   filtro por estado) y permite **Pausar**, **Retirar** (ambos con motivo obligatorio) y **Reactivar**.
@@ -258,6 +280,12 @@ están incluidos ahí.
 - Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
+### Pendiente de P2-5 (va con P2-6)
+- Crear el bucket privado `documentos` y su política en Supabase (ver "Configuración de Supabase"). Sin él, la subida
+  falla con "No pudimos subir el documento".
+- Al reemplazar el documento, el archivo anterior queda en el bucket (no hay política de borrado para la persona). La
+  limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
+
 ### Frontend (pendiente de P1-5)
 - Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
   `fotoUrl`. El API ya está listo (ver "Foto del vehículo"). Mostrarla en las tarjetas de fletes cuando exista P1-2.
@@ -269,6 +297,17 @@ están incluidos ahí.
     for insert to authenticated
     with check (bucket_id = 'publicaciones' and (storage.foldername(name))[1] = auth.uid()::text);
   ```
+- **Bucket privado `documentos` (P2-5), pendiente de crear.** Lo crea el dueño del proyecto en el SQL Editor:
+  ```sql
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('documentos', 'documentos', false, 5242880,
+          array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+  on conflict (id) do nothing;
+  create policy "Subir documento propio" on storage.objects
+    for insert to authenticated
+    with check (bucket_id = 'documentos' and (storage.foldername(name))[1] = auth.uid()::text);
+  ```
+  Sin políticas de lectura, cambio ni borrado para las personas: solo el servidor, con la clave secreta, lo lee (P2-6).
 - Decidir "Confirm email": desactivarlo en desarrollo o configurar SMTP propio
   (Resend/Brevo/SendGrid) y el Site URL para producción.
 
@@ -293,6 +332,21 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · backend · Aviso para subir el documento al crear la cuenta (P2-5)
+- Nuevo `Public/js/shared/aviso-documento.js?v=aviso-1`; lo marcan `registro.js` (`signup-8`) y `login.js` (`front-10`) y lo muestra Explorar (aviso dentro de la página, no flotante, para no taparse con el aviso de "Me interesa"). Estilo `.aviso-documento` en `explore.css` (`explore-9` en Explorar, Inicio y Me interesa), solo con variables `--tc-*`.
+- Prueba nueva `Tests/frontend/aviso_documento.test.mjs`.
+
+### 2026-10-05 · backend · Un admin que se registra como usuario termina su registro
+- `login.js` (`front-9`): con 409 en `/entrar`, se completa el registro pendiente antes del acceso admin (ver "Navegación y sesión"). Se encontró al probar: una cuenta admin sin Persona siempre terminaba en el panel.
+- Prueba nueva en `Tests/frontend/registro_comprador.test.mjs`.
+
+### 2026-10-05 · backend · P2-5 Foto del documento de identidad (subida y estado)
+- Ajustes → Perfil permite subir la foto o el PDF del documento al bucket privado `documentos`; queda `PENDIENTE` (ver "Documento de identidad (P2-5)"). La verificación por el admin es P2-6.
+- Columnas `tbpersonadocumentoruta`, `tbpersonadocumentoestado` y `tbpersonadocumentofecha` en los 4 lugares (`000instalacioncompleta.sql`, `016personadocumento.sql`, `schema.sql`, `migrate.php`), diccionario, DER y PDF.
+- Archivos: `MiPerfilController.php` (`documentoRuta`), `Persona.php` (`documentoPublico`, columnas en `actualizarPerfil`), `MiActividadController.php`, `shared/storage.js` (`subirDocumentoIdentidad`, `validarDocumento`; la subida pasa a `subirArchivo` común), `ajustes.js` (`ajustes-5`, import `storage.js?v=documento-1`), vista de Ajustes.
+- Pruebas: ampliadas `Tests/api_mi_perfil_test.php` (rutas ajenas, `..`, URL, extensión, null; estado PENDIENTE; nunca expone la ruta) y `Tests/frontend/perfil.test.mjs`; `Tests/schema_test.php` con las columnas.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/016personadocumento.sql`. El bucket `documentos` todavía no existe en Supabase (SQL en "Configuración de Supabase").
 
 ### 2026-10-05 · backend · P2-1 Máscaras de cédula y teléfono iguales al servidor; límite por IP comprobado en Vercel
 - El registro aceptaba cédulas que el servidor rechaza (`0-1234-5678`, 10 dígitos en una física) y mostraba "No se pudo verificar"; y teléfonos con letras, que fallaban recién después de crear la cuenta en Supabase. Ahora `validatePersonaDraft` aplica las reglas del servidor (ver "Máscaras iguales al servidor") y un 422 del servidor muestra su mensaje.

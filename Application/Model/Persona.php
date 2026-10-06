@@ -46,6 +46,19 @@ final class Persona
         return $sentencia->fetchColumn() !== false;
     }
 
+    /**
+     * Estado del documento de identidad para la propia persona, o null si no
+     * subió ninguno. Nunca expone la ruta: el archivo es privado (P2-5).
+     */
+    public static function documentoPublico(array $fila): ?array
+    {
+        $estado = $fila['tbpersonadocumentoestado'] ?? null;
+        return $estado === null ? null : [
+            'estado' => $estado,
+            'fecha' => $fila['tbpersonadocumentofecha'] ?? null,
+        ];
+    }
+
     /** Sin distinguir mayúsculas, igual que RegistroPublicoService al registrar. */
     public function existeCorreo(string $correoElectronico): bool
     {
@@ -189,6 +202,9 @@ final class Persona
             'alias' => 'tbpersonaalias',
             'telefono' => 'tbpersonatelefono',
             'fotoUrl' => 'tbpersonafotourl',
+            'documentoRuta' => 'tbpersonadocumentoruta',
+            'documentoEstado' => 'tbpersonadocumentoestado',
+            'documentoFecha' => 'tbpersonadocumentofecha',
         ];
         $asignaciones = [];
         $parametros = ['personaId' => $personaId];

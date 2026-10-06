@@ -31,20 +31,49 @@ export function usuarioDelToken(token) {
 }
 
 export function extensionDe(tipo) {
-    return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[tipo] ?? 'jpg';
+    return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' }[tipo] ?? 'jpg';
 }
 
 /** Sube la imagen y devuelve su URL pública https. */
 export async function subirImagenPublicacion(archivo, { fetchImpl = globalThis.fetch } = {}) {
     const problema = validarImagen(archivo);
     if (problema) throw new Error(problema);
+    const { url, ruta } = await subirArchivo(BUCKET_PUBLICACIONES, archivo, fetchImpl,
+        'No pudimos subir la imagen. Puedes usar una URL o publicar sin foto.');
+    return `${url}/storage/v1/object/public/${BUCKET_PUBLICACIONES}/${ruta}`;
+}
+
+// Documento de identidad (P2-5): bucket PRIVADO. Solo su dueño sube y solo el
+// administrador lo abre, con un enlace firmado temporal (P2-6).
+export const BUCKET_DOCUMENTOS = 'documentos';
+export const TIPOS_DOCUMENTO = Object.freeze([...TIPOS_IMAGEN, 'application/pdf']);
+
+/** Problema del documento elegido, o null si se puede subir. */
+export function validarDocumento(archivo) {
+    if (!archivo) return 'Elige la foto o el PDF de tu documento.';
+    if (!TIPOS_DOCUMENTO.includes(archivo.type)) return 'Usa una imagen JPG, PNG o WebP, o un PDF.';
+    if (archivo.size > MAXIMO_BYTES) return 'El archivo no puede superar 5 MB.';
+    return null;
+}
+
+/** Sube el documento y devuelve su ruta dentro del bucket privado (no hay URL pública). */
+export async function subirDocumentoIdentidad(archivo, { fetchImpl = globalThis.fetch } = {}) {
+    const problema = validarDocumento(archivo);
+    if (problema) throw new Error(problema);
+    const { ruta } = await subirArchivo(BUCKET_DOCUMENTOS, archivo, fetchImpl,
+        'No pudimos subir el documento. Intenta de nuevo más tarde.');
+    return ruta;
+}
+
+/** Sube el archivo a la carpeta del usuario dentro del bucket. Devuelve la URL del proyecto y la ruta. */
+async function subirArchivo(bucket, archivo, fetchImpl, mensajeError) {
     const token = await getAccessToken();
     const usuario = token ? usuarioDelToken(token) : null;
-    if (!usuario) throw new Error('La sesión expiró. Entra de nuevo para subir la imagen.');
+    if (!usuario) throw new Error('La sesión expiró. Entra de nuevo para subir el archivo.');
 
     const { url, publishableKey } = (await request('api/v1/auth/config')).data ?? {};
     const ruta = `${usuario}/${crypto.randomUUID()}.${extensionDe(archivo.type)}`;
-    const respuesta = await fetchImpl(`${url}/storage/v1/object/${BUCKET_PUBLICACIONES}/${ruta}`, {
+    const respuesta = await fetchImpl(`${url}/storage/v1/object/${bucket}/${ruta}`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${token}`,
@@ -56,7 +85,7 @@ export async function subirImagenPublicacion(archivo, { fetchImpl = globalThis.f
     });
     if (!respuesta.ok) {
         // Sin bucket o sin política, Supabase responde 400/403/404.
-        throw new Error('No pudimos subir la imagen. Puedes usar una URL o publicar sin foto.');
+        throw new Error(mensajeError);
     }
-    return `${url}/storage/v1/object/public/${BUCKET_PUBLICACIONES}/${ruta}`;
+    return { url, ruta };
 }

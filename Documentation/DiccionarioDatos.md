@@ -26,6 +26,9 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 | `tbpersonacorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo compartido por todos los perfiles. | Usuario | - |
 | `tbpersonaestado` | `TINYINT(1) NOT NULL` | No | Disponibilidad global de la identidad. | Aplicación | - |
 | `tbpersonafotourl` | `VARCHAR(500) NULL` | Sí | URL https de la foto de perfil (Supabase Storage o externa). NULL = avatar con iniciales. | Usuario | - |
+| `tbpersonadocumentoruta` | `VARCHAR(255) NULL` | Sí | Ruta del documento de identidad dentro del bucket **privado** `documentos` de Supabase Storage (`<id de usuario>/<uuid>.<ext>`), nunca una URL pública. El tipo de documento es `tbpersonaidentificaciontipo`. NULL = sin documento. | Usuario | - |
+| `tbpersonadocumentoestado` | `VARCHAR(20) NULL` | Sí | Verificación del documento: `PENDIENTE`, `VERIFICADO` o `RECHAZADO`. Un documento nuevo siempre queda `PENDIENTE`. | Aplicación | - |
+| `tbpersonadocumentofecha` | `DATETIME NULL` | Sí | Fecha UTC del último cambio de estado del documento, asignada por PHP. | Aplicación | - |
 
 ## tbproductor
 

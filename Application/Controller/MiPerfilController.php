@@ -17,13 +17,16 @@ use PDO;
 use Throwable;
 
 /**
- * La persona edita sus propios datos de perfil: foto, alias y teléfono. El
+ * La persona edita sus propios datos de perfil: foto, alias, teléfono y el
+ * documento de identidad que acaba de subir (queda PENDIENTE de revisión). El
  * nombre, la identificación y el correo no se editan aquí. La Persona sale del
  * JWT verificado, nunca del cuerpo.
  */
 final class MiPerfilController
 {
-    private const EDITABLES = ['alias', 'telefono', 'fotoUrl'];
+    private const EDITABLES = ['alias', 'telefono', 'fotoUrl', 'documentoRuta'];
+    /** Documento de identidad (P2-5): archivo del bucket privado "documentos". */
+    private const DOCUMENTO_EXTENSIONES = 'jpg|png|webp|pdf';
 
     private readonly Persona $personas;
     private readonly Bitacora $bitacora;
@@ -86,6 +89,22 @@ final class MiPerfilController
                 $errores += $error->errores;
             }
         }
+        if (array_key_exists('documentoRuta', $cuerpo)) {
+            // Solo una ruta dentro de la carpeta propia del bucket (la política de
+            // Storage solo deja subir ahí), con el nombre que genera el navegador.
+            $ruta = is_string($cuerpo['documentoRuta']) ? trim($cuerpo['documentoRuta']) : '';
+            $carpeta = preg_quote((string) $this->actor->proveedorSujeto, '/');
+            if ($carpeta === '' || !preg_match(
+                '/^' . $carpeta . '\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(' . self::DOCUMENTO_EXTENSIONES . ')$/',
+                $ruta,
+            )) {
+                $errores['documentoRuta'] = 'Sube el documento desde Ajustes → Perfil.';
+            }
+            // Un documento nuevo siempre vuelve a revisión, aunque el anterior estuviera verificado.
+            $cambios['documentoRuta'] = $ruta;
+            $cambios['documentoEstado'] = 'PENDIENTE';
+            $cambios['documentoFecha'] = gmdate('Y-m-d H:i:s');
+        }
         if ($errores !== []) {
             throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         }
@@ -105,10 +124,15 @@ final class MiPerfilController
             $this->bitacora->registrar(
                 'ACTUALIZAR',
                 'PERSONA:' . $personaId,
-                ['alias' => $anterior['tbpersonaalias'], 'fotoUrl' => $anterior['tbpersonafotourl'] ?? null],
+                [
+                    'alias' => $anterior['tbpersonaalias'],
+                    'fotoUrl' => $anterior['tbpersonafotourl'] ?? null,
+                    'documentoEstado' => $anterior['tbpersonadocumentoestado'] ?? null,
+                ],
                 [
                     'alias' => $nueva['tbpersonaalias'],
                     'fotoUrl' => $nueva['tbpersonafotourl'] ?? null,
+                    'documentoEstado' => $nueva['tbpersonadocumentoestado'] ?? null,
                     'telefonoCambiado' => ($anterior['tbpersonatelefono'] ?? null) !== ($nueva['tbpersonatelefono'] ?? null),
                 ],
                 $this->solicitudId,
@@ -129,6 +153,7 @@ final class MiPerfilController
             'alias' => $nueva['tbpersonaalias'],
             'telefono' => $nueva['tbpersonatelefono'],
             'fotoUrl' => $nueva['tbpersonafotourl'] ?? null,
+            'documento' => Persona::documentoPublico($nueva),
         ]]);
     }
 

@@ -4,6 +4,7 @@ import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js
 import { safeNext } from './shared/next.js';
 import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js';
 import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-5';
+import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 
 const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones']);
 
@@ -112,17 +113,14 @@ function initialize() {
                 profile = await loadBusinessProfile();
             } catch (error) {
                 if (error?.status === 401 || error?.status === 409) {
-                    if (error?.status === 409 && await isAdminAccount()) {
-                        writeAdminBrowserSession(email);
-                        setStatus(status, 'Acceso administrativo confirmado. Abriendo TinderCows…', 'success');
-                        window.location.assign(resolveAdminNext(window.location.search));
-                        return;
-                    }
-                    if (error?.status === 409) {
-                        // Correo recién confirmado: se termina el registro con
-                        // los datos que la persona ya llenó.
+                    // Correo recién confirmado: se termina el registro con los
+                    // datos que la persona ya llenó. Va antes que el acceso
+                    // admin: si no, un administrador que se registra como
+                    // usuario terminaría siempre en el panel, sin perfil.
+                    if (error?.status === 409 && !isAdminLogin(window.location)) {
                         try {
                             if (await completarRegistroPendiente(email)) {
+                                marcarAvisoDocumento();
                                 setStatus(status, 'Cuenta confirmada. Terminando tu registro…', 'success');
                                 await loadBusinessProfile();
                                 window.location.assign(resolveNext(window.location.search));
@@ -131,6 +129,14 @@ function initialize() {
                         } catch {
                             // Si falla, el formulario de registro conserva el borrador.
                         }
+                    }
+                    if (error?.status === 409 && await isAdminAccount()) {
+                        writeAdminBrowserSession(email);
+                        setStatus(status, 'Acceso administrativo confirmado. Abriendo TinderCows…', 'success');
+                        window.location.assign(resolveAdminNext(window.location.search));
+                        return;
+                    }
+                    if (error?.status === 409) {
                         setStatus(status, 'La cuenta está validada. Completa ahora tu registro guiado para crear tu perfil.', 'info');
                         window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
                         return;
