@@ -161,7 +161,15 @@ CREATE TABLE IF NOT EXISTS public.tbanimal (
     tbanimalraza VARCHAR(100) NULL,
     tbanimalcaracteristicas VARCHAR(500) NULL,
     tbanimalfecharegistroensistema TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbanimalorigenregistro VARCHAR(100) NOT NULL
+    tbanimalorigenregistro VARCHAR(100) NOT NULL,
+    tbespecieid INTEGER NULL,
+    tbanimaltipoid INTEGER NULL,
+    tbrazaid INTEGER NULL,
+    tbanimalfechanacimiento DATE NULL,
+    tbanimalfechanacimientoestimada SMALLINT NULL,
+    tbanimalpartos INTEGER NULL,
+    tbanimalestado VARCHAR(20) NULL,
+    tbproductorid INTEGER NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalproduccionsalud (
@@ -369,6 +377,52 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistahorario (
     tbtransportistahorarioorigen VARCHAR(100) NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbespecie (
+    tbespecieid INTEGER NOT NULL,
+    tbespecienombre VARCHAR(80) NOT NULL,
+    tbespecieactivo SMALLINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbanimaltipo (
+    tbanimaltipoid INTEGER NOT NULL,
+    tbespecieid INTEGER NOT NULL,
+    tbanimaltiponombre VARCHAR(80) NOT NULL,
+    tbanimaltiposexo VARCHAR(1) NULL,
+    tbanimaltipoactivo SMALLINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbraza (
+    tbrazaid INTEGER NOT NULL,
+    tbespecieid INTEGER NOT NULL,
+    tbrazanombre VARCHAR(100) NOT NULL,
+    tbrazaactivo SMALLINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionanimal (
+    tbanimalpublicacionanimalid INTEGER NOT NULL,
+    tbanimalpublicacionid INTEGER NOT NULL,
+    tbanimalid INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbvacuna (
+    tbvacunaid INTEGER NOT NULL,
+    tbvacunanombre VARCHAR(100) NOT NULL,
+    tbvacunaactivo SMALLINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbanimalvacunacion (
+    tbanimalvacunacionid INTEGER NOT NULL,
+    tbanimalid INTEGER NOT NULL,
+    tbvacunaid INTEGER NOT NULL,
+    tbanimalvacunacionfecha DATE NOT NULL,
+    tbanimalvacunaciondosis VARCHAR(50) NULL,
+    tbanimalvacunacionlote VARCHAR(50) NULL,
+    tbanimalvacunacionaplicadapor VARCHAR(150) NULL,
+    tbanimalvacunacionproximadosis DATE NULL,
+    tbanimalvacunacionobservaciones VARCHAR(500) NULL,
+    tbanimalvacunacionfecharegistro TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
 ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbadministrador ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
@@ -406,3 +460,9 @@ ALTER TABLE public.tbtransportistahorario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbregistroconsulta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistaoferta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcomprasolicitud ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbespecie ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimaltipo ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbraza ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimalpublicacionanimal ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbvacuna ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimalvacunacion ENABLE ROW LEVEL SECURITY;

@@ -212,7 +212,15 @@ CREATE TABLE IF NOT EXISTS tbanimal (
     tbanimalraza VARCHAR(100) NULL,
     tbanimalcaracteristicas VARCHAR(500) NULL,
     tbanimalfecharegistroensistema DATETIME NOT NULL,
-    tbanimalorigenregistro VARCHAR(100) NOT NULL
+    tbanimalorigenregistro VARCHAR(100) NOT NULL,
+    tbespecieid INT NULL,
+    tbanimaltipoid INT NULL,
+    tbrazaid INT NULL,
+    tbanimalfechanacimiento DATE NULL,
+    tbanimalfechanacimientoestimada TINYINT(1) NULL,
+    tbanimalpartos INT NULL,
+    tbanimalestado VARCHAR(20) NULL,
+    tbproductorid INT NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud (
@@ -430,6 +438,57 @@ CREATE TABLE IF NOT EXISTS tbcomprasolicitud (
     tbcomprasolicitudrespuestafecha DATETIME NULL,
     tbcomprasolicitudrespuestamotivo VARCHAR(250) NULL,
     tbcomprasolicitudfleterespuestafecha DATETIME NULL
+) ENGINE=InnoDB;
+
+-- Catálogos del animal (P2-2, DEC-ANIMAL-001). Sin llaves: tipo y raza apuntan a su especie por
+-- tbespecieid y PHP valida la pertenencia. "activo" permite que un administrador los gestione.
+CREATE TABLE IF NOT EXISTS tbespecie (
+    tbespecieid INT NOT NULL,
+    tbespecienombre VARCHAR(80) NOT NULL,
+    tbespecieactivo TINYINT(1) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbanimaltipo (
+    tbanimaltipoid INT NOT NULL,
+    tbespecieid INT NOT NULL,
+    tbanimaltiponombre VARCHAR(80) NOT NULL,
+    tbanimaltiposexo VARCHAR(1) NULL,
+    tbanimaltipoactivo TINYINT(1) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbraza (
+    tbrazaid INT NOT NULL,
+    tbespecieid INT NOT NULL,
+    tbrazanombre VARCHAR(100) NOT NULL,
+    tbrazaactivo TINYINT(1) NOT NULL
+) ENGINE=InnoDB;
+
+-- Animales de una publicación de lote (DEC-ANIMAL-001). Una publicación de un solo animal no tiene filas aquí.
+CREATE TABLE IF NOT EXISTS tbanimalpublicacionanimal (
+    tbanimalpublicacionanimalid INT NOT NULL,
+    tbanimalpublicacionid INT NOT NULL,
+    tbanimalid INT NOT NULL
+) ENGINE=InnoDB;
+
+-- Historial de vacunación del animal (P2-3). tbvacuna es el catálogo (con activo, para el panel de administración).
+-- Sin llaves: PHP valida que el animal sea del vendedor y que la vacuna exista y esté activa.
+CREATE TABLE IF NOT EXISTS tbvacuna (
+    tbvacunaid INT NOT NULL,
+    tbvacunanombre VARCHAR(100) NOT NULL,
+    tbvacunaactivo TINYINT(1) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbanimalvacunacion (
+    tbanimalvacunacionid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbvacunaid INT NOT NULL,
+    tbanimalvacunacionfecha DATE NOT NULL,
+    tbanimalvacunaciondosis VARCHAR(50) NULL,
+    tbanimalvacunacionlote VARCHAR(50) NULL,
+    tbanimalvacunacionaplicadapor VARCHAR(150) NULL,
+    tbanimalvacunacionproximadosis DATE NULL,
+    tbanimalvacunacionobservaciones VARCHAR(500) NULL,
+    tbanimalvacunacionfecharegistro DATETIME NOT NULL
 ) ENGINE=InnoDB;
 
 -- fin del script de instalación completa

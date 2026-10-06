@@ -176,7 +176,7 @@ if ($existe -eq "1") {
 $metodos = & $cli -u root -N -B $dbName -e "SELECT COUNT(*) FROM tbpagometodo;"
 if ($metodos -eq "0") {
   Write-Host "[..] Cargando seeds..."
-  foreach ($s in "101initialpagometodo", "102administrador") {
+  foreach ($s in "101initialpagometodo", "102administrador", "104catalogosanimal") {
     $archivo = Join-Path $proy "Database\SeedData\$s.sql"
     if (-not (Test-Path $archivo)) { Fallo "No existe $archivo" }
     cmd /c "`"$cli`" -u root --default-character-set=utf8mb4 $dbName < `"$archivo`""

@@ -7,13 +7,17 @@ namespace Application\Controller;
 // El repositorio usa loaders manuales en API y pruebas; este servicio nuevo
 // se carga aqui tambien para mantener el controlador autocontenido.
 require_once dirname(__DIR__) . '/Service/PublicacionCercaniaService.php';
+require_once dirname(__DIR__) . '/Service/AnimalValidacionService.php';
+require_once dirname(__DIR__) . '/Model/AnimalCatalogo.php';
 
 use Application\HttpException;
 use Application\Auth\ActorContext;
+use Application\Model\AnimalCatalogo;
 use Application\Model\AnimalComercial;
 use Application\Model\Bitacora;
 use Application\Model\Productor;
 use Application\Model\ProductorFinca;
+use Application\Service\AnimalValidacionService;
 use Application\Service\PublicacionCercaniaService;
 use PDO;
 use Throwable;
@@ -26,6 +30,7 @@ final class AnimalPublicacionController
     private const ESTADOS_EDITABLES = ['ACTIVO', 'PAUSADO'];
 
     private readonly AnimalComercial $animales;
+    private readonly AnimalCatalogo $catalogo;
     private readonly PublicacionCercaniaService $cercania;
     private readonly ?ActorContext $actor;
     private readonly Productor $productor;
@@ -36,6 +41,7 @@ final class AnimalPublicacionController
         ?ActorContext $actor = null)
     {
         $this->animales = new AnimalComercial($conexion);
+        $this->catalogo = new AnimalCatalogo($conexion);
         $this->cercania = new PublicacionCercaniaService($conexion);
         $this->actor = $actor;
         $this->solicitudId = is_string($solicitudId) && trim($solicitudId) !== ''
@@ -192,26 +198,51 @@ final class AnimalPublicacionController
         return $this->respuesta(true, 'Publicación actualizada correctamente.', ['publicacion' => $nueva]);
     }
 
+    /**
+     * Crea el animal (o los N animales de un lote, DEC-ANIMAL-001) y su publicación. Corre dentro del lock de tbanimal.
+     * La publicación apunta al primer animal; en un lote, tbanimalpublicacionanimal enlaza a los N.
+     */
     private function crearPublicacionCompleta(int $productorId, int $fincaId, array $datos): array
     {
-        $animalId = $this->animales->crearAnimal(
-            $datos['animalIdentificacion'],
-            $datos['sexo'],
-            $datos['raza'],
-            'PUBLIC_API',
-        );
-        $this->animales->ejecutarConBloqueoAlta(
-            'tbanimalproduccionsalud',
-            fn (): int => $this->animales->registrarObservacion($animalId, [
-                'origen' => 'PUBLIC_API',
-                'edadMeses' => $datos['edadMeses'],
-                'peso' => $datos['peso'],
-                'proposito' => $datos['proposito'],
-            ]),
-        );
+        if ($datos['arete'] !== null && $this->animales->existeAreteVigente($datos['arete'])) {
+            throw new HttpException('Revise los campos indicados.', 409, null, [
+                'arete' => 'Ya hay un animal con ese arete. Si es tuyo, revisa tus publicaciones.',
+            ]);
+        }
+        $lote = $datos['loteCantidad'];
+        $animalIds = [];
+        for ($i = 0; $i < $lote; $i++) {
+            $animalId = $this->animales->crearAnimal(
+                $i === 0 ? $datos['animalIdentificacion'] : null,
+                $datos['sexo'],
+                $datos['raza'],
+                'PUBLIC_API',
+                null,
+                [
+                    'especieId' => $datos['especieId'],
+                    'tipoId' => $datos['tipoId'],
+                    'razaId' => $datos['razaId'],
+                    'fechaNacimiento' => $datos['fechaNacimiento'],
+                    'fechaNacimientoEstimada' => $datos['fechaNacimientoEstimada'],
+                    'partos' => $datos['partos'],
+                    'estado' => 'PUBLICADO',
+                    'productorId' => $productorId,
+                ],
+            );
+            $this->animales->ejecutarConBloqueoAlta(
+                'tbanimalproduccionsalud',
+                fn (): int => $this->animales->registrarObservacion($animalId, [
+                    'origen' => 'PUBLIC_API',
+                    'edadMeses' => $datos['edadMeses'],
+                    'peso' => $datos['peso'],
+                    'proposito' => $datos['proposito'],
+                ]),
+            );
+            $animalIds[] = $animalId;
+        }
         $publicacionId = $this->animales->ejecutarConBloqueoAlta(
             'tbanimalpublicacion',
-            fn (): int => $this->animales->publicarAnimal($animalId, $productorId, $fincaId, [
+            fn (): int => $this->animales->publicarAnimal($animalIds[0], $productorId, $fincaId, [
                 'origen' => 'PUBLIC_API',
                 'estado' => 'ACTIVO',
                 'titulo' => $datos['titulo'],
@@ -220,8 +251,16 @@ final class AnimalPublicacionController
                 'imagenUrl' => $datos['imagenUrl'],
             ]),
         );
+        $resultado = ['animalId' => $animalIds[0], 'publicacionId' => $publicacionId, 'loteCantidad' => $lote];
+        if ($lote > 1) {
+            $this->animales->ejecutarConBloqueoAlta(
+                'tbanimalpublicacionanimal',
+                fn () => $this->animales->enlazarAnimalesPublicacion($publicacionId, $animalIds),
+            );
+            $resultado['animalIds'] = $animalIds;
+        }
 
-        return ['animalId' => $animalId, 'publicacionId' => $publicacionId];
+        return $resultado;
     }
 
     private function fincaActiva(int $productorId, string $nombre): ?array
@@ -270,12 +309,26 @@ final class AnimalPublicacionController
     {
         $texto = self::texto(...);
         $numero = self::numero(...);
+        $identificacion = $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100);
+        $raza = $texto($cuerpo['raza'] ?? null, 'raza', 120);
+        $sexo = $texto($cuerpo['sexo'] ?? null, 'sexo', 40);
+        // Modelo de animal (P2-2): catálogos, sexo por tipo, partos, nacimiento, arete y lote. Todo opcional.
+        $modelo = AnimalValidacionService::validar($this->catalogo, $cuerpo);
 
         return [
             'fincaNombre' => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
-            'animalIdentificacion' => $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100),
-            'raza' => $texto($cuerpo['raza'] ?? null, 'raza', 120),
-            'sexo' => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
+            // El arete (13 dígitos SENASA) reemplaza a la identificación libre; la raza de catálogo, al texto libre.
+            'animalIdentificacion' => $modelo['arete'] ?? $identificacion,
+            'arete' => $modelo['arete'],
+            'raza' => $modelo['razaNombre'] ?? $raza,
+            'sexo' => $modelo['sexo'] ?? $sexo,
+            'especieId' => $modelo['especieId'],
+            'tipoId' => $modelo['tipoId'],
+            'razaId' => $modelo['razaId'],
+            'fechaNacimiento' => $modelo['fechaNacimiento'],
+            'fechaNacimientoEstimada' => $modelo['fechaNacimientoEstimada'],
+            'partos' => $modelo['partos'],
+            'loteCantidad' => $modelo['loteCantidad'],
             'proposito' => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
             'edadMeses' => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
             'peso' => $numero($cuerpo['peso'] ?? null, 'peso'),
@@ -372,6 +425,8 @@ final class AnimalPublicacionController
                 $tamano
             );
         }
+        // Vacunas (P2-3): públicas y acotadas, solo de la página que se devuelve.
+        $resultado['publicaciones'] = $this->animales->adjuntarVacunas($resultado['publicaciones']);
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;
 

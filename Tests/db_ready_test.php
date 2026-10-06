@@ -15,7 +15,7 @@ $der = file_get_contents("{$root}/Documentation/DER.md");
 $manifest = schema_manifest();
 
 test_same('bdmercadoganadero', $manifest['database'], 'La base activa debe ser bdmercadoganadero');
-test_same(37, $manifest['table_count'], 'La capa DB ready debe contener 37 tablas');
+test_same(43, $manifest['table_count'], 'La capa DB ready debe contener 43 tablas');
 test_assert(in_array('tbadministrador', $manifest['tables_sorted'], true),
     'La autorización técnica debe tener una tabla separada de los contextos de negocio');
 
@@ -34,7 +34,7 @@ foreach (['INSERT INTO', 'UPDATE ', 'DELETE FROM', 'ALTER TABLE tbcomprador'] as
 }
 
 foreach (['CREATE TABLE IF NOT EXISTS tbvendedor', 'tbcompradorestadoperiodo',
-    'tbvendedorestadoperiodo', 'tbvendedoractividad', 'tbanimalfechanacimiento',
+    'tbvendedorestadoperiodo', 'tbvendedoractividad',
     'tbcompraestado', 'cantidadfletessemanales', 'metodopagofrecuente',
     'calificacionpromedio'] as $forbidden) {
     test_assert(!str_contains($schema, $forbidden), "El esquema no debe contener {$forbidden}");

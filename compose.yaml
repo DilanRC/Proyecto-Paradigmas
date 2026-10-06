@@ -37,6 +37,7 @@ services:
       - ./Database/SeedData/101initialpagometodo.sql:/docker-entrypoint-initdb.d/101initialpagometodo.sql:ro
       - ./Database/SeedData/102administrador.sql:/docker-entrypoint-initdb.d/102administrador.sql:ro
       - ./Database/SeedData/103exampleproductores.sql:/docker-entrypoint-initdb.d/103exampleproductores.sql:ro
+      - ./Database/SeedData/104catalogosanimal.sql:/docker-entrypoint-initdb.d/104catalogosanimal.sql:ro
     healthcheck:
       # TCP no está disponible en el servidor temporal de inicialización. Esto
       # evita marcar healthy antes de que las semillas terminen y MySQL reinicie.

@@ -140,6 +140,54 @@ Asocia transportista y vehículo.
 | `tbtransportistaid` | `INT NOT NULL` | No | Identificador lógico del transportista. | Aplicación | `tbtransportista` |
 | `tbvehiculoid` | `INT NOT NULL` | No | Identificador lógico del vehículo. | Aplicación | `tbvehiculo` |
 
+## tbespecie
+
+Catálogo de especies (P2-2). Datos iniciales: bovino, porcino, equino, ovino, caprino y bufalino. La
+columna `activo` permite al panel de administración (P2-6) retirar una especie sin borrarla.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbespecieid` | `INT NOT NULL` | No | Identificador lógico de la especie. | Datos iniciales | - |
+| `tbespecienombre` | `VARCHAR(80) NOT NULL` | No | Nombre de la especie. | Datos iniciales | - |
+| `tbespecieactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece en los formularios). | Administración | - |
+
+## tbanimaltipo
+
+Catálogo de tipos o categorías del animal por especie (P2-2): ternero, ternera, torete, novillo, vaquilla,
+vaca, toro y buey en bovinos, y los equivalentes de las demás especies. "Categorización" es el mismo concepto.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimaltipoid` | `INT NOT NULL` | No | Identificador lógico del tipo. | Datos iniciales | - |
+| `tbespecieid` | `INT NOT NULL` | No | Especie a la que pertenece; PHP valida la pertenencia. | Datos iniciales | `tbespecie` |
+| `tbanimaltiponombre` | `VARCHAR(80) NOT NULL` | No | Nombre del tipo. | Datos iniciales | - |
+| `tbanimaltiposexo` | `VARCHAR(1) NULL` | Sí | Sexo que implica el tipo: `M`, `H` o NULL (sin sexo fijo, p. ej. lechón). | Datos iniciales | - |
+| `tbanimaltipoactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece). | Administración | - |
+
+## tbraza
+
+Catálogo de razas por especie (P2-2): en bovinos, Brahman, Holstein, Jersey, Pardo Suizo, Angus, Nelore, Gyr,
+Girolando, Criollo, Mestizo y otras.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbrazaid` | `INT NOT NULL` | No | Identificador lógico de la raza. | Datos iniciales | - |
+| `tbespecieid` | `INT NOT NULL` | No | Especie a la que pertenece; PHP valida la pertenencia. | Datos iniciales | `tbespecie` |
+| `tbrazanombre` | `VARCHAR(100) NOT NULL` | No | Nombre de la raza. | Datos iniciales | - |
+| `tbrazaactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece). | Administración | - |
+
+## tbanimalpublicacionanimal
+
+Animales de una publicación **de lote** (`DEC-ANIMAL-001`). Una publicación de un solo animal no tiene filas
+aquí: su animal es `tbanimalpublicacion.tbanimalid`. En un lote, `tbanimalpublicacion.tbanimalid` apunta al
+primer animal y esta tabla lista **los N animales, incluido el primero**.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalpublicacionanimalid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación del lote. | Aplicación | `tbanimalpublicacion` |
+| `tbanimalid` | `INT NOT NULL` | No | Animal que forma parte del lote. | Aplicación | `tbanimal` |
+
 ## tbbitacora
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
@@ -246,19 +294,28 @@ la vez porque son tipos distintos.
 
 ## tbanimal
 
-Identidad estable del animal según la evidencia de Calidad: identificación,
-raza, sexo y características. No guarda peso ni edad actual, porque cambian y
-viven en `tbanimalproduccionsalud`, y no inventa fecha de nacimiento.
+Identidad del animal: identificación (arete), raza, sexo y características, más el modelo de P2-2
+(`DEC-ANIMAL-001`): especie, tipo, raza de catálogo, fecha de nacimiento, partos, estado y dueño explícito.
+No guarda peso ni edad actual, porque cambian y viven en `tbanimalproduccionsalud`. La fecha de nacimiento
+(nueva, opcional) no se inventa para los animales existentes: quedan en `NULL` y `NULL` nunca significa "hoy".
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
 | `tbanimalid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
-| `tbanimalidentificacion` | `VARCHAR(100) NULL` | Sí | Código, arete u otro identificador declarado. | Usuario | - |
+| `tbanimalidentificacion` | `VARCHAR(100) NULL` | Sí | Código, arete u otro identificador declarado. Si se ingresó como **arete SENASA** son los 13 dígitos (`188` + control + provincia `01`-`07` + 7 del correlativo), sin espacios ni guiones; PHP impide dos animales vigentes con el mismo arete. | Usuario | - |
 | `tbanimalsexo` | `VARCHAR(20) NULL` | Sí | Sexo declarado; dominio pendiente de Backend. | Usuario | - |
 | `tbanimalraza` | `VARCHAR(100) NULL` | Sí | Raza declarada estable o inicial. | Usuario | - |
 | `tbanimalcaracteristicas` | `VARCHAR(500) NULL` | Sí | Características declaradas del animal como parte de su identidad; no incluye peso ni edad. | Usuario | - |
 | `tbanimalfecharegistroensistema` | `DATETIME NOT NULL` | No | Fecha en que el sistema registró el animal; no es fecha de nacimiento. | Aplicación | - |
 | `tbanimalorigenregistro` | `VARCHAR(100) NOT NULL` | No | Origen técnico del alta. | Aplicación | - |
+| `tbespecieid` | `INT NULL` | Sí | Especie del animal (catálogo). NULL en los animales anteriores a P2-2. | Usuario | `tbespecie` |
+| `tbanimaltipoid` | `INT NULL` | Sí | Tipo o categoría (ternero, vaca, toro...). PHP verifica que sea de la especie y que el sexo coincida. | Usuario | `tbanimaltipo` |
+| `tbrazaid` | `INT NULL` | Sí | Raza de catálogo; `tbanimalraza` conserva el nombre en texto por compatibilidad. PHP verifica que sea de la especie. | Usuario | `tbraza` |
+| `tbanimalfechanacimiento` | `DATE NULL` | Sí | Fecha de nacimiento real o estimada; nunca futura. NULL = no declarada. | Usuario | - |
+| `tbanimalfechanacimientoestimada` | `TINYINT(1) NULL` | Sí | 1 si la fecha de nacimiento es una estimación; solo con fecha. | Usuario | - |
+| `tbanimalpartos` | `INT NULL` | Sí | Número de partos (entero ≥ 0); solo para hembras. | Usuario | - |
+| `tbanimalestado` | `VARCHAR(20) NULL` | Sí | `ACTIVO`, `PUBLICADO`, `VENDIDO` o `INACTIVO`. Un animal publicado por la API nace `PUBLICADO` y al venderse pasa a `VENDIDO`. NULL = animal anterior a P2-2 (se trata como vigente). | Aplicación | - |
+| `tbproductorid` | `INT NULL` | Sí | Dueño explícito (Productor). La publicación sigue guardando su vendedor; esto permite tener animales sin publicar. | Aplicación | `tbproductor` |
 
 ## tbanimalproduccionsalud
 
@@ -545,6 +602,37 @@ transportista.
 | `tbcomprasolicitudrespuestafecha` | `DATETIME NULL` | Sí | Fecha UTC en que el vendedor la aceptó o rechazó. | Aplicación | - |
 | `tbcomprasolicitudrespuestamotivo` | `VARCHAR(250) NULL` | Sí | Motivo del vendedor al rechazar. | Usuario | - |
 | `tbcomprasolicitudfleterespuestafecha` | `DATETIME NULL` | Sí | Fecha UTC en que el transportista respondió el flete. | Aplicación | - |
+
+## tbvacuna
+
+Catálogo de vacunas del ganado (P2-3): fiebre aftosa, brucelosis, rabia paralítica bovina, carbunco sintomático y
+bacteridiano, clostridiales, IBR/DVB, leptospirosis, complejo respiratorio y pasteurelosis. `activo` permite al
+panel de administración (P2-6) retirar una vacuna sin perder el historial que ya la usa.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbvacunaid` | `INT NOT NULL` | No | Identificador lógico de la vacuna. | Datos iniciales | - |
+| `tbvacunanombre` | `VARCHAR(100) NOT NULL` | No | Nombre de la vacuna. | Datos iniciales | - |
+| `tbvacunaactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece al registrar). | Administración | - |
+
+## tbanimalvacunacion
+
+Historial de vacunación de un animal (P2-3). Es append-first: un registro equivocado se **corrige** (PATCH) y cada
+cambio queda en la bitácora (`ANIMAL_VACUNACION`); no se borra. La lectura pública (en la tarjeta de la
+publicación) solo expone vacuna, fecha y próxima dosis.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalvacunacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | Animal vacunado; PHP exige que sea del vendedor (dueño explícito o de su publicación) y que no esté vendido. | Aplicación | `tbanimal` |
+| `tbvacunaid` | `INT NOT NULL` | No | Vacuna aplicada; PHP exige que exista y esté activa al registrarla. | Usuario | `tbvacuna` |
+| `tbanimalvacunacionfecha` | `DATE NOT NULL` | No | Fecha de aplicación; no puede ser futura. | Usuario | - |
+| `tbanimalvacunaciondosis` | `VARCHAR(50) NULL` | Sí | Dosis aplicada (texto libre, p. ej. `2 ml`). | Usuario | - |
+| `tbanimalvacunacionlote` | `VARCHAR(50) NULL` | Sí | Lote del biológico. Privado: no sale en la lectura pública. | Usuario | - |
+| `tbanimalvacunacionaplicadapor` | `VARCHAR(150) NULL` | Sí | Quién la aplicó (veterinario o persona). Privado. | Usuario | - |
+| `tbanimalvacunacionproximadosis` | `DATE NULL` | Sí | Fecha prevista de la próxima dosis; no anterior a la aplicación. | Usuario | - |
+| `tbanimalvacunacionobservaciones` | `VARCHAR(500) NULL` | Sí | Observaciones. Privadas. | Usuario | - |
+| `tbanimalvacunacionfecharegistro` | `DATETIME NOT NULL` | No | Momento (UTC) en que el sistema registró la vacuna. | Aplicación | - |
 
 ## Histórico transversal (Tramo 12/13 y avance 3)
 

@@ -10,7 +10,7 @@ const controller = readFileSync('Application/Controller/PublicacionInteraccionCo
 
 test('/me-interesa es una ruta con sesión que reutiliza la tarjeta de Explorar', () => {
     assert.match(htaccess, /RewriteRule \^me-interesa\/\?\$ me-interesa\.php \[END\]/);
-    assert.ok(js.includes("import { buildCard } from './explore.js?v=foto-3'"));
+    assert.ok(js.includes("import { buildCard } from './explore.js?v=foto-4'"));
     assert.ok(js.includes("entrar?next=me-interesa"));
     assert.ok(js.includes('tipo=ME_INTERESA'));
     for (const id of ['saved-loading', 'saved-error', 'saved-retry', 'saved-empty', 'saved-list']) {

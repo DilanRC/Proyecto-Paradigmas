@@ -12,7 +12,7 @@ $raiz = dirname(__DIR__, 2);
 require_once $raiz . '/Configuration/Configuration.php';
 require_once $raiz . '/Configuration/Database.php';
 require_once $raiz . '/Application/HttpException.php';
-foreach (['NamedLock', 'AnimalComercial', 'Bitacora', 'Persona', 'ProductorFinca', 'Productor'] as $modelo) {
+foreach (['NamedLock', 'AnimalCatalogo', 'AnimalComercial', 'Bitacora', 'Persona', 'ProductorFinca', 'Productor'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Service/PublicacionCercaniaService.php';

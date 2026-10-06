@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-14"></script>
-    <script type="module" src="js/me-interesa.js?v=interesa-4"></script>
+    <script type="module" src="js/me-interesa.js?v=interesa-5"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">

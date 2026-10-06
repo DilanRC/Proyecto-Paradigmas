@@ -51,6 +51,8 @@ compatibilidad técnica durante la migración.
 | `/api/v1/solicitudes-compra` | Solicitudes de compra de la Persona autenticada (GET, POST, PATCH; `GET ?resumen=1` devuelve solo `{ aprobadas }` para el carrito): las que hizo, las que recibe como vendedor y los fletes que le piden; los teléfonos solo se comparten cuando hay trato |
 | `/api/v1/pago-metodos-disponibles` | Métodos de pago activos (GET, con sesión): solo id y nombre, para proponer uno en una solicitud de compra |
 | `/api/v1/admin/fletes` | Fletes para el administrador (POST `{consulta}` de lectura, PATCH): ofertas y solicitudes de compra; retirar o reactivar una oferta con motivo. Sin teléfonos |
+| `/api/v1/catalogos` | Especies, tipos, razas y vacunas activos para los formularios de animal (GET con sesión; `?especieId=` filtra tipos y razas) |
+| `/api/v1/mi-animales/vacunas` | Historial de vacunación de un animal propio (GET `?animalId=`, POST para registrar y PATCH para corregir; con sesión; un animal ajeno responde 404) |
 | `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |
 | `/api/v1/registro` | Alta transaccional de identidad y actividades |
