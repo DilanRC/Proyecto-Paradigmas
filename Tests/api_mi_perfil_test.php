@@ -90,9 +90,39 @@ try {
     $reemplazo = $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.jpg']);
     test_same('PENDIENTE', $reemplazo['body']['data']['persona']['documento']['estado'], 'Un documento nuevo vuelve a revisión aunque el anterior estuviera verificado');
     test_same('PENDIENTE', $perfil->procesar('PATCH', ['alias' => 'Chepe'])['body']['data']['persona']['documento']['estado'], 'Editar otro dato no toca el documento');
+    // Lectura automática: el navegador manda solo el número leído y el servidor decide el resultado.
+    $lectura = static function (array $l) use ($perfil, $sujeto, $uuid): ?string {
+        $r = $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.jpg', 'documentoLectura' => $l]);
+        test_same(200, $r['status'], 'La lectura se acepta junto al documento');
+        return $r['body']['data']['persona']['documento']['lectura'];
+    };
+    test_same(null, $lectura(['numero' => '111111111']), 'Con pasaporte (letras) la lectura de dígitos no aplica');
+    // Las fixtures usan pasaporte: se pasan a cédula física con números únicos (y se limpian al final).
+    $cedula = static fn (): string => (string) random_int(100000000, 999999999);
+    $propio = $cedula();
+    $otraPersona = test_create_completo(['fincas' => [['nombre' => 'Finca Otra Lectura']]]);
+    $otroNumero = $cedula();
+    $aCedula = $db->prepare("UPDATE tbpersona SET tbpersonaidentificaciontipo = 'CEDULA_FISICA', tbpersonaidentificacionnumero = :nuevo
+        WHERE tbpersonaidentificacionnumero = :actual");
+    $aCedula->execute(['nuevo' => $propio, 'actual' => $persona['identificacionNumero']]);
+    $aCedula->execute(['nuevo' => $otroNumero, 'actual' => $otraPersona['identificacionNumero']]);
+    array_push($identificaciones, $propio, $otroNumero);
+    test_same('COINCIDE', $lectura(['numero' => ' ' . substr($propio, 0, 1) . '-' . substr($propio, 1, 4) . '-' . substr($propio, 5) . ' ']),
+        'El número leído (con guiones) es la identificación de la persona');
+    test_same('NO_COINCIDE', $lectura(['numero' => '999999999']), 'Un número que no es de nadie no coincide');
+    test_same('OTRA_CUENTA', $lectura(['numero' => $otroNumero]), 'El número de otra persona se marca aparte');
+    test_same('SIN_LECTURA', $lectura(['numero' => null]), 'Si no se encontró número, SIN_LECTURA');
+    test_same(422, $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.jpg', 'documentoLectura' => ['numero' => $propio, 'resultado' => 'COINCIDE']])['status'],
+        'El navegador no puede mandar el resultado, solo el número');
+    test_same(422, $perfil->procesar('PATCH', ['documentoLectura' => ['numero' => $propio]])['status'], 'Una lectura sin documento nuevo es 422');
+    test_same(422, $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.jpg', 'documentoLectura' => ['numero' => 'sin-digitos']])['status'],
+        'Un número sin dígitos es 422');
+    test_same(null, $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.pdf'])['body']['data']['persona']['documento']['lectura'],
+        'Un documento sin lectura (PDF) reemplaza la lectura anterior por null');
+
     $guardado = $db->prepare('SELECT tbpersonadocumentoruta FROM tbpersona WHERE tbpersonaid = :id');
     $guardado->execute(['id' => $personaId]);
-    test_same($sujeto . '/' . $uuid . '.jpg', $guardado->fetchColumn(), 'Se guarda la ruta dentro del bucket');
+    test_same($sujeto . '/' . $uuid . '.pdf', $guardado->fetchColumn(), 'Se guarda la ruta dentro del bucket');
 
     $bitacora = $db->prepare('SELECT tbbitacoraentidad, tbbitacoraorigen, tbbitacoradatosnuevos FROM tbbitacora
         WHERE tbbitacoraregistroidentificacionnumero = :r ORDER BY tbbitacoraid DESC LIMIT 1');

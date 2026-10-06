@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonadocumentoruta VARCHAR(255) NULL,
     tbpersonadocumentoestado VARCHAR(20) NULL,
     tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL,
-    tbpersonadocumentomotivo VARCHAR(250) NULL
+    tbpersonadocumentomotivo VARCHAR(250) NULL,
+    tbpersonadocumentonumeroleido VARCHAR(20) NULL,
+    tbpersonadocumentolectura VARCHAR(20) NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbadministrador (

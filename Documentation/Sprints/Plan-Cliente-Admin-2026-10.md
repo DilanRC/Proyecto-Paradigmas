@@ -284,23 +284,24 @@ nacimiento, partos, estado del animal y dueño explícito.
 
 Es el punto 1 del issue. **Sin IA generativa.**
 
-**Estado (2026-10-05): subida y estado hechos por Jeremi en la rama `backend`** (detalle en `MEMORIA.md`). Se eligió la opción c. El tipo de documento es el de la identificación (sin columna aparte) y solo se sube en Ajustes → Perfil. Falta que el dueño de Supabase cree el bucket privado `documentos` (SQL en `MEMORIA.md`). Verificar, ver con enlace firmado y borrar a los 90 días queda en P2-6.
+**Estado (2026-10-05): subida y estado hechos por Jeremi en la rama `backend`** (detalle en `MEMORIA.md`). Se eligió la opción c. El tipo de documento es el de la identificación (sin columna aparte) y solo se sube en Ajustes → Perfil. El bucket privado `documentos` ya está creado. La verificación por el admin está hecha (P2-6). **Actualización 2026-10-06:** por decisión del equipo se agregó la **opción a como ayuda**: lectura automática del número en el dispositivo (Tesseract.js, sin IA generativa ni servicios externos), "Tomar foto" en celulares y el paso opcional en el registro; la decisión sigue siendo del admin. Falta borrar a los 90 días.
 
 - [x] Recomendación: **opción c (captura manual + revisión de un administrador)**
       para empezar.
       - La opción a (OCR con Tesseract) no corre bien en los contenedores de Vercel.
       - La opción b (padrón) no tenemos de dónde importarla de forma legal y estable.
       - La opción c funciona hoy, y el OCR se puede agregar después.
-- [ ] Bucket **privado** en Supabase Storage (`documentos`). Solo el dueño sube y
+- [x] Bucket **privado** en Supabase Storage (`documentos`). Solo el dueño sube y
       solo el administrador lee, con enlaces firmados temporales. Tipos jpg, png,
-      webp y pdf; máximo 5 MB. (Código y SQL listos; falta que el dueño de Supabase lo cree.)
+      webp y pdf; máximo 5 MB. (Creado por Dilan y comprobado el 05/10.)
 - [x] Columnas en `tbpersona`: tipo de documento, ruta del archivo y estado de
       verificación (`PENDIENTE`, `VERIFICADO`, `RECHAZADO`). `NULL` para las
       cuentas actuales.
 - [x] Definir cuánto tiempo se conserva la foto (propuesta: borrarla 90 días
       después de verificada).
-- [x] Frontend: paso opcional al registrarse y en Ajustes → Perfil. (Solo Ajustes → Perfil, por decisión: al
-      registrarse puede no haber sesión todavía y sin sesión no se puede subir.)
+- [x] Frontend: paso opcional al registrarse y en Ajustes → Perfil. (En los dos, con "Subir archivo" y, en
+      celulares, "Tomar foto". En el registro el documento se envía al crear la cuenta; si no hay sesión, queda el
+      aviso hacia Ajustes.)
 
 ### P3-1 · Comerciante (solo investigación) · Jeremi
 
@@ -393,7 +394,12 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 - [ ] ¿Oferta de flete como tabla nueva, o solo transportista + horario? (P1-2)
 - [ ] ¿La solicitud de compra necesita aceptación del vendedor, o se reserva
       directamente? (P1-3)
-- [ ] ¿Opción a, b o c para leer el documento? (P2-5; se recomienda la c)
+- [x] ¿Opción a, b o c para leer el documento? (P2-5) **c + a como ayuda:** revisión del admin con lectura
+      automática del número en el dispositivo.
+- [ ] ¿Qué gana una persona con identidad verificada? Propuesta: una insignia en sus publicaciones; y exigirla
+      para publicar ganado u ofrecer fletes. **En pausa hasta decidirlo entre todos.**
+- [ ] Si la lectura automática coincide, ¿se verifica sola o siempre la revisa un admin? (Hoy: siempre el admin;
+      el resultado del navegador se puede falsificar.)
 - [ ] ¿"Categorización" es lo mismo que "tipo"? ¿Cuál es el formato del arete de SENASA? (P2-2)
 - [ ] ¿Una publicación es un animal o un lote? (P2-2)
 - [ ] ¿Qué es "comerciante"? (P3-1)

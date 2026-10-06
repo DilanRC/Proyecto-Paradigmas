@@ -195,9 +195,24 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   `VERIFICAR_DOCUMENTO` y `RECHAZAR_DOCUMENTO`, con `realizadoPor`.
 - `SUPABASE_SECRET_KEY` llega a la app PHP: en local por `compose.yaml`; **en producción hay que configurarla en las
   variables de entorno de Vercel** (sin ella, "Ver documento" responde 503). Nunca se manda al navegador.
+- **Lectura automática del número (opción a del plan, como ayuda):** con una **foto** (no PDF) de una identificación
+  numérica (cédula física, jurídica, DIMEX, NITE), `shared/escaner-documento.js` lee el número **en el dispositivo**
+  con Tesseract.js (CDN jsdelivr, se descarga solo al elegir una foto; es el primer script externo de la app). Prueba 4
+  variantes de la imagen y busca números con las reglas de `REGLAS_SERVIDOR`. El navegador manda **solo**
+  `documentoLectura: { numero }`; **PHP calcula** `tbpersonadocumentolectura` (`COINCIDE`, `NO_COINCIDE`,
+  `OTRA_CUENTA`, `SIN_LECTURA`; NULL si no se intentó o la identificación es un pasaporte) y guarda el número en
+  `tbpersonadocumentonumeroleido` (migración 018). **No aprueba nada:** el admin lo ve junto a la imagen y decide.
+  Si el lector no carga o falla, el documento se sube igual, sin lectura.
+- **Cámara:** "Tomar foto" abre la **app de cámara del teléfono** (`<input accept="image/*" capture="environment">`,
+  resolución completa) y solo se muestra en celulares (`esCelular()`: puntero grueso y pantalla táctil). En la prueba,
+  la webcam de una computadora no tuvo calidad suficiente; subir una foto bien tomada sí funcionó.
+- **Registro:** paso opcional "Documento de identidad" en el alta (no al ampliar). El archivo queda en memoria y se
+  envía **después** de crear la cuenta (hace falta sesión y Persona); si falla o no hay sesión (confirmación de correo
+  activa), la cuenta se crea igual y Explorar muestra el aviso hacia Ajustes.
+- **En pausa (decisión del equipo):** exigir identidad verificada para vender u ofrecer fletes, y si una lectura que
+  coincide podría verificar sola. Están en las preguntas abiertas del plan.
 - **Pendiente:** borrar las fotos 90 días después de verificadas y los archivos reemplazados (necesita una tarea
-  programada; acordarla con Dilan). El escáner automático (opción a: recortar y leer el número) se dejó para después,
-  como dice el plan.
+  programada; acordarla con Dilan).
 
 ### Administrador: gestionar administradores (P3-4)
 - `/admin/administradores` lista los correos de `tbadministrador`, permite **agregar** uno (se normaliza con
@@ -385,6 +400,13 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · backend · Lectura automática del número, cámara en celulares y documento en el registro (P2-5/P2-6)
+- Ver "Documento de identidad (P2-5)": lectura en el dispositivo con Tesseract.js, resultado calculado en PHP, "Tomar foto" solo en celulares, paso opcional en el registro y la lectura visible para el admin en `/admin/documentos`.
+- Columnas `tbpersonadocumentonumeroleido` y `tbpersonadocumentolectura` en los 4 lugares + migración 018, diccionario, DER y PDF.
+- Archivos: nuevo `shared/escaner-documento.js?v=escaner-2`; `storage.js` `documento-2` (`nuevoUuid`: `crypto.randomUUID` no existe en páginas sin HTTPS, como el celular entrando por `http://IP-local`; se arma con `getRandomValues`); `MiPerfilController.php` (`documentoLectura`, `numeroLeido`, `resultadoLectura`), `Persona.php`; `ajustes.js` (`ajustes-8`), `registro.js` (`signup-10`), `documentos.js` (`documentos-2`), vistas de Ajustes y Registro.
+- Antes se probó la lectura con una página temporal fuera del repositorio: una foto subida se leyó bien; la webcam de la computadora, no.
+- Pruebas: nueva `Tests/frontend/escaner_documento.test.mjs`; `api_mi_perfil_test.php` cubre los 5 resultados, que el navegador no puede mandar el resultado y que con pasaporte no aplica.
 
 ### 2026-10-05 · backend · P2-6 Verificación de documentos de identidad
 - Pantalla `/admin/documentos` y API `api/v1/admin/documentos` (ver "Documento de identidad (P2-5)"); columna `tbpersonadocumentomotivo` en los 4 lugares + migración 017, diccionario, DER y PDF; Ajustes muestra el motivo del rechazo (`ajustes-6`).

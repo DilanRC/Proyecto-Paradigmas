@@ -30,6 +30,20 @@ export function usuarioDelToken(token) {
     }
 }
 
+/**
+ * UUID v4 para el nombre del archivo. crypto.randomUUID() solo existe en páginas
+ * seguras (HTTPS o localhost): al entrar desde el celular por http://IP-local, o con
+ * un navegador viejo, no está. getRandomValues sí funciona en cualquier página.
+ */
+export function nuevoUuid(cripto = globalThis.crypto) {
+    if (typeof cripto?.randomUUID === 'function') return cripto.randomUUID();
+    const b = cripto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40; // versión 4
+    b[8] = (b[8] & 0x3f) | 0x80; // variante RFC 4122
+    const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 export function extensionDe(tipo) {
     return { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'application/pdf': 'pdf' }[tipo] ?? 'jpg';
 }
@@ -72,7 +86,7 @@ async function subirArchivo(bucket, archivo, fetchImpl, mensajeError) {
     if (!usuario) throw new Error('La sesión expiró. Entra de nuevo para subir el archivo.');
 
     const { url, publishableKey } = (await request('api/v1/auth/config')).data ?? {};
-    const ruta = `${usuario}/${crypto.randomUUID()}.${extensionDe(archivo.type)}`;
+    const ruta = `${usuario}/${nuevoUuid()}.${extensionDe(archivo.type)}`;
     const respuesta = await fetchImpl(`${url}/storage/v1/object/${bucket}/${ruta}`, {
         method: 'POST',
         headers: {

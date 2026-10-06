@@ -46,7 +46,9 @@ test('P2-5: el documento va al bucket privado y PHP solo recibe su ruta', async 
     // El documento nunca arma una URL pública.
     assert.doesNotMatch(storage, /object\/public\/\$\{BUCKET_DOCUMENTOS\}/);
     assert.ok(view.includes('accept="image/jpeg,image/png,image/webp,application/pdf"'));
-    assert.ok(js.includes('documentoRuta: await subirDocumentoIdentidad(archivo)'));
+    // La subida (y la lectura del número) pasan por shared/escaner-documento.js.
+    assert.ok(js.includes('await prepararEnvioDocumento(archivo, {'));
+    assert.match(read('Public/js/shared/escaner-documento.js'), /documentoRuta: await subirDocumentoIdentidad\(archivo\)/);
 });
 
 test('P2-5: Ajustes muestra el estado del documento sin exponer la ruta', async () => {

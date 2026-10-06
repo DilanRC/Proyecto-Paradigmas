@@ -29,7 +29,8 @@ test('el aviso del documento se muestra una sola vez por cuenta nueva', () => {
 
 test('los dos caminos del alta marcan el aviso y Explorar lo muestra con enlace a Ajustes', () => {
     // Con sesión al registrarse (registro.js) y al confirmar el correo (login.js).
-    assert.match(read('Public/js/registro.js'), /if \(!extending\) marcarAvisoDocumento\(\);/);
+    // Sin documento enviado en el registro, Explorar invita a subirlo (con sesión al registrarse).
+    assert.match(read('Public/js/registro.js'), /if \(!extending && !documentoEnviado\) marcarAvisoDocumento\(\);/);
     const login = read('Public/js/login.js');
     assert.ok(login.indexOf('marcarAvisoDocumento();') > login.indexOf('await completarRegistroPendiente(email)'));
     const vista = read('Application/View/explorar/index.php');

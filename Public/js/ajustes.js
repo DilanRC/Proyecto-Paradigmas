@@ -7,7 +7,8 @@ import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { createToast } from './shared/toast.js';
-import { subirDocumentoIdentidad, subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-1';
+import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-2';
+import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-2';
 import { safeImageUrl } from './explore.js?v=foto-3';
 
 const ACTIVITY_API = 'api/v1/actividad';
@@ -144,18 +145,27 @@ async function changeDocument(event) {
     const estado = document.querySelector('#profile-document-state');
     const problema = archivo ? validarDocumento(archivo) : null;
     if (!archivo || problema) { if (problema) estado.textContent = problema; return; }
-    const boton = document.querySelector('#profile-document-upload');
-    boton.disabled = true;
-    estado.textContent = 'Subiendo documento…';
+    const botones = document.querySelectorAll('#profile-document-upload, #profile-document-camera');
+    botones.forEach((boton) => { boton.disabled = true; });
     try {
-        // El archivo va al bucket privado; PHP solo guarda su ruta y lo deja PENDIENTE.
-        await patchPerfil({ documentoRuta: await subirDocumentoIdentidad(archivo) });
+        // Si es una foto, primero se lee el número (en el dispositivo); luego el archivo
+        // va al bucket privado y PHP guarda la ruta, calcula si el número coincide y lo
+        // deja PENDIENTE para el administrador.
+        const persona = activityData?.persona ?? {};
+        const cuerpo = await prepararEnvioDocumento(archivo, {
+            tipo: persona.identificacionTipo,
+            registrado: persona.identificacionNumero,
+            avisar: (paso) => { estado.textContent = paso; },
+        });
+        const response = await patchPerfil(cuerpo);
+        const lectura = mensajeLectura(response.data?.persona?.documento?.lectura);
+        if (lectura) estado.textContent = `${estado.textContent} ${lectura}`;
         toast?.success('Documento enviado a revisión.');
     } catch (error) {
         estado.textContent = error?.errors?.documentoRuta || error?.message || 'No pudimos subir el documento.';
         toast?.error(estado.textContent);
     } finally {
-        boton.disabled = false;
+        botones.forEach((boton) => { boton.disabled = false; });
     }
 }
 
@@ -213,6 +223,13 @@ function initializeProfileUi() {
     document.querySelector('#profile-photo-remove')?.addEventListener('click', removePhoto);
     document.querySelector('#profile-document-upload')?.addEventListener('click', () => document.querySelector('#profile-document-file').click());
     document.querySelector('#profile-document-file')?.addEventListener('change', changeDocument);
+    // "Tomar foto" abre la cámara del teléfono (capture); en computadoras no se ofrece.
+    const camara = document.querySelector('#profile-document-camera');
+    if (camara && esCelular()) {
+        camara.hidden = false;
+        camara.addEventListener('click', () => document.querySelector('#profile-document-photo').click());
+        document.querySelector('#profile-document-photo')?.addEventListener('change', changeDocument);
+    }
 }
 
 function renderProfile(persona = {}) {

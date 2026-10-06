@@ -58,6 +58,8 @@ final class Persona
             'fecha' => $fila['tbpersonadocumentofecha'] ?? null,
             // P2-6: la persona ve por qué se rechazó para saber qué corregir.
             'motivo' => $estado === 'RECHAZADO' ? ($fila['tbpersonadocumentomotivo'] ?? null) : null,
+            // Resultado de la lectura automática (COINCIDE, NO_COINCIDE, OTRA_CUENTA, SIN_LECTURA o null).
+            'lectura' => $fila['tbpersonadocumentolectura'] ?? null,
         ];
     }
 
@@ -110,6 +112,9 @@ final class Persona
                     'estado' => $fila['tbpersonadocumentoestado'],
                     'fecha' => $fila['tbpersonadocumentofecha'],
                     'motivo' => $fila['tbpersonadocumentomotivo'] ?? null,
+                    // Para el admin: ayuda a revisar, no decide.
+                    'numeroLeido' => $fila['tbpersonadocumentonumeroleido'] ?? null,
+                    'lectura' => $fila['tbpersonadocumentolectura'] ?? null,
                 ],
             ], $sentencia->fetchAll()),
             'total' => $total,
@@ -287,6 +292,8 @@ final class Persona
             'documentoEstado' => 'tbpersonadocumentoestado',
             'documentoFecha' => 'tbpersonadocumentofecha',
             'documentoMotivo' => 'tbpersonadocumentomotivo',
+            'documentoNumeroLeido' => 'tbpersonadocumentonumeroleido',
+            'documentoLectura' => 'tbpersonadocumentolectura',
         ];
         $asignaciones = [];
         $parametros = ['personaId' => $personaId];

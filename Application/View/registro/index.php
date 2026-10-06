@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=signup-8"></script>
+    <script type="module" src="js/registro.js?v=signup-10"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -75,6 +75,15 @@
                         <label class="auth-field"><span>Contraseña *</span><span class="auth-password-control"><input id="registro-password" name="password" type="password" minlength="8" autocomplete="new-password" required aria-describedby="registro-password-reglas"><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><ul class="password-rules" id="registro-password-reglas" data-password-rules aria-live="polite"><li data-rule="letter">Al menos una letra</li><li data-rule="uppercase">Al menos una letra en mayúscula</li><li data-rule="number">Al menos un número</li><li data-rule="length">Al menos 8 caracteres</li></ul><small class="auth-error" data-error-for="password"></small></label>
                         <label class="auth-field"><span>Confirmar contraseña *</span><span class="auth-password-control"><input id="registro-password-confirmacion" name="passwordConfirmacion" type="password" minlength="8" autocomplete="new-password" required><button class="auth-password-toggle" type="button" data-password-toggle aria-controls="registro-password-confirmacion" aria-label="Mostrar contraseña" aria-pressed="false"><i class="fa-solid fa-eye" aria-hidden="true"></i></button></span><small class="auth-error" data-error-for="passwordConfirmacion"></small></label>
                     </div>
+                </div>
+
+                <div class="auth-field" data-documento-registro>
+                    <span>Documento de identidad <em>(opcional)</em></span>
+                    <small class="field-help" id="registro-documento-ayuda">Ayuda a verificar tu cuenta. Una foto con buena luz, sin reflejos y con solo el documento en el cuadro; leemos el número en tu dispositivo. También puedes hacerlo después en Ajustes → Perfil.</small>
+                    <input id="registro-documento-archivo" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" hidden>
+                    <input id="registro-documento-foto" type="file" accept="image/*" capture="environment" hidden>
+                    <div><button class="onboarding-add" id="registro-documento-camara" type="button" hidden><i class="fa-solid fa-camera" aria-hidden="true"></i>Tomar foto</button> <button class="onboarding-add" id="registro-documento-subir" type="button" aria-describedby="registro-documento-ayuda"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Elegir archivo</button></div>
+                    <small class="field-help" id="registro-documento-estado" role="status" aria-live="polite"></small>
                 </div>
 
                 <div class="signup-accordions">

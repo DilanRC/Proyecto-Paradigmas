@@ -29,6 +29,20 @@ export function formatIdentificacion(persona = {}) {
     return `${TIPOS[persona.identificacionTipo] ?? persona.identificacionTipo ?? '—'} · ${persona.identificacionNumero ?? '—'}`;
 }
 
+/**
+ * Lectura automática (OCR en el navegador de la persona; el resultado lo calcula el
+ * servidor). Solo ayuda a revisar: el admin decide mirando la imagen. Exportado para pruebas.
+ */
+export function textoLectura(documento = {}) {
+    const leido = documento.numeroLeido ? ` (leído: ${documento.numeroLeido})` : '';
+    return {
+        COINCIDE: `✅ El número coincide${leido}`,
+        NO_COINCIDE: `⚠️ El número no coincide${leido}`,
+        OTRA_CUENTA: `⚠️ Es la identificación de otra cuenta${leido}`,
+        SIN_LECTURA: '— No se pudo leer el número',
+    }[documento.lectura] ?? '— Sin lectura automática';
+}
+
 /** Solo un documento pendiente se verifica o rechaza. Exportado para pruebas. */
 export function accionesDocumento(documento = {}) {
     return documento.estado === 'PENDIENTE' ? ['ver', 'verificar', 'rechazar'] : ['ver'];
@@ -147,6 +161,9 @@ function initialize() {
         badge.className = `badge badge--${clase}`;
         badge.textContent = etiqueta;
         statusCell.appendChild(badge);
+        const lectura = document.createElement('small');
+        lectura.textContent = ` ${textoLectura(item.documento)}`;
+        statusCell.appendChild(lectura);
         if (item.documento?.estado === 'RECHAZADO' && item.documento?.motivo) {
             const motivo = document.createElement('small');
             motivo.textContent = ` ${item.documento.motivo}`;
@@ -175,7 +192,7 @@ function initialize() {
         if (button.dataset.action === 'ver') { abrirDocumento(item.personaId, toast); return; }
         pendiente = item;
         if (button.dataset.action === 'verificar') {
-            elements.verifyMessage.textContent = `Confirme que revisó el documento de ${item.nombre} y que coincide con ${formatIdentificacion(item)}.`;
+            elements.verifyMessage.textContent = `Confirme que revisó el documento de ${item.nombre} y que coincide con ${formatIdentificacion(item)}. Lectura automática: ${textoLectura(item.documento)}.`;
             dialogs.open(elements.verifyModal, { focus: elements.verifyCancel });
         } else {
             errores.clearErrors();

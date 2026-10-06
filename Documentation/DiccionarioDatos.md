@@ -30,6 +30,8 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 | `tbpersonadocumentoestado` | `VARCHAR(20) NULL` | Sí | Verificación del documento: `PENDIENTE`, `VERIFICADO` o `RECHAZADO`. Un documento nuevo siempre queda `PENDIENTE`. | Aplicación | - |
 | `tbpersonadocumentofecha` | `DATETIME NULL` | Sí | Fecha UTC del último cambio de estado del documento, asignada por PHP. | Aplicación | - |
 | `tbpersonadocumentomotivo` | `VARCHAR(250) NULL` | Sí | Motivo del rechazo del documento, escrito por el administrador y visible para la persona en Ajustes. NULL si no fue rechazado; se limpia al subir otro documento. | Administrador | - |
+| `tbpersonadocumentonumeroleido` | `VARCHAR(20) NULL` | Sí | Número que la lectura automática (OCR en el navegador) encontró en la foto, solo dígitos. Ayuda al administrador; no aprueba nada. NULL si no se intentó leer (por ejemplo, un PDF). | Aplicación | - |
+| `tbpersonadocumentolectura` | `VARCHAR(20) NULL` | Sí | Resultado de comparar el número leído, **calculado en PHP**: `COINCIDE` (es la identificación de la persona), `NO_COINCIDE`, `OTRA_CUENTA` (es la identificación de otra Persona) o `SIN_LECTURA` (se intentó y no se encontró un número válido). NULL si no se intentó. | Aplicación | - |
 
 ## tbproductor
 

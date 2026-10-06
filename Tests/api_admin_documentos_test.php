@@ -72,7 +72,7 @@ try {
     test_assert(isset($sinMotivo['body']['errors']['motivo']), 'El error va en motivo');
     $rechazo = $docs->procesar('PATCH', [], ['personaId' => $personaId, 'estado' => 'RECHAZADO', 'motivo' => '  La foto está borrosa ']);
     test_same(200, $rechazo['status'], 'El admin rechaza con motivo');
-    test_same(['estado' => 'RECHAZADO', 'fecha' => $rechazo['body']['data']['documento']['fecha'], 'motivo' => 'La foto está borrosa'],
+    test_same(['estado' => 'RECHAZADO', 'fecha' => $rechazo['body']['data']['documento']['fecha'], 'motivo' => 'La foto está borrosa', 'lectura' => null],
         $rechazo['body']['data']['documento'], 'El motivo queda guardado y recortado');
     test_same(409, $docs->procesar('PATCH', [], ['personaId' => $personaId, 'estado' => 'VERIFICADO'])['status'],
         'Un documento ya revisado no se decide otra vez');
