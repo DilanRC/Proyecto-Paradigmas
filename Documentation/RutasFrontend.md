@@ -64,6 +64,7 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 | `/api/v1/fletes` |
 | `/api/v1/solicitudes-compra` |
 | `/api/v1/catalogos` |
+| `/api/v1/mi-animales/vacunas` |
 
 `/api/metodo-no-permitido.php` es una respuesta auxiliar para métodos HTTP no admitidos; no es una pantalla navegable.
 

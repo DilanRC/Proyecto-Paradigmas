@@ -176,6 +176,12 @@ const EXPECTED_COLUMNS = [
     ],
     'tbraza' => ['tbrazaid', 'tbespecieid', 'tbrazanombre', 'tbrazaactivo'],
     'tbanimalpublicacionanimal' => ['tbanimalpublicacionanimalid', 'tbanimalpublicacionid', 'tbanimalid'],
+    'tbvacuna' => ['tbvacunaid', 'tbvacunanombre', 'tbvacunaactivo'],
+    'tbanimalvacunacion' => [
+        'tbanimalvacunacionid', 'tbanimalid', 'tbvacunaid', 'tbanimalvacunacionfecha', 'tbanimalvacunaciondosis',
+        'tbanimalvacunacionlote', 'tbanimalvacunacionaplicadapor', 'tbanimalvacunacionproximadosis',
+        'tbanimalvacunacionobservaciones', 'tbanimalvacunacionfecharegistro',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -264,7 +270,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 41 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 43 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -484,7 +490,7 @@ function eliminarEstadoProductor(PDO $connection): void
 }
 
 /**
- * Catálogos del animal (P2-2). Solo se siembra una tabla VACÍA: lo que un administrador haya cambiado,
+ * Catálogos del animal (P2-2) y vacunas (P2-3). Solo se siembra una tabla VACÍA: lo que un administrador haya cambiado,
  * agregado o desactivado no se reinserta al redesplegar. Mismos datos que Database/SeedData/104catalogosanimal.sql.
  */
 function seedCatalogs(PDO $connection): void
@@ -570,11 +576,24 @@ function seedCatalogs(PDO $connection): void
         [41, 6, 'Mediterráneo', 1],
         [42, 6, 'Mestizo', 1],
     ],
+    'tbvacuna' => [
+        [1, 'Fiebre aftosa', 1],
+        [2, 'Brucelosis', 1],
+        [3, 'Rabia paralítica bovina', 1],
+        [4, 'Carbunco sintomático', 1],
+        [5, 'Carbunco bacteridiano', 1],
+        [6, 'Clostridiales (multiclostridial)', 1],
+        [7, 'IBR / DVB (rinotraqueítis y diarrea viral)', 1],
+        [8, 'Leptospirosis', 1],
+        [9, 'Complejo respiratorio bovino', 1],
+        [10, 'Pasteurelosis', 1],
+    ],
     ];
     $columnas = [
         'tbespecie' => ['tbespecieid', 'tbespecienombre', 'tbespecieactivo'],
         'tbanimaltipo' => ['tbanimaltipoid', 'tbespecieid', 'tbanimaltiponombre', 'tbanimaltiposexo', 'tbanimaltipoactivo'],
         'tbraza' => ['tbrazaid', 'tbespecieid', 'tbrazanombre', 'tbrazaactivo'],
+        'tbvacuna' => ['tbvacunaid', 'tbvacunanombre', 'tbvacunaactivo'],
     ];
     foreach ($catalogos as $tabla => $filas) {
         if ((int) $connection->query("SELECT COUNT(*) FROM public.{$tabla}")->fetchColumn() > 0) {
@@ -629,7 +648,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=41 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=43 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

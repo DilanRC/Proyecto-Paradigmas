@@ -17,7 +17,7 @@ $tables = ['tbadministrador', 'tbpersona', 'tbproductor', 'tbproductordireccion'
     'tbanimalpublicacionestadoperiodo', 'tbcompra', 'tbventa', 'tbanimalinteraccion', 'tbanimalpublicacioninteraccion',
     'tbcarrito', 'tbcarritoanimal', 'tbcarritoestadoperiodo',
     'tbtransportistaestadoperiodo', 'tbtransportistahorario', 'tbtransportistaflete',
-    'tbtransportistaresena', 'tbregistroconsulta', 'tbtransportistaoferta', 'tbcomprasolicitud', 'tbespecie', 'tbanimaltipo', 'tbraza', 'tbanimalpublicacionanimal'];
+    'tbtransportistaresena', 'tbregistroconsulta', 'tbtransportistaoferta', 'tbcomprasolicitud', 'tbespecie', 'tbanimaltipo', 'tbraza', 'tbanimalpublicacionanimal', 'tbvacuna', 'tbanimalvacunacion'];
 $check = static function (bool $condition, string $message): void {
     if (!$condition) {
         throw new RuntimeException($message);
@@ -27,7 +27,7 @@ foreach ($tables as $table) {
     $check(str_contains($schema, "CREATE TABLE IF NOT EXISTS public.{$table}"), "Falta {$table}");
     $check(str_contains($schema, "ALTER TABLE public.{$table} ENABLE ROW LEVEL SECURITY"), "Falta RLS en {$table}");
 }
-$check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 41, 'Deben existir exactamente cuarenta y una CREATE TABLE');
+$check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 43, 'Deben existir exactamente cuarenta y tres CREATE TABLE');
 $check(!str_contains($schema, 'tbproductordireccionprovincia'),
     'La ubicación vive solo en tbdireccion, también en el espejo PostgreSQL');
 $check(str_contains($migration, 'normalizeProductorAddress($connection)')
@@ -59,7 +59,7 @@ foreach (['PRIMARY KEY', 'FOREIGN KEY', 'DEFAULT ', 'CREATE INDEX', 'UNIQUE'] as
 $check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización de migración');
 $check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
 $check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
-$check(str_contains($migration, 'supabase_schema_status=ready tables=41 migration=v10'), 'Falta traza operativa');
+$check(str_contains($migration, 'supabase_schema_status=ready tables=43 migration=v10'), 'Falta traza operativa');
 $check(!str_contains($schema, 'tbproductorestado SMALLINT'),
     'La columna tbproductorestado fue retirada de tbproductor en v5');
 $check(str_contains($migration, 'eliminarEstadoProductor($connection)'),
@@ -77,10 +77,10 @@ foreach (['tbproductorclasificacionperiodo', 'tbanimal', 'tbanimalproduccionsalu
     'tbanimalpublicacionestadoperiodo', 'tbcompra', 'tbventa', 'tbanimalinteraccion', 'tbanimalpublicacioninteraccion',
     'tbcarrito', 'tbcarritoanimal', 'tbcarritoestadoperiodo',
     'tbtransportistaestadoperiodo', 'tbtransportistahorario', 'tbtransportistaflete',
-    'tbtransportistaresena', 'tbtransportistaoferta', 'tbcomprasolicitud', 'tbespecie', 'tbanimaltipo', 'tbraza', 'tbanimalpublicacionanimal'] as $newTable) {
+    'tbtransportistaresena', 'tbtransportistaoferta', 'tbcomprasolicitud', 'tbespecie', 'tbanimaltipo', 'tbraza', 'tbanimalpublicacionanimal', 'tbvacuna', 'tbanimalvacunacion'] as $newTable) {
     $check(str_contains($migration, "'{$newTable}' => ["), "Falta validar las columnas de {$newTable}");
 }
 $check(str_contains($migration, "\$query['sslmode']"), 'La migración debe leer sslmode desde la URL');
 $check(str_contains($migration, "? \$query['sslmode'] : 'require'"), 'TLS debe ser obligatorio por defecto');
 
-echo "OK supabase schema_test: cuarenta y una tablas, política administrativa, identidad compartida, históricos, comercio, RLS y validación estricta.\n";
+echo "OK supabase schema_test: cuarenta y tres tablas, política administrativa, identidad compartida, históricos, comercio, RLS y validación estricta.\n";

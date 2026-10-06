@@ -470,4 +470,25 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacionanimal (
     tbanimalid INT NOT NULL
 ) ENGINE=InnoDB;
 
+-- Historial de vacunación del animal (P2-3). tbvacuna es el catálogo (con activo, para el panel de administración).
+-- Sin llaves: PHP valida que el animal sea del vendedor y que la vacuna exista y esté activa.
+CREATE TABLE IF NOT EXISTS tbvacuna (
+    tbvacunaid INT NOT NULL,
+    tbvacunanombre VARCHAR(100) NOT NULL,
+    tbvacunaactivo TINYINT(1) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbanimalvacunacion (
+    tbanimalvacunacionid INT NOT NULL,
+    tbanimalid INT NOT NULL,
+    tbvacunaid INT NOT NULL,
+    tbanimalvacunacionfecha DATE NOT NULL,
+    tbanimalvacunaciondosis VARCHAR(50) NULL,
+    tbanimalvacunacionlote VARCHAR(50) NULL,
+    tbanimalvacunacionaplicadapor VARCHAR(150) NULL,
+    tbanimalvacunacionproximadosis DATE NULL,
+    tbanimalvacunacionobservaciones VARCHAR(500) NULL,
+    tbanimalvacunacionfecharegistro DATETIME NOT NULL
+) ENGINE=InnoDB;
+
 -- fin del script de instalación completa

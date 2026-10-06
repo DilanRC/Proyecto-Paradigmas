@@ -7,7 +7,7 @@ namespace Application\Model;
 use PDO;
 
 /**
- * Catálogos del animal (P2-2, DEC-ANIMAL-001): especies, tipos y razas. Solo lectura aquí;
+ * Catálogos del animal (P2-2, DEC-ANIMAL-001): especies, tipos y razas; y vacunas (P2-3). Solo lectura aquí;
  * el panel de administración (P2-6) los gestionará con la columna "activo".
  * Alias SQL en minúscula: Postgres los pliega.
  */
@@ -57,6 +57,27 @@ final class AnimalCatalogo
         return array_map(static fn (array $f): array => [
             'razaId' => (int) $f['id'], 'especieId' => (int) $f['especieid'], 'nombre' => $f['nombre'],
         ], $sentencia->fetchAll());
+    }
+
+    /** @return array<int,array{vacunaId:int,nombre:string}> solo activas (P2-3) */
+    public function vacunas(): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbvacunaid AS id, tbvacunanombre AS nombre FROM tbvacuna WHERE tbvacunaactivo = 1 ORDER BY tbvacunaid'
+        );
+        $sentencia->execute();
+
+        return array_map(static fn (array $f): array => ['vacunaId' => (int) $f['id'], 'nombre' => $f['nombre']], $sentencia->fetchAll());
+    }
+
+    /** @return array{vacunaId:int,nombre:string,activo:bool}|null */
+    public function vacuna(int $id): ?array
+    {
+        $fila = $this->uno('SELECT tbvacunaid AS id, tbvacunanombre AS nombre, tbvacunaactivo AS activo
+                            FROM tbvacuna WHERE tbvacunaid = :id', $id);
+
+        return $fila === null ? null
+            : ['vacunaId' => (int) $fila['id'], 'nombre' => $fila['nombre'], 'activo' => (int) $fila['activo'] === 1];
     }
 
     /** @return array{especieId:int,nombre:string,activo:bool}|null */

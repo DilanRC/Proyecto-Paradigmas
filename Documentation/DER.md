@@ -183,6 +183,25 @@ erDiagram
         INT tbanimalid
     }
 
+    tbvacuna {
+        INT tbvacunaid
+        VARCHAR tbvacunanombre
+        TINYINT tbvacunaactivo
+    }
+
+    tbanimalvacunacion {
+        INT tbanimalvacunacionid
+        INT tbanimalid
+        INT tbvacunaid
+        DATE tbanimalvacunacionfecha
+        VARCHAR tbanimalvacunaciondosis
+        VARCHAR tbanimalvacunacionlote
+        VARCHAR tbanimalvacunacionaplicadapor
+        DATE tbanimalvacunacionproximadosis
+        VARCHAR tbanimalvacunacionobservaciones
+        DATETIME tbanimalvacunacionfecharegistro
+    }
+
     tbanimalproduccionsalud {
         INT tbanimalproduccionsaludid
         INT tbanimalid
@@ -437,6 +456,8 @@ erDiagram
     tbproductor ||--o{ tbanimal : "dueño"
     tbanimalpublicacion ||--o{ tbanimalpublicacionanimal : "animales del lote"
     tbanimal ||--o{ tbanimalpublicacionanimal : "en lote"
+    tbanimal ||--o{ tbanimalvacunacion : "vacunas"
+    tbvacuna ||--o{ tbanimalvacunacion : "vacuna"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
 ```
 

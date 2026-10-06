@@ -542,6 +542,52 @@ final class AnimalComercial
         ];
     }
 
+    public const VACUNAS_POR_PUBLICACION = 8;
+
+    /**
+     * Agrega `vacunas` a cada publicación (P2-3), de forma pública y acotada: solo vacuna, fecha de la última
+     * aplicación y próxima dosis (nunca lote, quién la aplicó ni observaciones), a lo sumo 8 por publicación. En un
+     * lote suma las vacunas de todos sus animales (una fila por vacuna, con la fecha más reciente).
+     *
+     * @param array<int,array<string,mixed>> $publicaciones
+     * @return array<int,array<string,mixed>>
+     */
+    public function adjuntarVacunas(array $publicaciones): array
+    {
+        $ids = array_values(array_unique(array_map(static fn (array $p): int => (int) $p['publicacionId'], $publicaciones)));
+        if ($ids === []) {
+            return $publicaciones;
+        }
+        $marcas = implode(',', array_fill(0, count($ids), '?'));
+        $sentencia = $this->conexion->prepare(
+            "SELECT p.tbanimalpublicacionid AS publicacionid, c.tbvacunanombre AS vacuna,
+                    MAX(v.tbanimalvacunacionfecha) AS fecha, MAX(v.tbanimalvacunacionproximadosis) AS proxima
+             FROM tbanimalpublicacion p
+             INNER JOIN tbanimalvacunacion v
+                ON v.tbanimalid = p.tbanimalid
+                OR v.tbanimalid IN (SELECT l.tbanimalid FROM tbanimalpublicacionanimal l
+                                    WHERE l.tbanimalpublicacionid = p.tbanimalpublicacionid)
+             INNER JOIN tbvacuna c ON c.tbvacunaid = v.tbvacunaid
+             WHERE p.tbanimalpublicacionid IN ({$marcas})
+             GROUP BY p.tbanimalpublicacionid, c.tbvacunaid, c.tbvacunanombre
+             ORDER BY p.tbanimalpublicacionid, fecha DESC, c.tbvacunaid"
+        );
+        $sentencia->execute($ids);
+        $porPublicacion = [];
+        foreach ($sentencia->fetchAll() as $fila) {
+            $lista = &$porPublicacion[(int) $fila['publicacionid']];
+            if (count($lista ?? []) < self::VACUNAS_POR_PUBLICACION) {
+                $lista[] = ['vacuna' => $fila['vacuna'], 'fecha' => $fila['fecha'], 'proximaDosis' => $fila['proxima']];
+            }
+            unset($lista);
+        }
+
+        return array_map(static function (array $p) use ($porPublicacion): array {
+            $p['vacunas'] = $porPublicacion[(int) $p['publicacionId']] ?? [];
+            return $p;
+        }, $publicaciones);
+    }
+
     private const COLUMNAS_PUBLICACION_EDITABLES = [
         'titulo' => 'tbanimalpublicaciontitulo',
         'descripcion' => 'tbanimalpublicaciondescripcion',

@@ -1,7 +1,7 @@
 USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Catálogos iniciales del animal (especies, tipos y razas). Idempotente: solo siembra una tabla vacía.
+-- Catálogos iniciales del animal (especies, tipos y razas) y vacunas. Idempotente: solo siembra una tabla vacía.
 START TRANSACTION;
 
 INSERT INTO tbespecie (tbespecieid, tbespecienombre, tbespecieactivo)
@@ -163,5 +163,29 @@ SELECT v.* FROM (
     SELECT 42, 6, 'Mestizo', 1
 ) v
 WHERE NOT EXISTS (SELECT 1 FROM tbraza);
+
+INSERT INTO tbvacuna (tbvacunaid, tbvacunanombre, tbvacunaactivo)
+SELECT v.* FROM (
+    SELECT 1 AS tbvacunaid, 'Fiebre aftosa' AS tbvacunanombre, 1 AS tbvacunaactivo
+    UNION ALL
+    SELECT 2, 'Brucelosis', 1
+    UNION ALL
+    SELECT 3, 'Rabia paralítica bovina', 1
+    UNION ALL
+    SELECT 4, 'Carbunco sintomático', 1
+    UNION ALL
+    SELECT 5, 'Carbunco bacteridiano', 1
+    UNION ALL
+    SELECT 6, 'Clostridiales (multiclostridial)', 1
+    UNION ALL
+    SELECT 7, 'IBR / DVB (rinotraqueítis y diarrea viral)', 1
+    UNION ALL
+    SELECT 8, 'Leptospirosis', 1
+    UNION ALL
+    SELECT 9, 'Complejo respiratorio bovino', 1
+    UNION ALL
+    SELECT 10, 'Pasteurelosis', 1
+) v
+WHERE NOT EXISTS (SELECT 1 FROM tbvacuna);
 
 COMMIT;

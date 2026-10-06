@@ -404,6 +404,25 @@ CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionanimal (
     tbanimalid INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbvacuna (
+    tbvacunaid INTEGER NOT NULL,
+    tbvacunanombre VARCHAR(100) NOT NULL,
+    tbvacunaactivo SMALLINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbanimalvacunacion (
+    tbanimalvacunacionid INTEGER NOT NULL,
+    tbanimalid INTEGER NOT NULL,
+    tbvacunaid INTEGER NOT NULL,
+    tbanimalvacunacionfecha DATE NOT NULL,
+    tbanimalvacunaciondosis VARCHAR(50) NULL,
+    tbanimalvacunacionlote VARCHAR(50) NULL,
+    tbanimalvacunacionaplicadapor VARCHAR(150) NULL,
+    tbanimalvacunacionproximadosis DATE NULL,
+    tbanimalvacunacionobservaciones VARCHAR(500) NULL,
+    tbanimalvacunacionfecharegistro TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
 ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbadministrador ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
@@ -445,3 +464,5 @@ ALTER TABLE public.tbespecie ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimaltipo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbraza ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalpublicacionanimal ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbvacuna ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbanimalvacunacion ENABLE ROW LEVEL SECURITY;

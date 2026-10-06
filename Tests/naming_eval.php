@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('cuarenta_y_una_tablas', $manifest['table_count'] === 41,
-    'SQL crea exactamente cuarenta y una tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
+$evaluate('cuarenta_y_tres_tablas', $manifest['table_count'] === 43,
+    'SQL crea exactamente cuarenta y tres tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -77,7 +77,7 @@ $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !st
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador', 'tbanimal',
     'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion', 'tbanimalpublicacionanimal',
-    'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbanimaltipo', 'tbbitacora', 'tbcarrito',
+    'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbanimaltipo', 'tbanimalvacunacion', 'tbbitacora', 'tbcarrito',
     'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
     'tbcompradorpersonatelefonohistorico', 'tbcomprasolicitud',
     'tbdireccion', 'tbespecie', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
@@ -85,7 +85,7 @@ $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador'
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
     'tbproductorubicacion', 'tbraza', 'tbregistroconsulta',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
-    'tbtransportistahorario', 'tbtransportistaoferta', 'tbtransportistaresena', 'tbtransportistavehiculo',
+    'tbtransportistahorario', 'tbtransportistaoferta', 'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvacuna',
     'tbvehiculo', 'tbventa'],
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));

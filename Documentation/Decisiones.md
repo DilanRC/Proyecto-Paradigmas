@@ -1172,7 +1172,7 @@ el siguiente paso es exigir un captcha o retirar otra vez la consulta.
 
 **Qué se decidió (P2-2).** El animal gana especie, tipo, raza de catálogo, fecha de nacimiento (real o estimada),
 partos, estado (`ACTIVO`, `PUBLICADO`, `VENDIDO`, `INACTIVO`) y dueño explícito (`tbproductorid`). Todas son columnas
-`NULL` en `tbanimal`, así que los animales existentes no cambian. El esquema pasa a 41 tablas.
+`NULL` en `tbanimal`, así que los animales existentes no cambian. El esquema pasa a 41 tablas (43 con el historial de vacunación, `DEC-ANIMAL-002`).
 
 **Catálogos con referencia a la especie** (`tbespecie`, `tbanimaltipo`, `tbraza`) y no una tabla genérica de
 catálogos: así PHP valida con una consulta simple que el tipo y la raza pertenecen a la especie, y el sexo se
@@ -1215,3 +1215,25 @@ restricciones, igual que el resto del esquema.
 **Fecha de nacimiento.** Antes el proyecto evitaba `tbanimalfechanacimiento` para no "inventar un pasado". La
 columna nueva es opcional y solo la llena quien conoce el dato; los animales existentes quedan en `NULL` y la edad
 sigue saliendo de `tbanimalproduccionsalud` cuando no hay fecha. Se ajustaron las tres pruebas que la prohibían.
+
+## DEC-ANIMAL-002 - Historial de vacunación
+
+**Qué se decidió (P2-3).** Dos tablas nuevas, `tbvacuna` (catálogo con `activo`, igual que los catálogos de
+`DEC-ANIMAL-001`) y `tbanimalvacunacion` (animal, vacuna, fecha de aplicación, dosis, lote, quién la aplicó, próxima
+dosis y observaciones). El esquema pasa a 43 tablas. Se descartó el nombre libre: un catálogo permite que el
+administrador lo mantenga y que la tarjeta muestre nombres consistentes.
+
+**Quién puede escribir.** `api/v1/mi-animales/vacunas` (GET, POST, PATCH; sin DELETE) acepta solo animales **propios**:
+los que tienen al vendedor como dueño explícito (`tbanimal.tbproductorid`) o como vendedor de una publicación
+(incluidos los de un lote). Un animal ajeno o inexistente responde 404, sin distinguir. Un animal `VENDIDO` o
+`INACTIVO` ya no recibe vacunas (409). Un registro equivocado se **corrige**, no se borra, y cada alta o corrección
+deja bitácora (`ANIMAL_VACUNACION`, origen `API_MI_ANIMALES_VACUNAS`).
+
+**Quién puede leer.** El historial completo es del dueño. La lectura **pública** (la lista de publicaciones agrega
+`vacunas` a cada una, solo en la página devuelta) es **acotada**: vacuna, fecha de la última aplicación y próxima
+dosis; nunca lote del biológico, quién la aplicó ni observaciones; a lo sumo 8 vacunas por publicación (una fila por
+vacuna). En un lote se suman las vacunas de todos sus animales.
+
+**Reglas.** La fecha de aplicación no es futura (hora de Costa Rica), la próxima dosis no es anterior a la aplicación y
+la vacuna debe existir y estar activa al registrarla (una vacuna desactivada después sigue mostrándose en lo ya
+registrado).

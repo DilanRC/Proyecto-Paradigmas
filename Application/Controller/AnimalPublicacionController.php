@@ -425,6 +425,8 @@ final class AnimalPublicacionController
                 $tamano
             );
         }
+        // Vacunas (P2-3): públicas y acotadas, solo de la página que se devuelve.
+        $resultado['publicaciones'] = $this->animales->adjuntarVacunas($resultado['publicaciones']);
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;
 

@@ -603,6 +603,37 @@ transportista.
 | `tbcomprasolicitudrespuestamotivo` | `VARCHAR(250) NULL` | Sí | Motivo del vendedor al rechazar. | Usuario | - |
 | `tbcomprasolicitudfleterespuestafecha` | `DATETIME NULL` | Sí | Fecha UTC en que el transportista respondió el flete. | Aplicación | - |
 
+## tbvacuna
+
+Catálogo de vacunas del ganado (P2-3): fiebre aftosa, brucelosis, rabia paralítica bovina, carbunco sintomático y
+bacteridiano, clostridiales, IBR/DVB, leptospirosis, complejo respiratorio y pasteurelosis. `activo` permite al
+panel de administración (P2-6) retirar una vacuna sin perder el historial que ya la usa.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbvacunaid` | `INT NOT NULL` | No | Identificador lógico de la vacuna. | Datos iniciales | - |
+| `tbvacunanombre` | `VARCHAR(100) NOT NULL` | No | Nombre de la vacuna. | Datos iniciales | - |
+| `tbvacunaactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece al registrar). | Administración | - |
+
+## tbanimalvacunacion
+
+Historial de vacunación de un animal (P2-3). Es append-first: un registro equivocado se **corrige** (PATCH) y cada
+cambio queda en la bitácora (`ANIMAL_VACUNACION`); no se borra. La lectura pública (en la tarjeta de la
+publicación) solo expone vacuna, fecha y próxima dosis.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalvacunacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | Animal vacunado; PHP exige que sea del vendedor (dueño explícito o de su publicación) y que no esté vendido. | Aplicación | `tbanimal` |
+| `tbvacunaid` | `INT NOT NULL` | No | Vacuna aplicada; PHP exige que exista y esté activa al registrarla. | Usuario | `tbvacuna` |
+| `tbanimalvacunacionfecha` | `DATE NOT NULL` | No | Fecha de aplicación; no puede ser futura. | Usuario | - |
+| `tbanimalvacunaciondosis` | `VARCHAR(50) NULL` | Sí | Dosis aplicada (texto libre, p. ej. `2 ml`). | Usuario | - |
+| `tbanimalvacunacionlote` | `VARCHAR(50) NULL` | Sí | Lote del biológico. Privado: no sale en la lectura pública. | Usuario | - |
+| `tbanimalvacunacionaplicadapor` | `VARCHAR(150) NULL` | Sí | Quién la aplicó (veterinario o persona). Privado. | Usuario | - |
+| `tbanimalvacunacionproximadosis` | `DATE NULL` | Sí | Fecha prevista de la próxima dosis; no anterior a la aplicación. | Usuario | - |
+| `tbanimalvacunacionobservaciones` | `VARCHAR(500) NULL` | Sí | Observaciones. Privadas. | Usuario | - |
+| `tbanimalvacunacionfecharegistro` | `DATETIME NOT NULL` | No | Momento (UTC) en que el sistema registró la vacuna. | Aplicación | - |
+
 ## Histórico transversal (Tramo 12/13 y avance 3)
 
 La matriz P0-C (`Documentation/MatrizArquitectonicaP0C.md`) supera la

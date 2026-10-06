@@ -9,7 +9,7 @@ use Application\Model\AnimalCatalogo;
 use PDO;
 
 /**
- * Catálogos del animal para los formularios (P2-2): especies, tipos y razas activos.
+ * Catálogos del animal para los formularios (P2-2, P2-3): especies, tipos, razas y vacunas activos.
  * Solo lectura y con sesión. La gestión (alta, baja, edición) es del panel de administración (P2-6).
  */
 final class CatalogosController
@@ -38,6 +38,7 @@ final class CatalogosController
                 'especies' => $this->catalogo->especies(),
                 'tipos' => $this->catalogo->tipos($especieId),
                 'razas' => $this->catalogo->razas($especieId),
+                'vacunas' => $this->catalogo->vacunas(),
             ]);
         } catch (HttpException $excepcion) {
             return $this->respuesta(false, $excepcion->getMessage(), $excepcion->datos, $excepcion->estadoHttp, $excepcion->errores);

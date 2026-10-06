@@ -51,7 +51,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo — **HECHO** | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado — **HECHO** (catálogos y lote; ver `DEC-ANIMAL-001`) | **Lidera** | | Apoya |
-| P2-3 | Historial de vacunación | **Lidera** | | Apoya |
+| P2-3 | Historial de vacunación — **HECHO** (API y lectura pública; la pantalla de alta va en P2-4) | **Lidera** | | Apoya |
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
 | P2-5 | Foto del documento de identidad y verificación — **SUBIDA HECHA** (falta bucket en Supabase; verificación en P2-6) | | **Lidera** | Apoya |
 | P2-6 | Administrador: catálogos, verificación de identidad y fletes | | **Lidera** | Apoya |
@@ -274,11 +274,11 @@ nacimiento, partos, estado del animal y dueño explícito.
 
 ### P2-3 · Historial de vacunación · Carlos (+ Jeferson)
 
-- [ ] Tabla `tbanimalvacunacion` (animal, vacuna, fecha de aplicación, dosis,
+- [x] Tabla `tbanimalvacunacion` (animal, vacuna, fecha de aplicación, dosis,
       lote, aplicada por, próxima dosis y observaciones) y catálogo `tbvacuna`,
       o nombre libre si se decide no tener catálogo.
-- [ ] Endpoints para registrar, listar y corregir el historial de un animal propio.
-- [ ] El detalle de la publicación muestra el historial del animal.
+- [x] Endpoints para registrar, listar y corregir el historial de un animal propio.
+- [x] El detalle de la publicación muestra el historial del animal.
 
 ### P2-4 · Mis animales (inventario) · Jeferson (+ Carlos)
 

@@ -78,6 +78,8 @@ DESCRIBE tbespecie;
 DESCRIBE tbanimaltipo;
 DESCRIBE tbraza;
 DESCRIBE tbanimalpublicacionanimal;
+DESCRIBE tbvacuna;
+DESCRIBE tbanimalvacunacion;
 
 -- Comprobación 2: el avance no introdujo llaves, restricciones ni índices.
 -- Resultado esperado: cero filas en las tres consultas.
@@ -106,7 +108,7 @@ SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATA
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
 
--- Comprobación 4: exactamente 41 tablas base.
-SELECT COUNT(*) AS tablas_esperadas_41
+-- Comprobación 4: exactamente 43 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_43
 FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

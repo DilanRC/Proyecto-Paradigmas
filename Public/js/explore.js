@@ -74,6 +74,26 @@ export function formatKind(animal) {
     return [animal?.especie, animal?.tipo].filter(Boolean).join(' · ') || '—';
 }
 
+/** "2026-05-12" -> "12/05/2026"; "—" si no es una fecha AAAA-MM-DD. */
+export function formatDate(iso) {
+    const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? ''));
+    return partes ? `${partes[3]}/${partes[2]}/${partes[1]}` : '—';
+}
+
+/** Historial de vacunación público (P2-3): vacuna, última aplicación y próxima dosis; null si no hay. */
+function vacunasBlock(vacunas) {
+    const lista = Array.isArray(vacunas) ? vacunas.filter((item) => item?.vacuna) : [];
+    if (lista.length === 0) return null;
+    const bloque = element('details', 'explore-card__more explore-card__vacunas');
+    const filas = element('dl', 'explore-card__specs');
+    for (const item of lista) {
+        const proxima = item.proximaDosis ? ` · próxima ${formatDate(item.proximaDosis)}` : '';
+        filas.append(specEntry('fa-syringe', formatText(item.vacuna), `${formatDate(item.fecha)}${proxima}`));
+    }
+    bloque.append(element('summary', null, `Vacunas (${lista.length})`), filas);
+    return bloque;
+}
+
 /** Cantidad de animales de la publicación: 1 es un animal; más de 1, un lote. */
 export function lotSize(publicacion) {
     const n = Number(publicacion?.loteCantidad);
@@ -277,6 +297,7 @@ export function buildCard(publicacion, { compacta = false } = {}) {
     );
     if (Number.isInteger(animal?.partos)) specs.append(specEntry('fa-baby', 'Partos', String(animal.partos)));
     if (lote > 1) specs.append(specEntry('fa-layer-group', 'Lote', `${lote} animales`));
+    const vacunas = vacunasBlock(publicacion.vacunas);
 
     const vendedor = element('p', 'explore-card__seller');
     const persona = element('i');
@@ -307,6 +328,7 @@ export function buildCard(publicacion, { compacta = false } = {}) {
             meta,
             element('p', null, formatText(publicacion.descripcion)),
             specs,
+            ...(vacunas ? [vacunas] : []),
             vendedor,
         );
         body.append(element('h2', null, formatText(publicacion.titulo)), precio, mas);
@@ -321,6 +343,7 @@ export function buildCard(publicacion, { compacta = false } = {}) {
         precio,
         element('p', null, formatText(publicacion.descripcion)),
         specs,
+        ...(vacunas ? [vacunas] : []),
         vendedor,
         acciones,
     );

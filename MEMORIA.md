@@ -340,8 +340,8 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   `tbproductoractividad`, `tbtransportistaestadoperiodo` se quedan como están), política de sesión de administrador (P3-4) y la limpieza menor de frontend.
 - **Lo trabaja Jeremi (no tocar):** verificación de identidad y catálogos en el panel de administración (P2-6).
 
-### Modelo de animal (P2-2, en construcción; DEC-ANIMAL-001)
-- Esquema de **41 tablas**: catálogos `tbespecie`, `tbanimaltipo` (con `sexo` M/H o NULL) y `tbraza` (todos con `activo`, para que Jeremi los gestione en el panel admin; **no hay endpoints ni pantallas admin de catálogos en esta línea**) y `tbanimalpublicacionanimal` (enlace de lote). Migración `021modeloanimal.sql`; semilla `104catalogosanimal.sql` (en `compose.yaml`, `instalar-local.*` y `Tools/db-aislada.sh`) y `seedCatalogs()` en `migrate.php`. **Solo se siembra una tabla vacía**: lo que el admin cambie o desactive no se reinserta.
+### Modelo de animal (P2-2; DEC-ANIMAL-001)
+- Esquema de **41 tablas** (43 con el historial de vacunación): catálogos `tbespecie`, `tbanimaltipo` (con `sexo` M/H o NULL) y `tbraza` (todos con `activo`, para que Jeremi los gestione en el panel admin; **no hay endpoints ni pantallas admin de catálogos en esta línea**) y `tbanimalpublicacionanimal` (enlace de lote). Migración `021modeloanimal.sql`; semilla `104catalogosanimal.sql` (en `compose.yaml`, `instalar-local.*` y `Tools/db-aislada.sh`) y `seedCatalogs()` en `migrate.php`. **Solo se siembra una tabla vacía**: lo que el admin cambie o desactive no se reinserta.
 - Columnas nuevas en `tbanimal` (todas NULL): `tbespecieid`, `tbanimaltipoid`, `tbrazaid`, `tbanimalfechanacimiento` (+ `…estimada`), `tbanimalpartos`, `tbanimalestado` (`ACTIVO|PUBLICADO|VENDIDO|INACTIVO`) y `tbproductorid` (dueño explícito). `tbanimalraza` (texto) se conserva y se llena con el nombre de la raza de catálogo.
 - **API `GET api/v1/catalogos?especieId=`** (sesión; `CatalogosController`): `{ especies, tipos, razas }` activos (con `especieId` filtra tipos y razas). Los formularios la leen una sola vez sin filtro.
 - **`POST api/v1/publicaciones` acepta, todo opcional:** `especieId`, `tipoId`, `razaId`, `fechaNacimiento` (AAAA-MM-DD) + `fechaNacimientoEstimada`, `partos`, `arete` y `loteCantidad` (2-100). Validaciones en `AnimalValidacionService` (422 por campo): tipo y raza activos y de la especie (el tipo/raza exige `especieId`); el **sexo se deriva del tipo** y si se envía debe coincidir; `partos` entero 0-30 solo si el sexo es HEMBRA; fecha válida y no futura (hora de Costa Rica), "estimada" exige fecha; un lote no lleva `arete` ni `partos`. Sin ninguno de estos campos todo funciona como antes (`animalIdentificacion` y `raza` libres siguen igual).
@@ -351,6 +351,14 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - **Lectura:** cada publicación trae `loteCantidad` y `animal.{especieId, especie, tipoId, tipo, razaId, fechaNacimiento, fechaNacimientoEstimada, partos, estado}` (null si el animal es anterior a P2-2).
 - **Publicar:** listas encadenadas especie → tipo y raza (con "Otra (la escribo)"), sexo fijado por el tipo, fecha de nacimiento (con "estimada"), partos solo si es hembra, arete con máscara y "Publicar un lote". Si el catálogo no carga, queda la raza en texto. Tarjetas (`buildCard`): Tipo (especie · tipo), edad calculada desde la fecha ("(aprox.)" si es estimada), partos y, en lotes, "Lote de N" junto al precio y una fila "Lote".
 - Cambió una decisión vieja: antes tres pruebas **prohibían** `tbanimalfechanacimiento` ("sin pasado inventado"). La columna es opcional y nunca se llena sola; se ajustaron `db_ready_test`, `naming_eval` y `schema_eval`.
+
+### Historial de vacunación (P2-3; DEC-ANIMAL-002)
+- Esquema de **43 tablas**: `tbvacuna` (catálogo con `activo`; 10 vacunas comunes del ganado) y `tbanimalvacunacion` (animal, vacuna, fecha, dosis, lote, aplicada por, próxima dosis, observaciones). Migración `022vacunacion.sql`; las vacunas también están en `104catalogosanimal.sql` y en `seedCatalogs()` (solo se siembran si la tabla está vacía). `GET api/v1/catalogos` devuelve además `vacunas`.
+- **API `api/v1/mi-animales/vacunas`** (sesión; `MiAnimalesVacunasController`, modelo `AnimalVacunacion`): `GET ?animalId=` lista (más reciente primero), `POST { animalId, vacunaId, fecha, dosis?, lote?, aplicadaPor?, proximaDosis?, observaciones? }` registra (201) y `PATCH { vacunacionId, ...campos }` corrige solo lo enviado (`null` borra un opcional). No hay DELETE ni cambio de animal.
+- Reglas: animal **propio** = dueño explícito (`tbanimal.tbproductorid`) o animal de una publicación suya (principal o del lote); ajeno o inexistente → 404; sin la actividad Vendedor → 409; animal `VENDIDO`/`INACTIVO` → 409. Fecha no futura, próxima dosis no anterior, vacuna existente y activa (422 por campo). Bitácora `ANIMAL_VACUNACION` / `API_MI_ANIMALES_VACUNAS` (`CREAR`, `ACTUALIZAR`).
+- **Lectura pública acotada:** `GET api/v1/publicaciones` agrega `vacunas: [{ vacuna, fecha, proximaDosis }]` a cada publicación de la página (nunca lote del biológico, quién la aplicó ni observaciones; máx. 8; en un lote, una fila por vacuna sumando sus animales). `AnimalComercial::adjuntarVacunas`. No se agrega en `api/v1/publicaciones/interacciones` (Me interesa).
+- La tarjeta (`buildCard`, completa y compacta) las muestra en un bloque desplegable "Vacunas (N)" con la fecha y la próxima dosis.
+- Pendiente: una pantalla para que el vendedor registre vacunas está en "Mis animales" (P2-4); hoy solo existe la API.
 
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
@@ -479,6 +487,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · modelo-animal · P2-3 Historial de vacunación
+- Tablas `tbvacuna` y `tbanimalvacunacion` (43 en total), `api/v1/mi-animales/vacunas`, vacunas en `api/v1/catalogos` y lectura pública acotada en la lista de publicaciones (ver "Historial de vacunación (P2-3)" y `DEC-ANIMAL-002`).
+- Archivos: `AnimalVacunacion.php`, `MiAnimalesVacunasController.php`, `Public/api/mi-animales-vacunas.php`, `AnimalCatalogo.php`, `CatalogosController.php`, `AnimalComercial.php` (`adjuntarVacunas`), `AnimalPublicacionController.php`, `022vacunacion.sql`, `104catalogosanimal.sql`, `schema.sql`, `migrate.php`, `explore.js` (bloque de vacunas), `Public/.htaccess`, diccionario, DER, `Decisiones.md` y PDF.
+- Pruebas: nuevas `Tests/mi_animales_vacunas_test.php` y `Tests/frontend/vacunas.test.mjs`; conteos de 41 a 43 tablas en README, `Database/Tests`, `schema_manifest_test`, `db_ready_test`, `instalacion_limpia_test`, `naming_eval`, `schema_eval` y `schema_test`.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/022vacunacion.sql` (después de la 021). Probado `migrate.php` en Postgres 16 (dos corridas; no reinserta lo que el administrador borró o desactivó).
 
 ### 2026-10-06 · modelo-animal · P2-2 Modelo de animal: catálogos, validaciones, arete, lote y Publicar
 - Esquema, API y pantalla del modelo de animal (ver "Modelo de animal (P2-2)" y `DEC-ANIMAL-001`): 4 tablas nuevas (41 en total), 8 columnas NULL en `tbanimal`, `api/v1/catalogos`, validaciones, arete SENASA, lote y venta de lote por animal.
