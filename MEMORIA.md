@@ -339,8 +339,12 @@ están incluidos ahí.
     with check (bucket_id = 'documentos' and (storage.foldername(name))[1] = auth.uid()::text);
   ```
   Sin políticas de lectura, cambio ni borrado para las personas: solo el servidor, con la clave secreta, lo lee (P2-6).
-- Decidir "Confirm email": desactivarlo en desarrollo o configurar SMTP propio
-  (Resend/Brevo/SendGrid) y el Site URL para producción.
+- **"Confirm email" está DESACTIVADO** (comprobado el 05/10: `mailer_autoconfirm = true`). ⚠️ **Riesgo abierto:** la app
+  vincula la sesión con la Persona **solo por el correo** (`SupabaseActorResolver::personaIdPorCorreo`), así que
+  cualquiera puede registrarse en Supabase con un correo ajeno que aún no tenga cuenta y entrar como esa Persona. Lo
+  mismo con `tbadministrador`: un correo agregado como admin **sin cuenta** lo reclama quien se registre primero.
+  Cerrarlo: reactivar la confirmación (con SMTP propio, Resend/Brevo/SendGrid, y el Site URL de producción) o hacer
+  P0-1 (vincular por el `sub` del JWT). Mientras tanto, agregar como admin solo correos que ya tengan cuenta.
 
 ### Frontend
 - Se quitó el botón **Pasar** de las tarjetas (un toque accidental ocultaría la publicación para siempre; el scroll ya cumple esa función). El API sigue aceptando el tipo `PASAR`, pero ninguna pantalla lo envía.
@@ -368,6 +372,10 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · backend · P3-1 Comerciante (investigación, sin código)
+- Nuevo `Documentation/Sprints/P3-1-Comerciante.md`: según la Ley 8799 y el Decreto 44336, "comerciante" no es un actor distinto (comprar y vender tiene las mismas obligaciones de guía y trazabilidad); lo distinto son los establecimientos mercantiles (subastas, ferias). Se recomienda tratarlo como Vendedor hasta que el cliente responda las 3 preguntas del documento.
+- De paso responde parte de P2-2: el arete oficial (DIIO) lleva el 188 de Costa Rica.
 
 ### 2026-10-05 · backend · P3-4 Visor de la bitácora
 - Pantalla `/admin/bitacora` y API `api/v1/admin/bitacora` de solo lectura (ver "Administrador: bitácora (P3-4)"). Sin columnas nuevas.
