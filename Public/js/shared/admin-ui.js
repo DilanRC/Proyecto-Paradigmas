@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-7';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-8';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-9';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-10';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -36,6 +36,11 @@ const MODULES = {
         icon: 'fa-clipboard-list',
         search: 'Título, raza, vendedor o finca',
         hint: 'Busca en título, raza, vendedor, finca y zona.',
+    },
+    'admin/documentos': {
+        icon: 'fa-id-card',
+        search: 'Nombre, identificación o correo',
+        hint: 'Documentos de identidad por revisar. Las pendientes, de la más antigua a la más nueva.',
     },
     'admin/metodos-pago': {
         icon: 'fa-wallet',

@@ -55,6 +55,8 @@ test('P2-5: Ajustes muestra el estado del documento sin exponer la ruta', async 
     assert.match(textoDocumento({ estado: 'PENDIENTE' }), /revisión/);
     assert.match(textoDocumento({ estado: 'VERIFICADO' }), /Verificado/);
     assert.match(textoDocumento({ estado: 'RECHAZADO' }), /más clara/);
+    // P2-6: si el admin dejó motivo, la persona lo ve.
+    assert.equal(textoDocumento({ estado: 'RECHAZADO', motivo: 'La foto está borrosa' }), 'No se pudo verificar: La foto está borrosa. Sube otro documento.');
     assert.ok(view.includes('id="profile-document-state"') && view.includes('role="status"'));
     assert.doesNotMatch(js, /persona\??\.documentoRuta|documento\??\.ruta/, 'la pantalla nunca lee ni muestra la ruta guardada');
 });

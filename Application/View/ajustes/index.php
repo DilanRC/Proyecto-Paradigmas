@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-12"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-5"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-6"></script>
 </head>
 <body class="public-home activity-page settings-page">
     <div class="public-shell" id="inicio">

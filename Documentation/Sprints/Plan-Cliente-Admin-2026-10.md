@@ -54,7 +54,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P2-3 | Historial de vacunación | **Lidera** | | Apoya |
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
 | P2-5 | Foto del documento de identidad y verificación — **SUBIDA HECHA** (falta bucket en Supabase; verificación en P2-6) | | **Lidera** | Apoya |
-| P2-6 | Administrador: catálogos, verificación de identidad y fletes | | **Lidera** | Apoya |
+| P2-6 | Administrador: catálogos, verificación de identidad y fletes — **VERIFICACIÓN HECHA** (catálogos y fletes esperan P2-2, P2-3, P1-2 y P1-3) | | **Lidera** | Apoya |
 | P3-1 | Comerciante (solo investigación) — **PROPUESTA LISTA** (falta respuesta del cliente) | | **Lidera** | |
 | P3-2 | Chat y comentarios en tiempo real (solo planificación) | **Lidera** | | |
 | P3-3 | Limpieza de tablas sin uso y decisión sobre el carrito | **Lidera** | | |
@@ -368,8 +368,10 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 - [ ] Catálogos: especies, tipos, razas y vacunas (P2-2 y P2-3), con el mismo
       patrón que Métodos de pago.
-- [ ] Verificación de identidad: lista de personas en `PENDIENTE`, ver la foto
+- [x] Verificación de identidad: lista de personas en `PENDIENTE`, ver la foto
       del documento con enlace firmado, y Verificar o Rechazar con motivo (P2-5).
+      (`/admin/documentos`, hecho por Jeremi; la persona ve el motivo en Ajustes. Falta configurar
+      `SUPABASE_SECRET_KEY` en Vercel y el borrado a los 90 días.)
 - [ ] Fletes: ver las ofertas y las solicitudes; pausar ofertas (P1-2 y P1-3).
 
 ### P3-4 · Gestionar administradores y ver la bitácora · Jeremi (+ Jeferson)

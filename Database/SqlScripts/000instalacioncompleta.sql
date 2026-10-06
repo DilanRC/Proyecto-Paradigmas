@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS tbpersona (
     tbpersonafotourl VARCHAR(500) NULL,
     tbpersonadocumentoruta VARCHAR(255) NULL,
     tbpersonadocumentoestado VARCHAR(20) NULL,
-    tbpersonadocumentofecha DATETIME NULL
+    tbpersonadocumentofecha DATETIME NULL,
+    tbpersonadocumentomotivo VARCHAR(250) NULL
 ) ENGINE=InnoDB;
 
 -- Política técnica de acceso administrativo. No es un rol de negocio ni se

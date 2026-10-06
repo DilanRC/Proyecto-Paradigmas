@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonafotourl VARCHAR(500) NULL,
     tbpersonadocumentoruta VARCHAR(255) NULL,
     tbpersonadocumentoestado VARCHAR(20) NULL,
-    tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL
+    tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbpersonadocumentomotivo VARCHAR(250) NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbadministrador (

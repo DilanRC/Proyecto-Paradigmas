@@ -14,6 +14,8 @@ services:
       DB_PASS: ${DB_PASS}
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+      # Solo para enlaces firmados de archivos privados (documentos, P2-6). Nunca llega al navegador.
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
       SUPABASE_AUTH_VERIFY_URL: http://supabase-server:3000/v1/auth/verify
     depends_on:
       db:

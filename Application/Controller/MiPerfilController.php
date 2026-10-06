@@ -104,6 +104,8 @@ final class MiPerfilController
             $cambios['documentoRuta'] = $ruta;
             $cambios['documentoEstado'] = 'PENDIENTE';
             $cambios['documentoFecha'] = gmdate('Y-m-d H:i:s');
+            // El motivo de un rechazo anterior ya no aplica al documento nuevo.
+            $cambios['documentoMotivo'] = null;
         }
         if ($errores !== []) {
             throw new HttpException('Revise los campos indicados.', 422, null, $errores);

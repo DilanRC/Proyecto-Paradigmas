@@ -125,7 +125,10 @@ export function textoDocumento(documento) {
     switch (documento?.estado) {
         case 'PENDIENTE': return 'En revisión: un administrador lo va a verificar.';
         case 'VERIFICADO': return 'Verificado.';
-        case 'RECHAZADO': return 'No se pudo verificar. Sube una foto más clara de tu documento.';
+        // P2-6: el motivo lo escribe el administrador al rechazar.
+        case 'RECHAZADO': return documento.motivo
+            ? `No se pudo verificar: ${documento.motivo}. Sube otro documento.`
+            : 'No se pudo verificar. Sube una foto más clara de tu documento.';
         default: return 'Todavía no has subido tu documento.';
     }
 }

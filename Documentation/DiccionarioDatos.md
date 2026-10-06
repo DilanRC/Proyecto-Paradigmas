@@ -29,6 +29,7 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 | `tbpersonadocumentoruta` | `VARCHAR(255) NULL` | Sí | Ruta del documento de identidad dentro del bucket **privado** `documentos` de Supabase Storage (`<id de usuario>/<uuid>.<ext>`), nunca una URL pública. El tipo de documento es `tbpersonaidentificaciontipo`. NULL = sin documento. | Usuario | - |
 | `tbpersonadocumentoestado` | `VARCHAR(20) NULL` | Sí | Verificación del documento: `PENDIENTE`, `VERIFICADO` o `RECHAZADO`. Un documento nuevo siempre queda `PENDIENTE`. | Aplicación | - |
 | `tbpersonadocumentofecha` | `DATETIME NULL` | Sí | Fecha UTC del último cambio de estado del documento, asignada por PHP. | Aplicación | - |
+| `tbpersonadocumentomotivo` | `VARCHAR(250) NULL` | Sí | Motivo del rechazo del documento, escrito por el administrador y visible para la persona en Ajustes. NULL si no fue rechazado; se limpia al subir otro documento. | Administrador | - |
 
 ## tbproductor
 

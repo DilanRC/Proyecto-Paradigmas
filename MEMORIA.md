@@ -183,8 +183,21 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   Ajustes → Perfil. No hay paso de documento en el registro: al registrarse no hay sesión mientras Supabase exija
   confirmar el correo. Si se quita la confirmación (P0-1) se puede agregar el paso, pero debe ocultarse solo si
   vuelve la confirmación y no debe impedir crear la cuenta si la subida falla.
-- Verificar o rechazar, ver el documento con enlace firmado y borrar las fotos 90 días después de verificadas es
-  **P2-6** y necesita `SUPABASE_SECRET_KEY` en el servidor.
+- **Verificación (P2-6, opción c del plan):** `/admin/documentos` lista las personas con documento (por defecto las
+  `PENDIENTE`, de la más antigua a la más nueva). "Ver documento" pide un **enlace firmado** que caduca en 5 minutos
+  (`Application/Service/SupabaseStorage.php`, con `SUPABASE_SECRET_KEY`) y lo abre en una pestaña sin `opener`. Solo un
+  documento `PENDIENTE` se verifica o rechaza (si no, 409); **rechazar exige motivo**, que se guarda en
+  `tbpersonadocumentomotivo` (migración `017personadocumentomotivo.sql`, en los 4 lugares) y la persona lo ve en
+  Ajustes. Un documento nuevo limpia el motivo y vuelve a `PENDIENTE`.
+- API `api/v1/admin/documentos` (solo admin): `POST { consulta }` lista; `POST { personaId }` da el enlace (la ruta
+  sale de la base, nunca del navegador); `PATCH { personaId, estado: VERIFICADO|RECHAZADO, motivo }` decide.
+  `Cache-Control: no-store`. Bitácora `PERSONA` con `VER_DOCUMENTO` (cada vez que un admin abre un documento),
+  `VERIFICAR_DOCUMENTO` y `RECHAZAR_DOCUMENTO`, con `realizadoPor`.
+- `SUPABASE_SECRET_KEY` llega a la app PHP: en local por `compose.yaml`; **en producción hay que configurarla en las
+  variables de entorno de Vercel** (sin ella, "Ver documento" responde 503). Nunca se manda al navegador.
+- **Pendiente:** borrar las fotos 90 días después de verificadas y los archivos reemplazados (necesita una tarea
+  programada; acordarla con Dilan). El escáner automático (opción a: recortar y leer el número) se dejó para después,
+  como dice el plan.
 
 ### Administrador: gestionar administradores (P3-4)
 - `/admin/administradores` lista los correos de `tbadministrador`, permite **agregar** uno (se normaliza con
@@ -372,6 +385,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · backend · P2-6 Verificación de documentos de identidad
+- Pantalla `/admin/documentos` y API `api/v1/admin/documentos` (ver "Documento de identidad (P2-5)"); columna `tbpersonadocumentomotivo` en los 4 lugares + migración 017, diccionario, DER y PDF; Ajustes muestra el motivo del rechazo (`ajustes-6`).
+- Archivos: nuevos `Application/Service/SupabaseStorage.php`, `AdminDocumentoController.php`, `Public/api/admin-documentos.php`, `Public/documentos.php`, vista `documentos/`, `Public/js/documentos.js`; `Persona.php` (`listarDocumentos`, `bloquearPorId`, `decidirDocumento`, motivo en `documentoPublico`); `MiPerfilController` limpia el motivo; `compose.yaml` pasa `SUPABASE_SECRET_KEY` a la app.
+- Cadena de caché (Cuidados #11): `auth-gate-8`, `admin-ui.js` y `admin-refinements.css` `admin-10`, `login.js` `front-13`, los 10 módulos admin con `shared/api.js?v=auth-gate-8`.
+- Pruebas: nueva `Tests/api_admin_documentos_test.php` (transporte falso para el enlace; borra sus eventos al terminar porque el id de la persona de prueba se reutiliza); `api_auth_admin_http_test.php` y `admin_cache_chain.test.mjs` incluyen la ruta; nueva `admin_documentos.test.mjs`. Enlace firmado probado contra el Supabase real (abre el archivo; la ruta pública da 400). Probado en Postgres 16.
 
 ### 2026-10-05 · backend · P3-1 Comerciante (investigación, sin código)
 - Nuevo `Documentation/Sprints/P3-1-Comerciante.md`: según la Ley 8799 y el Decreto 44336, "comerciante" no es un actor distinto (comprar y vender tiene las mismas obligaciones de guía y trazabilidad); lo distinto son los establecimientos mercantiles (subastas, ferias). Se recomienda tratarlo como Vendedor hasta que el cliente responda las 3 preguntas del documento.
