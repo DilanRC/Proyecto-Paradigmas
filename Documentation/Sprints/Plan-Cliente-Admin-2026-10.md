@@ -149,20 +149,22 @@ Hay que separar dos conceptos:
   Esto es `tbtransportistaflete`, que ya existe pero no se usa.
 
 Tareas:
-- [ ] **Decidir el modelo** (Carlos lo propone antes de programar). Propuesta:
+- [x] **Decidir el modelo** (decidido el 06/10 con Jeferson: tabla propia, precio base y horario como texto libre; ver DEC-FLETE-001).
+      Esquema, API y pantalla hechos (pasos 1 a 3). Falta probarla a mano con una sesión real.
+- (Propuesta original, sin cambios en lo esencial:) Propuesta:
       tabla `tbtransportistaoferta` (transportista, vehículo, `tbdireccionid` de
       la zona base, radio en km, precio por km o precio base, capacidad en
       cabezas, descripción, estado), con su horario en `tbtransportistahorario`,
       que ya existe y no se usa.
-- [ ] `POST`, `PATCH` y `GET api/v1/fletes`: el transportista crea y edita sus ofertas.
-- [ ] `GET api/v1/fletes?latitud=&longitud=`: ofertas activas ordenadas por
+- [x] `POST`, `PUT`, `PATCH` y `GET api/v1/mi-ofertas`: el transportista crea, edita y pausa sus ofertas.
+- [x] `GET api/v1/fletes?latitud=&longitud=`: ofertas activas dentro de su radio, ordenadas por
       distancia. **Reutilizar** la fórmula de distancia (Haversine) de
       `PublicacionCercaniaService`.
-- [ ] Página Fletes: si la persona es Transportista, ve "Mis ofertas" y puede
-      publicar una. Si no, ve las ofertas cercanas en tarjetas, con filtros de
-      distancia y capacidad.
-- [ ] Cada tarjeta muestra la foto del vehículo (P1-5), la zona, la capacidad,
-      el precio y el horario.
+- [x] Página Fletes: si la persona es Transportista, ve "Mis ofertas" y puede
+      publicar una. Además todos ven las ofertas cercanas, con filtro de capacidad
+      (el filtro de distancia es el radio de cada oferta).
+- [x] Cada fila muestra la foto del vehículo (P1-5), la zona, la capacidad,
+      el precio y la disponibilidad (texto libre).
 
 ### P1-3 · Fletes cerca de una publicación y solicitud de compra · Carlos (API) + Jeferson (pantalla), con apoyo de Jeremi
 
@@ -209,7 +211,7 @@ animal con flete.
       con la misma validación `https://`. En `PUT`, sin `fotoUrl` la foto se conserva.
 - [x] Mi panel → Mis vehículos: subir la foto con vista previa (campo
       compartido `shared/foto-campo.js`).
-- [ ] La foto se muestra en las tarjetas de fletes (P1-2).
+- [x] La foto se muestra en las tarjetas de fletes (P1-2).
 
 ### P2-1 · Validación en tiempo real de cédula y correo · Jeremi (+ Jeferson)
 

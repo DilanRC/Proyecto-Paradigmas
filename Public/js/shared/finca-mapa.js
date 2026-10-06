@@ -120,6 +120,10 @@ export function crearSelectorPuntoFinca({
     storage = typeof sessionStorage !== 'undefined' ? sessionStorage : null,
     crearMapaFn = crearMapa,
     onPuntoChange = () => {},
+    // Textos para reutilizar el selector fuera de las fincas (p. ej. la zona base de un flete).
+    titulo = 'Punto exacto de la finca',
+    opcional = true,
+    lugar = 'la finca',
 } = {}) {
     if (!mount) throw new TypeError('Se requiere un contenedor para el selector de finca.');
     asegurarEstilos();
@@ -127,7 +131,7 @@ export function crearSelectorPuntoFinca({
     mount.classList.add('farm-map-picker');
     mount.innerHTML = `
         <div class="farm-map-picker__header">
-            <strong>Punto exacto de la finca <span class="label">OPCIONAL</span></strong>
+            <strong>${titulo}${opcional ? ' <span class="label">OPCIONAL</span>' : ''}</strong>
             <div class="farm-map-picker__header-actions">
                 <button type="button" class="button button--secondary" data-farm-map-open>Abrir mapa</button>
                 <button type="button" class="button button--secondary" data-farm-map-close hidden>Cerrar mapa</button>
@@ -152,7 +156,7 @@ export function crearSelectorPuntoFinca({
                 <button type="button" class="map-shell__layer-button" data-farm-map-normal aria-pressed="true"><span class="map-shell__layer-swatch map-shell__layer-swatch--normal" aria-hidden="true"></span>Mapa</button>
                 <button type="button" class="map-shell__layer-button" data-farm-map-details aria-pressed="false"><span class="map-shell__layer-swatch map-shell__layer-swatch--details" aria-hidden="true"></span>Detalles oficiales</button>
             </div>
-            <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar la finca"></div>
+            <div class="map-shell__canvas" data-farm-map-canvas role="region" aria-label="Mapa para ubicar ${lugar}"></div>
             <div class="map-shell__fallback" data-farm-map-fallback hidden>
                 <button type="button" class="button button--secondary" data-farm-map-retry>Reintentar mapa</button>
             </div>
@@ -242,7 +246,7 @@ export function crearSelectorPuntoFinca({
         render();
         notificarCambio();
         status.textContent = punto
-            ? 'Punto exacto preparado. Se guardará junto con la dirección de la finca.'
+            ? `Punto exacto preparado. Se guardará junto con la dirección de ${lugar}.`
             : 'No hay punto exacto seleccionado.';
         onPuntoChange(punto);
         return punto;
@@ -405,7 +409,7 @@ export function crearSelectorPuntoFinca({
             locationButton.hidden = false;
             status.textContent = punto
                 ? 'Mapa listo. Puede arrastrar el marcador o elegir otro punto.'
-                : 'Mapa listo. Haga clic en la ubicación exacta de la finca.';
+                : `Mapa listo. Haga clic en la ubicación exacta de ${lugar}.`;
         } catch {
             if (destruido || operacion !== token) return;
             fallback.hidden = false;
@@ -459,7 +463,7 @@ export function crearSelectorPuntoFinca({
                     ? 'Usamos tu ubicación reciente. Puedes ajustar el punto en el mapa.'
                     : 'Ubicación encontrada. Puedes ajustar el punto en el mapa.';
             } else {
-                status.textContent = 'Ubicación encontrada. El mapa no está disponible, pero el punto se guardará con la finca.';
+                status.textContent = `Ubicación encontrada. El mapa no está disponible, pero el punto se guardará con ${lugar}.`;
             }
         } catch (error) {
             if (destruido || solicitud !== solicitudUbicacion) return;

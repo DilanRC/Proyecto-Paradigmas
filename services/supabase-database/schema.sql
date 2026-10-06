@@ -306,6 +306,19 @@ CREATE TABLE IF NOT EXISTS public.tbregistroconsulta (
     tbregistroconsultafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbtransportistaoferta (
+    tbtransportistaofertaid INTEGER NOT NULL,
+    tbtransportistaid INTEGER NOT NULL,
+    tbvehiculoid INTEGER NOT NULL,
+    tbdireccionid INTEGER NOT NULL,
+    tbtransportistaofertaradiokm INTEGER NOT NULL,
+    tbtransportistaofertacapacidad INTEGER NOT NULL,
+    tbtransportistaofertaprecio NUMERIC(12,2) NULL,
+    tbtransportistaofertadescripcion VARCHAR(500) NULL,
+    tbtransportistaofertaestado VARCHAR(20) NOT NULL,
+    tbtransportistaofertafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionestadoperiodo (
     tbanimalpublicacionestadoperiodoid INTEGER NOT NULL,
     tbanimalpublicacionid INTEGER NOT NULL,
@@ -372,3 +385,4 @@ ALTER TABLE public.tbanimalpublicacionestadoperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbcarritoestadoperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistahorario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbregistroconsulta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbtransportistaoferta ENABLE ROW LEVEL SECURITY;

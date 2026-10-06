@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('treinta_y_cinco_tablas', $manifest['table_count'] === 35,
-    'SQL crea exactamente treinta y cinco tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
+$evaluate('treinta_y_seis_tablas', $manifest['table_count'] === 36,
+    'SQL crea exactamente treinta y seis tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -85,7 +85,7 @@ $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador'
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
     'tbproductorubicacion', 'tbregistroconsulta',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
-    'tbtransportistahorario', 'tbtransportistaresena', 'tbtransportistavehiculo',
+    'tbtransportistahorario', 'tbtransportistaoferta', 'tbtransportistaresena', 'tbtransportistavehiculo',
     'tbvehiculo', 'tbventa'],
     'Las tablas usan nombres singulares');
 $models = implode("\n", array_map('file_get_contents', glob("{$root}/Application/Model/*.php")));

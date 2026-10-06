@@ -1130,6 +1130,20 @@ de `REMOTE_ADDR` cuando no hay proxy.
 Se descartó la regla de rate limit del firewall de Vercel porque no funciona en
 local y depende del plan del proyecto.
 
+## DEC-FLETE-001 - Oferta de flete como tabla propia
+
+La página Fletes debe funcionar como las publicaciones: el transportista ofrece
+su servicio y el cliente ve los fletes cercanos. El esquema pasa a 36 tablas con
+`tbtransportistaoferta`: vehículo, zona base (`tbdireccion` con coordenadas),
+radio en km, capacidad en cabezas, precio base opcional, descripción y estado
+(`ACTIVA` o `PAUSADA`).
+
+Se descartó reutilizar `tbtransportistaflete`: es un viaje realizado, tiene un
+método de pago obligatorio y las reseñas apuntan a él, así que mezclar ofertas
+con viajes ensuciaría el histórico. Tampoco se usa `tbtransportistahorario`: la
+disponibilidad va como texto libre en la descripción y se ampliará si el cliente
+lo pide. El precio es un valor base y no se calcula por kilómetro.
+
 Esto **reabre** la consulta pública del correo que el commit `d7b5a88`
 (29/09/2026, "Elimina enumeracion publica de correos") había retirado. El
 issue de la reunión del 29/09 la pide (P2-1), y el equipo decidió volver a

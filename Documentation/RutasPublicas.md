@@ -45,6 +45,8 @@ compatibilidad técnica durante la migración.
 | `/api/v1/admin/status` | Estado de autorización administrativa |
 | `/api/v1/actividad` | Actividad de la Persona autenticada |
 | `/api/v1/mi-vehiculos` | Vehículos propios del Transportista autenticado; nunca recibe una Persona o Transportista objetivo |
+| `/api/v1/mi-ofertas` | Ofertas de flete propias del Transportista autenticado (GET, POST, PUT, PATCH); nunca recibe un Transportista objetivo |
+| `/api/v1/fletes` | Ofertas de flete cercanas a un punto (GET, con sesión); no expone placa, señas ni coordenadas exactas |
 | `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |
 | `/api/v1/registro` | Alta transaccional de identidad y actividades |

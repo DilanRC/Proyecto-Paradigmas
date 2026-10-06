@@ -15,7 +15,7 @@ $der = file_get_contents("{$root}/Documentation/DER.md");
 $manifest = schema_manifest();
 
 test_same('bdmercadoganadero', $manifest['database'], 'La base activa debe ser bdmercadoganadero');
-test_same(35, $manifest['table_count'], 'La capa DB ready debe contener 35 tablas');
+test_same(36, $manifest['table_count'], 'La capa DB ready debe contener 36 tablas');
 test_assert(in_array('tbadministrador', $manifest['tables_sorted'], true),
     'La autorización técnica debe tener una tabla separada de los contextos de negocio');
 

@@ -311,6 +311,19 @@ erDiagram
         DATETIME tbregistroconsultafecha
     }
 
+    tbtransportistaoferta {
+        INT tbtransportistaofertaid
+        INT tbtransportistaid
+        INT tbvehiculoid
+        INT tbdireccionid
+        INT tbtransportistaofertaradiokm
+        INT tbtransportistaofertacapacidad
+        DECIMAL tbtransportistaofertaprecio
+        VARCHAR tbtransportistaofertadescripcion
+        VARCHAR tbtransportistaofertaestado
+        DATETIME tbtransportistaofertafecha
+    }
+
     tbbitacora {
         BIGINT tbbitacoraid
         VARCHAR tbbitacoraentidad
@@ -354,6 +367,9 @@ erDiagram
     tbtransportista ||--o{ tbtransportistaestadoperiodo : "estados"
     tbtransportista ||--o{ tbtransportistahorario : "horarios"
     tbtransportista ||--o{ tbtransportistaflete : "fletes"
+    tbtransportista ||--o{ tbtransportistaoferta : "ofertas"
+    tbvehiculo ||--o{ tbtransportistaoferta : "vehiculo"
+    tbdireccion ||--o{ tbtransportistaoferta : "zona base"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
 ```
 

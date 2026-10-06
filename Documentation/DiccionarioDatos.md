@@ -501,6 +501,25 @@ más de 60 segundos, así que la tabla no guarda historia.
 | `tbregistroconsultaclave` | `CHAR(64) NOT NULL` | No | Hash SHA-256 de la IP del cliente. Nunca se guarda la IP. | Aplicación | - |
 | `tbregistroconsultafecha` | `DATETIME NOT NULL` | No | Fecha UTC de la consulta, asignada por PHP. | Aplicación | - |
 
+## tbtransportistaoferta
+
+Oferta de flete (DEC-FLETE-001): el servicio que un transportista publica para
+que los clientes lo encuentren por cercanía. No es un viaje realizado (eso es
+`tbtransportistaflete`). Estado: `ACTIVA` o `PAUSADA`.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbtransportistaofertaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbtransportistaid` | `INT NOT NULL` | No | Transportista dueño de la oferta. | Aplicación | `tbtransportista.tbtransportistaid` |
+| `tbvehiculoid` | `INT NOT NULL` | No | Vehículo con el que presta el servicio (su foto se muestra en la tarjeta). | Aplicación | `tbvehiculo.tbvehiculoid` |
+| `tbdireccionid` | `INT NOT NULL` | No | Zona base, con latitud y longitud para ordenar por distancia. | Aplicación | `tbdireccion.tbdireccionid` |
+| `tbtransportistaofertaradiokm` | `INT NOT NULL` | No | Radio en kilómetros que cubre desde la zona base. | Cliente | - |
+| `tbtransportistaofertacapacidad` | `INT NOT NULL` | No | Capacidad en cabezas de ganado. | Cliente | - |
+| `tbtransportistaofertaprecio` | `DECIMAL(12,2) NULL` | Sí | Precio base en colones; `NULL` es "a convenir". | Cliente | - |
+| `tbtransportistaofertadescripcion` | `VARCHAR(500) NULL` | Sí | Detalles y disponibilidad en texto libre. | Cliente | - |
+| `tbtransportistaofertaestado` | `VARCHAR(20) NOT NULL` | No | `ACTIVA` o `PAUSADA`. | Aplicación | - |
+| `tbtransportistaofertafecha` | `DATETIME NOT NULL` | No | Fecha UTC de creación, asignada por PHP. | Aplicación | - |
+
 ## Histórico transversal (Tramo 12/13 y avance 3)
 
 La matriz P0-C (`Documentation/MatrizArquitectonicaP0C.md`) supera la

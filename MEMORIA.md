@@ -169,6 +169,37 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
   admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
 
+### Oferta de flete (P1-2, en construcción)
+- Tabla nueva `tbtransportistaoferta` (DEC-FLETE-001, esquema de **36 tablas**): transportista, vehículo, zona base (`tbdireccion` con
+  coordenadas), radio en km, capacidad en cabezas, precio base opcional (`NULL` = a convenir), descripción y estado `ACTIVA`/`PAUSADA`.
+  Migración `017transportistaoferta.sql`.
+- **No** reutiliza `tbtransportistaflete` (viaje realizado, con método de pago obligatorio y reseñas que apuntan a él) ni
+  `tbtransportistahorario` (la disponibilidad va como texto libre). El precio no se calcula por km.
+- **API `api/v1/mi-ofertas`** (sesión, Transportista ACTIVO; `MiOfertasController`):
+  - `GET` lista las propias en todos los estados (con zona exacta y vehículo).
+  - `POST { vehiculoId, direccion, radioKm, capacidad, precio?, descripcion? }` publica (201, queda `ACTIVA`). `PUT` lo mismo + `ofertaId`.
+    `PATCH { ofertaId, estado: ACTIVA|PAUSADA }` pausa o reactiva (idempotente). No hay DELETE: se pausa.
+  - Reglas: la `direccion` usa el mismo objeto que las fincas pero el **punto (latitud y longitud) es obligatorio**; `radioKm` 1–500,
+    `capacidad` 1–200, `precio` ≥ 0 o `null` (a convenir). El vehículo debe ser propio (404 si no) y estar activo (409). Una oferta
+    ajena responde 404. Sin la actividad Transportista: 409.
+  - Locks en orden oferta → dirección → bitácora, dentro de una transacción. Bitácora entidad `OFERTA_FLETE`, origen `API_MI_OFERTAS`
+    (`CREAR`, `ACTUALIZAR`, `PAUSAR`, `REACTIVAR`).
+- **API `api/v1/fletes`** (GET, **requiere sesión** como la página Fletes; `FletesController`): `latitud` y `longitud` obligatorias (422 sin
+  ellas), `capacidadMinima`, `pagina`, `tamanoPagina` (≤ 50). Devuelve solo ofertas `ACTIVA` cuyo punto queda **dentro de su radio**
+  (`distancia <= radioKm`), de la más cercana a la más lejana, con `distanciaKm`. Solo de transportistas, personas y **vehículos activos**.
+  La vista de cliente **no trae placa, VIN, señas ni coordenadas**: solo modelo y foto del vehículo y provincia/cantón/distrito/pueblo.
+  La distancia se calcula en PHP con `PublicacionCercaniaService::calcularDistanciaKm` (ver el `ponytail:` de `listarCercanas` si crece).
+- `api/v1/fletes` **no devuelve las ofertas de quien consulta** (viven en "Mis ofertas"), igual que Explorar con las publicaciones propias.
+- **Pantalla `/fletes`** (`fletes.js`, `fletes-1`): "Fletes disponibles" (lista las ofertas cercanas a la ubicación del navegador, con filtro de
+  capacidad mínima; sin ubicación pide "Usar mi ubicación") y, con Transportista activo, "Mis ofertas" (Publicar, Editar, Pausar/Reactivar).
+  Sin vehículo activo no deja publicar y manda a Mi panel. La columna lateral conserva el estado de la actividad; activar Transportista se hace
+  en Ajustes → Cómo participo (ya no se manda a `registro/transportista`).
+- **Editor de dirección con mapa reutilizable:** `shared/editor-direccion.js` (`montarEditorDireccion`) monta cascada, señas y mapa sobre un bloque con
+  los `data-farm-*` de las fincas; `crearSelectorPuntoFinca` ganó las opciones `titulo`, `opcional` y `lugar` (por defecto, los textos de finca).
+  **Pendiente de limpieza:** `mi-actividad.js` (`openFarmModal`) todavía tiene su propia copia de esa lógica; migrarla a `montarEditorDireccion`
+  exige ajustar `mi_actividad.test.mjs`, que busca esas cadenas en `mi-actividad.js`.
+- Hecho: esquema, API y pantalla. Sigue P1-3 (fletes cerca de una publicación y solicitud de compra).
+
 ### Documento de identidad (P2-5)
 - La persona sube la foto o el PDF de su documento en Ajustes → Perfil (opcional). El navegador lo sube directo al
   bucket **privado** `documentos` de Supabase Storage, en su carpeta `<id de usuario>/` (`subirDocumentoIdentidad` en
@@ -320,7 +351,7 @@ están incluidos ahí.
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
 
 ### Frontend (pendiente de P1-5)
-- Mostrar la foto del vehículo en las tarjetas de fletes cuando exista P1-2 (la subida en Mi panel ya está hecha).
+- (Resuelto con P1-2: la foto del vehículo ya se muestra en las filas de fletes.)
 
 ### Configuración de Supabase (panel, no código)
 - ~~Bucket `publicaciones` público + política de subida~~: **resuelto** (el bucket ya existe en Supabase; lo usan las fotos de publicaciones y de perfil). Si hubiera que recrearlo:
@@ -373,6 +404,23 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · jefersonbustamante · P1-2 paso 3: pantalla de Fletes
+- `/fletes` pasa de explicación a funcional: fletes disponibles cerca de ti y Mis ofertas (ver "Oferta de flete (P1-2)"). `api/v1/fletes` excluye las ofertas propias.
+- Archivos: `fletes.js` (reescrito, `fletes-1`), vista `fletes/index.php` (diálogo de oferta; ahora carga `components.css` y `mi-actividad.css`), nuevo `shared/editor-direccion.js`, `shared/finca-mapa.js` (opciones de texto), `TransportistaOferta::listarCercanas` y `FletesController` (parámetro de persona).
+- Pruebas: nueva `Tests/frontend/fletes.test.mjs` (ids de la vista vs. el script, campos del formulario, versiones, escape de HTML); ampliada `Tests/mi_ofertas_test.php`.
+- Cuidado: `finca-mapa.js` se importa con versiones distintas en cada lugar; el cambio de opciones solo lo ve quien importe `?v=oferta-1` (por eso `editor-direccion.js` lo versiona). No se probó en el navegador con una sesión real: revisar a mano (publicar, editar, pausar, ver desde otra cuenta).
+
+### 2026-10-06 · jefersonbustamante · P1-2 paso 2: API de ofertas de flete
+- `api/v1/mi-ofertas` (crear, editar, pausar) y `api/v1/fletes` (cercanas por radio) con sus reglas en "Oferta de flete (P1-2)". Sin columnas nuevas (la tabla es del paso 1).
+- Archivos: nuevos `Application/Model/TransportistaOferta.php`, `Application/Controller/MiOfertasController.php` y `FletesController.php`, `Public/api/mi-ofertas.php` y `fletes.php`; rutas en `Public/.htaccess`; `RutasFrontend.md` y `RutasPublicas.md`.
+- Pruebas: nueva `Tests/mi_ofertas_test.php` (validación, anti-IDOR, cercanía y radio, capacidad, pausa, vehículo inactivo, bitácora); pasan también `mi_vehiculos_test`, `api_requires_test`, `sql_alias_minuscula_test`, `api_publicaciones_test`, `api_mi_perfil_test` y `api_auth_admin_http_test`.
+- Cuidado: `FletesController` es **privado** (401 sin sesión), a diferencia de `api/v1/publicaciones`. Los alias SQL de `TransportistaOferta` van en minúscula (Cuidados #3).
+
+### 2026-10-06 · jefersonbustamante · P1-2 paso 1: tabla `tbtransportistaoferta` (esquema)
+- Tabla nueva en los 4 lugares (`000instalacioncompleta.sql`, `017transportistaoferta.sql`, `schema.sql` con RLS, `migrate.php`), diccionario, DER (con relaciones), `Decisiones.md` (DEC-FLETE-001) y los 3 PDF regenerados. Sin código de aplicación todavía.
+- El esquema pasa de 35 a **36 tablas**: se actualizaron README, GuiaDefensa, Respaldos, `Database/Tests`, `schema_manifest_test`, `db_ready_test`, `instalacion_limpia_test`, `naming_eval` y los tres archivos de `services/supabase-database`.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/017transportistaoferta.sql`.
 
 ### 2026-10-05 · jefersonbustamante · Explorar sin publicaciones propias y sin portada con sesión
 - API: `excluirPropias` en `api/v1/publicaciones` (sin cambio de contrato para quien no lo envía). Frontend: Explorar lo envía; `public-ui.js` (`public-13`) quita Inicio y redirige la portada a Explorar con sesión.
