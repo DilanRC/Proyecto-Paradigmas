@@ -282,6 +282,8 @@ nacimiento, partos, estado del animal y dueño explícito.
 
 ### P2-4 · Mis animales (inventario) · Jeferson (+ Carlos)
 
+**Estado (06/10): NO iniciado.** P2-2 y P2-3 (modelo, catálogos, lote, vacunas) ya están; el detalle de lo que falta está en `MEMORIA.md` → Pendientes.
+
 - [ ] Sección "Mis animales" en Mi panel: registrar un animal sin publicarlo,
       ver su historial de pesos y vacunas, y un botón "Publicar" que crea la
       publicación a partir del animal.
