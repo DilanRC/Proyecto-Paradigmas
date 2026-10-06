@@ -191,6 +191,9 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
 /* Bitácora (P3-4) */
 .rural-panel__nav-item[href$='admin/bitacora']::before { content:'\f1da'; } /* clock-rotate-left */
 
+/* Documentos de identidad (P2-6) */
+.rural-panel__nav-item[href$='admin/documentos']::before { content:'\f2c2'; } /* id-card */
+
 /* Detalle de la bitácora: datos antes y después (P3-4). Sin colores propios. */
 .detail-grid pre {
   margin: 0;

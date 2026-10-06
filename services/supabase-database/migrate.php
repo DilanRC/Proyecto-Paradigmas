@@ -10,6 +10,7 @@ const EXPECTED_COLUMNS = [
         'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
         'tbpersonanombre', 'tbpersonaalias', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
         'tbpersonafotourl', 'tbpersonadocumentoruta', 'tbpersonadocumentoestado', 'tbpersonadocumentofecha',
+        'tbpersonadocumentomotivo', 'tbpersonadocumentonumeroleido', 'tbpersonadocumentolectura',
     ],
     'tbproductor' => [
         'tbproductorid', 'tbpersonaid',
@@ -358,7 +359,10 @@ function ensureCurrentColumns(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbpersonafotourl VARCHAR(500) NULL,
         ADD COLUMN IF NOT EXISTS tbpersonadocumentoruta VARCHAR(255) NULL,
         ADD COLUMN IF NOT EXISTS tbpersonadocumentoestado VARCHAR(20) NULL,
-        ADD COLUMN IF NOT EXISTS tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL;
+        ADD COLUMN IF NOT EXISTS tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL,
+        ADD COLUMN IF NOT EXISTS tbpersonadocumentomotivo VARCHAR(250) NULL,
+        ADD COLUMN IF NOT EXISTS tbpersonadocumentonumeroleido VARCHAR(20) NULL,
+        ADD COLUMN IF NOT EXISTS tbpersonadocumentolectura VARCHAR(20) NULL;
         ALTER TABLE public.tbvehiculo
         ADD COLUMN IF NOT EXISTS tbvehiculofotourl VARCHAR(500) NULL;
         ALTER TABLE public.tbdireccion

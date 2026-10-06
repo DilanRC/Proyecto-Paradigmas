@@ -17,6 +17,8 @@ import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js';
 import { aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './shared/telefono.js?v=mascaras-1';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
+import { validarDocumento } from './shared/storage.js?v=documento-2';
+import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-2';
 
 const DRAFT_KEY = REGISTRATION_DRAFT_KEY;
 const PROFILE_KEY = 'tindercows:profile';
@@ -443,6 +445,7 @@ async function initialize() {
     let emailRevision = 0;
     let emailTimer = null;
     let emailState = 'idle';
+    let documentoPendiente = null;
     let submitInProgress = false;
     const computeSteps = () => registrationSteps(selectedCapabilities(form), extending, solicitada);
     let steps = computeSteps();
@@ -672,6 +675,29 @@ async function initialize() {
         aplicarRestriccionTelefono(telefono);
     }
     correoElectronico?.addEventListener('input', scheduleEmailCheck);
+
+    // Documento de identidad opcional, solo en el alta: se guarda en memoria y se
+    // envía después de crear la cuenta. "Tomar foto" solo en celulares.
+    const bloqueDocumento = form.querySelector('[data-documento-registro]');
+    const estadoDocumento = form.querySelector('#registro-documento-estado');
+    if (bloqueDocumento) bloqueDocumento.hidden = extending;
+    const elegirDocumento = (event) => {
+        const archivo = event.target.files?.[0];
+        event.target.value = '';
+        if (!archivo) return;
+        const problema = validarDocumento(archivo);
+        if (problema) { estadoDocumento.textContent = problema; return; }
+        documentoPendiente = archivo;
+        estadoDocumento.textContent = `Listo: se enviará a revisión al crear tu cuenta (${archivo.name}).`;
+    };
+    form.querySelector('#registro-documento-subir')?.addEventListener('click', () => form.querySelector('#registro-documento-archivo').click());
+    form.querySelector('#registro-documento-archivo')?.addEventListener('change', elegirDocumento);
+    const camaraRegistro = form.querySelector('#registro-documento-camara');
+    if (camaraRegistro && esCelular()) {
+        camaraRegistro.hidden = false;
+        camaraRegistro.addEventListener('click', () => form.querySelector('#registro-documento-foto').click());
+        form.querySelector('#registro-documento-foto')?.addEventListener('change', elegirDocumento);
+    }
     scheduleEmailCheck();
     form.addEventListener('input', () => { setErrors({}); persistDraft(form, existingProfile); });
     form.addEventListener('change', () => { persistDraft(form, existingProfile); });
@@ -753,8 +779,26 @@ async function initialize() {
             // auxiliar; si su lectura falla, no debemos dejar a la persona
             // atrapada en el botón ni hacerle repetir una operación exitosa.
             sessionStorage.removeItem(DRAFT_KEY);
-            // Cuenta nueva: Explorar la invita una vez a subir su documento (P2-5).
-            if (!extending) marcarAvisoDocumento();
+            // Documento opcional: se envía ahora que hay sesión y Persona. Si falla, la
+            // cuenta ya está creada y Explorar la invita a subirlo desde Ajustes.
+            let documentoEnviado = false;
+            if (!extending && documentoPendiente && readAuthSession()) {
+                try {
+                    const cuerpo = await prepararEnvioDocumento(documentoPendiente, {
+                        tipo: summary.persona.identificacionTipo,
+                        registrado: summary.persona.identificacionNumero,
+                        avisar: (paso) => setStatus(status, paso),
+                    });
+                    const enviado = await request('api/v1/mi-perfil', { method: 'PATCH', body: JSON.stringify(cuerpo) });
+                    documentoEnviado = true;
+                    const lectura = mensajeLectura(enviado.data?.persona?.documento?.lectura);
+                    setStatus(status, `Documento enviado a revisión. ${lectura}`.trim(), 'success');
+                } catch {
+                    // Se sigue: el aviso de Explorar lleva a Ajustes para intentarlo de nuevo.
+                }
+            }
+            // Cuenta nueva sin documento: Explorar la invita una vez a subirlo (P2-5).
+            if (!extending && !documentoEnviado) marcarAvisoDocumento();
             // Cuenta nueva: directo a Explorar. Ampliación: de vuelta al panel.
             const fallback = extending ? 'mi-actividad?actualizado=1' : 'explorar';
             setStatus(status, extending

@@ -60,6 +60,10 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Al entrar por `/entrar` sin Persona (409), `login.js` termina **primero** el registro pendiente de la pestaña
   y **después** revisa si la cuenta es admin. Antes iba al panel y un administrador nunca podía crear su perfil de
   usuario. Por `/admin/entrar` sigue mandando al panel.
+- **Toda salida de sesión borra el perfil en caché** (`tindercows:profile`, con cédula, teléfono y correo):
+  `clearAuthSession()` en `supabase-auth.js`, por donde pasan el menú, el panel admin, la sesión vencida y el login
+  rechazado. Antes quedaba en el navegador y el registro lo usaba para rellenar el formulario de la siguiente
+  persona. El borrador del registro se conserva a propósito (se necesita si Supabase pide confirmar el correo).
 - Iniciar sesión lleva a **Explorar** salvo que `next` traiga un destino
   seguro (por ejemplo `explorar?publicacion=6`).
 - **Con sesión no hay portada.** `public-ui.js` quita "Inicio" del menú y del pie, el logo lleva a Explorar y la portada (`<body data-portada>` en `home/index.php`) redirige a `explorar`. Sin sesión todo sigue igual. Si cambias la portada, conserva `data-portada` y no se la pongas a Explorar (bucle de redirección).
@@ -270,8 +274,36 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   Ajustes → Perfil. No hay paso de documento en el registro: al registrarse no hay sesión mientras Supabase exija
   confirmar el correo. Si se quita la confirmación (P0-1) se puede agregar el paso, pero debe ocultarse solo si
   vuelve la confirmación y no debe impedir crear la cuenta si la subida falla.
-- Verificar o rechazar, ver el documento con enlace firmado y borrar las fotos 90 días después de verificadas es
-  **P2-6** y necesita `SUPABASE_SECRET_KEY` en el servidor.
+- **Verificación (P2-6, opción c del plan):** `/admin/documentos` lista las personas con documento (por defecto las
+  `PENDIENTE`, de la más antigua a la más nueva). "Ver documento" pide un **enlace firmado** que caduca en 5 minutos
+  (`Application/Service/SupabaseStorage.php`, con `SUPABASE_SECRET_KEY`) y lo abre en una pestaña sin `opener`. Solo un
+  documento `PENDIENTE` se verifica o rechaza (si no, 409); **rechazar exige motivo**, que se guarda en
+  `tbpersonadocumentomotivo` (migración `017personadocumentomotivo.sql`, en los 4 lugares) y la persona lo ve en
+  Ajustes. Un documento nuevo limpia el motivo y vuelve a `PENDIENTE`.
+- API `api/v1/admin/documentos` (solo admin): `POST { consulta }` lista; `POST { personaId }` da el enlace (la ruta
+  sale de la base, nunca del navegador); `PATCH { personaId, estado: VERIFICADO|RECHAZADO, motivo }` decide.
+  `Cache-Control: no-store`. Bitácora `PERSONA` con `VER_DOCUMENTO` (cada vez que un admin abre un documento),
+  `VERIFICAR_DOCUMENTO` y `RECHAZAR_DOCUMENTO`, con `realizadoPor`.
+- `SUPABASE_SECRET_KEY` llega a la app PHP: en local por `compose.yaml`; **en producción hay que configurarla en las
+  variables de entorno de Vercel** (sin ella, "Ver documento" responde 503). Nunca se manda al navegador.
+- **Lectura automática del número (opción a del plan, como ayuda):** con una **foto** (no PDF) de una identificación
+  numérica (cédula física, jurídica, DIMEX, NITE), `shared/escaner-documento.js` lee el número **en el dispositivo**
+  con Tesseract.js (CDN jsdelivr, se descarga solo al elegir una foto; es el primer script externo de la app). Prueba 4
+  variantes de la imagen y busca números con las reglas de `REGLAS_SERVIDOR`. El navegador manda **solo**
+  `documentoLectura: { numero }`; **PHP calcula** `tbpersonadocumentolectura` (`COINCIDE`, `NO_COINCIDE`,
+  `OTRA_CUENTA`, `SIN_LECTURA`; NULL si no se intentó o la identificación es un pasaporte) y guarda el número en
+  `tbpersonadocumentonumeroleido` (migración 018). **No aprueba nada:** el admin lo ve junto a la imagen y decide.
+  Si el lector no carga o falla, el documento se sube igual, sin lectura.
+- **Cámara:** "Tomar foto" abre la **app de cámara del teléfono** (`<input accept="image/*" capture="environment">`,
+  resolución completa) y solo se muestra en celulares (`esCelular()`: puntero grueso y pantalla táctil). En la prueba,
+  la webcam de una computadora no tuvo calidad suficiente; subir una foto bien tomada sí funcionó.
+- **Registro:** paso opcional "Documento de identidad" en el alta (no al ampliar). El archivo queda en memoria y se
+  envía **después** de crear la cuenta (hace falta sesión y Persona); si falla o no hay sesión (confirmación de correo
+  activa), la cuenta se crea igual y Explorar muestra el aviso hacia Ajustes.
+- **En pausa (decisión del equipo):** exigir identidad verificada para vender u ofrecer fletes, y si una lectura que
+  coincide podría verificar sola. Están en las preguntas abiertas del plan.
+- **Pendiente:** borrar las fotos 90 días después de verificadas y los archivos reemplazados (necesita una tarea
+  programada; acordarla con Dilan).
 
 ### Administrador: gestionar administradores (P3-4)
 - `/admin/administradores` lista los correos de `tbadministrador`, permite **agregar** uno (se normaliza con
@@ -439,7 +471,14 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     `api.js` → `auth-gate.js` y `admin-ui.js` → `admin-refinements.css`. Al agregar una ruta admin: sube la versión de
     `auth-gate.js` y de `admin-ui.js`/`admin-refinements.css`, el import de `shared/api.js?v=…` en **todos** los módulos
     admin y el `?v=` de sus `<script>`. Si falta alguno, esa pantalla queda en blanco o sin el ícono nuevo.
-12. **Probar en un `git worktree` o con una base aparte** (dos personas o sesiones en paralelo): `docker compose exec app` solo ve el
+12. **Bitácora y consecutivos: el bloqueo dura hasta el COMMIT.** Los ids salen de MAX()+1 (o del último +1)
+    bajo `NamedLock`. Si un controlador escribe la bitácora dentro de una transacción, debe envolver **toda** la
+    transacción con `Bitacora::ejecutarConBloqueoAlta` (y con el bloqueo de cada tabla cuyo id calcule); si no,
+    el bloqueo se suelta antes del COMMIT y otra conexión repite el id (demostrado: dos eventos con id 56). El
+    `FOR UPDATE` del último id no lo evita en Postgres. `NamedLock` es reentrante, así que anidar es seguro.
+    `Tests/bitacora_bloqueo_test.php` falla si aparece un controlador nuevo sin envolver.
+
+13. **Probar en un `git worktree` o con una base aparte** (dos personas o sesiones en paralelo): `docker compose exec app` solo ve el
     repositorio principal y la base `bdmercadoganadero`. Usa `sh Tools/php-test.sh [-d base] Tests/x_test.php` (corre el código de TU árbol) y,
     para un cambio de esquema, `sh Tools/db-aislada.sh <nombre>` (crea una base propia desde TU `000instalacioncompleta.sql`) y pásala con `-d`.
     Así un esquema a medias no rompe `instalacion_limpia_test` ni la app de quien trabaja al lado. Limitación: las pruebas que llaman por HTTP
@@ -462,6 +501,16 @@ están incluidos ahí.
 - ~~Crear el bucket privado `documentos`~~: **resuelto** (06/10).
 - Al reemplazar el documento, el archivo anterior queda en el bucket (no hay política de borrado para la persona). La
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
+
+### Bitácora sin envolver (controladores antiguos)
+- 9 controladores escriben la bitácora en una transacción sin `Bitacora::ejecutarConBloqueoAlta` (Cuidados #12):
+  `AnimalPublicacionController` (PATCH de Mis publicaciones), `CompradorController`, `FincaController`,
+  `PagoMetodoController`, `ProductorController`, `ProductorUbicacionController`, `TransportistaController`,
+  `TransportistaVehiculoController` y `VehiculoController`. Están en la lista `PENDIENTES` de
+  `Tests/bitacora_bloqueo_test.php`; al arreglar uno, sacarlo de la lista.
+- De la revisión de P1-1 quedan detalles menores: "quitar de Me interesa" registra `CREAR` en la bitácora (debería
+  ser `RETIRAR`), marcar dos veces guarda dos filas, y la lista de guardados se ordena por fecha de publicación.
+- La búsqueda de `listarPublicaciones` usa `LIKE` sin `LOWER`: en Postgres distingue mayúsculas.
 
 ### Frontend (pendiente de P1-5)
 - (Resuelto con P1-2: la foto del vehículo ya se muestra en las filas de fletes.)
@@ -524,6 +573,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · jefersonbustamante · Integración de `backend` (Jeremi) en la rama del frente
+- Se fusionó `origin/backend` (documentos de identidad, lectura automática del número, bitácora con ids repetidos, cierre de sesión). Conflictos resueltos en: el menú de las 9 vistas admin (ahora **Fletes y Documentos**), `.htaccess`, `PRIVATE_ROUTES`, `ADMIN_DESTINATIONS`, `MODULES` de `admin-ui.js`, la prueba `admin_cache_chain`, versiones de las vistas públicas, `me-interesa.js` y esta memoria y el plan. Los dos PDF en conflicto se regeneraron con `Tools/generate-documentation-pdfs.py`.
+- Cuidado: **dos ramas subieron `auth-gate-8` y `admin-10` con contenido distinto**; tras la fusión la cadena pasó a `auth-gate-9` y `admin-11` para que ningún navegador conserve una copia vieja.
+- `AdminFletesController::moderar` ahora envuelve toda su transacción con `Bitacora::ejecutarConBloqueoAlta` (la prueba nueva `bitacora_bloqueo_test` de Jeremi lo exigió; ver Cuidados #12).
+- Migraciones: `017` y `018` (backend) y `019` a `022` (frente) conviven sin choque de números; las siguientes empiezan en `023`.
 
 ### 2026-10-06 · jefersonbustamante · Integración de las sesiones paralelas (admin de fletes, pago, carrito, modelo de animal y vacunas)
 - Se fusionaron `sesion-a-fletes-admin` (admin de fletes, método de pago visible, carrito como contador) y `modelo-animal` (P2-2 y P2-3). Conflictos resueltos solo en versiones de las vistas (`public-14`, `explore-12`, `home-8`, `publish-4`, `interactions-4`), rutas documentadas, esta memoria y una prueba.
@@ -608,6 +663,28 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - Archivos: nuevo `Public/js/shared/foto-campo.js` (`montarCampoFoto`; `resolver()` devuelve `undefined` sin cambio, `null` al quitar, o la URL subida), `mi-actividad.js` (`panel-8`, import `foto-campo-1`), vista de Mi panel. Reutiliza `.publish-dropzone` y `.publish-preview` de `onboarding.css` (sin CSS nuevo).
 - Pruebas: nueva `Tests/frontend/panel_fotos.test.mjs`. Quedan solo las 4 pruebas de frontend que ya fallaban.
 - Cuidado: no enviar `fotoUrl`/`imagenUrl` cuando no cambió la foto (el PUT del vehículo borra la foto con `null`). Tras un merge, `Public/js/shared/api.js` puede quedar con CRLF y fallar `public_identity_auth` (Cuidados #4).
+
+### 2026-10-06 · backend · Revisión de P1-1 y P1-4: bitácora con ids repetidos
+- Revisión del API de P1-1 (Me interesa) y P1-4 (perfil). Error encontrado y demostrado: `PublicacionInteraccionController`, `MiPerfilController` y `AdminPublicacionController` (P1-6) escribían la bitácora en una transacción sin mantener su bloqueo hasta el COMMIT, y dos peticiones simultáneas podían repetir el id. Ahora envuelven toda la transacción con el bloqueo de la bitácora y con el de su otro consecutivo (interacción, periodo de estado, o histórico de teléfono vía el nuevo `Persona::ejecutarConBloqueoTelefono`).
+- Comprobado con 2 procesos en paralelo × 25 ediciones del perfil: 50 eventos, 50 ids distintos.
+- Nueva `Tests/bitacora_bloqueo_test.php` (Cuidados #12). Quedan 9 controladores antiguos con el mismo problema (ver Pendientes).
+
+### 2026-10-06 · backend · Cerrar sesión borra el perfil en caché
+- Al cerrar sesión y pulsar "Crear cuenta", el registro aparecía con los datos de la cuenta anterior (menos contraseña y documento). Causa: `clearAuthSession()` no borraba `tindercows:profile` y `registro.js` usa ese perfil cuando no hay sesión. Ahora se borra en toda salida de sesión (ver "Navegación y sesión").
+- Caché: imports `supabase-auth.js?v=session-3` en `ajustes.js` (`ajustes-9`), `me-interesa.js` (`interesa-3`) y `mi-actividad.js` (`panel-8`). Prueba nueva `Tests/frontend/cerrar_sesion.test.mjs`.
+
+### 2026-10-06 · backend · Lectura automática del número, cámara en celulares y documento en el registro (P2-5/P2-6)
+- Ver "Documento de identidad (P2-5)": lectura en el dispositivo con Tesseract.js, resultado calculado en PHP, "Tomar foto" solo en celulares, paso opcional en el registro y la lectura visible para el admin en `/admin/documentos`.
+- Columnas `tbpersonadocumentonumeroleido` y `tbpersonadocumentolectura` en los 4 lugares + migración 018, diccionario, DER y PDF.
+- Archivos: nuevo `shared/escaner-documento.js?v=escaner-2`; `storage.js` `documento-2` (`nuevoUuid`: `crypto.randomUUID` no existe en páginas sin HTTPS, como el celular entrando por `http://IP-local`; se arma con `getRandomValues`); `MiPerfilController.php` (`documentoLectura`, `numeroLeido`, `resultadoLectura`), `Persona.php`; `ajustes.js` (`ajustes-8`), `registro.js` (`signup-10`), `documentos.js` (`documentos-2`), vistas de Ajustes y Registro.
+- Antes se probó la lectura con una página temporal fuera del repositorio: una foto subida se leyó bien; la webcam de la computadora, no.
+- Pruebas: nueva `Tests/frontend/escaner_documento.test.mjs`; `api_mi_perfil_test.php` cubre los 5 resultados, que el navegador no puede mandar el resultado y que con pasaporte no aplica.
+
+### 2026-10-05 · backend · P2-6 Verificación de documentos de identidad
+- Pantalla `/admin/documentos` y API `api/v1/admin/documentos` (ver "Documento de identidad (P2-5)"); columna `tbpersonadocumentomotivo` en los 4 lugares + migración 017, diccionario, DER y PDF; Ajustes muestra el motivo del rechazo (`ajustes-6`).
+- Archivos: nuevos `Application/Service/SupabaseStorage.php`, `AdminDocumentoController.php`, `Public/api/admin-documentos.php`, `Public/documentos.php`, vista `documentos/`, `Public/js/documentos.js`; `Persona.php` (`listarDocumentos`, `bloquearPorId`, `decidirDocumento`, motivo en `documentoPublico`); `MiPerfilController` limpia el motivo; `compose.yaml` pasa `SUPABASE_SECRET_KEY` a la app.
+- Cadena de caché (Cuidados #11): `auth-gate-8`, `admin-ui.js` y `admin-refinements.css` `admin-10`, `login.js` `front-13`, los 10 módulos admin con `shared/api.js?v=auth-gate-8`.
+- Pruebas: nueva `Tests/api_admin_documentos_test.php` (transporte falso para el enlace; borra sus eventos al terminar porque el id de la persona de prueba se reutiliza); `api_auth_admin_http_test.php` y `admin_cache_chain.test.mjs` incluyen la ruta; nueva `admin_documentos.test.mjs`. Enlace firmado probado contra el Supabase real (abre el archivo; la ruta pública da 400). Probado en Postgres 16.
 
 ### 2026-10-05 · backend · P3-1 Comerciante (investigación, sin código)
 - Nuevo `Documentation/Sprints/P3-1-Comerciante.md`: según la Ley 8799 y el Decreto 44336, "comerciante" no es un actor distinto (comprar y vender tiene las mismas obligaciones de guía y trazabilidad); lo distinto son los establecimientos mercantiles (subastas, ferias). Se recomienda tratarlo como Vendedor hasta que el cliente responda las 3 preguntas del documento.

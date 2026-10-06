@@ -2,7 +2,7 @@
 // portada (buildCard con compacta) y un botón "Quitar" (acción RETIRAR, idempotente).
 
 import { request } from './shared/api.js';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
 import { buildCard } from './explore.js?v=foto-4';
 import { createToast } from './shared/toast.js';
 

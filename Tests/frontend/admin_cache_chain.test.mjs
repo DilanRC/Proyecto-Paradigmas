@@ -6,8 +6,8 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 const read = (ruta) => readFileSync(ruta, 'utf8');
-const MODULOS_ADMIN = ['dashboard', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos', 'publicaciones', 'administradores', 'bitacora', 'adminfletes'];
-const RUTAS_ADMIN = ['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones', 'admin/administradores', 'admin/bitacora', 'admin/fletes'];
+const MODULOS_ADMIN = ['dashboard', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos', 'publicaciones', 'administradores', 'bitacora', 'adminfletes', 'documentos'];
+const RUTAS_ADMIN = ['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones', 'admin/administradores', 'admin/bitacora', 'admin/fletes', 'admin/documentos'];
 
 const api = read('Public/js/shared/api.js');
 const versionAuthGate = api.match(/^import '\.\/auth-gate\.js\?v=(auth-gate-\d+)';/)?.[1];
@@ -44,7 +44,7 @@ test('cada ruta admin está en la guarda de sesión, en login, en admin-ui y en 
         assert.ok(adminUi.includes(`'${ruta}'`), `${ruta} falta en MODULES`);
         vistas.forEach((vista, i) => assert.ok(vista.includes(`href="${ruta}"`), `${MODULOS_ADMIN[i]} no enlaza a ${ruta}`));
     }
-    for (const ruta of ['admin/administradores', 'admin/bitacora', 'admin/fletes']) {
+    for (const ruta of ['admin/administradores', 'admin/bitacora', 'admin/fletes', 'admin/documentos']) {
         assert.ok(css.includes(`[href$='${ruta}']::before`), `${ruta} no tiene ícono`);
     }
 });

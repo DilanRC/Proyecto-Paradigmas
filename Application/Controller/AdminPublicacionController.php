@@ -101,39 +101,45 @@ final class AdminPublicacionController
             ]);
         }
 
-        $this->conexion->beginTransaction();
-        try {
-            $anterior = $this->animales->buscarPublicacion((int) $publicacionId);
-            if ($anterior === null) {
-                throw new HttpException('La publicación no existe.', 404);
-            }
-            if (!in_array($anterior['estado'], self::ESTADOS_ABIERTOS, true)) {
-                throw new HttpException('La publicación ya está cerrada y no admite cambios.', 409);
-            }
-            if ($anterior['estado'] !== $estado) {
-                $this->animales->cambiarEstadoPublicacion(
-                    (int) $publicacionId, $estado, $motivo === '' ? null : $motivo, 'API_ADMIN_PUBLICACIONES'
-                );
-                $nueva = $this->animales->buscarPublicacion((int) $publicacionId);
-                $this->bitacora->registrar(
-                    'MODERAR',
-                    'PUBLICACION:' . $publicacionId,
-                    $anterior,
-                    $nueva + ['motivo' => $motivo === '' ? null : $motivo],
-                    $this->solicitudId,
-                    entidad: 'PUBLICACION',
-                    origen: 'API_ADMIN_PUBLICACIONES',
-                );
-            } else {
-                $nueva = $anterior;
-            }
-            $this->conexion->commit();
-        } catch (Throwable $error) {
-            if ($this->conexion->inTransaction()) {
-                $this->conexion->rollBack();
-            }
-            throw $error;
-        }
+        // Los ids del periodo de estado y de la bitácora salen del último + 1: sus bloqueos deben durar hasta el COMMIT.
+        $nueva = $this->animales->ejecutarConBloqueoAlta('tbanimalpublicacionestadoperiodo', fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
+            function () use ($publicacionId, $estado, $motivo): array {
+                $this->conexion->beginTransaction();
+                try {
+                    $anterior = $this->animales->buscarPublicacion((int) $publicacionId);
+                    if ($anterior === null) {
+                        throw new HttpException('La publicación no existe.', 404);
+                    }
+                    if (!in_array($anterior['estado'], self::ESTADOS_ABIERTOS, true)) {
+                        throw new HttpException('La publicación ya está cerrada y no admite cambios.', 409);
+                    }
+                    if ($anterior['estado'] !== $estado) {
+                        $this->animales->cambiarEstadoPublicacion(
+                            (int) $publicacionId, $estado, $motivo === '' ? null : $motivo, 'API_ADMIN_PUBLICACIONES'
+                        );
+                        $nueva = $this->animales->buscarPublicacion((int) $publicacionId);
+                        $this->bitacora->registrar(
+                            'MODERAR',
+                            'PUBLICACION:' . $publicacionId,
+                            $anterior,
+                            $nueva + ['motivo' => $motivo === '' ? null : $motivo],
+                            $this->solicitudId,
+                            entidad: 'PUBLICACION',
+                            origen: 'API_ADMIN_PUBLICACIONES',
+                        );
+                    } else {
+                        $nueva = $anterior;
+                    }
+                    $this->conexion->commit();
+                    return $nueva;
+                } catch (Throwable $error) {
+                    if ($this->conexion->inTransaction()) {
+                        $this->conexion->rollBack();
+                    }
+                    throw $error;
+                }
+            },
+        ));
 
         return $this->respuesta(true, 'Publicación actualizada correctamente.', ['publicacion' => $nueva]);
     }

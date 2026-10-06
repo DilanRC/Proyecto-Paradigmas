@@ -56,7 +56,99 @@ final class Persona
         return $estado === null ? null : [
             'estado' => $estado,
             'fecha' => $fila['tbpersonadocumentofecha'] ?? null,
+            // P2-6: la persona ve por qué se rechazó para saber qué corregir.
+            'motivo' => $estado === 'RECHAZADO' ? ($fila['tbpersonadocumentomotivo'] ?? null) : null,
+            // Resultado de la lectura automática (COINCIDE, NO_COINCIDE, OTRA_CUENTA, SIN_LECTURA o null).
+            'lectura' => $fila['tbpersonadocumentolectura'] ?? null,
         ];
+    }
+
+    /**
+     * Personas con documento de identidad, para la verificación del administrador
+     * (P2-6). Las pendientes primero y, dentro de cada estado, la más antigua
+     * primero: así se revisa en orden de llegada.
+     */
+    public function listarDocumentos(string $estado, string $busqueda, int $pagina, int $tamano): array
+    {
+        $condiciones = ['p.tbpersonadocumentoestado IS NOT NULL'];
+        $parametros = [];
+        if ($estado !== 'TODOS') {
+            $condiciones[] = 'p.tbpersonadocumentoestado = :estado';
+            $parametros['estado'] = $estado;
+        }
+        if ($busqueda !== '') {
+            $condiciones[] = '(LOWER(p.tbpersonanombre) LIKE :q1 OR LOWER(p.tbpersonaidentificacionnumero) LIKE :q2
+                OR LOWER(p.tbpersonacorreoelectronico) LIKE :q3)';
+            $texto = '%' . mb_strtolower($busqueda, 'UTF-8') . '%';
+            $parametros += ['q1' => $texto, 'q2' => $texto, 'q3' => $texto];
+        }
+        $where = 'WHERE ' . implode(' AND ', $condiciones);
+
+        $conteo = $this->conexion->prepare("SELECT COUNT(*) FROM tbpersona p {$where}");
+        $conteo->execute($parametros);
+        $total = (int) $conteo->fetchColumn();
+
+        $sentencia = $this->conexion->prepare(
+            "SELECT p.* FROM tbpersona p {$where}
+             ORDER BY CASE WHEN p.tbpersonadocumentoestado = 'PENDIENTE' THEN 0 ELSE 1 END,
+                      p.tbpersonadocumentofecha, p.tbpersonaid
+             LIMIT :limite OFFSET :desplazamiento"
+        );
+        foreach ($parametros as $nombre => $valor) {
+            $sentencia->bindValue($nombre, $valor);
+        }
+        $sentencia->bindValue('limite', $tamano, PDO::PARAM_INT);
+        $sentencia->bindValue('desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
+        $sentencia->execute();
+
+        return [
+            'personas' => array_map(static fn (array $fila): array => [
+                'personaId' => (int) $fila['tbpersonaid'],
+                'nombre' => $fila['tbpersonanombre'],
+                'identificacionTipo' => $fila['tbpersonaidentificaciontipo'],
+                'identificacionNumero' => $fila['tbpersonaidentificacionnumero'],
+                'correoElectronico' => $fila['tbpersonacorreoelectronico'],
+                'documento' => [
+                    'estado' => $fila['tbpersonadocumentoestado'],
+                    'fecha' => $fila['tbpersonadocumentofecha'],
+                    'motivo' => $fila['tbpersonadocumentomotivo'] ?? null,
+                    // Para el admin: ayuda a revisar, no decide.
+                    'numeroLeido' => $fila['tbpersonadocumentonumeroleido'] ?? null,
+                    'lectura' => $fila['tbpersonadocumentolectura'] ?? null,
+                ],
+            ], $sentencia->fetchAll()),
+            'total' => $total,
+        ];
+    }
+
+    /** Fila de la persona bloqueada para decidir sobre su documento, o null. */
+    public function bloquearPorId(int $personaId): ?array
+    {
+        $sentencia = $this->conexion->prepare('SELECT * FROM tbpersona WHERE tbpersonaid = :personaId FOR UPDATE');
+        $sentencia->execute(['personaId' => $personaId]);
+        $fila = $sentencia->fetch();
+
+        return $fila === false ? null : $fila;
+    }
+
+    public function decidirDocumento(int $personaId, string $estado, ?string $motivo): void
+    {
+        $this->conexion->prepare(
+            'UPDATE tbpersona SET tbpersonadocumentoestado = :estado, tbpersonadocumentofecha = :fecha,
+                    tbpersonadocumentomotivo = :motivo
+             WHERE tbpersonaid = :personaId'
+        )->execute([
+            'estado' => $estado,
+            'fecha' => gmdate('Y-m-d H:i:s'),
+            'motivo' => $motivo,
+            'personaId' => $personaId,
+        ]);
+    }
+
+    /** Ver PersonaTelefonoHistorico::ejecutarConBloqueoAlta: envolver toda la transacción que cambia el teléfono. */
+    public function ejecutarConBloqueoTelefono(callable $operacion): mixed
+    {
+        return $this->telefonoHistorico->ejecutarConBloqueoAlta($operacion);
     }
 
     /** Sin distinguir mayúsculas, igual que RegistroPublicoService al registrar. */
@@ -205,6 +297,9 @@ final class Persona
             'documentoRuta' => 'tbpersonadocumentoruta',
             'documentoEstado' => 'tbpersonadocumentoestado',
             'documentoFecha' => 'tbpersonadocumentofecha',
+            'documentoMotivo' => 'tbpersonadocumentomotivo',
+            'documentoNumeroLeido' => 'tbpersonadocumentonumeroleido',
+            'documentoLectura' => 'tbpersonadocumentolectura',
         ];
         $asignaciones = [];
         $parametros = ['personaId' => $personaId];

@@ -17,6 +17,9 @@ erDiagram
         VARCHAR tbpersonadocumentoruta
         VARCHAR tbpersonadocumentoestado
         DATETIME tbpersonadocumentofecha
+        VARCHAR tbpersonadocumentomotivo
+        VARCHAR tbpersonadocumentonumeroleido
+        VARCHAR tbpersonadocumentolectura
     }
 
     tbproductor {

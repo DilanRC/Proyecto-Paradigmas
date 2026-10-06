@@ -36,7 +36,7 @@ test('la imagen del dispositivo se valida y va a la carpeta de su dueño', async
     assert.equal(usuarioDelToken('no-es-jwt'), null);
     assert.equal(extensionDe('image/webp'), 'webp');
     const storage = read('Public/js/shared/storage.js');
-    assert.match(storage, /const ruta = `\$\{usuario\}\/\$\{crypto\.randomUUID\(\)\}/);
+    assert.match(storage, /const ruta = `\$\{usuario\}\/\$\{nuevoUuid\(\)\}/);
     assert.match(storage, /storage\/v1\/object\/public\/\$\{BUCKET_PUBLICACIONES\}/);
 });
 
@@ -58,4 +58,15 @@ test('Publicar usa el sistema de formulario y los colores del sitio', () => {
     assert.match(vista, /name="imagenUrl" type="url"/);
     assert.match(vista, /value="archivo" checked/);
     assert.match(vista, /maxlength="500"/, 'la descripción coincide con el límite del backend');
+});
+
+test('el nombre del archivo es un UUID v4 aunque la página no sea segura (celular por http://IP-local)', async () => {
+    const { nuevoUuid } = await import('../../Public/js/shared/storage.js');
+    const formato = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    // Sin randomUUID (contexto no seguro): se arma con getRandomValues.
+    const sinRandomUuid = { getRandomValues: (a) => globalThis.crypto.getRandomValues(a) };
+    for (let i = 0; i < 50; i++) assert.match(nuevoUuid(sinRandomUuid), formato);
+    assert.match(nuevoUuid(), formato);
+    // Es el formato que exige el servidor (MiPerfilController) para la ruta del documento.
+    assert.notEqual(nuevoUuid(sinRandomUuid), nuevoUuid(sinRandomUuid));
 });

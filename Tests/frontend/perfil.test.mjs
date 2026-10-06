@@ -46,7 +46,9 @@ test('P2-5: el documento va al bucket privado y PHP solo recibe su ruta', async 
     // El documento nunca arma una URL pública.
     assert.doesNotMatch(storage, /object\/public\/\$\{BUCKET_DOCUMENTOS\}/);
     assert.ok(view.includes('accept="image/jpeg,image/png,image/webp,application/pdf"'));
-    assert.ok(js.includes('documentoRuta: await subirDocumentoIdentidad(archivo)'));
+    // La subida (y la lectura del número) pasan por shared/escaner-documento.js.
+    assert.ok(js.includes('await prepararEnvioDocumento(archivo, {'));
+    assert.match(read('Public/js/shared/escaner-documento.js'), /documentoRuta: await subirDocumentoIdentidad\(archivo\)/);
 });
 
 test('P2-5: Ajustes muestra el estado del documento sin exponer la ruta', async () => {
@@ -55,6 +57,8 @@ test('P2-5: Ajustes muestra el estado del documento sin exponer la ruta', async 
     assert.match(textoDocumento({ estado: 'PENDIENTE' }), /revisión/);
     assert.match(textoDocumento({ estado: 'VERIFICADO' }), /Verificado/);
     assert.match(textoDocumento({ estado: 'RECHAZADO' }), /más clara/);
+    // P2-6: si el admin dejó motivo, la persona lo ve.
+    assert.equal(textoDocumento({ estado: 'RECHAZADO', motivo: 'La foto está borrosa' }), 'No se pudo verificar: La foto está borrosa. Sube otro documento.');
     assert.ok(view.includes('id="profile-document-state"') && view.includes('role="status"'));
     assert.doesNotMatch(js, /persona\??\.documentoRuta|documento\??\.ruta/, 'la pantalla nunca lee ni muestra la ruta guardada');
 });

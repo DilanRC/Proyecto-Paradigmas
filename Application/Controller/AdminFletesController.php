@@ -111,46 +111,50 @@ final class AdminFletesController
             ]);
         }
 
-        $this->conexion->beginTransaction();
-        try {
-            $anterior = $this->ofertas->buscarAdmin((int) $ofertaId, true);
-            if ($anterior === null) {
-                throw new HttpException('La oferta no existe.', 404);
+        // El bloqueo de la bitácora debe durar hasta el COMMIT (Cuidados #12 de MEMORIA).
+        $nueva = $this->bitacora->ejecutarConBloqueoAlta(function () use ($ofertaId, $estado, $motivo): array {
+            $this->conexion->beginTransaction();
+            try {
+                $anterior = $this->ofertas->buscarAdmin((int) $ofertaId, true);
+                if ($anterior === null) {
+                    throw new HttpException('La oferta no existe.', 404);
+                }
+                // Retirar solo desde ACTIVA o PAUSADA; reactivar solo desde RETIRADA. Pausar/reactivar es del transportista.
+                $permitido = $estado === TransportistaOferta::ESTADO_RETIRADA
+                    ? in_array($anterior['estado'], TransportistaOferta::ESTADOS, true)
+                    : $anterior['estado'] === TransportistaOferta::ESTADO_RETIRADA;
+                if (!$permitido && $anterior['estado'] !== $estado) {
+                    throw new HttpException(
+                        $estado === TransportistaOferta::ESTADO_RETIRADA
+                            ? 'La oferta ya no está abierta.'
+                            : 'Solo se reactiva una oferta retirada; las pausadas las reactiva su transportista.',
+                        409
+                    );
+                }
+                if ($anterior['estado'] !== $estado) {
+                    $this->ofertas->cambiarEstado((int) $ofertaId, $estado);
+                    $nueva = $this->ofertas->buscarAdmin((int) $ofertaId);
+                    $this->bitacora->registrar(
+                        'MODERAR',
+                        (string) $ofertaId,
+                        $anterior,
+                        $nueva + ['motivo' => $motivo === '' ? null : $motivo],
+                        $this->solicitudId,
+                        entidad: 'OFERTA_FLETE',
+                        origen: 'API_ADMIN_FLETES',
+                    );
+                } else {
+                    $nueva = $anterior;
+                }
+                $this->conexion->commit();
+            } catch (Throwable $error) {
+                if ($this->conexion->inTransaction()) {
+                    $this->conexion->rollBack();
+                }
+                throw $error;
             }
-            // Retirar solo desde ACTIVA o PAUSADA; reactivar solo desde RETIRADA. Pausar/reactivar es del transportista.
-            $permitido = $estado === TransportistaOferta::ESTADO_RETIRADA
-                ? in_array($anterior['estado'], TransportistaOferta::ESTADOS, true)
-                : $anterior['estado'] === TransportistaOferta::ESTADO_RETIRADA;
-            if (!$permitido && $anterior['estado'] !== $estado) {
-                throw new HttpException(
-                    $estado === TransportistaOferta::ESTADO_RETIRADA
-                        ? 'La oferta ya no está abierta.'
-                        : 'Solo se reactiva una oferta retirada; las pausadas las reactiva su transportista.',
-                    409
-                );
-            }
-            if ($anterior['estado'] !== $estado) {
-                $this->ofertas->cambiarEstado((int) $ofertaId, $estado);
-                $nueva = $this->ofertas->buscarAdmin((int) $ofertaId);
-                $this->bitacora->registrar(
-                    'MODERAR',
-                    (string) $ofertaId,
-                    $anterior,
-                    $nueva + ['motivo' => $motivo === '' ? null : $motivo],
-                    $this->solicitudId,
-                    entidad: 'OFERTA_FLETE',
-                    origen: 'API_ADMIN_FLETES',
-                );
-            } else {
-                $nueva = $anterior;
-            }
-            $this->conexion->commit();
-        } catch (Throwable $error) {
-            if ($this->conexion->inTransaction()) {
-                $this->conexion->rollBack();
-            }
-            throw $error;
-        }
+            return $nueva;
+        });
 
         return $this->respuesta(true, 'Oferta actualizada correctamente.', ['oferta' => $nueva]);
     }

@@ -1,6 +1,6 @@
 import { request } from './shared/api.js';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { safeImageUrl } from './explore.js?v=foto-3';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';

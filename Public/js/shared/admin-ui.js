@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-8';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-9';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-10';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-11';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -41,6 +41,11 @@ const MODULES = {
         icon: 'fa-truck-ramp-box',
         search: 'Transportista, vehículo o zona',
         hint: 'Busca en transportista, vehículo y zona, o en publicación, comprador y vendedor.',
+    },
+    'admin/documentos': {
+        icon: 'fa-id-card',
+        search: 'Nombre, identificación o correo',
+        hint: 'Documentos de identidad por revisar. Las pendientes, de la más antigua a la más nueva.',
     },
     'admin/metodos-pago': {
         icon: 'fa-wallet',
