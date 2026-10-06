@@ -172,7 +172,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ### Oferta de flete (P1-2, en construcción)
 - Tabla nueva `tbtransportistaoferta` (DEC-FLETE-001, esquema de **36 tablas**): transportista, vehículo, zona base (`tbdireccion` con
   coordenadas), radio en km, capacidad en cabezas, precio base opcional (`NULL` = a convenir), descripción y estado `ACTIVA`/`PAUSADA`.
-  Migración `017transportistaoferta.sql`.
+  Migración `019transportistaoferta.sql`.
 - **No** reutiliza `tbtransportistaflete` (viaje realizado, con método de pago obligatorio y reseñas que apuntan a él) ni
   `tbtransportistahorario` (la disponibilidad va como texto libre). El precio no se calcula por km.
 - **API `api/v1/mi-ofertas`** (sesión, Transportista ACTIVO; `MiOfertasController`):
@@ -207,7 +207,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   El comprador puede proponer un método de pago, opcional.
 - Tabla nueva `tbcomprasolicitud`: publicación, comprador (`tbcompradorid`), oferta de flete opcional, método de pago opcional, precio (copia del
   de la publicación; nulo si era "a convenir" y el vendedor lo fija al aceptar), mensaje, estado `PENDIENTE|ACEPTADA|RECHAZADA|CANCELADA`,
-  estado del flete (`NULL` si no pidió flete) y fechas/motivo de las respuestas. Migración `018comprasolicitud.sql`.
+  estado del flete (`NULL` si no pidió flete) y fechas/motivo de las respuestas. Migración `020comprasolicitud.sql`.
 - **`tbcompra` y `tbventa` se adaptaron (aditivo):** columna nueva `tbcompradorid`, `tbcomprasolicitudid` (solo `tbventa`), y
   `tbproductorcompradorid` y `tbpagometodoid` ahora aceptan `NULL`. Antes exigían un Productor comprador y un pago, que un Comprador normal no
   tiene. Las filas existentes no cambian. Al aceptar una solicitud se registran ambas con `tbcompradorid`.
@@ -467,6 +467,10 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-06 · jefersonbustamante · Migraciones renumeradas (colisión con `backend`)
+- La rama `backend` (Jeremi) ya usa las migraciones `017personadocumentomotivo.sql` y `018personadocumentolectura.sql`. Las mías pasan a `019transportistaoferta.sql` y `020comprasolicitud.sql`; **las siguientes empiezan en 021**. Solo cambió el nombre de los archivos (el contenido y lo aplicado en las bases no cambian).
+- Cuidado: antes de crear una migración, mira también `git ls-tree origin/backend Database/Migrations/` para no repetir número.
+
 ### 2026-10-06 · jefersonbustamante · P1-3 paso 3: pantallas de solicitudes de compra
 - "Solicitar compra" en Explorar, "Solicitar compra" y "Ver fletes cercanos" en Me interesa, y las tres bandejas de Mi panel (ver "Solicitud de compra (P1-3)").
 - Archivos: nuevos `Public/js/shared/solicitud-compra.js` y `Public/css/solicitud.css`; `explore.js` (`explore-11`), `explore-interactions.js` (`interactions-3`), `me-interesa.js` (`interesa-3`), `mi-actividad.js` (`panel-9`), vistas de Explorar, Me interesa y Mi panel.
@@ -480,10 +484,10 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - Cuidado: los transportistas y vendedores registrados por `RegistroPublicoController` **también son Compradores** (alta inicial); un vendedor creado con `test_create_completo` no lo es. Los alias SQL de `CompraSolicitud` van en minúscula (Cuidados #3).
 
 ### 2026-10-06 · jefersonbustamante · P1-3 paso 1: tabla `tbcomprasolicitud` y adaptación de compra/venta (esquema)
-- Tabla nueva en los 4 lugares (`000instalacioncompleta.sql`, `018comprasolicitud.sql`, `schema.sql` con RLS, `migrate.php`) y cambios en `tbcompra` y `tbventa` (ver "Solicitud de compra (P1-3)"); diccionario, DER, `Decisiones.md` (DEC-COMPRA-001) y PDF.
+- Tabla nueva en los 4 lugares (`000instalacioncompleta.sql`, `020comprasolicitud.sql`, `schema.sql` con RLS, `migrate.php`) y cambios en `tbcompra` y `tbventa` (ver "Solicitud de compra (P1-3)"); diccionario, DER, `Decisiones.md` (DEC-COMPRA-001) y PDF.
 - El esquema pasa de 36 a **37 tablas**: se actualizaron los mismos README, docs y pruebas que en el cambio anterior.
 - `migrate.php`: `EXPECTED_COLUMNS` de `tbcompra`, `tbventa` y la tabla nueva, y `ensureCurrentColumns()` con `ADD COLUMN IF NOT EXISTS` y `DROP NOT NULL`.
-- Cuidado: una base MySQL existente necesita `Database/Migrations/018comprasolicitud.sql` (y la 017 si falta).
+- Cuidado: una base MySQL existente necesita `Database/Migrations/020comprasolicitud.sql` (y la 019 si falta).
 - Limpieza: `mi_ofertas_test` dejó filas huérfanas de `tbcomprador` en una corrida fallida; `instalacion_limpia_test` las detecta ("Ningún tbcomprador apunta a una persona inexistente").
 
 ### 2026-10-06 · jefersonbustamante · P1-2 paso 3: pantalla de Fletes
@@ -499,9 +503,9 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - Cuidado: `FletesController` es **privado** (401 sin sesión), a diferencia de `api/v1/publicaciones`. Los alias SQL de `TransportistaOferta` van en minúscula (Cuidados #3).
 
 ### 2026-10-06 · jefersonbustamante · P1-2 paso 1: tabla `tbtransportistaoferta` (esquema)
-- Tabla nueva en los 4 lugares (`000instalacioncompleta.sql`, `017transportistaoferta.sql`, `schema.sql` con RLS, `migrate.php`), diccionario, DER (con relaciones), `Decisiones.md` (DEC-FLETE-001) y los 3 PDF regenerados. Sin código de aplicación todavía.
+- Tabla nueva en los 4 lugares (`000instalacioncompleta.sql`, `019transportistaoferta.sql`, `schema.sql` con RLS, `migrate.php`), diccionario, DER (con relaciones), `Decisiones.md` (DEC-FLETE-001) y los 3 PDF regenerados. Sin código de aplicación todavía.
 - El esquema pasa de 35 a **36 tablas**: se actualizaron README, GuiaDefensa, Respaldos, `Database/Tests`, `schema_manifest_test`, `db_ready_test`, `instalacion_limpia_test`, `naming_eval` y los tres archivos de `services/supabase-database`.
-- Cuidado: una base MySQL existente necesita `Database/Migrations/017transportistaoferta.sql`.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/019transportistaoferta.sql`.
 
 ### 2026-10-05 · jefersonbustamante · Explorar sin publicaciones propias y sin portada con sesión
 - API: `excluirPropias` en `api/v1/publicaciones` (sin cambio de contrato para quien no lo envía). Frontend: Explorar lo envía; `public-ui.js` (`public-13`) quita Inicio y redirige la portada a Explorar con sesión.
