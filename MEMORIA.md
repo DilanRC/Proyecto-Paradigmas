@@ -389,6 +389,11 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     `api.js` → `auth-gate.js` y `admin-ui.js` → `admin-refinements.css`. Al agregar una ruta admin: sube la versión de
     `auth-gate.js` y de `admin-ui.js`/`admin-refinements.css`, el import de `shared/api.js?v=…` en **todos** los módulos
     admin y el `?v=` de sus `<script>`. Si falta alguno, esa pantalla queda en blanco o sin el ícono nuevo.
+12. **Probar en un `git worktree` o con una base aparte** (dos personas o sesiones en paralelo): `docker compose exec app` solo ve el
+    repositorio principal y la base `bdmercadoganadero`. Usa `sh Tools/php-test.sh [-d base] Tests/x_test.php` (corre el código de TU árbol) y,
+    para un cambio de esquema, `sh Tools/db-aislada.sh <nombre>` (crea una base propia desde TU `000instalacioncompleta.sql`) y pásala con `-d`.
+    Así un esquema a medias no rompe `instalacion_limpia_test` ni la app de quien trabaja al lado. Limitación: las pruebas que llaman por HTTP
+    (`instalacion_limpia_test`, `*_http_test`) necesitan Apache y solo corren en el repositorio principal.
 
 ## 5. Pendientes
 
