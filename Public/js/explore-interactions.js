@@ -70,12 +70,36 @@ async function save(button, type) {
     }
 }
 
+async function requestPurchase(button) {
+    const context = cardContext(button);
+    if (!context) {
+        toast('No pudimos identificar esta publicación. Actualiza Explorar e inténtalo de nuevo.');
+        return;
+    }
+    if (!session()) {
+        window.location.assign(`entrar?next=${encodeURIComponent('explorar')}`);
+        return;
+    }
+    const { abrirSolicitudCompra } = await import('./shared/solicitud-compra.js?v=solicitud-1');
+    abrirSolicitudCompra({
+        publicacionId: context.publicacionId,
+        titulo: context.card.querySelector('h2')?.textContent ?? 'Publicación',
+        precio: context.card.querySelector('.explore-card__price strong')?.textContent ?? '',
+        aviso: (message) => toast(message),
+    });
+}
+
 function initialize() {
     document.addEventListener('click', (event) => {
         const button = event.target instanceof Element
             ? event.target.closest('[data-explore-action]')
             : null;
         if (!(button instanceof HTMLButtonElement)) return;
+        if (button.dataset.exploreAction === 'Solicitar compra') {
+            event.preventDefault();
+            void requestPurchase(button);
+            return;
+        }
         const type = ACTION_TYPES[button.dataset.exploreAction];
         if (!type) return;
         event.preventDefault();

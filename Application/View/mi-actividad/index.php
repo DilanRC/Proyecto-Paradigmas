@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-13"></script>
-    <script type="module" src="js/mi-actividad.js?v=panel-8"></script>
+    <script type="module" src="js/mi-actividad.js?v=panel-9"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">
@@ -58,6 +58,21 @@
 
                 <div class="panel-grid">
                     <div class="panel-col">
+                        <section id="sol-recibidas-panel" class="activity-panel" aria-labelledby="sol-recibidas-title" hidden>
+                            <div class="panel-head"><h2 id="sol-recibidas-title">Solicitudes recibidas<span class="panel-count" id="sol-recibidas-count"></span></h2></div>
+                            <div id="sol-recibidas-list" class="panel-rows" aria-live="polite"></div>
+                        </section>
+
+                        <section id="sol-fletes-panel" class="activity-panel" aria-labelledby="sol-fletes-title" hidden>
+                            <div class="panel-head"><h2 id="sol-fletes-title">Fletes que me piden<span class="panel-count" id="sol-fletes-count"></span></h2></div>
+                            <div id="sol-fletes-list" class="panel-rows" aria-live="polite"></div>
+                        </section>
+
+                        <section id="sol-hechas-panel" class="activity-panel" aria-labelledby="sol-hechas-title" hidden>
+                            <div class="panel-head"><h2 id="sol-hechas-title">Mis solicitudes<span class="panel-count" id="sol-hechas-count"></span></h2></div>
+                            <div id="sol-hechas-list" class="panel-rows" aria-live="polite"></div>
+                        </section>
+
                         <section id="publications-panel" class="activity-panel" aria-labelledby="publications-title" hidden>
                             <div class="panel-head"><h2 id="publications-title">Mis publicaciones<span class="panel-count" id="publications-count"></span></h2></div>
                             <div id="publications-loading" class="resource-state" role="status" aria-live="polite">Cargando publicaciones…</div>

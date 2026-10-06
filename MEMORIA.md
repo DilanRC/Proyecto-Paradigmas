@@ -229,8 +229,18 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   - Bitácora entidad `COMPRA_SOLICITUD`, origen `API_SOLICITUDES_COMPRA` (`CREAR`, `CANCELAR`, `ACEPTAR`, `RECHAZAR`, `ACEPTAR_FLETE`, `RECHAZAR_FLETE`).
 - `AnimalComercial::registrarCompra` y `registrarVenta` aceptan ahora `?int $productorCompradorId` y, en `$datos`, `compradorId`, `solicitudId` y un
   `pagoMetodoId` opcional (los llamadores anteriores siguen igual).
-- Hecho: esquema y API. Falta: botones "Comprar animal" y "Comprar con flete" en la publicación, "Ver fletes cercanos" en Me interesa y las bandejas
-  (Mis solicitudes y Solicitudes recibidas) en Mi panel.
+- **Pantallas:**
+  - Explorar: la tarjeta completa tiene un tercer botón, **"Solicitar compra"** (la acción principal, coral). `explore-interactions.js` lo atiende y carga
+    por demanda `shared/solicitud-compra.js` (`abrirSolicitudCompra`), que arma su propio `<dialog>` con DOM (sin `innerHTML`) y su hoja `css/solicitud.css`.
+    Ahí se elige "Solo el animal" o "El animal con flete" (la lista sale de `api/v1/fletes?publicacionId=`), con un mensaje opcional.
+  - Me interesa: si la publicación sigue ACTIVA, la tarjeta suma "Solicitar compra" y **"Ver fletes cercanos"** (abre el mismo diálogo con el flete preseleccionado).
+  - Mi panel: tres bandejas que solo aparecen si tienen filas: **Solicitudes recibidas** (Aceptar o Rechazar), **Fletes que me piden** (Aceptar flete o
+    Rechazar) y **Mis solicitudes** (Cancelar). Al aceptar una publicación "a convenir" se pide el precio con `window.prompt`; al rechazar, un motivo opcional.
+    Los teléfonos aparecen cuando la API los entrega.
+  - **Sin método de pago en la interfaz:** la API lo acepta (`pagoMetodoId`), pero no hay una lista pública de métodos (`api/v1/metodos-pago` es solo de admin).
+    Si se quiere, hace falta un endpoint de lectura para clientes.
+- Hecho: esquema, API y pantallas. **No se probó en el navegador con una sesión real** (solo pruebas estáticas y de API): revisar a mano el flujo completo
+  con dos cuentas (comprador y vendedor) y una tercera con Transportista.
 
 ### Documento de identidad (P2-5)
 - La persona sube la foto o el PDF de su documento en Ajustes → Perfil (opcional). El navegador lo sube directo al
@@ -436,6 +446,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · jefersonbustamante · P1-3 paso 3: pantallas de solicitudes de compra
+- "Solicitar compra" en Explorar, "Solicitar compra" y "Ver fletes cercanos" en Me interesa, y las tres bandejas de Mi panel (ver "Solicitud de compra (P1-3)").
+- Archivos: nuevos `Public/js/shared/solicitud-compra.js` y `Public/css/solicitud.css`; `explore.js` (`explore-11`), `explore-interactions.js` (`interactions-3`), `me-interesa.js` (`interesa-3`), `mi-actividad.js` (`panel-9`), vistas de Explorar, Me interesa y Mi panel.
+- Pruebas: nueva `Tests/frontend/solicitudes_ui.test.mjs` (ids de la vista vs. el script, acciones de la API, escape de HTML, estilos con `--tc-*`). Quedan solo las 4 fallas de frontend conocidas; pasa `frontend_contrast_test` (20 hojas).
+- Cuidado: `shared/solicitud-compra.js` **no importa `explore.js`** a propósito: Explorar lo carga con otro `?v=` y se ejecutaría dos veces. Si cambias el diálogo, sube su `?v=solicitud-` en `explore-interactions.js` y en `me-interesa.js`, y el de `solicitud.css` en las dos vistas.
 
 ### 2026-10-06 · jefersonbustamante · P1-3 paso 2: API de solicitudes de compra
 - `api/v1/solicitudes-compra` (listar, solicitar, cancelar, aceptar, rechazar y responder el flete) con las reglas de "Solicitud de compra (P1-3)". Sin columnas nuevas (el esquema es del paso 1).

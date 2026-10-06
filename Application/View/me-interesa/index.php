@@ -17,9 +17,10 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <link rel="stylesheet" href="css/explore.css?v=explore-9">
+    <link rel="stylesheet" href="css/solicitud.css?v=solicitud-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-13"></script>
-    <script type="module" src="js/me-interesa.js?v=interesa-2"></script>
+    <script type="module" src="js/me-interesa.js?v=interesa-3"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">

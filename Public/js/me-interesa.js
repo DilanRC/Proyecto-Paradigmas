@@ -51,6 +51,25 @@ export function savedCard(publicacion) {
     remove.addEventListener('click', () => removeSaved(Number(publicacion.publicacionId), card, remove));
     const actions = document.createElement('div');
     actions.className = 'explore-card__actions';
+    if (publicacion.estado === 'ACTIVO') {
+        const abrir = (conFlete) => import('./shared/solicitud-compra.js?v=solicitud-1').then(({ abrirSolicitudCompra }) => abrirSolicitudCompra({
+            publicacionId: Number(publicacion.publicacionId),
+            titulo: publicacion.titulo || 'Publicación',
+            precio: card.querySelector('.explore-card__price strong')?.textContent ?? '',
+            conFlete,
+            aviso: (mensaje, tipo) => (tipo === 'error' ? toast?.error(mensaje) : toast?.success(mensaje)),
+        }));
+        const solicitar = document.createElement('button');
+        solicitar.type = 'button';
+        solicitar.className = 'is-primary';
+        solicitar.innerHTML = '<i class="fa-solid fa-handshake" aria-hidden="true"></i><span>Solicitar compra</span>';
+        solicitar.addEventListener('click', () => abrir(false));
+        const fletes = document.createElement('button');
+        fletes.type = 'button';
+        fletes.innerHTML = '<i class="fa-solid fa-truck" aria-hidden="true"></i><span>Ver fletes cercanos</span>';
+        fletes.addEventListener('click', () => abrir(true));
+        actions.append(solicitar, fletes);
+    }
     actions.append(remove);
     body?.append(actions);
     return card;

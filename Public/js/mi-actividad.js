@@ -12,6 +12,7 @@ const ACTIVITY_API = 'api/v1/actividad';
 const VEHICLES_API = 'api/v1/mi-vehiculos';
 const FARMS_API = 'api/v1/mi-fincas';
 const PUBLICATIONS_API = 'api/v1/publicaciones';
+const SOLICITUDES_API = 'api/v1/solicitudes-compra';
 let activityData = null;
 let vehiclesData = [];
 let farmsData = [];
@@ -205,6 +206,7 @@ async function loadActivity({ quiet = false } = {}) {
         renderPanel(response.data);
         await loadFarms();
         await loadVehicles();
+        await loadSolicitudes();
         return response.data;
     } catch (error) {
         if (error?.status === 401) endExpiredSession();
@@ -223,6 +225,102 @@ function miniatura(item, icono = 'fa-cow') {
     return url
         ? `<img class="panel-thumb" src="${escapeHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
         : `<span class="panel-thumb panel-thumb--empty" aria-hidden="true"><i class="fa-solid ${icono}"></i></span>`;
+}
+
+const SOLICITUD_ESTADOS = { PENDIENTE: 'Pendiente', ACEPTADA: 'Aceptada', RECHAZADA: 'Rechazada', CANCELADA: 'Cancelada' };
+const FLETE_ESTADOS = { PENDIENTE: 'por confirmar', ACEPTADA: 'aceptado', RECHAZADA: 'rechazado', CANCELADA: 'cancelado' };
+let solicitudesData = { hechas: [], recibidas: [], fletes: [] };
+
+function contactoTexto(parte) {
+    if (!parte) return '';
+    return parte.telefono ? `${escapeHtml(parte.nombre)} · ${escapeHtml(parte.telefono)}` : escapeHtml(parte.nombre);
+}
+
+function solicitudAccion(accion, etiqueta, id) {
+    return `<button class="activity-button activity-button--text" type="button" data-solicitud-accion="${accion}" data-solicitud-id="${id}">${etiqueta}</button>`;
+}
+
+/** Fila común: título, precio, flete y el estado; cada bandeja agrega sus líneas y botones. */
+function filaSolicitud(s, lineas, botones, estado = { texto: SOLICITUD_ESTADOS[s.estado] ?? '', vigente: s.estado === 'ACEPTADA' || s.estado === 'PENDIENTE' }) {
+    const flete = s.flete ? `<p>Flete: ${escapeHtml(s.flete.vehiculo || 'Transporte')} · ${escapeHtml(s.flete.transportista.nombre)} (${FLETE_ESTADOS[s.flete.estado] ?? ''})</p>` : '';
+    return `<article class="panel-row panel-row--media">${miniatura({ imagenUrl: s.publicacion.imagenUrl })}<div><h3>${escapeHtml(s.publicacion.titulo || 'Publicación')}</h3><p>${formatColones(s.precio)}</p>${flete}${lineas}</div><div class="panel-row__actions"><span class="activity-state" data-state="${estado.vigente ? 'ACTIVO' : 'INACTIVO'}">${estado.texto}</span>${botones}</div></article>`;
+}
+
+function filaHecha(s) {
+    const aceptada = s.estado === 'ACEPTADA';
+    const lineas = (aceptada ? `<p>Contacta al vendedor: ${contactoTexto(s.vendedor)}</p>` : `<p>Vendedor: ${escapeHtml(s.vendedor.nombre)}</p>`)
+        + (aceptada && s.flete?.estado === 'ACEPTADA' ? `<p>Transportista: ${contactoTexto(s.flete.transportista)}</p>` : '')
+        + (s.respuestaMotivo ? `<p>Motivo: ${escapeHtml(s.respuestaMotivo)}</p>` : '');
+    return filaSolicitud(s, lineas, s.estado === 'PENDIENTE' ? solicitudAccion('CANCELAR', 'Cancelar', s.solicitudId) : '');
+}
+
+function filaRecibida(s) {
+    const lineas = `<p>Comprador: ${contactoTexto(s.comprador)}</p>${s.mensaje ? `<p>“${escapeHtml(s.mensaje)}”</p>` : ''}`;
+    const botones = s.estado === 'PENDIENTE' ? solicitudAccion('ACEPTAR', 'Aceptar', s.solicitudId) + solicitudAccion('RECHAZAR', 'Rechazar', s.solicitudId) : '';
+    return filaSolicitud(s, lineas, botones);
+}
+
+function filaFlete(s) {
+    const lineas = `<p>Comprador: ${contactoTexto(s.comprador)}</p><p>Vendedor: ${contactoTexto(s.vendedor)}</p>`;
+    const botones = s.flete?.estado === 'PENDIENTE' ? solicitudAccion('ACEPTAR_FLETE', 'Aceptar flete', s.solicitudId) + solicitudAccion('RECHAZAR_FLETE', 'Rechazar', s.solicitudId) : '';
+    const estadoFlete = s.flete?.estado;
+    return filaSolicitud(s, lineas, botones, { texto: `Flete ${FLETE_ESTADOS[estadoFlete] ?? ''}`, vigente: estadoFlete === 'ACEPTADA' || estadoFlete === 'PENDIENTE' });
+}
+
+function renderSolicitudes(datos) {
+    solicitudesData = { hechas: datos?.hechas ?? [], recibidas: datos?.recibidas ?? [], fletes: datos?.fletes ?? [] };
+    const bandejas = [['hechas', filaHecha], ['recibidas', filaRecibida], ['fletes', filaFlete]];
+    let alguna = false;
+    for (const [clave, fila] of bandejas) {
+        const lista = solicitudesData[clave];
+        document.querySelector(`#sol-${clave}-panel`).hidden = lista.length === 0;
+        document.querySelector(`#sol-${clave}-list`).innerHTML = lista.map(fila).join('');
+        setCount(`#sol-${clave}-count`, lista.length);
+        alguna ||= lista.length > 0;
+    }
+    // Una persona sin vendedor pero con solicitudes también necesita la columna principal.
+    document.querySelector('.panel-grid').classList.toggle('panel-grid--sin-principal', !isActive('PRODUCTOR') && !alguna);
+}
+
+async function loadSolicitudes() {
+    try {
+        const response = await request(SOLICITUDES_API);
+        renderSolicitudes(response.data);
+    } catch (error) {
+        if (error?.status === 401) endExpiredSession();
+        else toast?.error(error?.message || 'No pudimos cargar tus solicitudes.');
+    }
+}
+
+async function responderSolicitud(id, accion) {
+    const solicitud = [...solicitudesData.hechas, ...solicitudesData.recibidas, ...solicitudesData.fletes].find((s) => s.solicitudId === id);
+    if (!solicitud) return;
+    const cuerpo = { solicitudId: id, accion };
+    if (accion === 'ACEPTAR') {
+        if (!window.confirm('¿Aceptar esta solicitud? La publicación se marcará como vendida y las demás solicitudes se rechazarán.')) return;
+        if (solicitud.precio === null) {
+            const texto = window.prompt('La publicación no tiene precio. Indica el precio acordado en colones:');
+            if (texto === null) return;
+            const precio = Number(String(texto).replace(/\D/g, ''));
+            if (!(precio > 0)) { toast?.error('Indica un precio válido.'); return; }
+            cuerpo.precio = precio;
+        }
+    } else if (accion === 'RECHAZAR') {
+        const motivo = window.prompt('Motivo del rechazo (opcional):');
+        if (motivo === null) return;
+        if (motivo.trim()) cuerpo.motivo = motivo.trim();
+    } else if (!window.confirm(accion === 'CANCELAR' ? '¿Cancelar esta solicitud?' : '¿Confirmas tu respuesta sobre el flete?')) {
+        return;
+    }
+    try {
+        const response = await request(SOLICITUDES_API, { method: 'PATCH', body: JSON.stringify(cuerpo) });
+        toast?.success(response.message || 'Listo.');
+        await loadSolicitudes();
+        if (accion === 'ACEPTAR' && isActive('PRODUCTOR')) await loadPublications();
+    } catch (error) {
+        if (error?.status === 401) endExpiredSession();
+        else toast?.error(error?.errors?.precio || error?.message || 'No pudimos responder la solicitud.');
+    }
 }
 
 function setPublicationsView(view, message = '') {
@@ -357,6 +455,15 @@ async function savePublication(event) {
     } finally {
         save.disabled = false;
         form.setAttribute('aria-busy', 'false');
+    }
+}
+
+function initializeSolicitudesUi() {
+    for (const clave of ['hechas', 'recibidas', 'fletes']) {
+        document.querySelector(`#sol-${clave}-list`)?.addEventListener('click', (event) => {
+            const boton = event.target.closest('[data-solicitud-accion]');
+            if (boton) responderSolicitud(Number(boton.dataset.solicitudId), boton.dataset.solicitudAccion);
+        });
     }
 }
 
@@ -632,6 +739,7 @@ function initialize() {
     initializeFarmUi();
     initializeVehicleUi();
     initializePublicationUi();
+    initializeSolicitudesUi();
     const params = new URLSearchParams(window.location.search);
     if (params.get('bienvenida') === '1') document.querySelector('#welcome-banner').hidden = false;
     document.querySelector('#activity-retry')?.addEventListener('click', () => loadActivity());

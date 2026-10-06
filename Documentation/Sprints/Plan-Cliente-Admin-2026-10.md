@@ -134,8 +134,8 @@ Cubre el punto 8 del issue ("Me encanta"). **Ya existe** la tabla
 - [x] Una publicación vendida o cerrada aparece como **"No disponible"** (no desaparece).
 - [x] Página nueva `/me-interesa`, enlazada desde el menú del avatar y desde
       Mi panel. Usa `buildCard()` de `explore.js`.
-- [ ] Botón para quitar la publicación de la lista y botón "Ver fletes cercanos"
-      (lleva a P1-3).
+- [x] Botón para quitar la publicación de la lista y botón "Ver fletes cercanos"
+      (abre el diálogo de solicitud con el flete preseleccionado).
 
 ### P1-2 · Fletes cercanos · Carlos (API) + Jeferson (pantalla)
 
@@ -168,7 +168,7 @@ Tareas:
 
 ### P1-3 · Fletes cerca de una publicación y solicitud de compra · Carlos (API) + Jeferson (pantalla), con apoyo de Jeremi
 
-**Estado (2026-10-06): en curso por Jeferson.** Decidido: el vendedor acepta o rechaza; el transportista responde su flete por separado; `tbcompra` y `tbventa` se adaptaron para un Comprador normal y pago opcional (DEC-COMPRA-001). Esquema y API hechos (pasos 1 y 2); faltan las pantallas.
+**Estado (2026-10-06): en curso por Jeferson.** Decidido: el vendedor acepta o rechaza; el transportista responde su flete por separado; `tbcompra` y `tbventa` se adaptaron para un Comprador normal y pago opcional (DEC-COMPRA-001). Esquema, API y pantallas hechos (pasos 1 a 3); falta probarlo a mano con dos cuentas.
 
 Desde una publicación marcada con "Me interesa", el cliente puede ver los fletes
 cercanos a **la finca del animal** y decidir si compra solo el animal o el
@@ -183,9 +183,9 @@ animal con flete.
 - [ ] Cuando el vendedor acepta: registrar `tbventa` y `tbcompra` (ya existen,
       sin uso) y la publicación pasa a `VENDIDO`. Si la solicitud traía flete,
       se crea una solicitud de flete al transportista (P1-2).
-- [ ] En el detalle de una publicación: botones **"Comprar animal"** y
-      **"Comprar con flete"**. El segundo muestra antes los fletes cercanos.
-- [ ] En Mi panel: "Solicitudes recibidas" (vendedor y transportista) y
+- [x] En la tarjeta de Explorar: botón **"Solicitar compra"**; el diálogo ofrece "Solo el animal" o
+      "El animal con flete" (muestra antes los fletes cercanos a la finca).
+- [x] En Mi panel: "Solicitudes recibidas" (vendedor), "Fletes que me piden" (transportista) y
       "Mis solicitudes" (comprador).
 
 ### P1-4 · Foto de perfil y edición de datos personales · Jeremi (API) + Jeferson (pantalla)

@@ -251,8 +251,8 @@ export function buildCard(publicacion, { compacta = false } = {}) {
     vendedor.append(persona, element('span', null, formatSeller(publicacion)));
 
     const acciones = element('div', 'explore-card__actions');
-    for (const [accion, icono] of [['Me interesa', 'fa-heart'], ['Contactar', 'fa-message']]) {
-        const boton = element('button', null);
+    for (const [accion, icono] of [['Me interesa', 'fa-heart'], ['Contactar', 'fa-message'], ['Solicitar compra', 'fa-handshake']]) {
+        const boton = element('button', accion === 'Solicitar compra' ? 'is-primary' : null);
         boton.type = 'button';
         boton.dataset.exploreAction = accion;
         if (accion === 'Me interesa' && publicacion?.meInteresa === true) {

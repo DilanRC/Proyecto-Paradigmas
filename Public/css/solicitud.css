@@ -1,0 +1,218 @@
+/* Diálogo "Solicitar compra" (Explorar y Me interesa). Solo variables --tc-*. */
+.solicitud-dialog {
+    width:min(560px,calc(100% - 28px));
+    max-height:calc(100dvh - 28px);
+    padding:0;
+    overflow:auto;
+    border:1px solid var(--tc-line-strong);
+    border-radius:20px;
+    color:var(--tc-text);
+    background:var(--tc-surface);
+    box-shadow:0 24px 80px rgba(0,0,0,.45);
+}
+
+.solicitud-dialog::backdrop {
+    background:rgba(7,16,13,.72);
+}
+
+.solicitud-form {
+    display:grid;
+    gap:16px;
+    padding:24px;
+}
+
+.solicitud-form__header {
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:16px;
+}
+
+.solicitud-form__kicker {
+    margin:0;
+    color:var(--tc-text-soft);
+    font-size:.78rem;
+    font-weight:800;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+}
+
+.solicitud-form h2 {
+    margin:.25rem 0 0;
+    font-size:1.35rem;
+    line-height:1.2;
+}
+
+.solicitud-form__price {
+    margin:.35rem 0 0;
+    color:var(--tc-text-soft);
+    font-weight:700;
+}
+
+.solicitud-close {
+    width:44px;
+    height:44px;
+    flex:0 0 auto;
+    border:1px solid var(--tc-line-strong);
+    border-radius:50%;
+    color:var(--tc-text);
+    background:transparent;
+    font-size:1.6rem;
+    line-height:1;
+    cursor:pointer;
+}
+
+.solicitud-options {
+    display:grid;
+    gap:10px;
+    margin:0;
+    padding:0;
+    border:0;
+}
+
+.solicitud-options legend {
+    margin-bottom:8px;
+    padding:0;
+    font-weight:800;
+}
+
+.solicitud-option {
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    padding:12px 14px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:14px;
+    background:var(--tc-bg);
+    cursor:pointer;
+}
+
+.solicitud-option:has(input:checked) {
+    border-color:var(--tc-primary);
+    box-shadow:0 0 0 3px var(--tc-glow);
+}
+
+.solicitud-option:has(input:focus-visible) {
+    outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent);
+    outline-offset:2px;
+}
+
+.solicitud-option input {
+    flex:0 0 auto;
+    width:18px;
+    height:18px;
+    margin-top:2px;
+    accent-color:var(--tc-primary);
+}
+
+.solicitud-option small {
+    display:block;
+    margin-top:2px;
+    color:var(--tc-text-soft);
+}
+
+.solicitud-fletes {
+    display:grid;
+    gap:8px;
+}
+
+.solicitud-fletes[hidden] {
+    display:none;
+}
+
+.solicitud-note {
+    margin:0;
+    padding:12px 14px;
+    border:1px dashed var(--tc-line-strong);
+    border-radius:14px;
+    color:var(--tc-text-soft);
+    line-height:1.5;
+}
+
+.solicitud-field {
+    display:grid;
+    gap:6px;
+}
+
+.solicitud-field > span {
+    font-weight:800;
+}
+
+.solicitud-field textarea {
+    width:100%;
+    min-height:84px;
+    padding:10px 12px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:12px;
+    color:var(--tc-text);
+    background:var(--tc-bg);
+    font:inherit;
+    resize:vertical;
+}
+
+.solicitud-field textarea:focus-visible {
+    border-color:var(--tc-primary);
+    box-shadow:0 0 0 3px var(--tc-glow);
+    outline:none;
+}
+
+.solicitud-status {
+    min-height:1.3em;
+    margin:0;
+    color:var(--tc-text-soft);
+}
+
+.solicitud-status[data-tipo="error"] {
+    color:var(--tc-danger,#b94a48);
+    font-weight:700;
+}
+
+.solicitud-actions {
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+}
+
+.solicitud-actions button {
+    min-height:44px;
+    padding:0 18px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:12px;
+    color:var(--tc-text);
+    background:transparent;
+    font:inherit;
+    font-weight:800;
+    cursor:pointer;
+}
+
+.solicitud-actions button:hover,
+.solicitud-actions button:focus-visible,
+.solicitud-close:hover,
+.solicitud-close:focus-visible {
+    border-color:var(--tc-primary);
+}
+
+.solicitud-actions .is-primary {
+    color:#fff;
+    border-color:transparent;
+    background:var(--tc-primary);
+}
+
+.solicitud-actions button:disabled {
+    opacity:.6;
+    cursor:wait;
+}
+
+@media (max-width:560px) {
+    .solicitud-form {
+        padding:18px;
+    }
+
+    .solicitud-actions {
+        flex-direction:column-reverse;
+    }
+
+    .solicitud-actions button {
+        width:100%;
+    }
+}
