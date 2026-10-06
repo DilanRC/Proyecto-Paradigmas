@@ -14,7 +14,7 @@ test('/admin/publicaciones tiene ruta, API admin y guarda de sesión', () => {
     assert.ok(read('Public/js/shared/admin-ui.js').includes("'admin/publicaciones'"));
     assert.ok(read('Public/api/admin-publicaciones.php').includes('AdminAuthorization::require'));
     // Sin este versionado, un api.js en caché deja el panel oculto (visibility:hidden) en blanco.
-    assert.ok(read('Public/js/publicaciones.js').includes("from './shared/api.js?v=auth-gate-5'"));
+    // La versión de api.js la comprueba admin_cache_chain.test.mjs.
 });
 
 test('todas las vistas admin enlazan a Publicaciones', () => {

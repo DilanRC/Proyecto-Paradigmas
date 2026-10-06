@@ -55,10 +55,10 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
 | P2-5 | Foto del documento de identidad y verificación — **SUBIDA HECHA** (falta bucket en Supabase; verificación en P2-6) | | **Lidera** | Apoya |
 | P2-6 | Administrador: catálogos, verificación de identidad y fletes | | **Lidera** | Apoya |
-| P3-1 | Comerciante (solo investigación) | | **Lidera** | |
+| P3-1 | Comerciante (solo investigación) — **PROPUESTA LISTA** (falta respuesta del cliente) | | **Lidera** | |
 | P3-2 | Chat y comentarios en tiempo real (solo planificación) | **Lidera** | | |
 | P3-3 | Limpieza de tablas sin uso y decisión sobre el carrito | **Lidera** | | |
-| P3-4 | Administrador: gestionar administradores y ver la bitácora | | **Lidera** | Apoya |
+| P3-4 | Administrador: gestionar administradores y ver la bitácora — **HECHO** (queda la decisión de sesiones separadas) | | **Lidera** | Apoya |
 
 ---
 
@@ -260,6 +260,8 @@ nacimiento, partos, estado del animal y dueño explícito.
 - [ ] Decidir si una publicación es de **un animal o de un lote**. Recomendación:
       un animal por ahora; un lote necesita una tabla intermedia.
 - [ ] Confirmar el formato del arete de SENASA y si "categorización" es lo mismo que "tipo".
+      (Arete: el DIIO oficial son dos aretes, uno visual y uno con chip RFID, y su numeración lleva el 188
+      de Costa Rica; ver `P3-1-Comerciante.md`. Falta confirmar la longitud exacta del número.)
 - [ ] Frontend: Publicar usa listas desplegables de especie, tipo y raza
       encadenadas, con el campo de partos solo para hembras.
 
@@ -302,8 +304,10 @@ Es el punto 1 del issue. **Sin IA generativa.**
 
 ### P3-1 · Comerciante (solo investigación) · Jeremi
 
-- [ ] No existe en el código ni en la base de datos (revisado). Proponer en el
+- [x] No existe en el código ni en la base de datos (revisado). Proponer en el
       issue si es un vendedor con más volumen, una empresa o algo distinto.
+      (Propuesta en `Documentation/Sprints/P3-1-Comerciante.md`: para la Ley 8799 no es un actor
+      distinto; se recomienda tratarlo como Vendedor hasta que el cliente defina qué lo diferencia.)
       Podría ser una cuarta actividad junto a Comprador, Vendedor y Transportista.
       **No implementar.**
 
@@ -370,10 +374,10 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 ### P3-4 · Gestionar administradores y ver la bitácora · Jeremi (+ Jeferson)
 
-- [ ] Agregar o desactivar administradores desde el panel, en lugar de editar
-      la base a mano.
-- [ ] Visor de `tbbitacora`, filtrado por entidad, fecha y persona. Hoy se
-      escribe en cada cambio pero nadie la consulta.
+- [x] Agregar o desactivar administradores desde el panel, en lugar de editar
+      la base a mano. (`/admin/administradores`; nadie se quita su propio acceso ni deja el panel sin administradores.)
+- [x] Visor de `tbbitacora`, filtrado por entidad, fecha y persona. Hoy se
+      escribe en cada cambio pero nadie la consulta. (`/admin/bitacora`, solo lectura.)
 - [ ] Pendiente de decisión: Calidad pidió separar la sesión pública de la
       administrativa y la "política de administrador" sigue sin aprobarse
       (comentario en `Public/js/shared/auth-gate.js`).

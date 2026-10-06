@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-5';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-7';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-6';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-9';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -41,6 +41,16 @@ const MODULES = {
         icon: 'fa-wallet',
         search: 'Nombre o descripción',
         hint: 'Busca en nombre y descripción.',
+    },
+    'admin/administradores': {
+        icon: 'fa-user-shield',
+        search: 'Correo',
+        hint: 'Quién puede entrar al panel de administración.',
+    },
+    'admin/bitacora': {
+        icon: 'fa-clock-rotate-left',
+        search: 'Persona o registro',
+        hint: 'Busca por nombre, identificación o correo de quien hizo el cambio, o por el registro afectado.',
     },
 };
 

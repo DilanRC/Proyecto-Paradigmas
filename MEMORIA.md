@@ -186,6 +186,32 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Verificar o rechazar, ver el documento con enlace firmado y borrar las fotos 90 días después de verificadas es
   **P2-6** y necesita `SUPABASE_SECRET_KEY` en el servidor.
 
+### Administrador: gestionar administradores (P3-4)
+- `/admin/administradores` lista los correos de `tbadministrador`, permite **agregar** uno (se normaliza con
+  `ValidacionService::validarCorreo`) y **desactivar o reactivar**. Antes se agregaban a mano en la base.
+- API `api/v1/admin/administradores` (solo administrador): `GET` lista (con `esUsted`), `POST { correoElectronico }`
+  agrega (201) o, si el correo ya existió inactivo, reactiva la **misma fila** (200); si ya es admin activo, 409.
+  `PATCH { administradorId, activo }` cambia el estado.
+- Reglas: **nadie puede desactivarse a sí mismo** y **debe quedar al menos un administrador activo** (409). Todo pasa bajo
+  `NamedLock` `tindercows_administrador_alta`, así dos admins no pueden desactivarse a la vez y dejar el panel vacío.
+- Bitácora entidad `ADMINISTRADOR`, origen `API_ADMIN_ADMINISTRADORES`; los datos nuevos llevan `realizadoPor` (correo de
+  quien hizo el cambio), porque un admin puede no tener Persona y `tbbitacorausuarioid` quedaría vacío.
+- `migrate.php` siembra el admin inicial solo si su correo no existe, así que un admin desactivado desde el panel no se
+  reactiva al redesplegar.
+
+### Administrador: bitácora (P3-4)
+- `/admin/bitacora` es un visor **de solo lectura** de `tbbitacora`, del evento más reciente al más antiguo, 25 por página,
+  con "Ver detalle" (datos anteriores y nuevos en JSON, mostrados con `textContent`).
+- API `api/v1/admin/bitacora` (solo administrador; `GET` o `POST { consulta }`, sin PATCH/DELETE). Filtros: `entidad` exacta
+  (la lista sale de las entidades que ya existen), `desde`/`hasta` (`AAAA-MM-DD`, días UTC, ambos inclusive) y `q`, que busca
+  sin distinguir mayúsculas en el nombre, identificación o correo de **quien hizo el cambio** y en el registro afectado.
+  La consulta va por POST para que los nombres buscados no queden en la URL.
+- "Hecho por": el nombre de la Persona; si no tiene (admin sin Persona), el `realizadoPor` de los datos; si no, el tipo de
+  actor (`Sistema` = `NO_AUTENTICADO`). La pantalla muestra las fechas en la hora local del navegador.
+- Límite conocido: `q` no busca dentro del JSON, así que los cambios de un admin **sin Persona** no se encuentran por su
+  correo (sí por entidad, fecha o registro). Buscar en JSON se escribe distinto en MySQL y Postgres.
+- `Bitacora::listar` usa `LOWER(...) LIKE` en los dos lados porque Postgres distingue mayúsculas en `LIKE`. Probado en Postgres 16.
+
 ### Administrador: moderar publicaciones
 - `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
   filtro por estado) y permite **Pausar**, **Retirar** (ambos con motivo obligatorio) y **Reactivar**.
@@ -230,7 +256,8 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 2. **Versiones de caché `?v=`**: súbelas al cambiar CSS/JS. Si un módulo
    compartido gana un `export`, versiona su `import` donde se usa (ya pasa con
    `explore.js?v=foto-1`, `business-rules.js?v=panel-2`,
-   `supabase-auth.js?v=session-2`, `auth-gate.js?v=auth-gate-5`).
+   `supabase-auth.js?v=session-2`, `auth-gate.js?v=auth-gate-6`; `public-ui.js` sigue con `auth-gate-5` porque
+   no usa la lista de rutas privadas).
 3. **Alias SQL siempre en minúscula** (`AS publicacionid`, nunca
    `AS publicacionId`). Postgres (producción) pasa a minúscula los alias sin
    comillas; MySQL (local) no, así que el error solo aparece en producción:
@@ -266,6 +293,10 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     el secreto `VERCEL_TOKEN` del entorno `vercel-registry` de GitHub; el
     entorno, su límite a `dev` y `main` y el secreto se configuran en GitHub,
     no en el repo.
+11. **Ruta admin nueva = subir versiones en cadena.** El menú, sus íconos y la guarda de sesión llegan por
+    `api.js` → `auth-gate.js` y `admin-ui.js` → `admin-refinements.css`. Al agregar una ruta admin: sube la versión de
+    `auth-gate.js` y de `admin-ui.js`/`admin-refinements.css`, el import de `shared/api.js?v=…` en **todos** los módulos
+    admin y el `?v=` de sus `<script>`. Si falta alguno, esa pantalla queda en blanco o sin el ícono nuevo.
 
 ## 5. Pendientes
 
@@ -308,8 +339,12 @@ están incluidos ahí.
     with check (bucket_id = 'documentos' and (storage.foldername(name))[1] = auth.uid()::text);
   ```
   Sin políticas de lectura, cambio ni borrado para las personas: solo el servidor, con la clave secreta, lo lee (P2-6).
-- Decidir "Confirm email": desactivarlo en desarrollo o configurar SMTP propio
-  (Resend/Brevo/SendGrid) y el Site URL para producción.
+- **"Confirm email" está DESACTIVADO** (comprobado el 05/10: `mailer_autoconfirm = true`). ⚠️ **Riesgo abierto:** la app
+  vincula la sesión con la Persona **solo por el correo** (`SupabaseActorResolver::personaIdPorCorreo`), así que
+  cualquiera puede registrarse en Supabase con un correo ajeno que aún no tenga cuenta y entrar como esa Persona. Lo
+  mismo con `tbadministrador`: un correo agregado como admin **sin cuenta** lo reclama quien se registre primero.
+  Cerrarlo: reactivar la confirmación (con SMTP propio, Resend/Brevo/SendGrid, y el Site URL de producción) o hacer
+  P0-1 (vincular por el `sub` del JWT). Mientras tanto, agregar como admin solo correos que ya tengan cuenta.
 
 ### Frontend
 - Se quitó el botón **Pasar** de las tarjetas (un toque accidental ocultaría la publicación para siempre; el scroll ya cumple esa función). El API sigue aceptando el tipo `PASAR`, pero ninguna pantalla lo envía.
@@ -326,12 +361,37 @@ de trabajo** (no son regresiones):
 
 Cualquier otro fallo es una regresión.
 
+**Ojo: dos pruebas vacían la bitácora local.** `Tests/transaction_test.php` y `Tests/pagometodo_test.php` achican
+por un momento `tbbitacorasolicitudid` a `VARCHAR(5)` para forzar un fallo, y antes borran **toda fila con
+solicitud de más de 5 caracteres**, que son casi todas. Después de correr toda la batería, `/admin/bitacora` queda casi
+vacía en local. No pasa en producción (ahí no se corren las pruebas). Arreglarlo exige otra forma de forzar el fallo.
+
 `Tests/registro_publico_test.php` falló una vez (201 esperado, 200 recibido) y
 pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · backend · P3-1 Comerciante (investigación, sin código)
+- Nuevo `Documentation/Sprints/P3-1-Comerciante.md`: según la Ley 8799 y el Decreto 44336, "comerciante" no es un actor distinto (comprar y vender tiene las mismas obligaciones de guía y trazabilidad); lo distinto son los establecimientos mercantiles (subastas, ferias). Se recomienda tratarlo como Vendedor hasta que el cliente responda las 3 preguntas del documento.
+- De paso responde parte de P2-2: el arete oficial (DIIO) lleva el 188 de Costa Rica.
+
+### 2026-10-05 · backend · P3-4 Visor de la bitácora
+- Pantalla `/admin/bitacora` y API `api/v1/admin/bitacora` de solo lectura (ver "Administrador: bitácora (P3-4)"). Sin columnas nuevas.
+- Archivos: `Bitacora.php` (`listar`, `entidades`), nuevos `AdminBitacoraController.php`, `Public/api/admin-bitacora.php`, `Public/bitacora.php`, vista `bitacora/`, `Public/js/bitacora.js`; estilo `.detail-grid pre` en `admin-refinements.css` (sin colores).
+- Cadena de caché (Cuidados #11): `auth-gate-7`, `admin-ui.js` `admin-9`, `admin-refinements.css` `admin-9`, `login.js` `front-12`; los 9 módulos admin importan `shared/api.js?v=auth-gate-7` y sus `<script>` suben (`admin-menu-2`, `sections-5`, `moderacion-4`, `administradores-2`, `bitacora-1`).
+- Pruebas: nueva `Tests/api_admin_bitacora_test.php`; `api_auth_admin_http_test.php` incluye el endpoint (encontró que un POST mal formado sin sesión respondía 422 en vez de 401: ahora la autorización va primero); nuevas `admin_bitacora.test.mjs` y `admin_cache_chain.test.mjs`, que exige que **toda la cadena use la misma versión** en vez de fijar números (ya no hay que editar las pruebas al subir versiones).
+- La prueba que ya fallaba ("el shell existente se mejora desde un bootstrap compartido…") es `admin_shell_ux.test.mjs`, que todavía fija `auth-gate-2`.
+- Los filtros de fecha usan el aspecto de los `select` de filtro y `color-scheme` según el tema del panel (`admin-refinements.css` `admin-9`; el panel es oscuro por defecto y el navegador lo pintaba claro).
+
+### 2026-10-05 · backend · P3-4 Gestionar administradores desde el panel
+- Pantalla `/admin/administradores` y API `api/v1/admin/administradores` (ver "Administrador: gestionar administradores"). Sin columnas nuevas.
+- Archivos: nuevos `Application/Model/Administrador.php`, `AdminAdministradorController.php`, `Public/api/admin-administradores.php`, `Public/administradores.php`, vista `administradores/`, `Public/js/administradores.js`.
+- Cableado de la ruta: `Public/.htaccess`, `PRIVATE_ROUTES` en `auth-gate.js`, `MODULES` en `admin-ui.js`, `ADMIN_DESTINATIONS` en `login.js`, enlace en el menú de las 8 vistas admin e ícono en `admin-refinements.css`.
+- Caché: `auth-gate.js` `auth-gate-6` (en `login.js`, `admin-ui.js`, `api.js`), `admin-ui.js` `admin-7` (import en `api.js`), `admin-refinements.css` `admin-7`, `login.js` `front-11`; `administradores.js` importa `shared/api.js?v=auth-gate-6`.
+- Ícono del menú que no aparecía en las otras pantallas admin: el ícono vive en `admin-refinements.css`, que inyecta `admin-ui.js`, que carga `api.js`; las demás pantallas importaban `api.js` **sin versión** y el navegador usaba la copia vieja. Ahora los 7 módulos admin importan `shared/api.js?v=auth-gate-6` y sus `<script>` llevan versión (`admin-menu-1`, `productores` `sections-4`, `publicaciones` `moderacion-3`).
+- Pruebas: nueva `Tests/api_admin_administradores_test.php` (desactiva a los demás admins para probar "último activo" y los restaura); `api_auth_admin_http_test.php` incluye el endpoint; nueva `Tests/frontend/admin_administradores.test.mjs`; `public_identity_auth.test.mjs` con las versiones nuevas de `api.js`.
 
 ### 2026-10-05 · backend · Aviso para subir el documento al crear la cuenta (P2-5)
 - Nuevo `Public/js/shared/aviso-documento.js?v=aviso-1`; lo marcan `registro.js` (`signup-8`) y `login.js` (`front-10`) y lo muestra Explorar (aviso dentro de la página, no flotante, para no taparse con el aviso de "Me interesa"). Estilo `.aviso-documento` en `explore.css` (`explore-9` en Explorar, Inicio y Me interesa), solo con variables `--tc-*`.

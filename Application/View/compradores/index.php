@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <script type="module" src="js/compradores.js"></script>
+    <script type="module" src="js/compradores.js?v=admin-menu-2"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
@@ -33,6 +33,8 @@
                 <a class="rural-panel__nav-item" href="admin/vehiculos">Vehículos</a>
                 <a class="rural-panel__nav-item" href="admin/publicaciones">Publicaciones</a>
                 <a class="rural-panel__nav-item" href="admin/metodos-pago">Métodos de pago</a>
+                <a class="rural-panel__nav-item" href="admin/administradores">Administradores</a>
+                <a class="rural-panel__nav-item" href="admin/bitacora">Bitácora</a>
             </div>
         </nav>
         <div class="rural-panel__sidebar-footer"><p>Gestión de la red ganadera.</p><p>TinderCows · 2026</p></div>

@@ -1,4 +1,4 @@
-import { request } from './shared/api.js';
+import { request } from './shared/api.js?v=auth-gate-7';
 
 const SOURCES = [
     { key: 'productores', label: 'Productores', icon: 'fa-cow', href: 'admin/productores', query: { pagina: 1, tamanoPagina: 1 } },
