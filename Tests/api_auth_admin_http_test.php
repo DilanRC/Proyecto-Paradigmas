@@ -42,6 +42,7 @@ $admins = [
     'pagometodos.php' => ['verbos' => ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], 'prohibido' => null],
     'mi-perfil.php' => ['verbos' => ['PATCH'], 'prohibido' => 'GET'],
     'admin-publicaciones.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
+    'admin-fletes.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
     'admin-administradores.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
     'admin-bitacora.php' => ['verbos' => ['GET', 'POST'], 'prohibido' => 'PATCH'],
     'compradores.php' => ['verbos' => ['GET', 'POST', 'DELETE', 'PATCH'], 'prohibido' => 'PUT'],

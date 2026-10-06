@@ -32,6 +32,7 @@ servidor.
 | `/admin/transportistas` | Administrativa | Transportistas |
 | `/admin/vehiculos` | Administrativa | Vehículos |
 | `/admin/metodos-pago` | Administrativa | Métodos de pago |
+| `/admin/fletes` | Administrativa | Fletes: ofertas (retirar y reactivar) y solicitudes de compra (solo lectura) |
 
 ## API versionada
 
@@ -48,6 +49,7 @@ compatibilidad técnica durante la migración.
 | `/api/v1/mi-ofertas` | Ofertas de flete propias del Transportista autenticado (GET, POST, PUT, PATCH); nunca recibe un Transportista objetivo |
 | `/api/v1/fletes` | Ofertas de flete cercanas a un punto (GET, con sesión); no expone placa, señas ni coordenadas exactas |
 | `/api/v1/solicitudes-compra` | Solicitudes de compra de la Persona autenticada (GET, POST, PATCH): las que hizo, las que recibe como vendedor y los fletes que le piden; los teléfonos solo se comparten cuando hay trato |
+| `/api/v1/admin/fletes` | Fletes para el administrador (POST `{consulta}` de lectura, PATCH): ofertas y solicitudes de compra; retirar o reactivar una oferta con motivo. Sin teléfonos |
 | `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |
 | `/api/v1/registro` | Alta transaccional de identidad y actividades |

@@ -104,6 +104,7 @@ final class MiOfertasController
             $this->bloquearTransportista($transportista, $transportistaId);
             $anterior = $this->ofertas->buscarPropia($id, $transportistaId, true);
             if ($anterior === null) throw new HttpException('La oferta no existe en tu cuenta.', 404);
+            $this->exigirNoRetirada($anterior);
             $this->exigirVehiculoPropio($datos['vehiculoId'], $transportistaId);
             $this->ofertas->actualizar($id, $datos);
             $actualizada = $this->ofertas->buscarPropia($id, $transportistaId);
@@ -138,6 +139,7 @@ final class MiOfertasController
             $this->bloquearTransportista($transportista, $transportistaId);
             $anterior = $this->ofertas->buscarPropia($id, $transportistaId, true);
             if ($anterior === null) throw new HttpException('La oferta no existe en tu cuenta.', 404);
+            $this->exigirNoRetirada($anterior);
             if ($anterior['estado'] !== $estado) {
                 $this->ofertas->cambiarEstado($id, $estado);
                 $actualizada = $this->ofertas->buscarPropia($id, $transportistaId);
@@ -152,6 +154,14 @@ final class MiOfertasController
             'oferta' => $oferta,
             'ofertas' => $this->ofertas->listarPropias($transportistaId),
         ]);
+    }
+
+    /** Una oferta retirada por un administrador no se edita, pausa ni reactiva desde la cuenta del transportista. */
+    private function exigirNoRetirada(array $oferta): void
+    {
+        if ($oferta['estado'] === TransportistaOferta::ESTADO_RETIRADA) {
+            throw new HttpException('Un administrador retiró esta oferta; no puede modificarse.', 409);
+        }
     }
 
     /** Orden de locks: oferta -> dirección -> bitácora, dentro de una transacción. */

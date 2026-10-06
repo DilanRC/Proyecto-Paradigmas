@@ -84,6 +84,7 @@ RewriteRule ^admin/metodos-pago/?$ pagometodos.php [END]
 RewriteRule ^admin/publicaciones/?$ publicaciones.php [END]
 RewriteRule ^admin/administradores/?$ administradores.php [END]
 RewriteRule ^admin/bitacora/?$ bitacora.php [END]
+RewriteRule ^admin/fletes/?$ adminfletes.php [END]
 
 # API versionada. Los nombres de tablas y archivos son implementación; el
 # contrato público usa recursos semánticos y no filtra extensiones PHP.
@@ -98,6 +99,7 @@ RewriteRule ^api/v1/mi-fincas/?$ api/mi-fincas.php [END]
 RewriteRule ^api/v1/mi-ofertas/?$ api/mi-ofertas.php [END]
 RewriteRule ^api/v1/fletes/?$ api/fletes.php [END]
 RewriteRule ^api/v1/solicitudes-compra/?$ api/solicitudes-compra.php [END]
+RewriteRule ^api/v1/admin/fletes/?$ api/admin-fletes.php [END]
 RewriteRule ^api/v1/mi-perfil/?$ api/mi-perfil.php [END]
 RewriteRule ^api/v1/identidad/?$ api/identidad.php [END]
 RewriteRule ^api/v1/registro/identificacion/?$ api/registro-validar-identificacion.php [END]

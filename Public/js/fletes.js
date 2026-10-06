@@ -106,8 +106,9 @@ async function usarMiUbicacion() {
 
 function filaPropia(oferta) {
     const activa = oferta.estado === 'ACTIVA';
+    const retirada = oferta.estado === 'RETIRADA'; // la retira un administrador; el transportista no puede cambiarla
     const boton = (accion, etiqueta) => `<button class="activity-button activity-button--text" type="button" data-oferta-accion="${accion}" data-oferta-id="${oferta.ofertaId}">${etiqueta}</button>`;
-    return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo)} · ${escapeHtml(oferta.vehiculo?.placa)}</h3><p>${escapeHtml(formatLocation(oferta.zona))} · hasta ${Number(oferta.capacidad)} cabezas · cubre ${Number(oferta.radioKm)} km</p><p>${escapeHtml(formatPrice(oferta.precio))}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${activa ? 'ACTIVO' : 'INACTIVO'}">${activa ? 'Activa' : 'Pausada'}</span>${boton('editar', 'Editar')}${boton(activa ? 'PAUSADA' : 'ACTIVA', activa ? 'Pausar' : 'Reactivar')}</div></article>`;
+    return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo)} · ${escapeHtml(oferta.vehiculo?.placa)}</h3><p>${escapeHtml(formatLocation(oferta.zona))} · hasta ${Number(oferta.capacidad)} cabezas · cubre ${Number(oferta.radioKm)} km</p><p>${escapeHtml(formatPrice(oferta.precio))}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${activa ? 'ACTIVO' : 'INACTIVO'}">${activa ? 'Activa' : retirada ? 'Retirada por un administrador' : 'Pausada'}</span>${retirada ? '' : `${boton('editar', 'Editar')}${boton(activa ? 'PAUSADA' : 'ACTIVA', activa ? 'Pausar' : 'Reactivar')}`}</div></article>`;
 }
 
 function mostrarMisOfertas() {

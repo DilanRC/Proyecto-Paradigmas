@@ -1,6 +1,6 @@
 // Visor de la bitácora (P3-4), solo lectura. api.js se versiona por la cadena
 // de caché de las rutas admin (MEMORIA.md, Cuidados #11).
-import { request } from './shared/api.js?v=auth-gate-7';
+import { request } from './shared/api.js?v=auth-gate-8';
 import { createDialogController } from './shared/dialog.js';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,

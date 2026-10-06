@@ -32,6 +32,7 @@
                 <a class="rural-panel__nav-item" href="admin/transportistas">Transportistas</a>
                 <a class="rural-panel__nav-item" href="admin/vehiculos">Vehículos</a>
                 <a class="rural-panel__nav-item" href="admin/publicaciones">Publicaciones</a>
+                <a class="rural-panel__nav-item" href="admin/fletes">Fletes</a>
                 <a class="rural-panel__nav-item" href="admin/metodos-pago">Métodos de pago</a>
                 <a class="rural-panel__nav-item rural-panel__nav-item--active" href="admin/administradores">Administradores<span class="rural-panel__nav-dot" aria-hidden="true"></span></a>
                 <a class="rural-panel__nav-item" href="admin/bitacora">Bitácora</a>

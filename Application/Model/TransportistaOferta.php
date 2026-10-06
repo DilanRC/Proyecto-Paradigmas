@@ -14,7 +14,9 @@ use PDO;
  */
 final class TransportistaOferta
 {
+    /** Estados que el transportista puede poner. RETIRADA solo la pone un administrador (moderación). */
     public const ESTADOS = ['ACTIVA', 'PAUSADA'];
+    public const ESTADO_RETIRADA = 'RETIRADA';
     private const LOCK_ALTA = 'tindercows_transportista_oferta_alta';
 
     private int $profundidadBloqueoAlta = 0;
@@ -181,6 +183,95 @@ final class TransportistaOferta
         return [
             'ofertas' => array_values(array_slice($ofertas, ($pagina - 1) * $tamano, $tamano)),
             'total' => count($ofertas),
+        ];
+    }
+
+    /**
+     * Lista de moderación (administrador): todas las ofertas, en cualquier estado, con transportista, vehículo y
+     * zona general. Sin teléfono, señas ni coordenadas. $estado = TODOS o un estado de oferta.
+     * @return array{ofertas:array<int,array<string,mixed>>,total:int}
+     */
+    public function listarAdmin(string $busqueda, string $estado, int $pagina, int $tamano): array
+    {
+        $condiciones = [];
+        $parametros = [];
+        if ($busqueda !== '') {
+            $columnas = ['pe.tbpersonanombre', 'v.tbvehiculomodelo', 'v.tbvehiculoplaca', 'd.tbdireccionprovincia',
+                'd.tbdireccioncanton', 'd.tbdirecciondistrito', 'd.tbdireccionpueblo'];
+            $partes = [];
+            foreach ($columnas as $i => $columna) {
+                $partes[] = "LOWER({$columna}) LIKE :busqueda{$i}";
+                $parametros["busqueda{$i}"] = '%' . mb_strtolower($busqueda, 'UTF-8') . '%';
+            }
+            $condiciones[] = '(' . implode(' OR ', $partes) . ')';
+        }
+        if ($estado !== 'TODOS') {
+            $condiciones[] = 'o.tbtransportistaofertaestado = :estado';
+            $parametros['estado'] = $estado;
+        }
+        $where = $condiciones === [] ? '' : ' WHERE ' . implode(' AND ', $condiciones);
+
+        $conteo = $this->conexion->prepare('SELECT COUNT(*) FROM (' . $this->seleccionAdmin() . $where . ') AS lista');
+        $conteo->execute($parametros);
+        $total = (int) $conteo->fetchColumn();
+
+        $sentencia = $this->conexion->prepare(
+            $this->seleccionAdmin() . $where
+            . ' ORDER BY o.tbtransportistaofertafecha DESC, o.tbtransportistaofertaid DESC LIMIT :limite OFFSET :desplazamiento'
+        );
+        foreach ($parametros as $nombre => $valor) $sentencia->bindValue($nombre, $valor);
+        $sentencia->bindValue('limite', $tamano, PDO::PARAM_INT);
+        $sentencia->bindValue('desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
+        $sentencia->execute();
+
+        return [
+            'ofertas' => array_map(fn (array $fila): array => $this->mapearAdmin($fila), $sentencia->fetchAll()),
+            'total' => $total,
+        ];
+    }
+
+    /** Una oferta con la vista de moderación. Con $bloquear toma solo la fila de la oferta (FOR UPDATE OF o). */
+    public function buscarAdmin(int $ofertaId, bool $bloquear = false): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            $this->seleccionAdmin() . ' WHERE o.tbtransportistaofertaid = :ofertaId' . ($bloquear ? ' FOR UPDATE OF o' : '')
+        );
+        $sentencia->execute(['ofertaId' => $ofertaId]);
+        $fila = $sentencia->fetch();
+
+        return $fila === false ? null : $this->mapearAdmin($fila);
+    }
+
+    private function seleccionAdmin(): string
+    {
+        return 'SELECT o.tbtransportistaofertaid AS ofertaid, o.tbtransportistaofertaradiokm AS radiokm,
+                       o.tbtransportistaofertacapacidad AS capacidad, o.tbtransportistaofertaprecio AS precio,
+                       o.tbtransportistaofertaestado AS estado, o.tbtransportistaofertafecha AS fecha,
+                       pe.tbpersonanombre AS transportistanombre, v.tbvehiculomodelo AS modelo, v.tbvehiculoplaca AS placa,
+                       d.tbdireccionprovincia AS provincia, d.tbdireccioncanton AS canton,
+                       d.tbdirecciondistrito AS distrito, d.tbdireccionpueblo AS pueblo
+                FROM tbtransportistaoferta o
+                INNER JOIN tbtransportista t ON t.tbtransportistaid = o.tbtransportistaid
+                INNER JOIN tbpersona pe ON pe.tbpersonaid = t.tbpersonaid
+                INNER JOIN tbvehiculo v ON v.tbvehiculoid = o.tbvehiculoid
+                INNER JOIN tbdireccion d ON d.tbdireccionid = o.tbdireccionid';
+    }
+
+    private function mapearAdmin(array $fila): array
+    {
+        return [
+            'ofertaId' => (int) $fila['ofertaid'],
+            'estado' => $fila['estado'],
+            'radioKm' => (int) $fila['radiokm'],
+            'capacidad' => (int) $fila['capacidad'],
+            'precio' => $fila['precio'] === null ? null : (float) $fila['precio'],
+            'fecha' => $fila['fecha'],
+            'transportista' => ['nombre' => $fila['transportistanombre']],
+            'vehiculo' => ['modelo' => $fila['modelo'], 'placa' => $fila['placa']],
+            'zona' => [
+                'provincia' => $fila['provincia'], 'canton' => $fila['canton'],
+                'distrito' => $fila['distrito'], 'pueblo' => $fila['pueblo'],
+            ],
         ];
     }
 

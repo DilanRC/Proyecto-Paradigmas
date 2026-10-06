@@ -33,6 +33,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 | Ajustes de cuenta (`/ajustes`) | `Application/View/ajustes/` + `Public/js/ajustes.js` |
 | Foto, alias y teléfono propios (Ajustes → Perfil) | `Public/js/ajustes.js` + API `Public/api/mi-perfil.php` (`MiPerfilController`) |
 | Admin: moderar publicaciones (`/admin/publicaciones`) | `Application/View/publicaciones/` + `Public/js/publicaciones.js` + API `Public/api/admin-publicaciones.php` |
+| Admin: fletes (`/admin/fletes`) | `Application/View/adminfletes/` + `Public/js/adminfletes.js` + API `Public/api/admin-fletes.php` (`AdminFletesController`) |
 | Me interesa (`/me-interesa`) | `Application/View/me-interesa/` + `Public/js/me-interesa.js` |
 | Registro / ampliación | `Application/View/registro/` + `Public/js/registro.js` |
 | Publicar | `Application/View/publicar/` + `Public/js/publicar.js` |
@@ -297,6 +298,24 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Si el admin retira una publicación, el vendedor ya no puede editarla (409). Si solo la pausa, la ve en Mi
   panel como "Pausada".
 
+### Administrador: fletes
+- `/admin/fletes` (vista `adminfletes`, `adminfletes.js`; el nombre evita chocar con `fletes.js` de la pantalla pública) tiene dos vistas
+  en la misma pantalla, elegidas con el selector "Ver": **Ofertas** (todas las ofertas de flete con transportista, vehículo, zona
+  general, radio, capacidad, precio y estado) y **Solicitudes** (solicitudes de compra de **solo lectura**: publicación, comprador,
+  vendedor, estado y estado del flete). Ambas con buscador y filtro de estado. No se muestran teléfonos, señas ni coordenadas.
+- API `api/v1/admin/fletes` (solo administrador; `AdminFletesController`): lectura con `POST { consulta: { vista: OFERTAS|SOLICITUDES,
+  q, estado, pagina, tamanoPagina } }` y `PATCH { ofertaId, estado: RETIRADA|ACTIVA, motivo }`. Consultas: `TransportistaOferta::listarAdmin`
+  / `buscarAdmin` y `CompraSolicitud::listarAdmin`.
+- **Moderación sin esquema nuevo:** `tbtransportistaofertaestado` es VARCHAR(20), así que se agregó el estado **`RETIRADA`**
+  (`TransportistaOferta::ESTADO_RETIRADA`). `TransportistaOferta::ESTADOS` sigue siendo `ACTIVA|PAUSADA` (lo que el transportista puede
+  poner). El admin retira una oferta ACTIVA o PAUSADA (motivo obligatorio, hasta 250) y reactiva (`ACTIVA`, sin motivo) **solo** una
+  RETIRADA; una PAUSADA por su dueño la reactiva su dueño (409 al admin). Repetir el mismo estado es idempotente (200).
+- El transportista **no puede** editar, pausar ni reactivar una RETIRADA (409 en `PUT` y `PATCH` de `api/v1/mi-ofertas`); en "Mis ofertas"
+  la ve como "Retirada por un administrador" y sin botones. Una RETIRADA no sale en `api/v1/fletes` ni se puede pedir (esas consultas ya
+  filtran por `ACTIVA`).
+- El **motivo solo vive en la bitácora** (acción `MODERAR`, entidad `OFERTA_FLETE`, origen `API_ADMIN_FLETES`, clave = id de la oferta);
+  la pantalla del transportista no lo muestra (no hay columna). Si se quiere mostrar, hay que agregar una columna o leer la bitácora.
+
 ### Me interesa (guardados)
 - No hay tabla nueva: se usa `tbanimalpublicacioninteraccion` (tipo `ME_INTERESA`). El historial solo
   crece; la **marca vigente** es la última acción del par persona/publicación: `REGISTRAR` la marca y
@@ -466,6 +485,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · sesion-a-fletes-admin · Admin: pantalla /admin/fletes (moderación de ofertas)
+- Pantalla y API nuevas (ver "Administrador: fletes"); estado `RETIRADA` de oferta sin cambiar el esquema; el transportista no puede tocar una retirada.
+- Archivos: `AdminFletesController.php`, `Public/api/admin-fletes.php`, `TransportistaOferta.php` (`listarAdmin`, `buscarAdmin`), `CompraSolicitud.php` (`listarAdmin`), `MiOfertasController.php` (409 si RETIRADA), vista `adminfletes`, `adminfletes.js`, `fletes.js` (`fletes-2`), `Public/.htaccess`, enlace "Fletes" en el menú de las 9 vistas admin.
+- Cadena de caché (Cuidados #11): `auth-gate-8` (api.js, login, admin-ui y los 8 módulos admin), `admin-10` (admin-ui y `admin-refinements.css`).
+- Pruebas: nueva `Tests/api_admin_fletes_test.php` (y en la lista de `api_auth_admin_http_test.php`) y `Tests/frontend/admin_fletes.test.mjs`; `admin_cache_chain` y `fletes` ajustadas.
 
 ### 2026-10-06 · jefersonbustamante · Migraciones renumeradas (colisión con `backend`)
 - La rama `backend` (Jeremi) ya usa las migraciones `017personadocumentomotivo.sql` y `018personadocumentolectura.sql`. Las mías pasan a `019transportistaoferta.sql` y `020comprasolicitud.sql`; **las siguientes empiezan en 021**. Solo cambió el nombre de los archivos (el contenido y lo aplicado en las bases no cambian).

@@ -84,6 +84,60 @@ final class CompraSolicitud
         return $sentencia->fetchAll();
     }
 
+    /**
+     * Lista de solo lectura para el administrador, de la más reciente a la más antigua. Solo nombres: sin
+     * teléfonos ni mensajes. $estado = TODOS o un estado de la solicitud; el buscador mira publicación,
+     * comprador y vendedor.
+     * @return array{solicitudes:array<int,array<string,mixed>>,total:int}
+     */
+    public function listarAdmin(string $busqueda, string $estado, int $pagina, int $tamano): array
+    {
+        $condiciones = [];
+        $parametros = [];
+        if ($busqueda !== '') {
+            $partes = [];
+            foreach (['p.tbanimalpublicaciontitulo', 'pc.tbpersonanombre', 'pv.tbpersonanombre'] as $i => $columna) {
+                $partes[] = "LOWER({$columna}) LIKE :busqueda{$i}";
+                $parametros["busqueda{$i}"] = '%' . mb_strtolower($busqueda, 'UTF-8') . '%';
+            }
+            $condiciones[] = '(' . implode(' OR ', $partes) . ')';
+        }
+        if ($estado !== 'TODOS') {
+            $condiciones[] = 's.tbcomprasolicitudestado = :estado';
+            $parametros['estado'] = $estado;
+        }
+        $where = $condiciones === [] ? '' : ' WHERE ' . implode(' AND ', $condiciones);
+
+        $conteo = $this->conexion->prepare('SELECT COUNT(*) FROM (' . $this->seleccion() . $where . ') AS lista');
+        $conteo->execute($parametros);
+        $total = (int) $conteo->fetchColumn();
+
+        $sentencia = $this->conexion->prepare(
+            $this->seleccion() . $where
+            . ' ORDER BY s.tbcomprasolicitudfecha DESC, s.tbcomprasolicitudid DESC LIMIT :limite OFFSET :desplazamiento'
+        );
+        foreach ($parametros as $nombre => $valor) $sentencia->bindValue($nombre, $valor);
+        $sentencia->bindValue('limite', $tamano, PDO::PARAM_INT);
+        $sentencia->bindValue('desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
+        $sentencia->execute();
+
+        $solicitudes = array_map(static fn (array $f): array => [
+            'solicitudId' => (int) $f['solicitudid'],
+            'estado' => $f['estado'],
+            'fecha' => $f['fecha'],
+            'precio' => $f['precio'] === null ? null : (float) $f['precio'],
+            'publicacion' => ['publicacionId' => (int) $f['publicacionid'], 'titulo' => $f['titulo'], 'estado' => $f['publicacionestado']],
+            'comprador' => ['nombre' => $f['compradornombre']],
+            'vendedor' => ['nombre' => $f['vendedornombre']],
+            'flete' => $f['ofertaid'] === null ? null : [
+                'ofertaId' => (int) $f['ofertaid'], 'estado' => $f['fleteestado'],
+                'transportista' => $f['transportistanombre'], 'vehiculo' => $f['fletemodelo'],
+            ],
+        ], $sentencia->fetchAll());
+
+        return ['solicitudes' => $solicitudes, 'total' => $total];
+    }
+
     public function hayPendiente(int $publicacionId, int $compradorId): bool
     {
         $sentencia = $this->conexion->prepare(
