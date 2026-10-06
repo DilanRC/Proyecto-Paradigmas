@@ -1,4 +1,4 @@
-import { request } from './shared/api.js';
+import { request } from './shared/api.js?v=auth-gate-6';
 import { createDialogController } from './shared/dialog.js';
 import { aplicarRestriccionIdentificacion } from './shared/identificacion.js';
 import { aplicarRestriccionTelefono } from './shared/telefono.js';

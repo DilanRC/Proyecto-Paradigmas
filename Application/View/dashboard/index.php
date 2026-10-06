@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
     <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-3">
-    <script type="module" src="js/dashboard.js"></script>
+    <script type="module" src="js/dashboard.js?v=admin-menu-1"></script>
 </head>
 <body class="rural-panel admin-dashboard">
     <aside class="rural-panel__sidebar">
@@ -34,6 +34,7 @@
                 <a class="rural-panel__nav-item" href="admin/vehiculos">Vehículos</a>
                 <a class="rural-panel__nav-item" href="admin/publicaciones">Publicaciones</a>
                 <a class="rural-panel__nav-item" href="admin/metodos-pago">Métodos de pago</a>
+                <a class="rural-panel__nav-item" href="admin/administradores">Administradores</a>
             </div>
         </nav>
         <div class="rural-panel__sidebar-footer">

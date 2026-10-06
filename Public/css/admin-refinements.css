@@ -181,3 +181,6 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
 
 /* Moderación de publicaciones */
 .rural-panel__nav-item[href$='admin/publicaciones']::before { content:'\f46d'; } /* clipboard-list */
+
+/* Administradores (P3-4) */
+.rural-panel__nav-item[href$='admin/administradores']::before { content:'\f505'; } /* user-shield */

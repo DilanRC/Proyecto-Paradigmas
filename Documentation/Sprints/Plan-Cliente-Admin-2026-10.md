@@ -370,8 +370,8 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 ### P3-4 · Gestionar administradores y ver la bitácora · Jeremi (+ Jeferson)
 
-- [ ] Agregar o desactivar administradores desde el panel, en lugar de editar
-      la base a mano.
+- [x] Agregar o desactivar administradores desde el panel, en lugar de editar
+      la base a mano. (`/admin/administradores`; nadie se quita su propio acceso ni deja el panel sin administradores.)
 - [ ] Visor de `tbbitacora`, filtrado por entidad, fecha y persona. Hoy se
       escribe en cada cambio pero nadie la consulta.
 - [ ] Pendiente de decisión: Calidad pidió separar la sesión pública de la
