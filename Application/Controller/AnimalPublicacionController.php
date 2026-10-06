@@ -28,6 +28,8 @@ final class AnimalPublicacionController
     private const ESTADOS = ['TODOS', 'ACTIVO', 'PAUSADO', 'VENDIDO', 'RETIRADO'];
     /** Solo una publicación ACTIVA o PAUSADA se puede editar o cambiar de estado. */
     private const ESTADOS_EDITABLES = ['ACTIVO', 'PAUSADO'];
+    private const LOCKS_CREAR = ['tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
+        'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacionanimal'];
 
     private readonly AnimalComercial $animales;
     private readonly AnimalCatalogo $catalogo;
@@ -95,16 +97,8 @@ final class AnimalPublicacionController
             ]);
         }
 
-        $this->conexion->beginTransaction();
-        try {
-            $resultado = $this->animales->ejecutarConBloqueoAlta(
-                'tbanimal',
-                fn (): array => $this->crearPublicacionCompleta(
-                    (int) $productor['tbproductorid'],
-                    (int) $finca['tbfincaid'],
-                    $datos,
-                ),
-            );
+        $resultado = $this->conBloqueos(self::LOCKS_CREAR, function () use ($productor, $finca, $datos): array {
+            $resultado = $this->crearPublicacionCompleta((int) $productor['tbproductorid'], (int) $finca['tbfincaid'], $datos);
             $this->bitacora->registrar(
                 'CREAR',
                 'PUBLICACION:' . $resultado['publicacionId'],
@@ -114,13 +108,8 @@ final class AnimalPublicacionController
                 entidad: 'PUBLICACION',
                 origen: 'API_PUBLICACIONES',
             );
-            $this->conexion->commit();
-        } catch (Throwable $error) {
-            if ($this->conexion->inTransaction()) {
-                $this->conexion->rollBack();
-            }
-            throw $error;
-        }
+            return $resultado;
+        });
 
         return $this->respuesta(true, 'Publicación creada correctamente.', $resultado, 201);
     }
@@ -162,8 +151,7 @@ final class AnimalPublicacionController
         }
 
         $vendedorId = (int) $productor['tbproductorid'];
-        $this->conexion->beginTransaction();
-        try {
+        $nueva = $this->conBloqueos(['tbanimalpublicacionestadoperiodo'], function () use ($publicacionId, $vendedorId, $campos, $estado, $motivo): array {
             $anterior = $this->animales->buscarPublicacionPropia($publicacionId, $vendedorId);
             if ($anterior === null) {
                 throw new HttpException('La publicación no existe.', 404);
@@ -187,13 +175,8 @@ final class AnimalPublicacionController
                 entidad: 'PUBLICACION',
                 origen: 'API_PUBLICACIONES',
             );
-            $this->conexion->commit();
-        } catch (Throwable $error) {
-            if ($this->conexion->inTransaction()) {
-                $this->conexion->rollBack();
-            }
-            throw $error;
-        }
+            return $nueva;
+        });
 
         return $this->respuesta(true, 'Publicación actualizada correctamente.', ['publicacion' => $nueva]);
     }
@@ -263,6 +246,33 @@ final class AnimalPublicacionController
         return $resultado;
     }
 
+    /**
+     * Locks de las tablas en orden fijo, luego el de la bitácora y recién entonces la transacción: así el id de
+     * la bitácora (MAX()+1) sigue protegido hasta el COMMIT (MEMORIA.md, cuidado #12). Es el mismo orden que
+     * usan MiAnimalesController y AdminPublicacionController, para que dos peticiones no se esperen en cruz.
+     */
+    private function conBloqueos(array $tablas, callable $operacion): mixed
+    {
+        if ($tablas !== []) {
+            $tabla = array_shift($tablas);
+            return $this->animales->ejecutarConBloqueoAlta($tabla, fn (): mixed => $this->conBloqueos($tablas, $operacion));
+        }
+
+        return $this->bitacora->ejecutarConBloqueoAlta(function () use ($operacion): mixed {
+            $this->conexion->beginTransaction();
+            try {
+                $resultado = $operacion();
+                $this->conexion->commit();
+                return $resultado;
+            } catch (Throwable $error) {
+                if ($this->conexion->inTransaction()) {
+                    $this->conexion->rollBack();
+                }
+                throw $error;
+            }
+        });
+    }
+
     private function fincaActiva(int $productorId, string $nombre): ?array
     {
         $sentencia = $this->conexion->prepare(
@@ -278,7 +288,7 @@ final class AnimalPublicacionController
         return $filas[0] ?? null;
     }
 
-    private static function texto(mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string
+    public static function texto(mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string
     {
         if ($valor === null || trim((string) $valor) === '') {
             if ($obligatorio) {
@@ -293,7 +303,7 @@ final class AnimalPublicacionController
         return $valor;
     }
 
-    private static function numero(mixed $valor, string $campo, bool $entero = false): ?float
+    public static function numero(mixed $valor, string $campo, bool $entero = false): ?float
     {
         if ($valor === null || $valor === '') return null;
         if (!is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {

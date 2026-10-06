@@ -67,6 +67,13 @@ try {
     test_same('PUBLICACION_INTERACCION', $evento['tbbitacoraentidad'] ?? null, 'La interacción debe dejar bitácora');
     test_same('API_PUBLICACION_INTERACCIONES', $evento['tbbitacoraorigen'] ?? null, 'La bitácora debe indicar el endpoint');
 
+    // Quitar de la lista queda como RETIRAR, no como CREAR.
+    $retiro = $controlador->procesar('POST', ['publicacionId' => 1, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR']);
+    test_same(201, $retiro['status'], 'Retirar el interés responde 201');
+    $accion = $db->prepare('SELECT tbbitacoraaccion FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :registro');
+    $accion->execute(['registro' => 'PUBLICACION_INTERACCION:' . $retiro['body']['data']['interaccionId']]);
+    test_same('RETIRAR', $accion->fetchColumn(), 'La bitácora registra la acción RETIRAR');
+
     echo "OK publicacion_interaccion_test: actor Persona, persistencia, validación y bitácora.\n";
 } finally {
     if ($personaId !== null) {

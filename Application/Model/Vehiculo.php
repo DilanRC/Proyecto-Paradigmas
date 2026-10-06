@@ -136,9 +136,9 @@ final class Vehiculo
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(v.tbvehiculoplaca LIKE :busquedaPlaca
-                OR v.tbvehiculovin LIKE :busquedaVin
-                OR v.tbvehiculomodelo LIKE :busquedaModelo)';
+            $condiciones[] = '(LOWER(v.tbvehiculoplaca) LIKE LOWER(:busquedaPlaca)
+                OR LOWER(v.tbvehiculovin) LIKE LOWER(:busquedaVin)
+                OR LOWER(v.tbvehiculomodelo) LIKE LOWER(:busquedaModelo))';
             $parametros = [
                 ':busquedaPlaca' => "%{$busqueda}%",
                 ':busquedaVin' => "%{$busqueda}%",

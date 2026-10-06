@@ -56,6 +56,7 @@ const PRIVATE_ROUTES = new Set([
     'admin/bitacora',
     'admin/fletes',
     'admin/documentos',
+    'admin/catalogos',
 ]);
 
 /**

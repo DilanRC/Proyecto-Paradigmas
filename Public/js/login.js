@@ -3,10 +3,10 @@ import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from '.
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
 import { safeNext } from './shared/next.js';
 import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-9';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-10';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 
-const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones', 'admin/administradores', 'admin/bitacora', 'admin/fletes', 'admin/documentos']);
+const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones', 'admin/administradores', 'admin/bitacora', 'admin/fletes', 'admin/documentos', 'admin/catalogos']);
 
 /** Después de entrar: el destino de origen si es seguro; si no, Explorar. */
 export function resolveNext(search = '') {

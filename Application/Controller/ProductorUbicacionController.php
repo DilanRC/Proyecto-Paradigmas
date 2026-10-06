@@ -294,20 +294,23 @@ final class ProductorUbicacionController
         throw new HttpException('Revise los campos indicados.', 422, null, $errores);
     }
 
+    /** La bitácora queda bloqueada hasta el COMMIT: su id sale de MAX()+1 (MEMORIA.md, cuidado #12). */
     private function transaccion(callable $operacion): mixed
     {
-        $this->conexion->beginTransaction();
-        try {
-            $resultado = $operacion();
-            $this->conexion->commit();
+        return $this->bitacora->ejecutarConBloqueoAlta(function () use ($operacion): mixed {
+            $this->conexion->beginTransaction();
+            try {
+                $resultado = $operacion();
+                $this->conexion->commit();
 
-            return $resultado;
-        } catch (Throwable $excepcion) {
-            if ($this->conexion->inTransaction()) {
-                $this->conexion->rollBack();
+                return $resultado;
+            } catch (Throwable $excepcion) {
+                if ($this->conexion->inTransaction()) {
+                    $this->conexion->rollBack();
+                }
+                throw $excepcion;
             }
-            throw $excepcion;
-        }
+        });
     }
 
     private function normalizarSolicitudId(?string $valor): string

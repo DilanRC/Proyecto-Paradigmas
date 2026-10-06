@@ -11,21 +11,10 @@ require __DIR__ . '/bootstrap.php';
  * conexión calcula el mismo id (demostrado: dos eventos con id 56). FOR UPDATE no
  * lo evita en Postgres (producción), por eso el bloqueo debe durar hasta el COMMIT.
  *
- * Los controladores antiguos de PENDIENTES todavía no envuelven (MEMORIA.md,
- * Pendientes). Esta prueba impide que aparezcan casos nuevos y avisa cuando uno
- * de la lista se arregla, para sacarlo de ella.
+ * Los nueve controladores antiguos que faltaban se envolvieron en octubre de 2026:
+ * PENDIENTES queda vacía y esta prueba impide que aparezcan casos nuevos.
  */
-const PENDIENTES = [
-    'AnimalPublicacionController.php',
-    'CompradorController.php',
-    'FincaController.php',
-    'PagoMetodoController.php',
-    'ProductorController.php',
-    'ProductorUbicacionController.php',
-    'TransportistaController.php',
-    'TransportistaVehiculoController.php',
-    'VehiculoController.php',
-];
+const PENDIENTES = [];
 
 $sinEnvolver = [];
 foreach (glob(dirname(__DIR__) . '/Application/Controller/*.php') as $archivo) {
@@ -50,4 +39,4 @@ foreach (['PublicacionInteraccionController.php', 'MiPerfilController.php', 'Adm
 test_assert(str_contains(file_get_contents(dirname(__DIR__) . '/Application/Controller/MiPerfilController.php'), 'ejecutarConBloqueoTelefono('),
     'MiPerfil mantiene el bloqueo del histórico de teléfono hasta el COMMIT');
 
-echo "OK bitacora_bloqueo_test: los controladores nuevos envuelven la bitácora; quedan " . count(PENDIENTES) . " antiguos pendientes.\n";
+echo "OK bitacora_bloqueo_test: todos los controladores envuelven la bitácora hasta el COMMIT.\n";

@@ -7,6 +7,7 @@ import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
+import { montarMisAnimales } from './mis-animales.js?v=animales-1';
 
 const ACTIVITY_API = 'api/v1/actividad';
 const VEHICLES_API = 'api/v1/mi-vehiculos';
@@ -27,6 +28,7 @@ let farmEditor = null;
 let toast = null;
 let vehiclePhoto = null;
 let publicationPhoto = null;
+let misAnimales = null;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -98,6 +100,7 @@ function renderPanel(data) {
     renderProfileCard(data?.persona ?? {});
     document.querySelector('#farms-panel').hidden = !isActive('PRODUCTOR');
     document.querySelector('#publications-panel').hidden = !isActive('PRODUCTOR');
+    document.querySelector('#animals-panel').hidden = !isActive('PRODUCTOR');
     document.querySelector('#vehicles-panel').hidden = !isActive('TRANSPORTISTA');
     // Sin actividad de vendedor la columna principal queda vacía: el lateral ocupa todo.
     document.querySelector('.panel-grid').classList.toggle('panel-grid--sin-principal', !isActive('PRODUCTOR'));
@@ -143,6 +146,7 @@ async function loadFarms() {
         renderFarms(response.data?.fincas ?? []);
         setFarmView('content');
         await loadPublications();
+        await misAnimales?.cargar();
     } catch (error) {
         if (error?.status === 401) endExpiredSession();
         else setFarmView('error', error?.message || 'No pudimos cargar tus fincas.');
@@ -744,6 +748,7 @@ function initialize() {
     initializeFarmUi();
     initializeVehicleUi();
     initializePublicationUi();
+    misAnimales = montarMisAnimales({ toast, fincas: () => farmsData, alPublicar: loadPublications });
     initializeSolicitudesUi();
     const params = new URLSearchParams(window.location.search);
     if (params.get('bienvenida') === '1') document.querySelector('#welcome-banner').hidden = false;

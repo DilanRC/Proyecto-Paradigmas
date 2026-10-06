@@ -100,6 +100,76 @@ final class AnimalComercial
         return $animalId;
     }
 
+    /**
+     * Inventario del vendedor (P2-4): animales con él como dueño explícito o que son el animal
+     * principal de una publicación suya. Los demás animales de un lote no se listan sueltos:
+     * van con su publicación. Incluye la última observación, la publicación más reciente y
+     * cuántas vacunas tiene. Del más reciente al más antiguo.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function inventarioPropio(int $productorId): array
+    {
+        $sentencia = $this->conexion->prepare(
+            "SELECT a.tbanimalid AS animalid, a.tbanimalidentificacion AS arete, a.tbanimalsexo AS sexo,
+                    a.tbanimalraza AS razatexto, a.tbanimalestado AS estado, a.tbanimalfechanacimiento AS fechanacimiento,
+                    a.tbanimalfechanacimientoestimada AS fechaestimada, a.tbanimalpartos AS partos,
+                    a.tbespecieid AS especieid, e.tbespecienombre AS especie, a.tbanimaltipoid AS tipoid,
+                    t.tbanimaltiponombre AS tipo, a.tbrazaid AS razaid, r.tbrazanombre AS raza,
+                    obs.edadmeses AS edadmeses, obs.peso AS peso, obs.proposito AS proposito,
+                    pub.tbanimalpublicacionid AS publicacionid, pub.tbanimalpublicaciontitulo AS publicaciontitulo,
+                    (SELECT ep.tbanimalpublicacionestadoperiodoestado FROM tbanimalpublicacionestadoperiodo ep
+                      WHERE ep.tbanimalpublicacionid = pub.tbanimalpublicacionid
+                        AND ep.tbanimalpublicacionestadoperiodofechafin IS NULL) AS publicacionestado,
+                    (SELECT COUNT(*) FROM tbanimalvacunacion v WHERE v.tbanimalid = a.tbanimalid) AS vacunas
+             FROM tbanimal a
+             LEFT JOIN tbespecie e ON e.tbespecieid = a.tbespecieid
+             LEFT JOIN tbanimaltipo t ON t.tbanimaltipoid = a.tbanimaltipoid
+             LEFT JOIN tbraza r ON r.tbrazaid = a.tbrazaid
+             LEFT JOIN tbanimalpublicacion pub ON pub.tbanimalpublicacionid = (
+                 SELECT MAX(p2.tbanimalpublicacionid) FROM tbanimalpublicacion p2
+                 WHERE p2.tbanimalid = a.tbanimalid AND p2.tbproductorvendedorid = :vendedorPub)
+             LEFT JOIN (
+                 SELECT s.tbanimalid, s.tbanimalproduccionsaludedadmeses AS edadmeses,
+                        s.tbanimalproduccionsaludpeso AS peso, s.tbanimalproduccionsaludproposito AS proposito,
+                        ROW_NUMBER() OVER (PARTITION BY s.tbanimalid
+                            ORDER BY s.tbanimalproduccionsaludfecha DESC, s.tbanimalproduccionsaludid DESC) AS fila
+                 FROM tbanimalproduccionsalud s
+             ) obs ON obs.tbanimalid = a.tbanimalid AND obs.fila = 1
+             WHERE (a.tbproductorid = :dueno
+                    OR EXISTS (SELECT 1 FROM tbanimalpublicacion p
+                               WHERE p.tbanimalid = a.tbanimalid AND p.tbproductorvendedorid = :vendedor))
+               AND NOT EXISTS (SELECT 1 FROM tbanimalpublicacionanimal l
+                               INNER JOIN tbanimalpublicacion lp ON lp.tbanimalpublicacionid = l.tbanimalpublicacionid
+                               WHERE l.tbanimalid = a.tbanimalid AND lp.tbanimalid <> a.tbanimalid)
+             ORDER BY a.tbanimalid DESC"
+        );
+        $sentencia->execute(['vendedorPub' => $productorId, 'dueno' => $productorId, 'vendedor' => $productorId]);
+
+        return array_map(static fn (array $fila): array => [
+            'animalId' => (int) $fila['animalid'],
+            'arete' => $fila['arete'],
+            'sexo' => $fila['sexo'],
+            'especie' => $fila['especieid'] === null ? null : ['id' => (int) $fila['especieid'], 'nombre' => $fila['especie']],
+            'tipo' => $fila['tipoid'] === null ? null : ['id' => (int) $fila['tipoid'], 'nombre' => $fila['tipo']],
+            'raza' => $fila['raza'] ?? $fila['razatexto'],
+            'fechaNacimiento' => $fila['fechanacimiento'],
+            'fechaNacimientoEstimada' => $fila['fechaestimada'] === null ? null : (int) $fila['fechaestimada'] === 1,
+            'partos' => $fila['partos'] === null ? null : (int) $fila['partos'],
+            // Los animales de antes de P2-2 no tienen estado: se leen por su publicación.
+            'estado' => $fila['estado'] ?? ($fila['publicacionid'] === null ? 'ACTIVO' : 'PUBLICADO'),
+            'edadMeses' => $fila['edadmeses'] === null ? null : (int) $fila['edadmeses'],
+            'peso' => $fila['peso'] === null ? null : (float) $fila['peso'],
+            'proposito' => $fila['proposito'],
+            'publicacion' => $fila['publicacionid'] === null ? null : [
+                'publicacionId' => (int) $fila['publicacionid'],
+                'titulo' => $fila['publicaciontitulo'],
+                'estado' => $fila['publicacionestado'],
+            ],
+            'vacunas' => (int) $fila['vacunas'],
+        ], $sentencia->fetchAll());
+    }
+
     /** ¿Hay otro animal vigente (no vendido ni inactivo) con este arete? El arete identifica a un solo animal. */
     public function existeAreteVigente(string $arete): bool
     {
@@ -439,12 +509,12 @@ final class AnimalComercial
             $parametros[':guardadaPersona'] = $personaId;
         }
         if ($busqueda !== '') {
-            $condiciones[] = '(p.tbanimalpublicaciontitulo LIKE :busquedaTitulo'
-                . ' OR a.tbanimalraza LIKE :busquedaRaza'
-                . ' OR pe.tbpersonanombre LIKE :busquedaVendedor'
-                . ' OR f.tbfincanombre LIKE :busquedaFinca'
-                . ' OR d.tbdireccioncanton LIKE :busquedaCanton'
-                . ' OR d.tbdireccionprovincia LIKE :busquedaProvincia)';
+            $condiciones[] = '(LOWER(p.tbanimalpublicaciontitulo) LIKE LOWER(:busquedaTitulo)'
+                . ' OR LOWER(a.tbanimalraza) LIKE LOWER(:busquedaRaza)'
+                . ' OR LOWER(pe.tbpersonanombre) LIKE LOWER(:busquedaVendedor)'
+                . ' OR LOWER(f.tbfincanombre) LIKE LOWER(:busquedaFinca)'
+                . ' OR LOWER(d.tbdireccioncanton) LIKE LOWER(:busquedaCanton)'
+                . ' OR LOWER(d.tbdireccionprovincia) LIKE LOWER(:busquedaProvincia))';
             foreach (['Titulo', 'Raza', 'Vendedor', 'Finca', 'Canton', 'Provincia'] as $campo) {
                 $parametros[":busqueda{$campo}"] = "%{$busqueda}%";
             }
@@ -669,8 +739,21 @@ final class AnimalComercial
                 'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacionid',
                 $publicacionId, $estado, $origen, $motivo
             );
+            // Los animales siguen a su publicación (P2-4): retirada vuelve al inventario y se
+            // puede republicar; vendida los cierra; activa o pausada los deja publicados.
+            $estadoAnimal = self::ESTADO_ANIMAL_POR_PUBLICACION[$estado] ?? null;
+            if ($estadoAnimal !== null) {
+                $this->marcarEstadoAnimales($this->animalesDePublicacion($publicacionId), $estadoAnimal);
+            }
         });
     }
+
+    private const ESTADO_ANIMAL_POR_PUBLICACION = [
+        'ACTIVO' => 'PUBLICADO',
+        'PAUSADO' => 'PUBLICADO',
+        'VENDIDO' => 'VENDIDO',
+        'RETIRADO' => 'ACTIVO',
+    ];
 
     /** Normaliza tipos: PDO devuelve DECIMAL e INT como texto en MySQL. */
     private static function mapearPublicacion(array $fila): array

@@ -1,6 +1,6 @@
 // Verificación de documentos de identidad (P2-6). api.js se versiona por la
 // cadena de caché de las rutas admin (MEMORIA.md, Cuidados #11).
-import { request } from './shared/api.js?v=auth-gate-9';
+import { request } from './shared/api.js?v=auth-gate-10';
 import { createDialogController } from './shared/dialog.js';
 import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
 import {

@@ -403,7 +403,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - **Lo trabaja Jeremi (no tocar):** verificación de identidad y catálogos en el panel de administración (P2-6).
 
 ### Modelo de animal (P2-2; DEC-ANIMAL-001)
-- Esquema de **41 tablas** (43 con el historial de vacunación): catálogos `tbespecie`, `tbanimaltipo` (con `sexo` M/H o NULL) y `tbraza` (todos con `activo`, para que Jeremi los gestione en el panel admin; **no hay endpoints ni pantallas admin de catálogos en esta línea**) y `tbanimalpublicacionanimal` (enlace de lote). Migración `021modeloanimal.sql`; semilla `104catalogosanimal.sql` (en `compose.yaml`, `instalar-local.*` y `Tools/db-aislada.sh`) y `seedCatalogs()` en `migrate.php`. **Solo se siembra una tabla vacía**: lo que el admin cambie o desactive no se reinserta.
+- Esquema de **41 tablas** (43 con el historial de vacunación): catálogos `tbespecie`, `tbanimaltipo` (con `sexo` M/H o NULL) y `tbraza` (todos con `activo`; se gestionan en `/admin/catalogos`, ver "Mis animales y catálogos") y `tbanimalpublicacionanimal` (enlace de lote). Migración `021modeloanimal.sql`; semilla `104catalogosanimal.sql` (en `compose.yaml`, `instalar-local.*` y `Tools/db-aislada.sh`) y `seedCatalogs()` en `migrate.php`. **Solo se siembra una tabla vacía**: lo que el admin cambie o desactive no se reinserta.
 - Columnas nuevas en `tbanimal` (todas NULL): `tbespecieid`, `tbanimaltipoid`, `tbrazaid`, `tbanimalfechanacimiento` (+ `…estimada`), `tbanimalpartos`, `tbanimalestado` (`ACTIVO|PUBLICADO|VENDIDO|INACTIVO`) y `tbproductorid` (dueño explícito). `tbanimalraza` (texto) se conserva y se llena con el nombre de la raza de catálogo.
 - **API `GET api/v1/catalogos?especieId=`** (sesión; `CatalogosController`): `{ especies, tipos, razas }` activos (con `especieId` filtra tipos y razas). Los formularios la leen una sola vez sin filtro.
 - **`POST api/v1/publicaciones` acepta, todo opcional:** `especieId`, `tipoId`, `razaId`, `fechaNacimiento` (AAAA-MM-DD) + `fechaNacimientoEstimada`, `partos`, `arete` y `loteCantidad` (2-100). Validaciones en `AnimalValidacionService` (422 por campo): tipo y raza activos y de la especie (el tipo/raza exige `especieId`); el **sexo se deriva del tipo** y si se envía debe coincidir; `partos` entero 0-30 solo si el sexo es HEMBRA; fecha válida y no futura (hora de Costa Rica), "estimada" exige fecha; un lote no lleva `arete` ni `partos`. Sin ninguno de estos campos todo funciona como antes (`animalIdentificacion` y `raza` libres siguen igual).
@@ -420,7 +420,13 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Reglas: animal **propio** = dueño explícito (`tbanimal.tbproductorid`) o animal de una publicación suya (principal o del lote); ajeno o inexistente → 404; sin la actividad Vendedor → 409; animal `VENDIDO`/`INACTIVO` → 409. Fecha no futura, próxima dosis no anterior, vacuna existente y activa (422 por campo). Bitácora `ANIMAL_VACUNACION` / `API_MI_ANIMALES_VACUNAS` (`CREAR`, `ACTUALIZAR`).
 - **Lectura pública acotada:** `GET api/v1/publicaciones` agrega `vacunas: [{ vacuna, fecha, proximaDosis }]` a cada publicación de la página (nunca lote del biológico, quién la aplicó ni observaciones; máx. 8; en un lote, una fila por vacuna sumando sus animales). `AnimalComercial::adjuntarVacunas`. No se agrega en `api/v1/publicaciones/interacciones` (Me interesa).
 - La tarjeta (`buildCard`, completa y compacta) las muestra en un bloque desplegable "Vacunas (N)" con la fecha y la próxima dosis.
-- Pendiente: una pantalla para que el vendedor registre vacunas está en "Mis animales" (P2-4); hoy solo existe la API.
+- La pantalla para registrar vacunas está en Mi panel → "Mis animales" (P2-4).
+
+### Mis animales (P2-4) y catálogos admin (P2-6)
+- **API `api/v1/mi-animales`** (sesión; `MiAnimalesController`): `GET` inventario (`AnimalComercial::inventarioPropio`: dueño explícito o animal principal de una publicación suya; los demás animales de un lote no se listan sueltos; con la última observación, la publicación más reciente y cuántas vacunas tiene). `POST` registra un animal sin publicar (`tbanimalestado = ACTIVO`, `tbproductorid` = el vendedor, valida con `AnimalValidacionService::validar`; un lote → 422; arete repetido → 409). `PATCH { animalId, accion: 'PUBLICAR', fincaNombre, titulo, precio?, descripcion?, imagenUrl? }` publica un animal `ACTIVO` propio (ajeno → 404; ya publicado → 409) y lo marca `PUBLICADO`. Bitácora `ANIMAL` y `PUBLICACION` con origen `API_MI_ANIMALES`.
+- **El estado del animal sigue a su publicación** (`cambiarEstadoPublicacion`): `ACTIVO`/`PAUSADO` → `PUBLICADO`, `VENDIDO` → `VENDIDO`, `RETIRADO` → vuelve a `ACTIVO` (al inventario, se puede publicar de nuevo).
+- **Pantalla:** sección "Mis animales" en Mi panel (módulo `Public/js/mis-animales.js`, importado desde `mi-actividad.js`): registrar (especie → tipo y raza, sexo fijado por el tipo, partos solo hembras, arete con máscara), vacunas (historial + alta rápida con `api/v1/mi-animales/vacunas`) y Publicar (finca, título, precio, descripción y foto).
+- **Catálogos en el panel:** `/admin/catalogos` y API `api/v1/admin/catalogos` (solo administrador; `AdminCatalogoController`): `GET` las cuatro listas con inactivos, `POST { catalogo: ESPECIE|TIPO|RAZA|VACUNA, nombre, especieId (tipo y raza), sexo: M|H|null (tipo) }`, `PATCH { catalogo, id, nombre?, activo? }`. **Sin DELETE** (los animales los referencian) y **sin cambiar la especie ni el sexo** después de crear. Nombre único por especie sin distinguir mayúsculas (409). No se reactiva un tipo o raza de una especie inactiva (409). Bitácora `CATALOGO` (`CREAR`, `ACTUALIZAR`, `DESACTIVAR`, `REACTIVAR`), registro `TIPO:5`.
 
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
@@ -476,7 +482,9 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     transacción con `Bitacora::ejecutarConBloqueoAlta` (y con el bloqueo de cada tabla cuyo id calcule); si no,
     el bloqueo se suelta antes del COMMIT y otra conexión repite el id (demostrado: dos eventos con id 56). El
     `FOR UPDATE` del último id no lo evita en Postgres. `NamedLock` es reentrante, así que anidar es seguro.
-    `Tests/bitacora_bloqueo_test.php` falla si aparece un controlador nuevo sin envolver.
+    `Tests/bitacora_bloqueo_test.php` falla si aparece un controlador nuevo sin envolver. **Orden fijo:** locks de las
+    tablas (p. ej. `tbanimal` → `tbanimalproduccionsalud` → `tbanimalpublicacion` → `…estadoperiodo`) → bitácora →
+    transacción; tomar la bitácora antes que una tabla puede dejar dos peticiones esperándose en cruz.
 
 13. **Probar en un `git worktree` o con una base aparte** (dos personas o sesiones en paralelo): `docker compose exec app` solo ve el
     repositorio principal y la base `bdmercadoganadero`. Usa `sh Tools/php-test.sh [-d base] Tests/x_test.php` (corre el código de TU árbol) y,
@@ -492,8 +500,7 @@ están incluidos ahí.
 
 ### Backend (para el compañero de backend)
 - Editar **nombre, identificación o correo**: sigue sin existir (solo alias, teléfono y foto, ver "Foto de perfil y datos propios").
-- **P2-4 "Mis animales" NO se hizo** (se priorizó dejar P2-2 y P2-3 completos y en verde). Lo que falta, en orden: (1) API `api/v1/mi-animales` (GET inventario propio: dueño explícito o animal principal de una publicación suya, sin los miembros no principales de un lote; POST registrar un animal sin publicar con `tbproductorid` = el vendedor y `tbanimalestado = ACTIVO`, reutilizando `AnimalValidacionService::validar`; PATCH `{ animalId, accion: 'PUBLICAR', fincaNombre, titulo, precio?, descripcion?, imagenUrl? }` que crea la publicación con `AnimalComercial::publicarAnimal` y marca el animal `PUBLICADO`). (2) Que `AnimalComercial::cambiarEstadoPublicacion` devuelva el animal a `ACTIVO` cuando la publicación pasa a `RETIRADO` (hoy un animal retirado se queda `PUBLICADO` y no se podría republicar) y lo marque `VENDIDO` con la venta (ya lo hace `aceptar`). (3) Pantalla: sección "Mis animales" en Mi panel (módulo nuevo `Public/js/mis-animales.js` importado desde `mi-actividad.js` para no chocar con otros cambios en ese archivo), con diálogo de alta, historial de vacunas con alta rápida (la API `api/v1/mi-animales/vacunas` y el catálogo de vacunas ya existen) y el botón "Publicar". La API de vacunas ya acepta animales sin publicar con dueño explícito.
-- Catálogos del animal (especies, tipos, razas, vacunas): el CRUD en el panel admin es de Jeremi (P2-6); las tablas ya traen `activo`.
+- Mis animales: un **historial de pesos** (hoy se muestra el último) y editar un animal ya registrado, si el cliente lo pide.
 - **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
 
@@ -501,16 +508,13 @@ están incluidos ahí.
 - ~~Crear el bucket privado `documentos`~~: **resuelto** (06/10).
 - Al reemplazar el documento, el archivo anterior queda en el bucket (no hay política de borrado para la persona). La
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
+  **Sigue sin hacerse** (06/10): borra archivos del bucket de producción y necesita una tarea programada; se deja para
+  acordarla con Dilan.
+- Recordar a Dilan: `SUPABASE_SECRET_KEY` en Vercel (sin ella `/admin/documentos` responde 503 al ver la foto).
 
-### Bitácora sin envolver (controladores antiguos)
-- 9 controladores escriben la bitácora en una transacción sin `Bitacora::ejecutarConBloqueoAlta` (Cuidados #12):
-  `AnimalPublicacionController` (PATCH de Mis publicaciones), `CompradorController`, `FincaController`,
-  `PagoMetodoController`, `ProductorController`, `ProductorUbicacionController`, `TransportistaController`,
-  `TransportistaVehiculoController` y `VehiculoController`. Están en la lista `PENDIENTES` de
-  `Tests/bitacora_bloqueo_test.php`; al arreglar uno, sacarlo de la lista.
-- De la revisión de P1-1 quedan detalles menores: "quitar de Me interesa" registra `CREAR` en la bitácora (debería
-  ser `RETIRAR`), marcar dos veces guarda dos filas, y la lista de guardados se ordena por fecha de publicación.
-- La búsqueda de `listarPublicaciones` usa `LIKE` sin `LOWER`: en Postgres distingue mayúsculas.
+### Detalles menores de la revisión de P1-1
+- Marcar dos veces "Me interesa" guarda dos filas, y la lista de guardados se ordena por fecha de publicación.
+  (La bitácora del retiro y las búsquedas sin `LOWER` ya se corrigieron el 06/10.)
 
 ### Frontend (pendiente de P1-5)
 - (Resuelto con P1-2: la foto del vehículo ya se muestra en las filas de fletes.)
@@ -573,6 +577,25 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · backend · P2-4 Mis animales, P2-6 catálogos admin y arreglos para producción
+- **P2-4:** API `api/v1/mi-animales` (`MiAnimalesController`, `AnimalComercial::inventarioPropio`) y sección "Mis
+  animales" en Mi panel (`Public/js/mis-animales.js`, `mi-actividad.js?v=panel-11`). El estado del animal ahora sigue al
+  de su publicación (retirada → vuelve al inventario). `AnimalPublicacionController::texto` y `::numero` pasaron a
+  públicos para reutilizarlos. Ver "Mis animales (P2-4) y catálogos admin (P2-6)".
+- **P2-6 catálogos:** `/admin/catalogos` (`catalogos.js`, vista `Application/View/catalogos`), API `api/v1/admin/catalogos`
+  (`AdminCatalogoController`) y métodos admin en `AnimalCatalogo` (`TABLAS`, `listarAdmin`, `crear`, `actualizar`,
+  `existeNombre`; un solo lock `tindercows_catalogo_alta`). Cadena de caché admin: **`auth-gate-10`, `admin-12`,
+  `login.js?v=front-14`** y la versión del script de las 11 vistas admin; menú "Catálogos" (ícono `tags`) en todas.
+- **Bitácora hasta el COMMIT en los 9 controladores antiguos** (Cuidados #12): su `transaccion()` ahora envuelve con
+  `Bitacora::ejecutarConBloqueoAlta`; `AnimalPublicacionController` usa `conBloqueos()` (locks de tablas en orden fijo →
+  bitácora → transacción). `PENDIENTES` de `bitacora_bloqueo_test` quedó vacía.
+- **Búsquedas sin distinguir mayúsculas en Postgres:** todos los `LIKE` de los modelos usan `LOWER(columna) LIKE LOWER(:valor)`.
+- "Quitar de Me interesa" queda en la bitácora como `RETIRAR` (antes `CREAR`).
+- Base local: se aplicaron las migraciones `019` a `022` y la semilla `104` sin recrearla.
+- Pruebas nuevas: `mi_animales_test.php`, `admin_catalogos_test.php`, `Tests/frontend/mis_animales.test.mjs` y
+  `catalogos_admin.test.mjs`; `publicacion_interaccion_test` comprueba `RETIRAR`.
+- Rutas en `RutasPublicas.md` y `RutasFrontend.md`; plan actualizado (P1-1, P1-3, P2-4, P2-5 y P2-6).
 
 ### 2026-10-06 · jefersonbustamante · Integración de `backend` (Jeremi) en la rama del frente
 - Se fusionó `origin/backend` (documentos de identidad, lectura automática del número, bitácora con ids repetidos, cierre de sesión). Conflictos resueltos en: el menú de las 9 vistas admin (ahora **Fletes y Documentos**), `.htaccess`, `PRIVATE_ROUTES`, `ADMIN_DESTINATIONS`, `MODULES` de `admin-ui.js`, la prueba `admin_cache_chain`, versiones de las vistas públicas, `me-interesa.js` y esta memoria y el plan. Los dos PDF en conflicto se regeneraron con `Tools/generate-documentation-pdfs.py`.

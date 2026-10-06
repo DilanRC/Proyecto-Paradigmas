@@ -43,18 +43,18 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 |---|---|---|---|---|
 | P0-1 | Acceso en producción (confirmación de correo y unión por ID de Supabase) | **Lidera** | | Apoya |
 | P0-2 | Mis publicaciones: listar, editar, pausar y cerrar — **HECHO** (con foto en el diálogo) | **Lidera** (API) | | **Lidera** (pantalla) |
-| P1-1 | Página "Me interesa" (guardados) — **HECHO** (falta "Ver fletes cercanos") | | **Lidera** (API) | **Lidera** (pantalla) |
+| P1-1 | Página "Me interesa" (guardados) — **HECHO** (con "Ver fletes cercanos") | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-2 | Fletes cercanos (los fletes funcionan como publicaciones) | **Lidera** (API) | | **Lidera** (pantalla) |
-| P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
+| P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) — **HECHO** (probado a mano) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
 | P1-4 | Foto de perfil y edición de datos personales — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-5 | Fotos de vehículos — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo — **HECHO** | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado — **HECHO** (catálogos y lote; ver `DEC-ANIMAL-001`) | **Lidera** | | Apoya |
 | P2-3 | Historial de vacunación — **HECHO** (API y lectura pública; la pantalla de alta va en P2-4) | **Lidera** | | Apoya |
-| P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
-| P2-5 | Foto del documento de identidad y verificación — **SUBIDA HECHA** (falta bucket en Supabase; verificación en P2-6) | | **Lidera** | Apoya |
-| P2-6 | Administrador: catálogos, verificación de identidad y fletes — **VERIFICACIÓN HECHA** (catálogos y fletes esperan P2-2, P2-3, P1-2 y P1-3) | | **Lidera** | Apoya |
+| P2-4 | Mis animales (inventario) — **HECHO** (por Jeremi, 06/10) | Apoya | | **Lidera** |
+| P2-5 | Foto del documento de identidad y verificación — **HECHO** (lectura automática como ayuda; falta el borrado a los 90 días) | | **Lidera** | Apoya |
+| P2-6 | Administrador: catálogos, verificación de identidad y fletes — **HECHO** (falta el borrado de documentos a los 90 días) | | **Lidera** | Apoya |
 | P3-1 | Comerciante (solo investigación) — **PROPUESTA LISTA** (falta respuesta del cliente) | | **Lidera** | |
 | P3-2 | Chat y comentarios en tiempo real (solo planificación) | **Lidera** | | |
 | P3-3 | Limpieza de tablas sin uso y decisión sobre el carrito | **Lidera** | | |
@@ -123,7 +123,7 @@ navegador buscando por nombre de finca, lo que confunde a homónimos.
 
 ### P1-1 · Página "Me interesa" (guardados) · Jeremi (API) + Jeferson (pantalla)
 
-**Estado (2026-10-04): hecho por Jeferson en la rama `jefersonbustamante`**, API y pantalla (detalle en `MEMORIA.md`). Jeremi: solo falta tu revisión. Queda pendiente el botón "Ver fletes cercanos" (depende de P1-3).
+**Estado (2026-10-04): hecho por Jeferson en la rama `jefersonbustamante`**, API y pantalla (detalle en `MEMORIA.md`). Revisado por Jeremi (06/10). El botón "Ver fletes cercanos" ya está: abre el diálogo de solicitud de P1-3.
 
 Cubre el punto 8 del issue ("Me encanta"). **Ya existe** la tabla
 `tbanimalpublicacioninteraccion` con el tipo `ME_INTERESA`; hoy solo se escribe
@@ -171,7 +171,7 @@ Tareas:
 
 ### P1-3 · Fletes cerca de una publicación y solicitud de compra · Carlos (API) + Jeferson (pantalla), con apoyo de Jeremi
 
-**Estado (2026-10-06): en curso por Jeferson.** Decidido: el vendedor acepta o rechaza; el transportista responde su flete por separado; `tbcompra` y `tbventa` se adaptaron para un Comprador normal y pago opcional (DEC-COMPRA-001). Esquema, API y pantallas hechos (pasos 1 a 3); falta probarlo a mano con dos cuentas.
+**Estado (2026-10-06): en curso por Jeferson.** Decidido: el vendedor acepta o rechaza; el transportista responde su flete por separado; `tbcompra` y `tbventa` se adaptaron para un Comprador normal y pago opcional (DEC-COMPRA-001). Esquema, API y pantallas hechos (pasos 1 a 3) y probado a mano con dos cuentas (06/10).
 
 Desde una publicación marcada con "Me interesa", el cliente puede ver los fletes
 cercanos a **la finca del animal** y decidir si compra solo el animal o el
@@ -282,12 +282,13 @@ nacimiento, partos, estado del animal y dueño explícito.
 
 ### P2-4 · Mis animales (inventario) · Jeferson (+ Carlos)
 
-**Estado (06/10): NO iniciado.** P2-2 y P2-3 (modelo, catálogos, lote, vacunas) ya están; el detalle de lo que falta está en `MEMORIA.md` → Pendientes.
+**Estado (06/10): hecho por Jeremi en la rama `backend`** (detalle en `MEMORIA.md`).
 
-- [ ] Sección "Mis animales" en Mi panel: registrar un animal sin publicarlo,
-      ver su historial de pesos y vacunas, y un botón "Publicar" que crea la
-      publicación a partir del animal.
-- [ ] Depende de P2-2 y P2-3.
+- [x] Sección "Mis animales" en Mi panel: registrar un animal sin publicarlo,
+      ver su historial de vacunas (y agregar una) y un botón "Publicar" que crea la
+      publicación a partir del animal. API `api/v1/mi-animales` (GET, POST y PATCH `PUBLICAR`).
+      Se muestra el último peso; un historial de pesos queda para después si se pide.
+- [x] Depende de P2-2 y P2-3.
 
 ### P2-5 · Foto del documento de identidad y verificación · Jeremi (+ Jeferson)
 
@@ -376,8 +377,9 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 ### P2-6 · Catálogos, verificación de identidad y fletes · Jeremi (+ Jeferson)
 
-- [ ] Catálogos: especies, tipos, razas y vacunas (P2-2 y P2-3), con el mismo
-      patrón que Métodos de pago.
+- [x] Catálogos: especies, tipos, razas y vacunas (P2-2 y P2-3), con el mismo
+      patrón que Métodos de pago. Hecho en `/admin/catalogos` (06/10): crear, renombrar,
+      desactivar y reactivar; sin borrar, porque los animales los referencian.
 - [x] Verificación de identidad: lista de personas en `PENDIENTE`, ver la foto
       del documento con enlace firmado, y Verificar o Rechazar con motivo (P2-5).
       (`/admin/documentos`, hecho por Jeremi; la persona ve el motivo en Ajustes. Falta configurar

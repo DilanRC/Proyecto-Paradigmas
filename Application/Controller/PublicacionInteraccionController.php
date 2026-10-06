@@ -134,7 +134,7 @@ final class PublicacionInteraccionController
                         'accion' => $accion,
                     ];
                     $this->bitacora->registrar(
-                        'CREAR',
+                        $accion === 'RETIRAR' ? 'RETIRAR' : 'CREAR',
                         'PUBLICACION_INTERACCION:' . $interaccionId,
                         null,
                         $resultado,

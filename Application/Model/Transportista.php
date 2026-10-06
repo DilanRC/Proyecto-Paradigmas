@@ -202,9 +202,9 @@ final class Transportista
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(pe.tbpersonanombre LIKE :busquedaNombre
-                OR pe.tbpersonacorreoelectronico LIKE :busquedaCorreo
-                OR pe.tbpersonaidentificacionnumero LIKE :busquedaIdentificacion)';
+            $condiciones[] = '(LOWER(pe.tbpersonanombre) LIKE LOWER(:busquedaNombre)
+                OR LOWER(pe.tbpersonacorreoelectronico) LIKE LOWER(:busquedaCorreo)
+                OR LOWER(pe.tbpersonaidentificacionnumero) LIKE LOWER(:busquedaIdentificacion))';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
                 ':busquedaCorreo' => "%{$busqueda}%",
