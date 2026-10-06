@@ -15,10 +15,10 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-8">
     <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-12"></script>
+    <script type="module" src="js/public-ui.js?v=public-13"></script>
     <script type="module" src="js/home.js?v=home-7"></script>
 </head>
-<body class="public-home">
+<body class="public-home" data-portada>
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
             <a class="public-brand" href="#inicio">

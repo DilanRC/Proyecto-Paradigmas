@@ -317,15 +317,21 @@ final class AnimalComercial
     /**
      * $personaId agrega meInteresa a cada fila; con $soloMarcadas devuelve solo
      * las publicaciones que esa persona tiene en "Me interesa" (sea cual sea su estado).
+     * $excluirVendedorId deja fuera las publicaciones de ese vendedor (Explorar no muestra las propias).
      */
     public function listarPublicaciones(string $busqueda, string $estado, int $pagina, int $tamano,
-        ?int $productorVendedorId = null, ?int $personaId = null, bool $soloMarcadas = false): array
+        ?int $productorVendedorId = null, ?int $personaId = null, bool $soloMarcadas = false,
+        ?int $excluirVendedorId = null): array
     {
         $condiciones = ['ep.tbanimalpublicacionestadoperiodofechafin IS NULL'];
         $parametros = [];
         if ($productorVendedorId !== null) {
             $condiciones[] = 'p.tbproductorvendedorid = :productorVendedorId';
             $parametros[':productorVendedorId'] = $productorVendedorId;
+        }
+        if ($excluirVendedorId !== null) {
+            $condiciones[] = 'p.tbproductorvendedorid <> :excluirVendedorId';
+            $parametros[':excluirVendedorId'] = $excluirVendedorId;
         }
         if ($estado !== 'TODOS') {
             $condiciones[] = 'ep.tbanimalpublicacionestadoperiodoestado = :estado';

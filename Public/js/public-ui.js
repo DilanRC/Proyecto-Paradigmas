@@ -216,6 +216,10 @@ function enhancePublicNavigation() {
     if (session?.authenticated === true) {
         addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
         addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
+        // Con sesión no hay portada: Inicio es Explorar.
+        document.querySelectorAll('.public-nav--primary a[href="./"], .public-nav--primary a[href="#inicio"], .public-footer a[href="./"], .public-footer a[href^="./#"]')
+            .forEach((link) => link.remove());
+        document.querySelectorAll('.public-brand').forEach((logo) => { logo.href = 'explorar'; });
     } else {
         hideAnonymousLinks();
         initializeAnonymousGate();
@@ -281,6 +285,13 @@ if (typeof document !== 'undefined'
     && ['explorar', 'fletes'].includes(pageName(window.location.href))
     && !readSession()) {
     window.location.replace('./');
+}
+
+// La portada es para quien aún no tiene cuenta: con sesión se va directo a Explorar.
+if (typeof document !== 'undefined'
+    && document.body?.hasAttribute('data-portada')
+    && readSession()) {
+    window.location.replace('explorar');
 }
 
 if (typeof document !== 'undefined') {

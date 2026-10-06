@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-8">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-12"></script>
+    <script type="module" src="js/public-ui.js?v=public-13"></script>
     <script type="module" src="js/fletes.js?v=front-2"></script>
 </head>
 <body class="public-home">

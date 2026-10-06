@@ -216,6 +216,15 @@ try {
     test_same(401, test_publicacion_controller()->procesar('PATCH', [], ['publicacionId' => $miaId, 'titulo' => 'x'])['status'],
         'Editar sin sesión debe ser 401');
 
+    // Explorar no muestra las publicaciones propias; sin sesión no hay a quién excluir.
+    $exploracion = $publicador->procesar('GET', ['excluirPropias' => 'true', 'q' => 'Título nuevo'], []);
+    $idsExploracion = array_column($exploracion['body']['data']['publicaciones'], 'publicacionId');
+    test_assert(!in_array($miaId, array_map('intval', $idsExploracion), true),
+        'excluirPropias=true no devuelve las publicaciones del propio vendedor');
+    test_assert(in_array($miaId, array_map('intval', array_column(
+        test_publicacion_controller()->procesar('GET', ['excluirPropias' => 'true'], [])['body']['data']['publicaciones'], 'publicacionId')), true),
+        'excluirPropias=true sin sesión no excluye nada');
+
     $editada = $publicador->procesar('PATCH', [], ['publicacionId' => $miaId, 'titulo' => 'Título nuevo', 'precio' => 900000]);
     test_same(200, $editada['status'], 'El dueño puede editar su publicación');
     test_same('Título nuevo', $editada['body']['data']['publicacion']['titulo'], 'El título editado se guarda');

@@ -376,6 +376,8 @@ async function load() {
 
     const parametros = new URLSearchParams({
         estado: 'ACTIVO', pagina: '1', tamanoPagina: String(TAMANO_PAGINA),
+        // Tus propias publicaciones viven en Mi panel, no en Explorar.
+        excluirPropias: 'true',
     });
     const ubicacion = leerUbicacionUsuario();
     if (ubicacion) {

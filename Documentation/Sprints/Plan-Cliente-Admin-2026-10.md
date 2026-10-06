@@ -42,12 +42,12 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | Prioridad | Tarea | Carlos | Jeremi | Jeferson |
 |---|---|---|---|---|
 | P0-1 | Acceso en producción (confirmación de correo y unión por ID de Supabase) | **Lidera** | | Apoya |
-| P0-2 | Mis publicaciones: listar, editar, pausar y cerrar — **HECHO** (falta foto en el diálogo) | **Lidera** (API) | | **Lidera** (pantalla) |
+| P0-2 | Mis publicaciones: listar, editar, pausar y cerrar — **HECHO** (con foto en el diálogo) | **Lidera** (API) | | **Lidera** (pantalla) |
 | P1-1 | Página "Me interesa" (guardados) — **HECHO** (falta "Ver fletes cercanos") | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-2 | Fletes cercanos (los fletes funcionan como publicaciones) | **Lidera** (API) | | **Lidera** (pantalla) |
 | P1-3 | Fletes cerca de una publicación y solicitud de compra (animal, o animal + flete) | **Lidera** (API) | Apoya | **Lidera** (pantalla) |
 | P1-4 | Foto de perfil y edición de datos personales — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
-| P1-5 | Fotos de vehículos — **API HECHA** (falta pantalla) | | **Lidera** (API) | **Lidera** (pantalla) |
+| P1-5 | Fotos de vehículos — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo — **HECHO** | | **Lidera** | Apoya |
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
@@ -111,7 +111,7 @@ navegador buscando por nombre de finca, lo que confunde a homónimos.
 - [x] `GET api/v1/publicaciones` con `mias=true` (solo con sesión): devuelve
       las publicaciones del vendedor autenticado en todos sus estados.
 - [x] `PATCH api/v1/publicaciones`: editar precio, título, descripción y foto
-      de una publicación propia (el API acepta la foto; el diálogo de Mi panel aún no la muestra).
+      de una publicación propia (el diálogo de Mi panel ya sube la foto).
 - [x] Cambio de estado (`ACTIVO`, `PAUSADO`, `VENDIDO`, `RETIRADO`): cerrar el
       periodo vigente y abrir otro; dejar registro en `tbbitacora`.
 - [x] Mi panel usa `mias=true` en lugar de la búsqueda por nombre de finca
@@ -207,8 +207,8 @@ animal con flete.
       foto para empezar; varias fotos necesitarían una tabla aparte).
 - [x] Aceptar y devolver `fotoUrl` en `api/v1/mi-vehiculos` (crear y editar),
       con la misma validación `https://`. En `PUT`, sin `fotoUrl` la foto se conserva.
-- [ ] Mi panel → Mis vehículos: subir la foto con vista previa (mismo
-      componente que en Publicar).
+- [x] Mi panel → Mis vehículos: subir la foto con vista previa (campo
+      compartido `shared/foto-campo.js`).
 - [ ] La foto se muestra en las tarjetas de fletes (P1-2).
 
 ### P2-1 · Validación en tiempo real de cédula y correo · Jeremi (+ Jeferson)

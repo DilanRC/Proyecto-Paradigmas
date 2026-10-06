@@ -61,6 +61,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   usuario. Por `/admin/entrar` sigue mandando al panel.
 - Iniciar sesión lleva a **Explorar** salvo que `next` traiga un destino
   seguro (por ejemplo `explorar?publicacion=6`).
+- **Con sesión no hay portada.** `public-ui.js` quita "Inicio" del menú y del pie, el logo lleva a Explorar y la portada (`<body data-portada>` en `home/index.php`) redirige a `explorar`. Sin sesión todo sigue igual. Si cambias la portada, conserva `data-portada` y no se la pongas a Explorar (bucle de redirección).
 
 ### Registro y actividades (comprador, vendedor, transportista)
 - **Alta inicial = solo Comprador.** El formulario no pregunta actividades y
@@ -164,6 +165,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   Una sola foto por vehículo; los vehículos anteriores quedan en NULL.
 - `api/v1/mi-vehiculos` acepta `fotoUrl` en `POST` y `PUT` y lo devuelve en `vehiculo` y `vehiculos[]`. Misma validación que la
   foto de perfil (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
+- Mi panel → Mis vehículos: el diálogo sube la foto (campo compartido `shared/foto-campo.js`, mismo bucket `publicaciones`) y la fila muestra la miniatura. El navegador **solo envía `fotoUrl` si la foto cambió**; así un PUT sin cambio de foto no la borra.
 - En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
   admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
 
@@ -247,6 +249,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   información"), sin botones de acción y sin navegar al hacer clic.
 - Explorar: hero con foto, filtros de tipo/ubicación/precio y fila de
   tarjetas completas con scroll inferior (más de 4).
+- **Explorar no muestra tus propias publicaciones** (viven en Mi panel). `explore.js` envía `excluirPropias: 'true'` y el servidor (`AnimalPublicacionController::consultar` → `listarPublicaciones(..., $excluirVendedorId)`) excluye las del vendedor autenticado; así el total y la paginación salen bien. Sin sesión no excluye nada. Es opcional: Inicio, Mi panel y los demás no lo envían. Una publicación propia ya no abre con `explorar?publicacion=<id>`.
 
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
@@ -308,7 +311,6 @@ están incluidos ahí.
 - Editar **nombre, identificación o correo**: sigue sin existir (solo alias, teléfono y foto, ver "Foto de perfil y datos propios").
 - **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
-- Editar la **foto** de una publicación desde Mi panel (el API ya acepta `imagenUrl` en el PATCH; falta el campo en el diálogo).
 - "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
 ### Pendiente de P2-5 (va con P2-6)
@@ -318,8 +320,7 @@ están incluidos ahí.
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
 
 ### Frontend (pendiente de P1-5)
-- Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
-  `fotoUrl`. El API ya está listo (ver "Foto del vehículo"). Mostrarla en las tarjetas de fletes cuando exista P1-2.
+- Mostrar la foto del vehículo en las tarjetas de fletes cuando exista P1-2 (la subida en Mi panel ya está hecha).
 
 ### Configuración de Supabase (panel, no código)
 - ~~Bucket `publicaciones` público + política de subida~~: **resuelto** (el bucket ya existe en Supabase; lo usan las fotos de publicaciones y de perfil). Si hubiera que recrearlo:
@@ -372,6 +373,17 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · jefersonbustamante · Explorar sin publicaciones propias y sin portada con sesión
+- API: `excluirPropias` en `api/v1/publicaciones` (sin cambio de contrato para quien no lo envía). Frontend: Explorar lo envía; `public-ui.js` (`public-13`) quita Inicio y redirige la portada a Explorar con sesión.
+- Archivos: `AnimalPublicacionController.php`, `AnimalComercial.php` (`listarPublicaciones`), `explore.js` (`explore-10`), `public-ui.js`, `home/index.php` (`data-portada`); `?v=` de `public-ui.js` y `explore.js` subidos en todas las vistas.
+- Pruebas: ampliada `Tests/api_publicaciones_test.php`; nueva `Tests/frontend/explorar_sin_propias.test.mjs`.
+
+### 2026-10-05 · jefersonbustamante · P1-5 pantalla de foto de vehículo y foto en el diálogo de editar publicación (P0-2)
+- Mi panel: los diálogos de **vehículo** y de **publicación** tienen campo de foto (elegir, vista previa, quitar). La fila del vehículo muestra miniatura (`fa-truck` si no hay). Sin cambios de API ni de esquema.
+- Archivos: nuevo `Public/js/shared/foto-campo.js` (`montarCampoFoto`; `resolver()` devuelve `undefined` sin cambio, `null` al quitar, o la URL subida), `mi-actividad.js` (`panel-8`, import `foto-campo-1`), vista de Mi panel. Reutiliza `.publish-dropzone` y `.publish-preview` de `onboarding.css` (sin CSS nuevo).
+- Pruebas: nueva `Tests/frontend/panel_fotos.test.mjs`. Quedan solo las 4 pruebas de frontend que ya fallaban.
+- Cuidado: no enviar `fotoUrl`/`imagenUrl` cuando no cambió la foto (el PUT del vehículo borra la foto con `null`). Tras un merge, `Public/js/shared/api.js` puede quedar con CRLF y fallar `public_identity_auth` (Cuidados #4).
 
 ### 2026-10-05 · backend · P3-1 Comerciante (investigación, sin código)
 - Nuevo `Documentation/Sprints/P3-1-Comerciante.md`: según la Ley 8799 y el Decreto 44336, "comerciante" no es un actor distinto (comprar y vender tiene las mismas obligaciones de guía y trazabilidad); lo distinto son los establecimientos mercantiles (subastas, ferias). Se recomienda tratarlo como Vendedor hasta que el cliente responda las 3 preguntas del documento.

@@ -326,6 +326,12 @@ final class AnimalPublicacionController
             $productor = $this->productor->buscarPorPersonaId((int) $this->actor->personaId);
             $vendedorId = $productor === null ? 0 : (int) $productor['tbproductorid'];
         }
+        // excluirPropias=true (Explorar): con sesión, deja fuera las publicaciones del propio vendedor.
+        $excluirId = null;
+        if (filter_var($consulta['excluirPropias'] ?? false, FILTER_VALIDATE_BOOLEAN) && $this->actor?->tienePersona()) {
+            $propio = $this->productor->buscarPorPersonaId((int) $this->actor->personaId);
+            $excluirId = $propio === null ? null : (int) $propio['tbproductorid'];
+        }
         // Con sesión, cada publicación trae meInteresa (ver api/v1/publicaciones/interacciones).
         $personaId = $this->actor?->tienePersona() ? (int) $this->actor->personaId : null;
         $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? ($mias ? 'TODOS' : 'ACTIVO'), 10), 'UTF-8');
@@ -346,18 +352,18 @@ final class AnimalPublicacionController
         $ubicacion = $this->ubicacionConsulta($consulta);
 
         if ($ubicacion === null) {
-            $resultado = $this->animales->listarPublicaciones($busqueda, $estado, $pagina, $tamano, $vendedorId, $personaId);
+            $resultado = $this->animales->listarPublicaciones($busqueda, $estado, $pagina, $tamano, $vendedorId, $personaId, false, $excluirId);
             $resultado['ranking'] = 'RECIENTE';
         } else {
             // La capa de datos conserva su paginación tradicional. Para ordenar
             // correctamente por distancia antes de paginar se obtiene el total
             // filtrado y el servicio aplica Haversine en PHP. Si el catálogo
             // crece de forma sustancial deberá evolucionar a candidatos por zona.
-            $conteo = $this->animales->listarPublicaciones($busqueda, $estado, 1, 1, $vendedorId);
+            $conteo = $this->animales->listarPublicaciones($busqueda, $estado, 1, 1, $vendedorId, null, false, $excluirId);
             $total = (int) ($conteo['total'] ?? 0);
             $todas = $total === 0
                 ? []
-                : $this->animales->listarPublicaciones($busqueda, $estado, 1, $total, $vendedorId, $personaId)['publicaciones'];
+                : $this->animales->listarPublicaciones($busqueda, $estado, 1, $total, $vendedorId, $personaId, false, $excluirId)['publicaciones'];
             $resultado = $this->cercania->ordenarYPaginar(
                 $todas,
                 $ubicacion['latitud'],

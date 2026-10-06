@@ -3,6 +3,7 @@ import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { safeImageUrl } from './explore.js?v=foto-3';
+import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
@@ -23,6 +24,8 @@ let lastVehicleTrigger = null;
 let lastFarmTrigger = null;
 let farmEditor = null;
 let toast = null;
+let vehiclePhoto = null;
+let publicationPhoto = null;
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -157,7 +160,7 @@ function renderVehicles(vehiculos = []) {
     const add = document.querySelector('#vehicle-add');
     if (add && vehiclesData.length === 0) add.hidden = true;
     setCount('#vehicles-count', vehiclesData.length);
-    target.innerHTML = vehiclesData.map((vehicle) => `<article class="panel-row"><div><h3>${escapeHtml(vehicle.placa)}</h3><p>${escapeHtml(vehicle.modelo)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(vehicle.estado)}">${vehicle.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}</span>${vehicle.estado === 'ACTIVO' ? `<button class="activity-button activity-button--text" type="button" data-edit-vehicle="${vehicle.vehiculoId}">Editar</button><button class="activity-button activity-button--text" type="button" data-remove-vehicle="${vehicle.vehiculoId}">Desactivar</button>` : `<button class="activity-button activity-button--text" type="button" data-restore-vehicle="${vehicle.vehiculoId}">Reactivar</button>`}</div></article>`).join('');
+    target.innerHTML = vehiclesData.map((vehicle) => `<article class="panel-row panel-row--media">${miniatura({ imagenUrl: vehicle.fotoUrl }, 'fa-truck')}<div><h3>${escapeHtml(vehicle.placa)}</h3><p>${escapeHtml(vehicle.modelo)}</p></div><div class="panel-row__actions"><span class="activity-state" data-state="${escapeHtml(vehicle.estado)}">${vehicle.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}</span>${vehicle.estado === 'ACTIVO' ? `<button class="activity-button activity-button--text" type="button" data-edit-vehicle="${vehicle.vehiculoId}">Editar</button><button class="activity-button activity-button--text" type="button" data-remove-vehicle="${vehicle.vehiculoId}">Desactivar</button>` : `<button class="activity-button activity-button--text" type="button" data-restore-vehicle="${vehicle.vehiculoId}">Reactivar</button>`}</div></article>`).join('');
     target.querySelectorAll('[data-edit-vehicle]').forEach((button) => button.addEventListener('click', () => openVehicleModal(Number(button.dataset.editVehicle), button)));
     target.querySelectorAll('[data-remove-vehicle]').forEach((button) => button.addEventListener('click', () => changeVehicleState(Number(button.dataset.removeVehicle), false)));
     target.querySelectorAll('[data-restore-vehicle]').forEach((button) => button.addEventListener('click', () => changeVehicleState(Number(button.dataset.restoreVehicle), true)));
@@ -215,11 +218,11 @@ function formatColones(precio) {
     return `₡${String(Math.round(precio)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 }
 
-function miniatura(item) {
+function miniatura(item, icono = 'fa-cow') {
     const url = safeImageUrl(item?.imagenUrl);
     return url
         ? `<img class="panel-thumb" src="${escapeHtml(url)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
-        : '<span class="panel-thumb panel-thumb--empty" aria-hidden="true"><i class="fa-solid fa-cow"></i></span>';
+        : `<span class="panel-thumb panel-thumb--empty" aria-hidden="true"><i class="fa-solid ${icono}"></i></span>`;
 }
 
 function setPublicationsView(view, message = '') {
@@ -308,6 +311,7 @@ function openPublicationModal(id, trigger = null) {
     form.elements.precio.value = item.precio ?? '';
     form.elements.descripcion.value = item.descripcion ?? '';
     setPublicationErrors({});
+    publicationPhoto.reiniciar(safeImageUrl(item.imagenUrl));
     document.querySelector('#publication-form-status').textContent = '';
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else { dialog.hidden = false; dialog.setAttribute('open', ''); }
@@ -335,17 +339,20 @@ async function savePublication(event) {
     form.setAttribute('aria-busy', 'true');
     status.textContent = 'Guardando publicación…';
     try {
+        const imagenUrl = await publicationPhoto.resolver();
         const response = await patchPublication({
             publicacionId: editingPublicationId,
             titulo,
             precio: form.elements.precio.value.trim() === '' ? null : Number(form.elements.precio.value),
             descripcion: form.elements.descripcion.value.trim() || null,
+            ...(imagenUrl !== undefined && { imagenUrl }),
         });
         closePublicationModal();
         await loadPublications();
         toast?.success(response.message || 'Publicación actualizada.');
     } catch (error) {
         setPublicationErrors(error?.errors ?? {});
+        if (error?.errors?.imagenUrl) publicationPhoto.mostrarError(error.errors.imagenUrl);
         status.textContent = error?.message || 'No fue posible guardar la publicación.';
     } finally {
         save.disabled = false;
@@ -354,6 +361,7 @@ async function savePublication(event) {
 }
 
 function initializePublicationUi() {
+    publicationPhoto = montarCampoFoto(document.querySelector('[data-foto-campo="publication"]'));
     document.querySelector('#publications-list')?.addEventListener('click', (event) => {
         const button = event.target.closest('[data-publication-action]');
         if (!button) return;
@@ -534,6 +542,7 @@ function openVehicleModal(id = null, trigger = null) {
     document.querySelector('#vehicle-modal-title').textContent = vehicle ? 'Editar vehículo' : 'Agregar vehículo';
     for (const field of ['placa', 'vin', 'modelo']) form.elements[field].value = vehicle?.[field] ?? '';
     setFormErrors({});
+    vehiclePhoto.reiniciar(safeImageUrl(vehicle?.fotoUrl));
     document.querySelector('#vehicle-form-status').textContent = '';
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else { dialog.hidden = false; dialog.setAttribute('open', ''); }
@@ -562,6 +571,9 @@ async function saveVehicle(event) {
     form.setAttribute('aria-busy', 'true');
     status.textContent = 'Guardando vehículo…';
     try {
+        // Sin cambio no se envía fotoUrl: en PUT eso conserva la foto guardada.
+        const fotoUrl = await vehiclePhoto.resolver();
+        if (fotoUrl !== undefined) datos.fotoUrl = fotoUrl;
         const options = { method: editingVehicleId ? 'PUT' : 'POST', body: JSON.stringify(editingVehicleId ? { ...datos, vehiculoId: editingVehicleId } : datos) };
         const response = await request(VEHICLES_API, options);
         closeVehicleModal();
@@ -570,6 +582,7 @@ async function saveVehicle(event) {
         toast?.success(response.message || 'Vehículo guardado correctamente.');
     } catch (error) {
         setFormErrors(error?.errors ?? {});
+        if (error?.errors?.fotoUrl) vehiclePhoto.mostrarError(error.errors.fotoUrl);
         status.textContent = error?.message || 'No fue posible guardar el vehículo.';
         toast?.error(error?.message || 'No fue posible guardar el vehículo.');
     } finally {
@@ -592,6 +605,7 @@ async function changeVehicleState(id, activo) {
 }
 
 function initializeVehicleUi() {
+    vehiclePhoto = montarCampoFoto(document.querySelector('[data-foto-campo="vehicle"]'));
     document.querySelector('#vehicle-add')?.addEventListener('click', () => openVehicleModal());
     document.querySelector('#vehicle-add-empty')?.addEventListener('click', (event) => openVehicleModal(null, event.currentTarget));
     document.querySelector('#vehicles-retry')?.addEventListener('click', loadVehicles);
