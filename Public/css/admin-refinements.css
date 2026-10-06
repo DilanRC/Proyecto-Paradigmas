@@ -184,3 +184,42 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
 
 /* Administradores (P3-4) */
 .rural-panel__nav-item[href$='admin/administradores']::before { content:'\f505'; } /* user-shield */
+
+/* Bitácora (P3-4) */
+.rural-panel__nav-item[href$='admin/bitacora']::before { content:'\f1da'; } /* clock-rotate-left */
+
+/* Detalle de la bitácora: datos antes y después (P3-4). Sin colores propios. */
+.detail-grid pre {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Filtros de fecha (bitácora): mismo aspecto que los select de filtro. El panel
+   es oscuro por defecto, así que el calendario del navegador también lo es. */
+.rural-panel .filter input[type='date'] {
+  min-height: 42px;
+  height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--admin-line-strong);
+  border-radius: 10px;
+  color: var(--admin-text);
+  background: var(--admin-bg-elevated, var(--admin-surface-2));
+  box-shadow: none;
+  font: inherit;
+  font-size: 13px;
+  color-scheme: dark;
+}
+
+html[data-theme='light'] .rural-panel .filter input[type='date'] {
+  color-scheme: light;
+}
+
+.rural-panel .filter input[type='date']:focus {
+  outline: 3px solid color-mix(in srgb, var(--admin-primary) 42%, transparent);
+  outline-offset: 2px;
+}

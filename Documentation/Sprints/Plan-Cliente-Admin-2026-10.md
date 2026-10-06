@@ -58,7 +58,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P3-1 | Comerciante (solo investigación) | | **Lidera** | |
 | P3-2 | Chat y comentarios en tiempo real (solo planificación) | **Lidera** | | |
 | P3-3 | Limpieza de tablas sin uso y decisión sobre el carrito | **Lidera** | | |
-| P3-4 | Administrador: gestionar administradores y ver la bitácora | | **Lidera** | Apoya |
+| P3-4 | Administrador: gestionar administradores y ver la bitácora — **HECHO** (queda la decisión de sesiones separadas) | | **Lidera** | Apoya |
 
 ---
 
@@ -372,8 +372,8 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 - [x] Agregar o desactivar administradores desde el panel, en lugar de editar
       la base a mano. (`/admin/administradores`; nadie se quita su propio acceso ni deja el panel sin administradores.)
-- [ ] Visor de `tbbitacora`, filtrado por entidad, fecha y persona. Hoy se
-      escribe en cada cambio pero nadie la consulta.
+- [x] Visor de `tbbitacora`, filtrado por entidad, fecha y persona. Hoy se
+      escribe en cada cambio pero nadie la consulta. (`/admin/bitacora`, solo lectura.)
 - [ ] Pendiente de decisión: Calidad pidió separar la sesión pública de la
       administrativa y la "política de administrador" sigue sin aprobarse
       (comentario en `Public/js/shared/auth-gate.js`).

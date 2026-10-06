@@ -5,7 +5,7 @@ import test from 'node:test';
 const read = (ruta) => readFileSync(ruta, 'utf8');
 const htaccess = read('Public/.htaccess');
 const view = read('Application/View/administradores/index.php');
-const VISTAS_ADMIN = ['dashboard', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos', 'publicaciones', 'administradores'];
+const VISTAS_ADMIN = ['dashboard', 'productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos', 'publicaciones', 'administradores', 'bitacora'];
 
 test('/admin/administradores tiene ruta, API admin y guarda de sesión', () => {
     assert.match(htaccess, /RewriteRule \^admin\/administradores\/\?\$ administradores\.php \[END\]/);
@@ -14,11 +14,7 @@ test('/admin/administradores tiene ruta, API admin y guarda de sesión', () => {
     assert.ok(read('Public/js/login.js').includes("'admin/administradores'"));
     assert.ok(read('Public/js/shared/admin-ui.js').includes("'admin/administradores'"));
     assert.ok(read('Public/api/admin-administradores.php').includes('AdminAuthorization::require'));
-    // auth-gate conoce la ruta nueva: su versión sube en todos los que lo importan.
-    assert.ok(read('Public/js/administradores.js').includes("from './shared/api.js?v=auth-gate-6'"));
-    assert.ok(read('Public/js/shared/api.js').includes("import './auth-gate.js?v=auth-gate-6'"));
-    assert.ok(read('Public/js/shared/admin-ui.js').includes("from './auth-gate.js?v=auth-gate-6'"));
-    assert.ok(read('Public/js/login.js').includes("from './shared/auth-gate.js?v=auth-gate-6'"));
+    // Las versiones de la cadena de caché las comprueba admin_cache_chain.test.mjs.
 });
 
 test('todas las vistas admin enlazan a Administradores y la propia lo marca activo', () => {

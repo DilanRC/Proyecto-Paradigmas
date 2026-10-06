@@ -199,6 +199,19 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - `migrate.php` siembra el admin inicial solo si su correo no existe, así que un admin desactivado desde el panel no se
   reactiva al redesplegar.
 
+### Administrador: bitácora (P3-4)
+- `/admin/bitacora` es un visor **de solo lectura** de `tbbitacora`, del evento más reciente al más antiguo, 25 por página,
+  con "Ver detalle" (datos anteriores y nuevos en JSON, mostrados con `textContent`).
+- API `api/v1/admin/bitacora` (solo administrador; `GET` o `POST { consulta }`, sin PATCH/DELETE). Filtros: `entidad` exacta
+  (la lista sale de las entidades que ya existen), `desde`/`hasta` (`AAAA-MM-DD`, días UTC, ambos inclusive) y `q`, que busca
+  sin distinguir mayúsculas en el nombre, identificación o correo de **quien hizo el cambio** y en el registro afectado.
+  La consulta va por POST para que los nombres buscados no queden en la URL.
+- "Hecho por": el nombre de la Persona; si no tiene (admin sin Persona), el `realizadoPor` de los datos; si no, el tipo de
+  actor (`Sistema` = `NO_AUTENTICADO`). La pantalla muestra las fechas en la hora local del navegador.
+- Límite conocido: `q` no busca dentro del JSON, así que los cambios de un admin **sin Persona** no se encuentran por su
+  correo (sí por entidad, fecha o registro). Buscar en JSON se escribe distinto en MySQL y Postgres.
+- `Bitacora::listar` usa `LOWER(...) LIKE` en los dos lados porque Postgres distingue mayúsculas en `LIKE`. Probado en Postgres 16.
+
 ### Administrador: moderar publicaciones
 - `/admin/publicaciones` lista **todas** las publicaciones (buscador por título, raza, vendedor, finca o zona;
   filtro por estado) y permite **Pausar**, **Retirar** (ambos con motivo obligatorio) y **Reactivar**.
@@ -344,12 +357,25 @@ de trabajo** (no son regresiones):
 
 Cualquier otro fallo es una regresión.
 
+**Ojo: dos pruebas vacían la bitácora local.** `Tests/transaction_test.php` y `Tests/pagometodo_test.php` achican
+por un momento `tbbitacorasolicitudid` a `VARCHAR(5)` para forzar un fallo, y antes borran **toda fila con
+solicitud de más de 5 caracteres**, que son casi todas. Después de correr toda la batería, `/admin/bitacora` queda casi
+vacía en local. No pasa en producción (ahí no se corren las pruebas). Arreglarlo exige otra forma de forzar el fallo.
+
 `Tests/registro_publico_test.php` falló una vez (201 esperado, 200 recibido) y
 pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-05 · backend · P3-4 Visor de la bitácora
+- Pantalla `/admin/bitacora` y API `api/v1/admin/bitacora` de solo lectura (ver "Administrador: bitácora (P3-4)"). Sin columnas nuevas.
+- Archivos: `Bitacora.php` (`listar`, `entidades`), nuevos `AdminBitacoraController.php`, `Public/api/admin-bitacora.php`, `Public/bitacora.php`, vista `bitacora/`, `Public/js/bitacora.js`; estilo `.detail-grid pre` en `admin-refinements.css` (sin colores).
+- Cadena de caché (Cuidados #11): `auth-gate-7`, `admin-ui.js` `admin-9`, `admin-refinements.css` `admin-9`, `login.js` `front-12`; los 9 módulos admin importan `shared/api.js?v=auth-gate-7` y sus `<script>` suben (`admin-menu-2`, `sections-5`, `moderacion-4`, `administradores-2`, `bitacora-1`).
+- Pruebas: nueva `Tests/api_admin_bitacora_test.php`; `api_auth_admin_http_test.php` incluye el endpoint (encontró que un POST mal formado sin sesión respondía 422 en vez de 401: ahora la autorización va primero); nuevas `admin_bitacora.test.mjs` y `admin_cache_chain.test.mjs`, que exige que **toda la cadena use la misma versión** en vez de fijar números (ya no hay que editar las pruebas al subir versiones).
+- La prueba que ya fallaba ("el shell existente se mejora desde un bootstrap compartido…") es `admin_shell_ux.test.mjs`, que todavía fija `auth-gate-2`.
+- Los filtros de fecha usan el aspecto de los `select` de filtro y `color-scheme` según el tema del panel (`admin-refinements.css` `admin-9`; el panel es oscuro por defecto y el navegador lo pintaba claro).
 
 ### 2026-10-05 · backend · P3-4 Gestionar administradores desde el panel
 - Pantalla `/admin/administradores` y API `api/v1/admin/administradores` (ver "Administrador: gestionar administradores"). Sin columnas nuevas.

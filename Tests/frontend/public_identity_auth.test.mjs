@@ -408,9 +408,10 @@ test('el shell privado distingue volver al sitio público de cerrar sesión', ()
 test('los paneles privados fallan cerrados y comparten bootstrap de API', () => {
     assert.ok(baseCss.includes('body.rural-panel {\n    visibility:hidden;'));
     assert.ok(baseCss.includes("html[data-tc-auth='ready'] body.rural-panel"));
-    assert.ok(api.startsWith("import './auth-gate.js?v=auth-gate-6';\nimport './admin-ui.js?v=admin-7';"));
+    // Las versiones exactas las comprueba admin_cache_chain.test.mjs.
+    assert.match(api, /^import '\.\/auth-gate\.js\?v=auth-gate-\d+';\nimport '\.\/admin-ui\.js\?v=admin-\d+';/);
     for (const path of PRIVATE_MODULES) {
         const module = read(path);
-        assert.ok(module.includes("from './shared/api.js?v=auth-gate-6'"), `${path} debe versionar api.js`);
+        assert.match(module, /from '\.\/shared\/api\.js\?v=auth-gate-\d+'/, `${path} debe versionar api.js`);
     }
 });

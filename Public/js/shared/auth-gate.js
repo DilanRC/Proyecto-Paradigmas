@@ -53,6 +53,7 @@ const PRIVATE_ROUTES = new Set([
     'admin/metodos-pago',
     'admin/publicaciones',
     'admin/administradores',
+    'admin/bitacora',
 ]);
 
 /**
