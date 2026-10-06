@@ -32,6 +32,7 @@ servidor.
 | `/admin/transportistas` | Administrativa | Transportistas |
 | `/admin/vehiculos` | Administrativa | Vehículos |
 | `/admin/metodos-pago` | Administrativa | Métodos de pago |
+| `/admin/catalogos` | Administrativa | Catálogos del animal: especies, tipos, razas y vacunas (P2-6) |
 | `/admin/fletes` | Administrativa | Fletes: ofertas (retirar y reactivar) y solicitudes de compra (solo lectura) |
 
 ## API versionada
@@ -52,6 +53,7 @@ compatibilidad técnica durante la migración.
 | `/api/v1/pago-metodos-disponibles` | Métodos de pago activos (GET, con sesión): solo id y nombre, para proponer uno en una solicitud de compra |
 | `/api/v1/admin/fletes` | Fletes para el administrador (POST `{consulta}` de lectura, PATCH): ofertas y solicitudes de compra; retirar o reactivar una oferta con motivo. Sin teléfonos |
 | `/api/v1/catalogos` | Especies, tipos, razas y vacunas activos para los formularios de animal (GET con sesión; `?especieId=` filtra tipos y razas) |
+| `/api/v1/mi-animales` | Inventario del vendedor (GET lista sus animales; POST registra uno sin publicarlo; PATCH `{animalId, accion: "PUBLICAR", fincaNombre, titulo, ...}` lo publica; con sesión; un animal ajeno responde 404) |
 | `/api/v1/mi-animales/vacunas` | Historial de vacunación de un animal propio (GET `?animalId=`, POST para registrar y PATCH para corregir; con sesión; un animal ajeno responde 404) |
 | `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |
@@ -68,6 +70,7 @@ compatibilidad técnica durante la migración.
 | `/api/v1/transportistas/vehiculos` | Asociación Transportista-Vehículo |
 | `/api/v1/vehiculos` | CRUD administrativo de Vehículos |
 | `/api/v1/metodos-pago` | CRUD administrativo de métodos de pago |
+| `/api/v1/admin/catalogos` | Catálogos del animal (GET todos, también inactivos; POST `{catalogo, nombre, especieId?, sexo?}`; PATCH `{catalogo, id, nombre?, activo?}`; solo administradores; sin DELETE) |
 | `/api/v1/fincas/direccion` | Dirección de finca |
 
 ## Política de información en URL

@@ -194,6 +194,9 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
 /* Documentos de identidad (P2-6) */
 .rural-panel__nav-item[href$='admin/documentos']::before { content:'\f2c2'; } /* id-card */
 
+/* Catálogos del animal (P2-6) */
+.rural-panel__nav-item[href$='admin/catalogos']::before { content:'\f02c'; } /* tags */
+
 /* Detalle de la bitácora: datos antes y después (P3-4). Sin colores propios. */
 .detail-grid pre {
   margin: 0;
