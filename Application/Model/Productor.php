@@ -227,10 +227,10 @@ final class Productor
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(pe.tbpersonanombre LIKE :busquedaNombre
-                OR pe.tbpersonaalias LIKE :busquedaAlias
-                OR pe.tbpersonacorreoelectronico LIKE :busquedaCorreo
-                OR pe.tbpersonaidentificacionnumero LIKE :busquedaIdentificacion)';
+            $condiciones[] = '(LOWER(pe.tbpersonanombre) LIKE LOWER(:busquedaNombre)
+                OR LOWER(pe.tbpersonaalias) LIKE LOWER(:busquedaAlias)
+                OR LOWER(pe.tbpersonacorreoelectronico) LIKE LOWER(:busquedaCorreo)
+                OR LOWER(pe.tbpersonaidentificacionnumero) LIKE LOWER(:busquedaIdentificacion))';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
                 ':busquedaAlias' => "%{$busqueda}%",

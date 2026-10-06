@@ -162,9 +162,9 @@ final class ProductorClasificacionPeriodo
                       AND cp.tbproductorclasificacionperiodofechafin IS NULL ';
         $parametros = [':tipo' => $tipoNormalizado];
         if ($busqueda !== '') {
-            $origen .= ' AND (pe.tbpersonanombre LIKE :nombre
-                              OR pe.tbpersonacorreoelectronico LIKE :correo
-                              OR pe.tbpersonaidentificacionnumero LIKE :identificacion) ';
+            $origen .= ' AND (LOWER(pe.tbpersonanombre) LIKE LOWER(:nombre)
+                              OR LOWER(pe.tbpersonacorreoelectronico) LIKE LOWER(:correo)
+                              OR LOWER(pe.tbpersonaidentificacionnumero) LIKE LOWER(:identificacion)) ';
             $parametros[':nombre'] = "%{$busqueda}%";
             $parametros[':correo'] = "%{$busqueda}%";
             $parametros[':identificacion'] = '%'

@@ -154,8 +154,8 @@ final class PagoMetodo
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(pm.tbpagometodonombre LIKE :busquedaNombre
-                OR pm.tbpagometododescripcion LIKE :busquedaDescripcion)';
+            $condiciones[] = '(LOWER(pm.tbpagometodonombre) LIKE LOWER(:busquedaNombre)
+                OR LOWER(pm.tbpagometododescripcion) LIKE LOWER(:busquedaDescripcion))';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
                 ':busquedaDescripcion' => "%{$busqueda}%",

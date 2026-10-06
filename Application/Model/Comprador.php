@@ -220,10 +220,10 @@ final class Comprador
         $condiciones = [];
         $parametros = [];
         if ($busqueda !== '') {
-            $condiciones[] = '(p.tbpersonanombre LIKE :busquedaNombre
-                OR p.tbpersonaalias LIKE :busquedaAlias
-                OR p.tbpersonacorreoelectronico LIKE :busquedaCorreo
-                OR p.tbpersonaidentificacionnumero LIKE :busquedaIdentificacion)';
+            $condiciones[] = '(LOWER(p.tbpersonanombre) LIKE LOWER(:busquedaNombre)
+                OR LOWER(p.tbpersonaalias) LIKE LOWER(:busquedaAlias)
+                OR LOWER(p.tbpersonacorreoelectronico) LIKE LOWER(:busquedaCorreo)
+                OR LOWER(p.tbpersonaidentificacionnumero) LIKE LOWER(:busquedaIdentificacion))';
             $parametros = [
                 ':busquedaNombre' => "%{$busqueda}%",
                 ':busquedaAlias' => "%{$busqueda}%",
