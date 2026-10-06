@@ -14,6 +14,9 @@ erDiagram
         VARCHAR tbpersonacorreoelectronico
         TINYINT tbpersonaestado
         VARCHAR tbpersonafotourl
+        VARCHAR tbpersonadocumentoruta
+        VARCHAR tbpersonadocumentoestado
+        DATETIME tbpersonadocumentofecha
     }
 
     tbproductor {

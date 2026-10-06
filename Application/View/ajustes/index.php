@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-12"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-4"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-5"></script>
 </head>
 <body class="public-home activity-page settings-page">
     <div class="public-shell" id="inicio">
@@ -64,6 +64,13 @@
                             </div>
                         </div>
                         <dl id="profile-list" class="settings-profile"></dl>
+                        <div class="profile-document" aria-labelledby="profile-document-title">
+                            <h3 id="profile-document-title">Documento de identidad <span class="label">opcional</span></h3>
+                            <p id="profile-document-state" class="settings-hint" role="status" aria-live="polite"></p>
+                            <input id="profile-document-file" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" hidden>
+                            <button id="profile-document-upload" class="activity-button activity-button--sm" type="button">Subir documento</button>
+                            <p class="settings-hint">Foto o PDF de hasta 5 MB del documento de tu identificación. Es privado: solo lo ve un administrador para verificar tu cuenta.</p>
+                        </div>
                         <form id="profile-form" class="profile-form" novalidate hidden>
                             <label class="field"><span>Alias <span class="label">opcional</span></span><input name="alias" maxlength="150" autocomplete="off" aria-describedby="profile-alias-error"><small id="profile-alias-error" class="field-error" data-profile-error="alias"></small></label>
                             <label class="field"><span>Teléfono</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" required aria-describedby="profile-telefono-error"><small id="profile-telefono-error" class="field-error" data-profile-error="telefono"></small></label>

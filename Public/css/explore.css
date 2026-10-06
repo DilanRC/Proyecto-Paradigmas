@@ -409,6 +409,58 @@
     color:var(--tc-text-soft);
 }
 
+/* Aviso de un solo uso tras crear la cuenta (P2-5): subir el documento. */
+.aviso-documento {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:8px 14px;
+    margin:0 0 16px;
+    padding:12px 14px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:12px;
+    color:var(--tc-text);
+    background:var(--tc-bg-elevated);
+}
+
+.aviso-documento[hidden] {
+    display:none;
+}
+
+.aviso-documento p {
+    flex:1 1 260px;
+    margin:0;
+    color:var(--tc-text-soft);
+}
+
+.aviso-documento strong {
+    color:var(--tc-text);
+}
+
+.aviso-documento a {
+    color:var(--tc-text);
+    font-weight:750;
+    text-decoration:underline;
+    text-underline-offset:3px;
+}
+
+.aviso-documento button {
+    display:grid;
+    width:32px;
+    height:32px;
+    place-items:center;
+    border:0;
+    border-radius:8px;
+    color:var(--tc-text-soft);
+    background:transparent;
+    cursor:pointer;
+}
+
+.aviso-documento button:hover {
+    color:var(--tc-text);
+    background:var(--tc-surface);
+}
+
 .explore-toast {
     position:fixed;
     right:22px;

@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
-    <link rel="stylesheet" href="css/explore.css?v=explore-8">
+    <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-12"></script>
     <script type="module" src="js/me-interesa.js?v=interesa-2"></script>

@@ -19,11 +19,12 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <link rel="stylesheet" href="css/public-product.css?v=product-8">
-    <link rel="stylesheet" href="css/explore.css?v=explore-8">
+    <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-12"></script>
     <script type="module" src="js/explore.js?v=explore-9"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-2"></script>
+    <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
@@ -60,6 +61,11 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
         </header>
 
         <main class="explore-main">
+            <aside class="aviso-documento" data-aviso-documento role="status" aria-live="polite" hidden>
+                <p><strong>Tu cuenta está lista.</strong> Si quieres, verifica tu identidad subiendo tu documento: es privado y solo lo ve un administrador.</p>
+                <a href="ajustes#perfil">Subir documento</a>
+                <button type="button" data-aviso-cerrar aria-label="Cerrar aviso"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+            </aside>
             <section class="explore-heading" aria-labelledby="explore-title">
                 <div>
                     <p class="section-kicker">Explorar</p>

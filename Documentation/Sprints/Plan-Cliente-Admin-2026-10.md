@@ -53,7 +53,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
 | P2-3 | Historial de vacunación | **Lidera** | | Apoya |
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
-| P2-5 | Foto del documento de identidad y verificación | | **Lidera** | Apoya |
+| P2-5 | Foto del documento de identidad y verificación — **SUBIDA HECHA** (falta bucket en Supabase; verificación en P2-6) | | **Lidera** | Apoya |
 | P2-6 | Administrador: catálogos, verificación de identidad y fletes | | **Lidera** | Apoya |
 | P3-1 | Comerciante (solo investigación) | | **Lidera** | |
 | P3-2 | Chat y comentarios en tiempo real (solo planificación) | **Lidera** | | |
@@ -282,20 +282,23 @@ nacimiento, partos, estado del animal y dueño explícito.
 
 Es el punto 1 del issue. **Sin IA generativa.**
 
-- [ ] Recomendación: **opción c (captura manual + revisión de un administrador)**
+**Estado (2026-10-05): subida y estado hechos por Jeremi en la rama `backend`** (detalle en `MEMORIA.md`). Se eligió la opción c. El tipo de documento es el de la identificación (sin columna aparte) y solo se sube en Ajustes → Perfil. Falta que el dueño de Supabase cree el bucket privado `documentos` (SQL en `MEMORIA.md`). Verificar, ver con enlace firmado y borrar a los 90 días queda en P2-6.
+
+- [x] Recomendación: **opción c (captura manual + revisión de un administrador)**
       para empezar.
       - La opción a (OCR con Tesseract) no corre bien en los contenedores de Vercel.
       - La opción b (padrón) no tenemos de dónde importarla de forma legal y estable.
       - La opción c funciona hoy, y el OCR se puede agregar después.
 - [ ] Bucket **privado** en Supabase Storage (`documentos`). Solo el dueño sube y
       solo el administrador lee, con enlaces firmados temporales. Tipos jpg, png,
-      webp y pdf; máximo 5 MB.
-- [ ] Columnas en `tbpersona`: tipo de documento, ruta del archivo y estado de
+      webp y pdf; máximo 5 MB. (Código y SQL listos; falta que el dueño de Supabase lo cree.)
+- [x] Columnas en `tbpersona`: tipo de documento, ruta del archivo y estado de
       verificación (`PENDIENTE`, `VERIFICADO`, `RECHAZADO`). `NULL` para las
       cuentas actuales.
-- [ ] Definir cuánto tiempo se conserva la foto (propuesta: borrarla 90 días
+- [x] Definir cuánto tiempo se conserva la foto (propuesta: borrarla 90 días
       después de verificada).
-- [ ] Frontend: paso opcional al registrarse y en Ajustes → Perfil.
+- [x] Frontend: paso opcional al registrarse y en Ajustes → Perfil. (Solo Ajustes → Perfil, por decisión: al
+      registrarse puede no haber sesión todavía y sin sesión no se puede subir.)
 
 ### P3-1 · Comerciante (solo investigación) · Jeremi
 

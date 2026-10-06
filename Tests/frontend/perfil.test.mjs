@@ -33,3 +33,28 @@ test('la API y el encabezado usan la foto solo si es https', () => {
     assert.ok(ui.includes("url.protocol === 'https:'"));
     assert.ok(read('Application/Controller/MiPerfilController.php').includes("imagenUrl($cuerpo['fotoUrl'], 'fotoUrl')"));
 });
+
+test('P2-5: el documento va al bucket privado y PHP solo recibe su ruta', async () => {
+    const { validarDocumento, extensionDe, BUCKET_DOCUMENTOS, MAXIMO_BYTES } = await import('../../Public/js/shared/storage.js');
+    assert.equal(BUCKET_DOCUMENTOS, 'documentos');
+    assert.equal(validarDocumento({ type: 'application/pdf', size: 1000 }), null);
+    assert.equal(validarDocumento({ type: 'image/jpeg', size: 1000 }), null);
+    assert.match(validarDocumento({ type: 'image/gif', size: 1000 }), /PDF/);
+    assert.match(validarDocumento({ type: 'application/pdf', size: MAXIMO_BYTES + 1 }), /5 MB/);
+    assert.equal(extensionDe('application/pdf'), 'pdf', 'el servidor rechaza una ruta .jpg para un PDF');
+    const storage = read('Public/js/shared/storage.js');
+    // El documento nunca arma una URL pública.
+    assert.doesNotMatch(storage, /object\/public\/\$\{BUCKET_DOCUMENTOS\}/);
+    assert.ok(view.includes('accept="image/jpeg,image/png,image/webp,application/pdf"'));
+    assert.ok(js.includes('documentoRuta: await subirDocumentoIdentidad(archivo)'));
+});
+
+test('P2-5: Ajustes muestra el estado del documento sin exponer la ruta', async () => {
+    const { textoDocumento } = await import('../../Public/js/ajustes.js');
+    assert.match(textoDocumento(null), /Todavía no/);
+    assert.match(textoDocumento({ estado: 'PENDIENTE' }), /revisión/);
+    assert.match(textoDocumento({ estado: 'VERIFICADO' }), /Verificado/);
+    assert.match(textoDocumento({ estado: 'RECHAZADO' }), /más clara/);
+    assert.ok(view.includes('id="profile-document-state"') && view.includes('role="status"'));
+    assert.doesNotMatch(js, /persona\??\.documentoRuta|documento\??\.ruta/, 'la pantalla nunca lee ni muestra la ruta guardada');
+});

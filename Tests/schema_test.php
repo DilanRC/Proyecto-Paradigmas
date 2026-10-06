@@ -50,7 +50,7 @@ $expectedColumns = [
         'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
         'tbpersonanombre', 'tbpersonaalias', 'tbpersonatelefono',
         'tbpersonacorreoelectronico', 'tbpersonaestado',
-        'tbpersonafotourl',
+        'tbpersonafotourl', 'tbpersonadocumentoruta', 'tbpersonadocumentoestado', 'tbpersonadocumentofecha',
     ],
     'tbproductor' => ['tbproductorid', 'tbpersonaid'],
     'tbcomprador' => ['tbcompradorid', 'tbpersonaid', 'tbcompradorestado'],

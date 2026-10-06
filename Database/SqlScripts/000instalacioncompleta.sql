@@ -21,7 +21,10 @@ CREATE TABLE IF NOT EXISTS tbpersona (
     tbpersonatelefono VARCHAR(20) NOT NULL,
     tbpersonacorreoelectronico VARCHAR(150) NOT NULL,
     tbpersonaestado TINYINT(1) NOT NULL,
-    tbpersonafotourl VARCHAR(500) NULL
+    tbpersonafotourl VARCHAR(500) NULL,
+    tbpersonadocumentoruta VARCHAR(255) NULL,
+    tbpersonadocumentoestado VARCHAR(20) NULL,
+    tbpersonadocumentofecha DATETIME NULL
 ) ENGINE=InnoDB;
 
 -- Política técnica de acceso administrativo. No es un rol de negocio ni se

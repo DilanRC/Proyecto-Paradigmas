@@ -16,6 +16,7 @@ import { safeNext } from './shared/next.js';
 import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js';
 import { aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './shared/telefono.js?v=mascaras-1';
+import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 
 const DRAFT_KEY = REGISTRATION_DRAFT_KEY;
 const PROFILE_KEY = 'tindercows:profile';
@@ -752,6 +753,8 @@ async function initialize() {
             // auxiliar; si su lectura falla, no debemos dejar a la persona
             // atrapada en el botón ni hacerle repetir una operación exitosa.
             sessionStorage.removeItem(DRAFT_KEY);
+            // Cuenta nueva: Explorar la invita una vez a subir su documento (P2-5).
+            if (!extending) marcarAvisoDocumento();
             // Cuenta nueva: directo a Explorar. Ampliación: de vuelta al panel.
             const fallback = extending ? 'mi-actividad?actualizado=1' : 'explorar';
             setStatus(status, extending

@@ -29,7 +29,8 @@ try {
     $buscar->execute(['identificacion' => $persona['identificacionNumero']]);
     $fila = $buscar->fetch();
     $personaId = (int) $fila['tbpersonaid'];
-    $actor = ActorContext::usuarioVerificado($personaId, 'test-perfil-' . test_token('subject'), $fila['tbpersonacorreoelectronico'], null);
+    $sujeto = 'test-perfil-' . test_token('subject');
+    $actor = ActorContext::usuarioVerificado($personaId, $sujeto, $fila['tbpersonacorreoelectronico'], null);
     $perfil = new MiPerfilController($db, $actor, test_token('perfil'));
 
     test_same(401, (new MiPerfilController($db, ActorContext::noAutenticado()))->procesar('PATCH', ['alias' => 'x'])['status'],
@@ -66,6 +67,32 @@ try {
     $quitada = $perfil->procesar('PATCH', ['fotoUrl' => null, 'alias' => '']);
     test_same(null, $quitada['body']['data']['persona']['fotoUrl'], 'Quitar la foto la deja en NULL');
     test_same(null, $quitada['body']['data']['persona']['alias'], 'Un alias vacío queda en NULL');
+
+    // P2-5: documento de identidad. Solo una ruta de la carpeta propia del bucket; queda PENDIENTE.
+    test_same(null, $quitada['body']['data']['persona']['documento'], 'Sin documento subido, documento es null');
+    $uuid = '0a1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d';
+    foreach ([
+        'otro-usuario/' . $uuid . '.jpg' => 'carpeta ajena',
+        $sujeto . '/' . $uuid . '.exe' => 'extensión no permitida',
+        $sujeto . '/../otro/' . $uuid . '.jpg' => 'ruta con ..',
+        'https://example.com/' . $uuid . '.jpg' => 'URL en lugar de ruta',
+    ] as $ruta => $motivo) {
+        $rechazo = $perfil->procesar('PATCH', ['documentoRuta' => $ruta]);
+        test_same(422, $rechazo['status'], "documentoRuta rechazada: {$motivo}");
+        test_assert(isset($rechazo['body']['errors']['documentoRuta']), "El error va en documentoRuta: {$motivo}");
+    }
+    test_same(422, $perfil->procesar('PATCH', ['documentoRuta' => null])['status'], 'documentoRuta null no se acepta');
+    $documento = $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.pdf']);
+    test_same(200, $documento['status'], 'La persona registra su documento');
+    test_same('PENDIENTE', $documento['body']['data']['persona']['documento']['estado'], 'Un documento nuevo queda PENDIENTE');
+    test_assert(!str_contains(json_encode($documento['body']), $uuid), 'La respuesta nunca expone la ruta del archivo privado');
+    $db->prepare("UPDATE tbpersona SET tbpersonadocumentoestado = 'VERIFICADO' WHERE tbpersonaid = :id")->execute(['id' => $personaId]);
+    $reemplazo = $perfil->procesar('PATCH', ['documentoRuta' => $sujeto . '/' . $uuid . '.jpg']);
+    test_same('PENDIENTE', $reemplazo['body']['data']['persona']['documento']['estado'], 'Un documento nuevo vuelve a revisión aunque el anterior estuviera verificado');
+    test_same('PENDIENTE', $perfil->procesar('PATCH', ['alias' => 'Chepe'])['body']['data']['persona']['documento']['estado'], 'Editar otro dato no toca el documento');
+    $guardado = $db->prepare('SELECT tbpersonadocumentoruta FROM tbpersona WHERE tbpersonaid = :id');
+    $guardado->execute(['id' => $personaId]);
+    test_same($sujeto . '/' . $uuid . '.jpg', $guardado->fetchColumn(), 'Se guarda la ruta dentro del bucket');
 
     $bitacora = $db->prepare('SELECT tbbitacoraentidad, tbbitacoraorigen, tbbitacoradatosnuevos FROM tbbitacora
         WHERE tbbitacoraregistroidentificacionnumero = :r ORDER BY tbbitacoraid DESC LIMIT 1');

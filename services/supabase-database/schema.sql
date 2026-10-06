@@ -7,7 +7,10 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonatelefono VARCHAR(20) NOT NULL,
     tbpersonacorreoelectronico VARCHAR(150) NOT NULL,
     tbpersonaestado SMALLINT NOT NULL,
-    tbpersonafotourl VARCHAR(500) NULL
+    tbpersonafotourl VARCHAR(500) NULL,
+    tbpersonadocumentoruta VARCHAR(255) NULL,
+    tbpersonadocumentoestado VARCHAR(20) NULL,
+    tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.tbadministrador (

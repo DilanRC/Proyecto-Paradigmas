@@ -7,7 +7,7 @@ import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { createToast } from './shared/toast.js';
-import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
+import { subirDocumentoIdentidad, subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-1';
 import { safeImageUrl } from './explore.js?v=foto-3';
 
 const ACTIVITY_API = 'api/v1/actividad';
@@ -120,6 +120,42 @@ async function removePhoto() {
     }
 }
 
+/** Texto del estado del documento de identidad (P2-5). Puro. */
+export function textoDocumento(documento) {
+    switch (documento?.estado) {
+        case 'PENDIENTE': return 'En revisión: un administrador lo va a verificar.';
+        case 'VERIFICADO': return 'Verificado.';
+        case 'RECHAZADO': return 'No se pudo verificar. Sube una foto más clara de tu documento.';
+        default: return 'Todavía no has subido tu documento.';
+    }
+}
+
+function renderDocumento(documento) {
+    document.querySelector('#profile-document-state').textContent = textoDocumento(documento);
+    document.querySelector('#profile-document-upload').textContent = documento ? 'Reemplazar documento' : 'Subir documento';
+}
+
+async function changeDocument(event) {
+    const archivo = event.target.files?.[0];
+    event.target.value = '';
+    const estado = document.querySelector('#profile-document-state');
+    const problema = archivo ? validarDocumento(archivo) : null;
+    if (!archivo || problema) { if (problema) estado.textContent = problema; return; }
+    const boton = document.querySelector('#profile-document-upload');
+    boton.disabled = true;
+    estado.textContent = 'Subiendo documento…';
+    try {
+        // El archivo va al bucket privado; PHP solo guarda su ruta y lo deja PENDIENTE.
+        await patchPerfil({ documentoRuta: await subirDocumentoIdentidad(archivo) });
+        toast?.success('Documento enviado a revisión.');
+    } catch (error) {
+        estado.textContent = error?.errors?.documentoRuta || error?.message || 'No pudimos subir el documento.';
+        toast?.error(estado.textContent);
+    } finally {
+        boton.disabled = false;
+    }
+}
+
 function setProfileErrors(errors = {}) {
     document.querySelectorAll('[data-profile-error]').forEach((node) => { node.textContent = ''; });
     document.querySelectorAll('#profile-form [aria-invalid="true"]').forEach((node) => node.removeAttribute('aria-invalid'));
@@ -172,10 +208,13 @@ function initializeProfileUi() {
     document.querySelector('#profile-photo-change')?.addEventListener('click', () => document.querySelector('#profile-photo-file').click());
     document.querySelector('#profile-photo-file')?.addEventListener('change', changePhoto);
     document.querySelector('#profile-photo-remove')?.addEventListener('click', removePhoto);
+    document.querySelector('#profile-document-upload')?.addEventListener('click', () => document.querySelector('#profile-document-file').click());
+    document.querySelector('#profile-document-file')?.addEventListener('change', changeDocument);
 }
 
 function renderProfile(persona = {}) {
     renderAvatar(persona);
+    renderDocumento(persona.documento);
     const target = document.querySelector('#profile-list');
     target.innerHTML = `
         <div><dt>Nombre</dt><dd>${escapeHtml(persona.nombre || 'Sin completar')}</dd></div>
