@@ -6,6 +6,7 @@ require __DIR__ . '/bootstrap.php';
 require_once dirname(__DIR__) . '/Application/Service/PublicacionCercaniaService.php';
 require_once dirname(__DIR__) . '/Application/Model/Vehiculo.php';
 require_once dirname(__DIR__) . '/Application/Model/TransportistaOferta.php';
+require_once dirname(__DIR__) . '/Application/Model/CompraSolicitud.php';
 require_once dirname(__DIR__) . '/Application/Controller/MiVehiculosController.php';
 require_once dirname(__DIR__) . '/Application/Controller/MiOfertasController.php';
 require_once dirname(__DIR__) . '/Application/Controller/FletesController.php';

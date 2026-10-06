@@ -189,6 +189,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   (`distancia <= radioKm`), de la más cercana a la más lejana, con `distanciaKm`. Solo de transportistas, personas y **vehículos activos**.
   La vista de cliente **no trae placa, VIN, señas ni coordenadas**: solo modelo y foto del vehículo y provincia/cantón/distrito/pueblo.
   La distancia se calcula en PHP con `PublicacionCercaniaService::calcularDistanciaKm` (ver el `ponytail:` de `listarCercanas` si crece).
+- `api/v1/fletes` también acepta **`publicacionId`** en vez de `latitud`/`longitud`: el servidor usa el punto de la finca del animal (sus coordenadas no se exponen) y devuelve los fletes que la cubren, con `distanciaKm` desde la finca; 422 si la finca no tiene punto en el mapa. Es lo que usará "Comprar con flete" y "Ver fletes cercanos".
 - `api/v1/fletes` **no devuelve las ofertas de quien consulta** (viven en "Mis ofertas"), igual que Explorar con las publicaciones propias.
 - **Pantalla `/fletes`** (`fletes.js`, `fletes-1`): "Fletes disponibles" (lista las ofertas cercanas a la ubicación del navegador, con filtro de
   capacidad mínima; sin ubicación pide "Usar mi ubicación") y, con Transportista activo, "Mis ofertas" (Publicar, Editar, Pausar/Reactivar).
@@ -199,6 +200,37 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   **Pendiente de limpieza:** `mi-actividad.js` (`openFarmModal`) todavía tiene su propia copia de esa lógica; migrarla a `montarEditorDireccion`
   exige ajustar `mi_actividad.test.mjs`, que busca esas cadenas en `mi-actividad.js`.
 - Hecho: esquema, API y pantalla. Sigue P1-3 (fletes cerca de una publicación y solicitud de compra).
+
+### Solicitud de compra (P1-3, en construcción)
+- Decisiones (DEC-COMPRA-001, esquema de **37 tablas**): comprar es una **solicitud que el vendedor acepta o rechaza** (no hay pagos en línea).
+  El **flete lo responde aparte el transportista**: la venta no depende de él (si lo rechaza, el comprador lo ve y puede pedir otro).
+  El comprador puede proponer un método de pago, opcional.
+- Tabla nueva `tbcomprasolicitud`: publicación, comprador (`tbcompradorid`), oferta de flete opcional, método de pago opcional, precio (copia del
+  de la publicación; nulo si era "a convenir" y el vendedor lo fija al aceptar), mensaje, estado `PENDIENTE|ACEPTADA|RECHAZADA|CANCELADA`,
+  estado del flete (`NULL` si no pidió flete) y fechas/motivo de las respuestas. Migración `018comprasolicitud.sql`.
+- **`tbcompra` y `tbventa` se adaptaron (aditivo):** columna nueva `tbcompradorid`, `tbcomprasolicitudid` (solo `tbventa`), y
+  `tbproductorcompradorid` y `tbpagometodoid` ahora aceptan `NULL`. Antes exigían un Productor comprador y un pago, que un Comprador normal no
+  tiene. Las filas existentes no cambian. Al aceptar una solicitud se registran ambas con `tbcompradorid`.
+- Comprobado contra Postgres 16: `migrate.php` actualiza una base con el esquema viejo (36 tablas, columnas NOT NULL) y se puede correr dos veces.
+- **API `api/v1/solicitudes-compra`** (sesión; `SolicitudesCompraController`, modelo `CompraSolicitud`):
+  - `GET` devuelve `{ hechas, recibidas, fletes }`: lo que la persona pidió como Comprador, lo que recibe como Vendedor y los fletes que le piden
+    como Transportista. El transportista **solo ve el flete cuando el vendedor ya aceptó la venta**.
+  - `POST { publicacionId, ofertaId?, pagoMetodoId?, mensaje? }` (201): exige Comprador activo (409), publicación ACTIVA (409), que no sea propia
+    (409) y que no haya otra pendiente suya para esa publicación (409). Copia el precio de la publicación (nulo si era "a convenir"). El flete
+    debe estar disponible (`TransportistaOferta::buscarDisponible`), no ser del propio comprador y, si la finca y la oferta tienen punto, cubrirla
+    (422 en `errors.ofertaId`).
+  - `PATCH { solicitudId, accion, motivo?, precio? }`, `accion` = `CANCELAR` (comprador, solo pendiente), `ACEPTAR` o `RECHAZAR` (vendedor, solo
+    pendiente), `ACEPTAR_FLETE` o `RECHAZAR_FLETE` (transportista, solo con la venta aceptada y el flete pendiente). Una solicitud ajena responde 404.
+  - **Aceptar** (todo en una transacción): registra `tbcompra` y `tbventa` con `tbcompradorid` y `tbcomprasolicitudid` (sin Productor comprador, pago
+    el que propuso el comprador o `NULL`, snapshots de raza/edad/peso/propósito), pasa la publicación a `VENDIDO` y **rechaza solas las demás
+    pendientes** de esa publicación. Si la publicación era "a convenir", el vendedor **debe mandar `precio`** (422 si no); si ya tenía precio, se
+    ignora el que mande.
+  - **Teléfonos:** se comparten solo cuando hay trato (venta aceptada entre comprador y vendedor; flete aceptado entre los tres). Antes, `telefono: null`.
+  - Bitácora entidad `COMPRA_SOLICITUD`, origen `API_SOLICITUDES_COMPRA` (`CREAR`, `CANCELAR`, `ACEPTAR`, `RECHAZAR`, `ACEPTAR_FLETE`, `RECHAZAR_FLETE`).
+- `AnimalComercial::registrarCompra` y `registrarVenta` aceptan ahora `?int $productorCompradorId` y, en `$datos`, `compradorId`, `solicitudId` y un
+  `pagoMetodoId` opcional (los llamadores anteriores siguen igual).
+- Hecho: esquema y API. Falta: botones "Comprar animal" y "Comprar con flete" en la publicación, "Ver fletes cercanos" en Me interesa y las bandejas
+  (Mis solicitudes y Solicitudes recibidas) en Mi panel.
 
 ### Documento de identidad (P2-5)
 - La persona sube la foto o el PDF de su documento en Ajustes → Perfil (opcional). El navegador lo sube directo al
@@ -404,6 +436,19 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · jefersonbustamante · P1-3 paso 2: API de solicitudes de compra
+- `api/v1/solicitudes-compra` (listar, solicitar, cancelar, aceptar, rechazar y responder el flete) con las reglas de "Solicitud de compra (P1-3)". Sin columnas nuevas (el esquema es del paso 1).
+- Archivos: nuevos `Application/Model/CompraSolicitud.php`, `Application/Controller/SolicitudesCompraController.php`, `Public/api/solicitudes-compra.php`; `TransportistaOferta::buscarDisponible`; `AnimalComercial` (compra y venta con Comprador); ruta en `Public/.htaccess`; `RutasFrontend.md` y `RutasPublicas.md`.
+- Pruebas: nueva `Tests/solicitudes_compra_test.php` (validación, anti-IDOR, cancelar, rechazar, aceptar con venta y compra, precio a convenir con rollback, flete aparte, contactos, bitácora); pasan también `api_requires_test`, `sql_alias_minuscula_test`, `backend_db_ready_test`, `instalacion_limpia_test`, `api_publicaciones_test`, `mi_ofertas_test` y `mi_vehiculos_test`.
+- Cuidado: los transportistas y vendedores registrados por `RegistroPublicoController` **también son Compradores** (alta inicial); un vendedor creado con `test_create_completo` no lo es. Los alias SQL de `CompraSolicitud` van en minúscula (Cuidados #3).
+
+### 2026-10-06 · jefersonbustamante · P1-3 paso 1: tabla `tbcomprasolicitud` y adaptación de compra/venta (esquema)
+- Tabla nueva en los 4 lugares (`000instalacioncompleta.sql`, `018comprasolicitud.sql`, `schema.sql` con RLS, `migrate.php`) y cambios en `tbcompra` y `tbventa` (ver "Solicitud de compra (P1-3)"); diccionario, DER, `Decisiones.md` (DEC-COMPRA-001) y PDF.
+- El esquema pasa de 36 a **37 tablas**: se actualizaron los mismos README, docs y pruebas que en el cambio anterior.
+- `migrate.php`: `EXPECTED_COLUMNS` de `tbcompra`, `tbventa` y la tabla nueva, y `ensureCurrentColumns()` con `ADD COLUMN IF NOT EXISTS` y `DROP NOT NULL`.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/018comprasolicitud.sql` (y la 017 si falta).
+- Limpieza: `mi_ofertas_test` dejó filas huérfanas de `tbcomprador` en una corrida fallida; `instalacion_limpia_test` las detecta ("Ningún tbcomprador apunta a una persona inexistente").
 
 ### 2026-10-06 · jefersonbustamante · P1-2 paso 3: pantalla de Fletes
 - `/fletes` pasa de explicación a funcional: fletes disponibles cerca de ti y Mis ofertas (ver "Oferta de flete (P1-2)"). `api/v1/fletes` excluye las ofertas propias.

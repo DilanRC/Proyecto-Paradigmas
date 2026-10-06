@@ -3,8 +3,9 @@
 declare(strict_types=1);
 
 use Application\Auth\SupabaseActorResolver;
-use Application\Controller\FletesController;
+use Application\Controller\SolicitudesCompraController;
 use Configuration\Database;
+use function Configuration\readJsonBody;
 use function Configuration\sendJsonResponse;
 
 $raiz = dirname(__DIR__, 2);
@@ -15,28 +16,43 @@ require_once $raiz . '/Application/Auth/ActorContext.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 require_once $raiz . '/Application/Service/AuthGuard.php';
 require_once $raiz . '/Application/Service/PublicacionCercaniaService.php';
-foreach (['NamedLock', 'Persona', 'Direccion', 'TransportistaOferta', 'CompraSolicitud'] as $modelo) {
+foreach ([
+    'NamedLock', 'Persona', 'Comprador', 'ProductorFinca', 'Productor', 'Direccion', 'Vehiculo', 'TransportistaVehiculo',
+    'Transportista', 'TransportistaOferta', 'AnimalComercial', 'CompraSolicitud', 'PagoMetodo', 'Bitacora',
+] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
-require_once $raiz . '/Application/Controller/FletesController.php';
+require_once $raiz . '/Application/Controller/SolicitudesCompraController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+$permitidos = ['GET', 'POST', 'PATCH'];
 if ($metodo === 'OPTIONS') {
-    header('Allow: GET, OPTIONS');
+    header('Allow: GET, POST, PATCH, OPTIONS');
     http_response_code(204);
     exit;
 }
-if ($metodo !== 'GET') {
-    header('Allow: GET, OPTIONS');
+if (!in_array($metodo, $permitidos, true)) {
+    header('Allow: GET, POST, PATCH, OPTIONS');
     sendJsonResponse(['success' => false, 'message' => 'Método no permitido.', 'data' => null], 405);
+}
+$conCuerpo = $metodo !== 'GET';
+if ($conCuerpo && strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0])) !== 'application/json') {
+    sendJsonResponse(['success' => false, 'message' => 'El cuerpo debe usar Content-Type: application/json.', 'data' => null], 415);
 }
 
 try {
+    $cuerpo = $conCuerpo ? readJsonBody() : [];
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
-    $respuesta = (new FletesController($conexion, $actor))->procesar($metodo, $_GET);
+    $respuesta = (new SolicitudesCompraController(
+        $conexion,
+        $actor,
+        is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
+    ))->procesar($metodo, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
+} catch (UnexpectedValueException $excepcion) {
+    sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);
 } catch (Application\HttpException $excepcion) {
     sendJsonResponse([
         'success' => false,

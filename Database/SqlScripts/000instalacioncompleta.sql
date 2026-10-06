@@ -257,13 +257,14 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacionestadoperiodo (
 CREATE TABLE IF NOT EXISTS tbcompra (
     tbcompraid INT NOT NULL,
     tbanimalid INT NOT NULL,
-    tbproductorcompradorid INT NOT NULL,
+    tbproductorcompradorid INT NULL,
+    tbcompradorid INT NULL,
     tbfincaorigenid INT NULL,
     tbcomprafecha DATE NOT NULL,
     tbcomprahora TIME NULL,
     tbcompralugar VARCHAR(250) NULL,
     tbcompraprecio DECIMAL(12,2) NOT NULL,
-    tbpagometodoid INT NOT NULL,
+    tbpagometodoid INT NULL,
     tbcompraorigen VARCHAR(100) NOT NULL
 ) ENGINE=InnoDB;
 
@@ -271,16 +272,18 @@ CREATE TABLE IF NOT EXISTS tbventa (
     tbventaid INT NOT NULL,
     tbanimalid INT NOT NULL,
     tbproductorvendedorid INT NOT NULL,
-    tbproductorcompradorid INT NOT NULL,
+    tbproductorcompradorid INT NULL,
+    tbcompradorid INT NULL,
     tbfincaid INT NULL,
     tbcompraid INT NULL,
+    tbcomprasolicitudid INT NULL,
     tbventafecha DATE NOT NULL,
     tbventahora TIME NULL,
     tbventalugar VARCHAR(250) NULL,
     tbventadireccionid INT NULL,
     tbventaproposito VARCHAR(80) NULL,
     tbventaprecio DECIMAL(12,2) NOT NULL,
-    tbpagometodoid INT NOT NULL,
+    tbpagometodoid INT NULL,
     tbventaedadmeses INT NULL,
     tbventapeso DECIMAL(10,2) NULL,
     tbventarazasnapshot VARCHAR(100) NULL,
@@ -406,6 +409,27 @@ CREATE TABLE IF NOT EXISTS tbtransportistaoferta (
     tbtransportistaofertadescripcion VARCHAR(500) NULL,
     tbtransportistaofertaestado VARCHAR(20) NOT NULL,
     tbtransportistaofertafecha DATETIME NOT NULL
+) ENGINE=InnoDB;
+
+-- Solicitud de compra (P1-3, DEC-COMPRA-001): el comprador pide un animal, con
+-- flete opcional (una oferta de tbtransportistaoferta), y el vendedor la acepta
+-- o la rechaza. Al aceptar se registran tbcompra y tbventa. Estado: PENDIENTE,
+-- ACEPTADA, RECHAZADA o CANCELADA. El flete lo responde aparte el transportista
+-- (PENDIENTE, ACEPTADA, RECHAZADA o CANCELADA; NULL si no pidió flete).
+CREATE TABLE IF NOT EXISTS tbcomprasolicitud (
+    tbcomprasolicitudid INT NOT NULL,
+    tbanimalpublicacionid INT NOT NULL,
+    tbcompradorid INT NOT NULL,
+    tbtransportistaofertaid INT NULL,
+    tbpagometodoid INT NULL,
+    tbcomprasolicitudprecio DECIMAL(12,2) NULL,
+    tbcomprasolicitudmensaje VARCHAR(500) NULL,
+    tbcomprasolicitudestado VARCHAR(20) NOT NULL,
+    tbcomprasolicitudfleteestado VARCHAR(20) NULL,
+    tbcomprasolicitudfecha DATETIME NOT NULL,
+    tbcomprasolicitudrespuestafecha DATETIME NULL,
+    tbcomprasolicitudrespuestamotivo VARCHAR(250) NULL,
+    tbcomprasolicitudfleterespuestafecha DATETIME NULL
 ) ENGINE=InnoDB;
 
 -- fin del script de instalación completa

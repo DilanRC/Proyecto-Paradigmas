@@ -102,6 +102,38 @@ final class TransportistaOferta
         return $fila === null ? null : $this->mapearPropia($fila);
     }
 
+    /**
+     * Oferta que hoy se puede pedir: ACTIVA, de un transportista y persona activos y con vehículo activo.
+     * @return array{ofertaId:int,transportistaId:int,personaId:int,radioKm:int,latitud:?float,longitud:?float}|null
+     */
+    public function buscarDisponible(int $ofertaId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT o.tbtransportistaofertaid AS ofertaid, o.tbtransportistaid AS transportistaid,
+                    t.tbpersonaid AS personaid, o.tbtransportistaofertaradiokm AS radiokm,
+                    d.tbdireccionlatitud AS latitud, d.tbdireccionlongitud AS longitud
+             FROM tbtransportistaoferta o
+             INNER JOIN tbtransportista t ON t.tbtransportistaid = o.tbtransportistaid
+             INNER JOIN tbpersona pe ON pe.tbpersonaid = t.tbpersonaid
+             INNER JOIN tbvehiculo v ON v.tbvehiculoid = o.tbvehiculoid
+             INNER JOIN tbdireccion d ON d.tbdireccionid = o.tbdireccionid
+             WHERE o.tbtransportistaofertaid = :ofertaId AND o.tbtransportistaofertaestado = :estado
+               AND t.tbtransportistaestado = 1 AND pe.tbpersonaestado = 1 AND v.tbvehiculoestado = 1'
+        );
+        $sentencia->execute(['ofertaId' => $ofertaId, 'estado' => 'ACTIVA']);
+        $fila = $sentencia->fetch();
+        if ($fila === false) return null;
+
+        return [
+            'ofertaId' => (int) $fila['ofertaid'],
+            'transportistaId' => (int) $fila['transportistaid'],
+            'personaId' => (int) $fila['personaid'],
+            'radioKm' => (int) $fila['radiokm'],
+            'latitud' => $fila['latitud'] === null ? null : (float) $fila['latitud'],
+            'longitud' => $fila['longitud'] === null ? null : (float) $fila['longitud'],
+        ];
+    }
+
     public function listarPropias(int $transportistaId): array
     {
         $sentencia = $this->conexion->prepare(

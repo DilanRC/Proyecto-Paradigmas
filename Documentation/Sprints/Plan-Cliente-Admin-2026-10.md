@@ -168,13 +168,15 @@ Tareas:
 
 ### P1-3 · Fletes cerca de una publicación y solicitud de compra · Carlos (API) + Jeferson (pantalla), con apoyo de Jeremi
 
+**Estado (2026-10-06): en curso por Jeferson.** Decidido: el vendedor acepta o rechaza; el transportista responde su flete por separado; `tbcompra` y `tbventa` se adaptaron para un Comprador normal y pago opcional (DEC-COMPRA-001). Esquema y API hechos (pasos 1 y 2); faltan las pantallas.
+
 Desde una publicación marcada con "Me interesa", el cliente puede ver los fletes
 cercanos a **la finca del animal** y decidir si compra solo el animal o el
 animal con flete.
 
-- [ ] `GET api/v1/fletes?publicacionId=`: ofertas cercanas a las coordenadas de
+- [x] `GET api/v1/fletes?publicacionId=`: ofertas cercanas a las coordenadas de
       la finca de la publicación (`tbfincadireccion` → `tbdireccion`).
-- [ ] **Solicitud de compra.** No hay pagos en línea, así que es una solicitud
+- [x] **Solicitud de compra** (API hecha: `api/v1/solicitudes-compra`). No hay pagos en línea, así que es una solicitud
       que el vendedor acepta o rechaza. Propuesta: tabla `tbcomprasolicitud`
       (publicación, comprador, oferta de flete opcional, estado `PENDIENTE` /
       `ACEPTADA` / `RECHAZADA` / `CANCELADA`, fecha y mensaje).

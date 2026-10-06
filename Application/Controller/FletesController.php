@@ -6,6 +6,7 @@ namespace Application\Controller;
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Model\CompraSolicitud;
 use Application\Model\Direccion;
 use Application\Model\TransportistaOferta;
 use PDO;
@@ -14,10 +15,12 @@ use PDO;
 final class FletesController
 {
     private TransportistaOferta $ofertas;
+    private CompraSolicitud $solicitudes;
 
     public function __construct(PDO $conexion, private readonly ?ActorContext $actor = null)
     {
         $this->ofertas = new TransportistaOferta($conexion, new Direccion($conexion));
+        $this->solicitudes = new CompraSolicitud($conexion);
     }
 
     public function procesar(string $metodo, array $consulta = []): array
@@ -33,8 +36,19 @@ final class FletesController
     private function consultar(array $consulta): array
     {
         $errores = [];
-        $latitud = $this->coordenada($consulta['latitud'] ?? null, 'latitud', 90, $errores);
-        $longitud = $this->coordenada($consulta['longitud'] ?? null, 'longitud', 180, $errores);
+        // Con publicacionId el punto es el de la finca del animal (sus coordenadas no se exponen al navegador).
+        if (($consulta['publicacionId'] ?? '') !== '') {
+            $publicacionId = $this->entero($consulta['publicacionId'], 'publicacionId', 1, PHP_INT_MAX, $errores);
+            $punto = $errores === [] ? $this->solicitudes->puntoDeFinca($publicacionId) : null;
+            if ($errores === [] && $punto === null) {
+                $errores['publicacionId'] = 'La finca de esta publicación no tiene su ubicación en el mapa.';
+            }
+            $latitud = $punto['latitud'] ?? 0.0;
+            $longitud = $punto['longitud'] ?? 0.0;
+        } else {
+            $latitud = $this->coordenada($consulta['latitud'] ?? null, 'latitud', 90, $errores);
+            $longitud = $this->coordenada($consulta['longitud'] ?? null, 'longitud', 180, $errores);
+        }
         $capacidad = $this->entero($consulta['capacidadMinima'] ?? 1, 'capacidadMinima', 1, 200, $errores);
         $pagina = $this->entero($consulta['pagina'] ?? 1, 'pagina', 1, PHP_INT_MAX, $errores);
         $tamano = $this->entero($consulta['tamanoPagina'] ?? 25, 'tamanoPagina', 1, 50, $errores);

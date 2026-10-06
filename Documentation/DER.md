@@ -191,6 +191,7 @@ erDiagram
         INT tbcompraid
         INT tbanimalid
         INT tbproductorcompradorid
+        INT tbcompradorid
         INT tbfincaorigenid
         DATE tbcomprafecha
         TIME tbcomprahora
@@ -205,8 +206,10 @@ erDiagram
         INT tbanimalid
         INT tbproductorvendedorid
         INT tbproductorcompradorid
+        INT tbcompradorid
         INT tbfincaid
         INT tbcompraid
+        INT tbcomprasolicitudid
         DATE tbventafecha
         TIME tbventahora
         VARCHAR tbventalugar
@@ -324,6 +327,22 @@ erDiagram
         DATETIME tbtransportistaofertafecha
     }
 
+    tbcomprasolicitud {
+        INT tbcomprasolicitudid
+        INT tbanimalpublicacionid
+        INT tbcompradorid
+        INT tbtransportistaofertaid
+        INT tbpagometodoid
+        DECIMAL tbcomprasolicitudprecio
+        VARCHAR tbcomprasolicitudmensaje
+        VARCHAR tbcomprasolicitudestado
+        VARCHAR tbcomprasolicitudfleteestado
+        DATETIME tbcomprasolicitudfecha
+        DATETIME tbcomprasolicitudrespuestafecha
+        VARCHAR tbcomprasolicitudrespuestamotivo
+        DATETIME tbcomprasolicitudfleterespuestafecha
+    }
+
     tbbitacora {
         BIGINT tbbitacoraid
         VARCHAR tbbitacoraentidad
@@ -370,6 +389,11 @@ erDiagram
     tbtransportista ||--o{ tbtransportistaoferta : "ofertas"
     tbvehiculo ||--o{ tbtransportistaoferta : "vehiculo"
     tbdireccion ||--o{ tbtransportistaoferta : "zona base"
+    tbanimalpublicacion ||--o{ tbcomprasolicitud : "solicitudes"
+    tbcomprador ||--o{ tbcomprasolicitud : "solicita"
+    tbtransportistaoferta ||--o{ tbcomprasolicitud : "flete pedido"
+    tbcomprador ||--o{ tbcompra : "compras"
+    tbcomprasolicitud ||--o{ tbventa : "origen"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
 ```
 

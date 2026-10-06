@@ -196,13 +196,14 @@ CREATE TABLE IF NOT EXISTS public.tbanimalpublicacion (
 CREATE TABLE IF NOT EXISTS public.tbcompra (
     tbcompraid INTEGER NOT NULL,
     tbanimalid INTEGER NOT NULL,
-    tbproductorcompradorid INTEGER NOT NULL,
+    tbproductorcompradorid INTEGER NULL,
+    tbcompradorid INTEGER NULL,
     tbfincaorigenid INTEGER NULL,
     tbcomprafecha DATE NOT NULL,
     tbcomprahora TIME WITHOUT TIME ZONE NULL,
     tbcompralugar VARCHAR(250) NULL,
     tbcompraprecio NUMERIC(12,2) NOT NULL,
-    tbpagometodoid INTEGER NOT NULL,
+    tbpagometodoid INTEGER NULL,
     tbcompraorigen VARCHAR(100) NOT NULL
 );
 
@@ -210,16 +211,18 @@ CREATE TABLE IF NOT EXISTS public.tbventa (
     tbventaid INTEGER NOT NULL,
     tbanimalid INTEGER NOT NULL,
     tbproductorvendedorid INTEGER NOT NULL,
-    tbproductorcompradorid INTEGER NOT NULL,
+    tbproductorcompradorid INTEGER NULL,
+    tbcompradorid INTEGER NULL,
     tbfincaid INTEGER NULL,
     tbcompraid INTEGER NULL,
+    tbcomprasolicitudid INTEGER NULL,
     tbventafecha DATE NOT NULL,
     tbventahora TIME WITHOUT TIME ZONE NULL,
     tbventalugar VARCHAR(250) NULL,
     tbventadireccionid INTEGER NULL,
     tbventaproposito VARCHAR(80) NULL,
     tbventaprecio NUMERIC(12,2) NOT NULL,
-    tbpagometodoid INTEGER NOT NULL,
+    tbpagometodoid INTEGER NULL,
     tbventaedadmeses INTEGER NULL,
     tbventapeso NUMERIC(10,2) NULL,
     tbventarazasnapshot VARCHAR(100) NULL,
@@ -319,6 +322,22 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaoferta (
     tbtransportistaofertafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS public.tbcomprasolicitud (
+    tbcomprasolicitudid INTEGER NOT NULL,
+    tbanimalpublicacionid INTEGER NOT NULL,
+    tbcompradorid INTEGER NOT NULL,
+    tbtransportistaofertaid INTEGER NULL,
+    tbpagometodoid INTEGER NULL,
+    tbcomprasolicitudprecio NUMERIC(12,2) NULL,
+    tbcomprasolicitudmensaje VARCHAR(500) NULL,
+    tbcomprasolicitudestado VARCHAR(20) NOT NULL,
+    tbcomprasolicitudfleteestado VARCHAR(20) NULL,
+    tbcomprasolicitudfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbcomprasolicitudrespuestafecha TIMESTAMP WITHOUT TIME ZONE NULL,
+    tbcomprasolicitudrespuestamotivo VARCHAR(250) NULL,
+    tbcomprasolicitudfleterespuestafecha TIMESTAMP WITHOUT TIME ZONE NULL
+);
+
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionestadoperiodo (
     tbanimalpublicacionestadoperiodoid INTEGER NOT NULL,
     tbanimalpublicacionid INTEGER NOT NULL,
@@ -386,3 +405,4 @@ ALTER TABLE public.tbcarritoestadoperiodo ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistahorario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbregistroconsulta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbtransportistaoferta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbcomprasolicitud ENABLE ROW LEVEL SECURITY;

@@ -1144,6 +1144,21 @@ con viajes ensuciaría el histórico. Tampoco se usa `tbtransportistahorario`: l
 disponibilidad va como texto libre en la descripción y se ampliará si el cliente
 lo pide. El precio es un valor base y no se calcula por kilómetro.
 
+## DEC-COMPRA-001 - Solicitud de compra y compradores normales
+
+No hay pagos en línea: comprar un animal es una solicitud que el vendedor acepta
+o rechaza. El esquema pasa a 37 tablas con `tbcomprasolicitud` (publicación,
+comprador, flete opcional, método de pago opcional, estado y respuesta). El
+flete lo responde aparte el transportista (`tbcomprasolicitudfleteestado`); la
+venta no depende de él.
+
+Al aceptar se registran `tbcompra` y `tbventa`, que hasta ahora exigían un
+Productor comprador y un método de pago. Se adaptaron de forma aditiva: nueva
+columna `tbcompradorid` (y `tbcomprasolicitudid` en `tbventa`), y
+`tbproductorcompradorid` y `tbpagometodoid` aceptan `NULL`. Las filas existentes
+no cambian. Se descartó reemplazar `tbproductorcompradorid` porque cambiaría el
+significado de datos que ya existen.
+
 Esto **reabre** la consulta pública del correo que el commit `d7b5a88`
 (29/09/2026, "Elimina enumeracion publica de correos") había retirado. El
 issue de la reunión del 29/09 la pide (P2-1), y el equipo decidió volver a

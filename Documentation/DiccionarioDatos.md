@@ -326,13 +326,14 @@ un ciclo de estados suficiente.
 |---|---|---|---|---|---|
 | `tbcompraid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal comprado. | Aplicación | `tbanimal` |
-| `tbproductorcompradorid` | `INT NOT NULL` | No | Productor comprador del momento. | Aplicación | `tbproductor` |
+| `tbproductorcompradorid` | `INT NULL` | Sí | Productor comprador del momento; nulo cuando compra un Comprador (DEC-COMPRA-001). | Aplicación | `tbproductor` |
+| `tbcompradorid` | `INT NULL` | Sí | Comprador del momento, cuando la compra sale de una solicitud. | Aplicación | `tbcomprador` |
 | `tbfincaorigenid` | `INT NULL` | Sí | Finca de origen conocida al comprar. | Aplicación | `tbfinca` |
 | `tbcomprafecha` | `DATE NOT NULL` | No | Fecha del hecho. | Aplicación | - |
 | `tbcomprahora` | `TIME NULL` | Sí | Hora del hecho, si existe. | Aplicación | - |
 | `tbcompralugar` | `VARCHAR(250) NULL` | Sí | Lugar declarado del hecho. | Usuario | - |
 | `tbcompraprecio` | `DECIMAL(12,2) NOT NULL` | No | Precio de compra. | Usuario | - |
-| `tbpagometodoid` | `INT NOT NULL` | No | Método de pago usado. | Aplicación | `tbpagometodo` |
+| `tbpagometodoid` | `INT NULL` | Sí | Método de pago usado, si se conoce. | Aplicación | `tbpagometodo` |
 | `tbcompraorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
 
 ## tbventa
@@ -345,16 +346,18 @@ en finca o existir antes del sistema. Edad, peso y raza son snapshots del hecho.
 | `tbventaid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal vendido. | Aplicación | `tbanimal` |
 | `tbproductorvendedorid` | `INT NOT NULL` | No | Productor vendedor del momento. | Aplicación | `tbproductor` |
-| `tbproductorcompradorid` | `INT NOT NULL` | No | Productor comprador del momento. | Aplicación | `tbproductor` |
+| `tbproductorcompradorid` | `INT NULL` | Sí | Productor comprador del momento; nulo cuando compra un Comprador (DEC-COMPRA-001). | Aplicación | `tbproductor` |
+| `tbcompradorid` | `INT NULL` | Sí | Comprador del momento, cuando la venta sale de una solicitud. | Aplicación | `tbcomprador` |
 | `tbfincaid` | `INT NULL` | Sí | Finca asociada al hecho, si aplica. | Aplicación | `tbfinca` |
 | `tbcompraid` | `INT NULL` | Sí | Compra relacionada, opcional. | Aplicación | `tbcompra` |
+| `tbcomprasolicitudid` | `INT NULL` | Sí | Solicitud de compra que originó la venta, si la hubo. | Aplicación | `tbcomprasolicitud` |
 | `tbventafecha` | `DATE NOT NULL` | No | Fecha del hecho. | Aplicación | - |
 | `tbventahora` | `TIME NULL` | Sí | Hora del hecho, si existe. | Aplicación | - |
 | `tbventalugar` | `VARCHAR(250) NULL` | Sí | Lugar declarado del hecho. | Usuario | - |
 | `tbventadireccionid` | `INT NULL` | Sí | Dirección de la venta cuando se conoce; nula si solo hay lugar declarado. | Aplicación | `tbdireccion` |
 | `tbventaproposito` | `VARCHAR(80) NULL` | Sí | Propósito declarado de la venta; dominio validado por Backend. | Usuario | - |
 | `tbventaprecio` | `DECIMAL(12,2) NOT NULL` | No | Precio de venta. | Usuario | - |
-| `tbpagometodoid` | `INT NOT NULL` | No | Método de pago usado. | Aplicación | `tbpagometodo` |
+| `tbpagometodoid` | `INT NULL` | Sí | Método de pago usado, si se conoce. | Aplicación | `tbpagometodo` |
 | `tbventaedadmeses` | `INT NULL` | Sí | Edad en meses declarada al vender. | Usuario | - |
 | `tbventapeso` | `DECIMAL(10,2) NULL` | Sí | Peso declarado al vender. | Usuario | - |
 | `tbventarazasnapshot` | `VARCHAR(100) NULL` | Sí | Raza declarada como snapshot del hecho, no duplicado técnico para evitar JOIN. | Usuario | - |
@@ -519,6 +522,29 @@ que los clientes lo encuentren por cercanía. No es un viaje realizado (eso es
 | `tbtransportistaofertadescripcion` | `VARCHAR(500) NULL` | Sí | Detalles y disponibilidad en texto libre. | Cliente | - |
 | `tbtransportistaofertaestado` | `VARCHAR(20) NOT NULL` | No | `ACTIVA` o `PAUSADA`. | Aplicación | - |
 | `tbtransportistaofertafecha` | `DATETIME NOT NULL` | No | Fecha UTC de creación, asignada por PHP. | Aplicación | - |
+
+## tbcomprasolicitud
+
+Solicitud de compra (DEC-COMPRA-001): un Comprador pide un animal publicado, con
+un flete opcional, y el vendedor la acepta o la rechaza. Estado: `PENDIENTE`,
+`ACEPTADA`, `RECHAZADA` o `CANCELADA`. El flete lo responde aparte el
+transportista.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcomprasolicitudid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación solicitada. | Aplicación | `tbanimalpublicacion` |
+| `tbcompradorid` | `INT NOT NULL` | No | Comprador que solicita. | Aplicación | `tbcomprador` |
+| `tbtransportistaofertaid` | `INT NULL` | Sí | Oferta de flete pedida junto con el animal; nulo si no pidió flete. | Cliente | `tbtransportistaoferta` |
+| `tbpagometodoid` | `INT NULL` | Sí | Método de pago que propone el comprador, opcional. | Cliente | `tbpagometodo` |
+| `tbcomprasolicitudprecio` | `DECIMAL(12,2) NULL` | Sí | Precio de la publicación al solicitar; nulo si era "a convenir" y el vendedor lo fija al aceptar. | Aplicación | - |
+| `tbcomprasolicitudmensaje` | `VARCHAR(500) NULL` | Sí | Mensaje del comprador al vendedor. | Cliente | - |
+| `tbcomprasolicitudestado` | `VARCHAR(20) NOT NULL` | No | `PENDIENTE`, `ACEPTADA`, `RECHAZADA` o `CANCELADA`. | Aplicación | - |
+| `tbcomprasolicitudfleteestado` | `VARCHAR(20) NULL` | Sí | Respuesta del transportista: `PENDIENTE`, `ACEPTADA`, `RECHAZADA` o `CANCELADA`; nulo sin flete. | Aplicación | - |
+| `tbcomprasolicitudfecha` | `DATETIME NOT NULL` | No | Fecha UTC de la solicitud, asignada por PHP. | Aplicación | - |
+| `tbcomprasolicitudrespuestafecha` | `DATETIME NULL` | Sí | Fecha UTC en que el vendedor la aceptó o rechazó. | Aplicación | - |
+| `tbcomprasolicitudrespuestamotivo` | `VARCHAR(250) NULL` | Sí | Motivo del vendedor al rechazar. | Usuario | - |
+| `tbcomprasolicitudfleterespuestafecha` | `DATETIME NULL` | Sí | Fecha UTC en que el transportista respondió el flete. | Aplicación | - |
 
 ## Histórico transversal (Tramo 12/13 y avance 3)
 

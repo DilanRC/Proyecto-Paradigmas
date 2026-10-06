@@ -146,64 +146,72 @@ final class AnimalComercial
         return $publicacionId;
     }
 
-    public function registrarCompra(int $animalId, int $productorCompradorId, ?int $fincaOrigenId, array $datos): int
+    /**
+     * El comprador es un Productor ($productorCompradorId) o un Comprador normal
+     * ($datos['compradorId']); el método de pago es opcional (DEC-COMPRA-001).
+     */
+    public function registrarCompra(int $animalId, ?int $productorCompradorId, ?int $fincaOrigenId, array $datos): int
     {
         $this->exigirLock('tbcompra');
         $compraId = $this->siguienteId('tbcompra', 'tbcompraid');
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbcompra
-             (tbcompraid, tbanimalid, tbproductorcompradorid, tbfincaorigenid,
+             (tbcompraid, tbanimalid, tbproductorcompradorid, tbcompradorid, tbfincaorigenid,
               tbcomprafecha, tbcomprahora, tbcompralugar, tbcompraprecio,
               tbpagometodoid, tbcompraorigen)
-             VALUES (:id, :animalId, :compradorId, :fincaOrigenId, :fecha,
+             VALUES (:id, :animalId, :productorCompradorId, :compradorId, :fincaOrigenId, :fecha,
               :hora, :lugar, :precio, :pagoMetodoId, :origen)'
         );
         $sentencia->execute([
             'id' => $compraId,
             'animalId' => $animalId,
-            'compradorId' => $productorCompradorId,
+            'productorCompradorId' => $productorCompradorId,
+            'compradorId' => $datos['compradorId'] ?? null,
             'fincaOrigenId' => $fincaOrigenId,
             'fecha' => $datos['fecha'],
             'hora' => $datos['hora'] ?? null,
             'lugar' => $datos['lugar'] ?? null,
             'precio' => $datos['precio'],
-            'pagoMetodoId' => $datos['pagoMetodoId'],
+            'pagoMetodoId' => $datos['pagoMetodoId'] ?? null,
             'origen' => $datos['origen'],
         ]);
 
         return $compraId;
     }
 
-    public function registrarVenta(int $animalId, int $productorVendedorId, int $productorCompradorId,
+    /** Igual que registrarCompra: `compradorId` y `solicitudId` en $datos enlazan al Comprador y a su solicitud. */
+    public function registrarVenta(int $animalId, int $productorVendedorId, ?int $productorCompradorId,
         ?int $fincaId, ?int $compraId, array $datos): int
     {
         $this->exigirLock('tbventa');
         $ventaId = $this->siguienteId('tbventa', 'tbventaid');
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbventa
-             (tbventaid, tbanimalid, tbproductorvendedorid, tbproductorcompradorid,
-              tbfincaid, tbcompraid, tbventafecha, tbventahora, tbventalugar,
+             (tbventaid, tbanimalid, tbproductorvendedorid, tbproductorcompradorid, tbcompradorid,
+              tbfincaid, tbcompraid, tbcomprasolicitudid, tbventafecha, tbventahora, tbventalugar,
               tbventadireccionid, tbventaproposito, tbventaprecio,
               tbpagometodoid, tbventaedadmeses, tbventapeso,
               tbventarazasnapshot, tbventaorigen)
-             VALUES (:id, :animalId, :vendedorId, :compradorId, :fincaId,
-              :compraId, :fecha, :hora, :lugar, :direccionId, :proposito,
+             VALUES (:id, :animalId, :vendedorId, :productorCompradorId, :compradorId, :fincaId,
+              :compraId, :solicitudId, :fecha, :hora, :lugar, :direccionId, :proposito,
               :precio, :pagoMetodoId, :edadMeses, :peso, :razaSnapshot, :origen)'
         );
         $sentencia->execute([
             'id' => $ventaId,
             'animalId' => $animalId,
             'vendedorId' => $productorVendedorId,
-            'compradorId' => $productorCompradorId,
+            'productorCompradorId' => $productorCompradorId,
+            'compradorId' => $datos['compradorId'] ?? null,
             'fincaId' => $fincaId,
             'compraId' => $compraId,
+            'solicitudId' => $datos['solicitudId'] ?? null,
             'fecha' => $datos['fecha'],
             'hora' => $datos['hora'] ?? null,
             'lugar' => $datos['lugar'] ?? null,
             'direccionId' => $datos['direccionId'] ?? null,
             'proposito' => $datos['proposito'] ?? null,
             'precio' => $datos['precio'],
-            'pagoMetodoId' => $datos['pagoMetodoId'],
+            'pagoMetodoId' => $datos['pagoMetodoId'] ?? null,
             'edadMeses' => $datos['edadMeses'] ?? null,
             'peso' => $datos['peso'] ?? null,
             'razaSnapshot' => $datos['razaSnapshot'] ?? null,

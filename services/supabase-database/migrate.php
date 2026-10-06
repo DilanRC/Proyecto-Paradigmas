@@ -96,13 +96,13 @@ const EXPECTED_COLUMNS = [
         'tbanimalpublicacionestadoperiodoorigen',
     ],
     'tbcompra' => [
-        'tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbfincaorigenid',
+        'tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbcompradorid', 'tbfincaorigenid',
         'tbcomprafecha', 'tbcomprahora', 'tbcompralugar', 'tbcompraprecio',
         'tbpagometodoid', 'tbcompraorigen',
     ],
     'tbventa' => [
-        'tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid',
-        'tbfincaid', 'tbcompraid', 'tbventafecha', 'tbventahora', 'tbventalugar',
+        'tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid', 'tbcompradorid',
+        'tbfincaid', 'tbcompraid', 'tbcomprasolicitudid', 'tbventafecha', 'tbventahora', 'tbventalugar',
         'tbventadireccionid', 'tbventaproposito', 'tbventaprecio', 'tbpagometodoid',
         'tbventaedadmeses', 'tbventapeso', 'tbventarazasnapshot', 'tbventaorigen',
     ],
@@ -156,6 +156,12 @@ const EXPECTED_COLUMNS = [
     ],
     'tbregistroconsulta' => [
         'tbregistroconsultaid', 'tbregistroconsultaclave', 'tbregistroconsultafecha',
+    ],
+    'tbcomprasolicitud' => [
+        'tbcomprasolicitudid', 'tbanimalpublicacionid', 'tbcompradorid', 'tbtransportistaofertaid',
+        'tbpagometodoid', 'tbcomprasolicitudprecio', 'tbcomprasolicitudmensaje', 'tbcomprasolicitudestado',
+        'tbcomprasolicitudfleteestado', 'tbcomprasolicitudfecha', 'tbcomprasolicitudrespuestafecha',
+        'tbcomprasolicitudrespuestamotivo', 'tbcomprasolicitudfleterespuestafecha',
     ],
     'tbtransportistaoferta' => [
         'tbtransportistaofertaid', 'tbtransportistaid', 'tbvehiculoid', 'tbdireccionid',
@@ -250,7 +256,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 36 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 37 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -345,7 +351,16 @@ function ensureCurrentColumns(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbdireccionlatitud NUMERIC(10,7) NULL,
         ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL;
         ALTER TABLE public.tbanimalpublicacion
-        ADD COLUMN IF NOT EXISTS tbanimalpublicacionimagenurl VARCHAR(500) NULL');
+        ADD COLUMN IF NOT EXISTS tbanimalpublicacionimagenurl VARCHAR(500) NULL;
+        ALTER TABLE public.tbcompra
+        ADD COLUMN IF NOT EXISTS tbcompradorid INTEGER NULL,
+        ALTER COLUMN tbproductorcompradorid DROP NOT NULL,
+        ALTER COLUMN tbpagometodoid DROP NOT NULL;
+        ALTER TABLE public.tbventa
+        ADD COLUMN IF NOT EXISTS tbcompradorid INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS tbcomprasolicitudid INTEGER NULL,
+        ALTER COLUMN tbproductorcompradorid DROP NOT NULL,
+        ALTER COLUMN tbpagometodoid DROP NOT NULL');
 }
 
 /**
@@ -486,7 +501,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=36 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=37 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

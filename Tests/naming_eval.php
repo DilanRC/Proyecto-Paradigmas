@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('treinta_y_seis_tablas', $manifest['table_count'] === 36,
-    'SQL crea exactamente treinta y seis tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
+$evaluate('treinta_y_siete_tablas', $manifest['table_count'] === 37,
+    'SQL crea exactamente treinta y siete tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -79,7 +79,7 @@ $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador'
     'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
     'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbbitacora', 'tbcarrito',
     'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
-    'tbcompradorpersonatelefonohistorico',
+    'tbcompradorpersonatelefonohistorico', 'tbcomprasolicitud',
     'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
     'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
