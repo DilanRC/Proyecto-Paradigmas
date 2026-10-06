@@ -46,7 +46,7 @@ test('Explorar tiene "Solicitar compra" como acción principal y la abre sin env
     assert.doesNotMatch(interacciones.match(/const ACTION_TYPES = \{[^}]*\}/)[0], /Solicitar/);
     const vista = read('Application/View/explorar/index.php');
     assert.match(vista, /css\/solicitud\.css\?v=solicitud-1/);
-    assert.match(vista, /js\/explore\.js\?v=explore-11/);
+    assert.match(vista, /js\/explore\.js\?v=explore-12/);
     assert.match(vista, /js\/explore-interactions\.js\?v=interactions-3/);
 });
 

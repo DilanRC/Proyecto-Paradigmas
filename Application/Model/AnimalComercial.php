@@ -20,6 +20,7 @@ final class AnimalComercial
         'tbanimalproduccionsalud' => 'tindercows_animal_observacion_alta',
         'tbanimalpublicacion' => 'tindercows_animal_publicacion_alta',
         'tbanimalpublicacionestadoperiodo' => 'tindercows_animal_publicacion_estado_alta',
+        'tbanimalpublicacionanimal' => 'tindercows_animal_publicacion_animal_alta',
         'tbcompra' => 'tindercows_compra_alta',
         'tbventa' => 'tindercows_venta_alta',
         'tbanimalinteraccion' => 'tindercows_animal_interaccion_alta',
@@ -50,8 +51,16 @@ final class AnimalComercial
         }
     }
 
+    public const ESTADOS_ANIMAL = ['ACTIVO', 'PUBLICADO', 'VENDIDO', 'INACTIVO'];
+
+    /**
+     * $extra (P2-2, todo opcional): especieId, tipoId, razaId, fechaNacimiento (AAAA-MM-DD),
+     * fechaNacimientoEstimada (bool), partos, estado (ESTADOS_ANIMAL) y productorId (dueño explícito).
+     *
+     * @param array<string,mixed> $extra
+     */
     public function crearAnimal(?string $codigo, ?string $sexo, ?string $raza, string $origen,
-        ?string $caracteristicas = null): int
+        ?string $caracteristicas = null, array $extra = []): int
     {
         $this->exigirLock('tbanimal');
         $animalId = $this->siguienteId('tbanimal', 'tbanimalid');
@@ -59,9 +68,17 @@ final class AnimalComercial
             'INSERT INTO tbanimal
              (tbanimalid, tbanimalidentificacion, tbanimalsexo, tbanimalraza,
               tbanimalcaracteristicas, tbanimalfecharegistroensistema,
-              tbanimalorigenregistro)
-             VALUES (:id, :codigo, :sexo, :raza, :caracteristicas, :fechaRegistro, :origen)'
+              tbanimalorigenregistro, tbespecieid, tbanimaltipoid, tbrazaid,
+              tbanimalfechanacimiento, tbanimalfechanacimientoestimada, tbanimalpartos,
+              tbanimalestado, tbproductorid)
+             VALUES (:id, :codigo, :sexo, :raza, :caracteristicas, :fechaRegistro, :origen,
+              :especieId, :tipoId, :razaId, :fechaNacimiento, :estimada, :partos, :estado, :productorId)'
         );
+        $estado = $extra['estado'] ?? null;
+        if ($estado !== null && !in_array($estado, self::ESTADOS_ANIMAL, true)) {
+            throw new \InvalidArgumentException('Estado de animal no aprobado.');
+        }
+        $estimada = $extra['fechaNacimientoEstimada'] ?? null;
         $sentencia->execute([
             'id' => $animalId,
             'codigo' => $codigo,
@@ -70,9 +87,81 @@ final class AnimalComercial
             'caracteristicas' => $caracteristicas,
             'fechaRegistro' => date('Y-m-d H:i:s'),
             'origen' => $origen,
+            'especieId' => $extra['especieId'] ?? null,
+            'tipoId' => $extra['tipoId'] ?? null,
+            'razaId' => $extra['razaId'] ?? null,
+            'fechaNacimiento' => $extra['fechaNacimiento'] ?? null,
+            'estimada' => $estimada === null ? null : ($estimada ? 1 : 0),
+            'partos' => $extra['partos'] ?? null,
+            'estado' => $estado,
+            'productorId' => $extra['productorId'] ?? null,
         ]);
 
         return $animalId;
+    }
+
+    /** ¿Hay otro animal vigente (no vendido ni inactivo) con este arete? El arete identifica a un solo animal. */
+    public function existeAreteVigente(string $arete): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            "SELECT COUNT(*) FROM tbanimal
+             WHERE tbanimalidentificacion = :arete AND COALESCE(tbanimalestado, 'ACTIVO') NOT IN ('VENDIDO', 'INACTIVO')"
+        );
+        $sentencia->execute(['arete' => $arete]);
+
+        return (int) $sentencia->fetchColumn() > 0;
+    }
+
+    /** Estado del animal (ACTIVO, PUBLICADO, VENDIDO, INACTIVO) para uno o varios animales. */
+    public function marcarEstadoAnimales(array $animalIds, string $estado): void
+    {
+        if (!in_array($estado, self::ESTADOS_ANIMAL, true)) {
+            throw new \InvalidArgumentException('Estado de animal no aprobado.');
+        }
+        $actualizar = $this->conexion->prepare('UPDATE tbanimal SET tbanimalestado = :estado WHERE tbanimalid = :id');
+        foreach ($animalIds as $animalId) {
+            $actualizar->execute(['estado' => $estado, 'id' => (int) $animalId]);
+        }
+    }
+
+    /** Lote (DEC-ANIMAL-001): enlaza los N animales de una publicación. Una publicación de un animal no lleva filas. */
+    public function enlazarAnimalesPublicacion(int $publicacionId, array $animalIds): void
+    {
+        $this->exigirLock('tbanimalpublicacionanimal');
+        $insertar = $this->conexion->prepare(
+            'INSERT INTO tbanimalpublicacionanimal (tbanimalpublicacionanimalid, tbanimalpublicacionid, tbanimalid)
+             VALUES (:id, :publicacionId, :animalId)'
+        );
+        foreach ($animalIds as $animalId) {
+            $insertar->execute([
+                'id' => $this->siguienteId('tbanimalpublicacionanimal', 'tbanimalpublicacionanimalid'),
+                'publicacionId' => $publicacionId,
+                'animalId' => (int) $animalId,
+            ]);
+        }
+    }
+
+    /**
+     * Ids de los animales de una publicación: el principal solo, o todos los del lote.
+     *
+     * @return array<int,int>
+     */
+    public function animalesDePublicacion(int $publicacionId): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbanimalid FROM tbanimalpublicacionanimal
+             WHERE tbanimalpublicacionid = :id ORDER BY tbanimalpublicacionanimalid'
+        );
+        $sentencia->execute(['id' => $publicacionId]);
+        $ids = array_map('intval', $sentencia->fetchAll(PDO::FETCH_COLUMN));
+        if ($ids !== []) {
+            return $ids;
+        }
+        $principal = $this->conexion->prepare('SELECT tbanimalid FROM tbanimalpublicacion WHERE tbanimalpublicacionid = :id');
+        $principal->execute(['id' => $publicacionId]);
+        $animalId = $principal->fetchColumn();
+
+        return $animalId === false ? [] : [(int) $animalId];
     }
 
     public function registrarObservacion(int $animalId, array $datos): int
@@ -365,6 +454,8 @@ final class AnimalComercial
         $desde = <<<SQL
             FROM tbanimalpublicacion p
             INNER JOIN tbanimal a ON a.tbanimalid = p.tbanimalid
+            LEFT JOIN tbespecie es ON es.tbespecieid = a.tbespecieid
+            LEFT JOIN tbanimaltipo ti ON ti.tbanimaltipoid = a.tbanimaltipoid
             INNER JOIN tbanimalpublicacionestadoperiodo ep
                 ON ep.tbanimalpublicacionid = p.tbanimalpublicacionid
             INNER JOIN tbproductor pr ON pr.tbproductorid = p.tbproductorvendedorid
@@ -407,6 +498,17 @@ final class AnimalComercial
                     a.tbanimalsexo AS sexo,
                     a.tbanimalraza AS raza,
                     a.tbanimalcaracteristicas AS caracteristicas,
+                    a.tbespecieid AS especieid,
+                    es.tbespecienombre AS especienombre,
+                    a.tbanimaltipoid AS tipoid,
+                    ti.tbanimaltiponombre AS tiponombre,
+                    a.tbrazaid AS razaid,
+                    a.tbanimalfechanacimiento AS fechanacimiento,
+                    a.tbanimalfechanacimientoestimada AS fechanacimientoestimada,
+                    a.tbanimalpartos AS partos,
+                    a.tbanimalestado AS animalestado,
+                    (SELECT COUNT(*) FROM tbanimalpublicacionanimal l
+                      WHERE l.tbanimalpublicacionid = p.tbanimalpublicacionid) AS lotecantidad,
                     obs.edadmeses AS edadmeses,
                     obs.peso AS peso,
                     obs.proposito AS proposito,
@@ -536,11 +638,23 @@ final class AnimalComercial
             'precio' => $fila['precio'] === null ? null : (float) $fila['precio'],
             'fecha' => $fila['fecha'],
             'estado' => $fila['estado'],
+            // Lote (DEC-ANIMAL-001): 1 = un solo animal; N > 1 = lote de N.
+            'loteCantidad' => max(1, (int) $fila['lotecantidad']),
             'animal' => [
                 'identificacion' => $fila['animalidentificacion'],
                 'sexo' => $fila['sexo'],
                 'raza' => $fila['raza'],
                 'caracteristicas' => $fila['caracteristicas'],
+                'especieId' => $fila['especieid'] === null ? null : (int) $fila['especieid'],
+                'especie' => $fila['especienombre'],
+                'tipoId' => $fila['tipoid'] === null ? null : (int) $fila['tipoid'],
+                'tipo' => $fila['tiponombre'],
+                'razaId' => $fila['razaid'] === null ? null : (int) $fila['razaid'],
+                'fechaNacimiento' => $fila['fechanacimiento'],
+                'fechaNacimientoEstimada' => $fila['fechanacimientoestimada'] === null
+                    ? null : (int) $fila['fechanacimientoestimada'] === 1,
+                'partos' => $fila['partos'] === null ? null : (int) $fila['partos'],
+                'estado' => $fila['animalestado'],
                 'edadMeses' => $fila['edadmeses'] === null ? null : (int) $fila['edadmeses'],
                 'peso' => $fila['peso'] === null ? null : (float) $fila['peso'],
                 'proposito' => $fila['proposito'],

@@ -151,7 +151,11 @@ final class CompraSolicitud
         return $ids;
     }
 
-    /** Datos del animal y la finca para registrar la compra y la venta (con los snapshots del hecho). */
+    /**
+     * Datos del animal y la finca para registrar la compra y la venta (con los snapshots del hecho).
+     * Las claves de siempre describen al animal principal; `animales` trae el principal solo, o todos los
+     * de un lote (DEC-ANIMAL-001), cada uno con su propio snapshot, para registrar compra y venta POR ANIMAL.
+     */
     public function datosParaVenta(int $publicacionId): ?array
     {
         $sentencia = $this->conexion->prepare(
@@ -183,7 +187,47 @@ final class CompraSolicitud
             'edadMeses' => $fila['edadmeses'] === null ? null : (int) $fila['edadmeses'],
             'peso' => $fila['peso'] === null ? null : (float) $fila['peso'],
             'proposito' => $fila['proposito'],
+            'animales' => $this->snapshotsDeAnimales($publicacionId, (int) $fila['animalid']),
         ];
+    }
+
+    /** @return array<int,array{animalId:int,raza:?string,edadMeses:?int,peso:?float,proposito:?string}> */
+    private function snapshotsDeAnimales(int $publicacionId, int $principalId): array
+    {
+        $enlaces = $this->conexion->prepare(
+            'SELECT tbanimalid FROM tbanimalpublicacionanimal
+             WHERE tbanimalpublicacionid = :id ORDER BY tbanimalpublicacionanimalid'
+        );
+        $enlaces->execute(['id' => $publicacionId]);
+        $ids = array_map('intval', $enlaces->fetchAll(PDO::FETCH_COLUMN)) ?: [$principalId];
+
+        $snapshot = $this->conexion->prepare(
+            'SELECT a.tbanimalraza AS raza,
+                    (SELECT s.tbanimalproduccionsaludedadmeses FROM tbanimalproduccionsalud s
+                      WHERE s.tbanimalid = a.tbanimalid
+                      ORDER BY s.tbanimalproduccionsaludfecha DESC, s.tbanimalproduccionsaludid DESC LIMIT 1) AS edadmeses,
+                    (SELECT s.tbanimalproduccionsaludpeso FROM tbanimalproduccionsalud s
+                      WHERE s.tbanimalid = a.tbanimalid
+                      ORDER BY s.tbanimalproduccionsaludfecha DESC, s.tbanimalproduccionsaludid DESC LIMIT 1) AS peso,
+                    (SELECT s.tbanimalproduccionsaludproposito FROM tbanimalproduccionsalud s
+                      WHERE s.tbanimalid = a.tbanimalid
+                      ORDER BY s.tbanimalproduccionsaludfecha DESC, s.tbanimalproduccionsaludid DESC LIMIT 1) AS proposito
+             FROM tbanimal a WHERE a.tbanimalid = :id'
+        );
+        $animales = [];
+        foreach ($ids as $id) {
+            $snapshot->execute(['id' => $id]);
+            $fila = $snapshot->fetch();
+            if ($fila === false) continue;
+            $animales[] = [
+                'animalId' => $id, 'raza' => $fila['raza'],
+                'edadMeses' => $fila['edadmeses'] === null ? null : (int) $fila['edadmeses'],
+                'peso' => $fila['peso'] === null ? null : (float) $fila['peso'],
+                'proposito' => $fila['proposito'],
+            ];
+        }
+
+        return $animales;
     }
 
     /** Punto de la finca de la publicación, o null si no se marcó en el mapa. */

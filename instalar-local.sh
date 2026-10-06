@@ -179,7 +179,7 @@ fi
 metodos="$(root_sql -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM tbpagometodo;")"
 if [[ "$metodos" == "0" ]]; then
     echo "[..] Cargando seeds..."
-    for s in 101initialpagometodo 102administrador; do
+    for s in 101initialpagometodo 102administrador 104catalogosanimal; do
         archivo="$PROYECTO/Database/SeedData/$s.sql"
         [[ -f "$archivo" ]] || fallo "No existe $archivo"
         root_sql --default-character-set=utf8mb4 "$DB_NAME" < "$archivo" || fallo "Fallo el seed $s."

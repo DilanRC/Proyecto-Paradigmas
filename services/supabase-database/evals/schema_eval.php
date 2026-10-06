@@ -7,7 +7,7 @@ $schema = file_get_contents("{$root}/schema.sql");
 $migration = file_get_contents("{$root}/migrate.php");
 $entrypoint = file_get_contents(dirname(__DIR__, 3) . '/docker/apache/container-entrypoint.sh');
 $checks = [
-    'treinta_y_siete_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 37,
+    'cuarenta_y_una_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 41,
     'politica_administrativa' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbadministrador')
         && str_contains($migration, "'tbadministrador' => ["),
     'persona_compartida' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbpersona')
@@ -25,8 +25,7 @@ $checks = [
     'clasificacion_productor' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbproductorclasificacionperiodo')
         && str_contains($schema, 'tbproductorclasificacionperiodotipo VARCHAR(30) NOT NULL'),
     'animal_observacion' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbanimal')
-        && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbanimalproduccionsalud')
-        && !str_contains($schema, 'tbanimalfechanacimiento'),
+        && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbanimalproduccionsalud'),
     'compra_venta_hechos' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbcompra')
         && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbventa')
         && str_contains($schema, 'tbcompraid INTEGER NULL'),
@@ -50,13 +49,13 @@ $checks = [
         && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbtransportistaresena'),
     'sin_tbvendedor' => !str_contains($schema, 'tbvendedor'),
     'sin_automatismos' => !preg_match('/PRIMARY KEY|FOREIGN KEY|DEFAULT |CREATE INDEX|UNIQUE/', $schema),
-    'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 37,
+    'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 41,
     'migracion_serializada' => str_contains($migration, 'pg_advisory_xact_lock'),
     'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),
     'diagnostico_columnas' => str_contains($migration, 'esperado=[%s] actual=[%s]'),
     'orden_columnas_neutro' => substr_count($migration, 'sort($columns)') === 2,
     'recarga_postgrest' => str_contains($migration, "NOTIFY pgrst, 'reload schema'"),
-    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=37 migration=v10'),
+    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=41 migration=v10'),
     'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
     'arranque_vercel' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
 ];

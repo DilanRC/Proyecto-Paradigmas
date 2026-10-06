@@ -50,7 +50,7 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 | P1-5 | Fotos de vehículos — **HECHO** | | **Lidera** (API) | **Lidera** (pantalla) |
 | P1-6 | Administrador: moderar publicaciones — **HECHO** | Apoya | | **Lidera** |
 | P2-1 | Validación en tiempo real de cédula y correo — **HECHO** | | **Lidera** | Apoya |
-| P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado | **Lidera** | | Apoya |
+| P2-2 | Modelo de animal: especie, tipo, raza, nacimiento, partos y estado — **HECHO** (catálogos y lote; ver `DEC-ANIMAL-001`) | **Lidera** | | Apoya |
 | P2-3 | Historial de vacunación | **Lidera** | | Apoya |
 | P2-4 | Mis animales (inventario) | Apoya | | **Lidera** |
 | P2-5 | Foto del documento de identidad y verificación — **SUBIDA HECHA** (falta bucket en Supabase; verificación en P2-6) | | **Lidera** | Apoya |
@@ -251,25 +251,25 @@ Son los puntos 4 a 6 del issue. **Lo que ya existe:**
 **Lo que falta:** especie, tipo o categoría, raza de catálogo, fecha de
 nacimiento, partos, estado del animal y dueño explícito.
 
-- [ ] Primero, entregar la propuesta de modelado con alternativas. Recomendada:
+- [x] Primero, entregar la propuesta de modelado con alternativas. Recomendada:
       catálogos con referencia a la especie, que valida mejor que una tabla
       genérica de catálogos:
       - `tbespecie` (id, nombre, activo)
       - `tbanimaltipo` (id, especie, nombre, sexo permitido: `M`, `H` o nulo)
       - `tbraza` (id, especie, nombre, activo)
-- [ ] Columnas nuevas en `tbanimal`: especie, tipo, raza, fecha de nacimiento
+- [x] Columnas nuevas en `tbanimal`: especie, tipo, raza, fecha de nacimiento
       (real o estimada), partos y estado (`ACTIVO`, `PUBLICADO`, `VENDIDO`,
       `INACTIVO`). Todas `NULL` para no romper los animales actuales.
-- [ ] Validaciones en PHP: el tipo pertenece a la especie, el sexo coincide con
+- [x] Validaciones en PHP: el tipo pertenece a la especie, el sexo coincide con
       el tipo y los partos solo aplican a hembras (entero ≥ 0).
-- [ ] `GET api/v1/catalogos?especieId=`: especies, tipos y razas. Con datos
+- [x] `GET api/v1/catalogos?especieId=`: especies, tipos y razas. Con datos
       iniciales de las especies y razas más comunes.
-- [ ] Decidir si una publicación es de **un animal o de un lote**. Recomendación:
+- [x] Decidir si una publicación es de **un animal o de un lote**. Recomendación:
       un animal por ahora; un lote necesita una tabla intermedia.
-- [ ] Confirmar el formato del arete de SENASA y si "categorización" es lo mismo que "tipo".
+- [x] Confirmar el formato del arete de SENASA y si "categorización" es lo mismo que "tipo".
       (Arete: el DIIO oficial son dos aretes, uno visual y uno con chip RFID, y su numeración lleva el 188
       de Costa Rica; ver `P3-1-Comerciante.md`. Falta confirmar la longitud exacta del número.)
-- [ ] Frontend: Publicar usa listas desplegables de especie, tipo y raza
+- [x] Frontend: Publicar usa listas desplegables de especie, tipo y raza
       encadenadas, con el campo de partos solo para hembras.
 
 ### P2-3 · Historial de vacunación · Carlos (+ Jeferson)

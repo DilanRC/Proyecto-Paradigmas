@@ -19,7 +19,7 @@ MYSQL="docker exec -i -e MYSQL_PWD proyecto-paradigmas-db-1 mysql -uroot --defau
 
 $MYSQL -e "DROP DATABASE IF EXISTS \`$NOMBRE\`; CREATE DATABASE \`$NOMBRE\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 for archivo in Database/SqlScripts/000instalacioncompleta.sql Database/SeedData/101initialpagometodo.sql \
-    Database/SeedData/102administrador.sql Database/SeedData/103exampleproductores.sql; do
+    Database/SeedData/102administrador.sql Database/SeedData/103exampleproductores.sql Database/SeedData/104catalogosanimal.sql; do
     sed "s/bdmercadoganadero/$NOMBRE/g" "$RAIZ/$archivo" | $MYSQL
 done
 echo "Base '$NOMBRE' lista: $($MYSQL -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$NOMBRE'") tablas."

@@ -47,6 +47,7 @@ compatibilidad técnica durante la migración.
 | `/api/v1/mi-vehiculos` | Vehículos propios del Transportista autenticado; nunca recibe una Persona o Transportista objetivo |
 | `/api/v1/mi-ofertas` | Ofertas de flete propias del Transportista autenticado (GET, POST, PUT, PATCH); nunca recibe un Transportista objetivo |
 | `/api/v1/fletes` | Ofertas de flete cercanas a un punto (GET, con sesión); no expone placa, señas ni coordenadas exactas |
+| `/api/v1/catalogos` | Especies, tipos y razas activos para los formularios de animal (GET con sesión; `?especieId=` filtra tipos y razas) |
 | `/api/v1/solicitudes-compra` | Solicitudes de compra de la Persona autenticada (GET, POST, PATCH): las que hizo, las que recibe como vendedor y los fletes que le piden; los teléfonos solo se comparten cuando hay trato |
 | `/api/v1/mi-fincas` | Fincas propias del Productor autenticado; nunca recibe una Persona o Productor objetivo |
 | `/api/v1/identidad` | Identidad pública autenticada |

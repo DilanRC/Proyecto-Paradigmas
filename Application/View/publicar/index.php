@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-13"></script>
-    <script type="module" src="js/publicar.js?v=publish-3"></script>
+    <script type="module" src="js/publicar.js?v=publish-4"></script>
 </head>
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">
@@ -92,12 +92,20 @@
                         <div class="signup-section">
                             <h2 class="signup-title signup-title--sm">Datos del animal</h2>
                             <div class="signup-grid">
-                                <div class="auth-field"><label for="publish-identificacion">Identificación del animal</label><input id="publish-identificacion" name="animalIdentificacion" maxlength="100" autocomplete="off" placeholder="Ej. arete 0457"></div>
-                                <div class="auth-field"><label for="publish-raza">Raza</label><input id="publish-raza" name="raza" maxlength="120" autocomplete="off" placeholder="Ej. Brahman"></div>
+                                <div class="auth-field"><label for="publish-especie">Especie</label><select id="publish-especie" name="especieId"><option value="">Sin indicar</option></select></div>
+                                <div class="auth-field"><label for="publish-tipo">Tipo de animal</label><select id="publish-tipo" name="tipoId" disabled><option value="">Elige primero la especie</option></select><small class="field-help">Ternero, vaca, toro&hellip; El tipo define el sexo.</small></div>
+                                <div class="auth-field"><label for="publish-raza-id">Raza</label><select id="publish-raza-id" name="razaId" disabled><option value="">Elige primero la especie</option></select></div>
+                                <div class="auth-field" data-raza-otra hidden><label for="publish-raza">Otra raza</label><input id="publish-raza" name="raza" maxlength="120" autocomplete="off" placeholder="Ej. Brahman"></div>
                                 <div class="auth-field"><label for="publish-sexo">Sexo</label><select id="publish-sexo" name="sexo"><option value="">Sin indicar</option><option value="HEMBRA">Hembra</option><option value="MACHO">Macho</option></select></div>
                                 <div class="auth-field"><label for="publish-proposito">Propósito</label><select id="publish-proposito" name="proposito"><option value="">Sin indicar</option><option value="CRIA">Cría</option><option value="ENGORDE">Engorde</option><option value="LECHE">Leche</option><option value="DOBLE PROPOSITO">Doble propósito</option></select></div>
-                                <div class="auth-field"><label for="publish-edad">Edad aproximada (meses)</label><input id="publish-edad" name="edadMeses" type="number" min="0" step="1" inputmode="numeric"></div>
+                                <div class="auth-field"><label for="publish-nacimiento">Fecha de nacimiento</label><input id="publish-nacimiento" name="fechaNacimiento" type="date"><small class="field-help">Si no la sabes exacta, escribe una aproximada y márcala como estimada.</small></div>
+                                <div class="auth-field"><span id="publish-estimada-etiqueta">&nbsp;</span><label class="signup-radio" for="publish-estimada"><input id="publish-estimada" name="fechaNacimientoEstimada" type="checkbox" value="true" aria-describedby="publish-estimada-etiqueta"><span>La fecha es estimada</span></label></div>
+                                <div class="auth-field"><label for="publish-edad">Edad aproximada (meses)</label><input id="publish-edad" name="edadMeses" type="number" min="0" step="1" inputmode="numeric"><small class="field-help">Se usa si no pones la fecha de nacimiento.</small></div>
                                 <div class="auth-field"><label for="publish-peso">Peso aproximado (kg)</label><input id="publish-peso" name="peso" type="number" min="0" step="0.1" inputmode="decimal"></div>
+                                <div class="auth-field" data-partos hidden><label for="publish-partos">Partos</label><input id="publish-partos" name="partos" type="number" min="0" max="30" step="1" inputmode="numeric"></div>
+                                <div class="auth-field" data-arete><label for="publish-arete">Arete SENASA</label><input id="publish-arete" name="arete" inputmode="numeric" maxlength="17" autocomplete="off" placeholder="188 0 01 0002345" aria-describedby="publish-arete-ayuda"><small id="publish-arete-ayuda" class="field-help">Opcional. 13 dígitos: 188, un dígito de control, la provincia (01 a 07) y 7 del correlativo.</small><small class="auth-error" data-error-for="arete" role="alert"></small></div>
+                                <div class="auth-field auth-field--wide"><label class="signup-radio" for="publish-es-lote"><input id="publish-es-lote" name="esLote" type="checkbox" value="on" aria-controls="publish-lote-cantidad-campo"><span>Publicar un lote (varios animales iguales)</span></label></div>
+                                <div class="auth-field" id="publish-lote-cantidad-campo" data-lote hidden><label for="publish-lote-cantidad">Cantidad de animales del lote</label><input id="publish-lote-cantidad" name="loteCantidad" type="number" min="2" max="100" step="1" inputmode="numeric" value="2"><small class="field-help">De 2 a 100. Todos comparten especie, tipo, raza, edad y peso; el precio es el del lote completo.</small></div>
                                 <div class="auth-field auth-field--wide"><label for="publish-descripcion">Descripción</label><textarea id="publish-descripcion" name="descripcion" maxlength="500" placeholder="Describe características relevantes para la persona compradora."></textarea><small class="field-help">Hasta 500 caracteres.</small></div>
                             </div>
                         </div>

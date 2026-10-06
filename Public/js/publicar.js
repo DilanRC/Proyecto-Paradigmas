@@ -1,11 +1,13 @@
 import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
 import { request } from './shared/api.js';
 import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
-import { safeImageUrl } from './explore.js?v=foto-3';
+import { safeImageUrl } from './explore.js?v=foto-4';
+import { digitosArete, errorArete, formatearArete } from './shared/arete.js';
 
 const DRAFT_KEY = 'tindercows:publish-draft';
 // La foto elegida no viaja en el borrador: un File no se puede guardar.
-const CAMPOS_FUERA_DEL_ENVIO = new Set(['imagenModo']);
+const CAMPOS_FUERA_DEL_ENVIO = new Set(['imagenModo', 'esLote']);
+const SEXO_POR_TIPO = { H: 'HEMBRA', M: 'MACHO' };
 
 function readStored(key) {
     try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
@@ -76,7 +78,9 @@ function restoreDraft(form) {
     if (!draft || !form) return;
     for (const [name, value] of Object.entries(draft)) {
         const control = form.elements.namedItem(name);
-        if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
+        if (control instanceof HTMLInputElement && control.type === 'checkbox') {
+            control.checked = value === control.value;
+        } else if (control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement
             || control instanceof HTMLSelectElement || control instanceof RadioNodeList) {
             control.value = value ?? '';
         }
@@ -91,11 +95,29 @@ export function serialize(form) {
         .map(([key, value]) => [key, value.trim()]));
 }
 
-/** Cuerpo para la API: sin el modo de imagen y con imagenUrl solo si aplica. */
+/**
+ * Cuerpo para la API: sin el modo de imagen y con imagenUrl solo si aplica. Del modelo de animal (P2-2)
+ * viaja solo lo que se llenó: la raza de catálogo manda sobre el texto, un lote no lleva arete ni partos
+ * y el arete viaja solo con dígitos.
+ */
 export function cuerpoPublicacion(draft, imagenUrl) {
     const cuerpo = Object.fromEntries(Object.entries(draft).filter(([key]) => !CAMPOS_FUERA_DEL_ENVIO.has(key)));
     if (imagenUrl) cuerpo.imagenUrl = imagenUrl;
     else delete cuerpo.imagenUrl;
+    if (/^\d+$/.test(cuerpo.razaId ?? '')) delete cuerpo.raza;
+    else delete cuerpo.razaId;
+    if (draft.esLote === 'on') {
+        delete cuerpo.arete;
+        delete cuerpo.partos;
+    } else {
+        delete cuerpo.loteCantidad;
+    }
+    if (cuerpo.arete) cuerpo.arete = digitosArete(cuerpo.arete);
+    if (cuerpo.fechaNacimientoEstimada === 'true') cuerpo.fechaNacimientoEstimada = true;
+    else delete cuerpo.fechaNacimientoEstimada;
+    for (const campo of ['especieId', 'tipoId', 'partos', 'fechaNacimiento', 'arete']) {
+        if (cuerpo[campo] === '') delete cuerpo[campo];
+    }
     return cuerpo;
 }
 
@@ -236,6 +258,125 @@ function montarFoto(form) {
     };
 }
 
+/**
+ * Modelo de animal (P2-2): especie -> tipo y raza encadenados (de api/v1/catalogos), el sexo que fija el tipo,
+ * partos solo para hembras, arete con máscara y publicación de lote. Si el catálogo no carga, el formulario
+ * sigue como antes (raza en texto libre).
+ */
+async function montarModelo(form) {
+    const campo = (id) => form.querySelector(id);
+    const especie = campo('#publish-especie');
+    const tipo = campo('#publish-tipo');
+    const raza = campo('#publish-raza-id');
+    const razaOtra = campo('[data-raza-otra]');
+    const sexo = campo('#publish-sexo');
+    const partosCampo = campo('[data-partos]');
+    const partos = campo('#publish-partos');
+    const nacimiento = campo('#publish-nacimiento');
+    const estimada = campo('#publish-estimada');
+    const arete = campo('#publish-arete');
+    const areteCampo = campo('[data-arete]');
+    const areteError = form.querySelector('[data-error-for="arete"]');
+    const esLote = campo('#publish-es-lote');
+    const loteCampo = campo('[data-lote]');
+
+    let catalogo = null;
+    try {
+        catalogo = (await request('api/v1/catalogos')).data;
+    } catch { /* Sin catálogo el formulario conserva la raza en texto. */ }
+    if (!catalogo) {
+        for (const control of [especie, tipo, raza]) {
+            control.disabled = true;
+            control.closest('.auth-field').hidden = true;
+        }
+        razaOtra.hidden = false;
+    } else {
+        for (const item of catalogo.especies) especie.append(new Option(item.nombre, String(item.especieId)));
+    }
+
+    const llenar = (select, items, vacio, clave, extra = null) => {
+        select.replaceChildren(new Option(vacio, ''));
+        items.forEach((item) => select.append(new Option(item.nombre, String(item[clave]))));
+        if (extra) select.append(new Option(extra, 'otra'));
+    };
+    const tipoElegido = () => catalogo?.tipos.find((item) => String(item.tipoId) === tipo.value) ?? null;
+
+    const actualizarPartos = () => {
+        const visible = sexo.value === 'HEMBRA' && !esLote.checked;
+        partosCampo.hidden = !visible;
+        if (!visible) partos.value = '';
+    };
+    const actualizarSexo = () => {
+        const fijo = SEXO_POR_TIPO[tipoElegido()?.sexo] ?? null;
+        if (fijo) sexo.value = fijo;
+        sexo.disabled = fijo !== null;
+        actualizarPartos();
+    };
+    const actualizarRaza = () => {
+        razaOtra.hidden = catalogo !== null && raza.value !== 'otra';
+        if (razaOtra.hidden) razaOtra.querySelector('input').value = '';
+    };
+    const actualizarEspecie = () => {
+        const id = Number(especie.value);
+        const hay = catalogo !== null && Number.isInteger(id) && id > 0;
+        llenar(tipo, hay ? catalogo.tipos.filter((item) => item.especieId === id) : [],
+            hay ? 'Sin indicar' : 'Elige primero la especie', 'tipoId');
+        llenar(raza, hay ? catalogo.razas.filter((item) => item.especieId === id) : [],
+            hay ? 'Sin indicar' : 'Elige primero la especie', 'razaId', hay ? 'Otra (la escribo)' : null);
+        tipo.disabled = !hay;
+        raza.disabled = !hay;
+        actualizarRaza();
+        actualizarSexo();
+    };
+    const actualizarLote = () => {
+        loteCampo.hidden = !esLote.checked;
+        areteCampo.hidden = esLote.checked;
+        if (esLote.checked) arete.value = '';
+        actualizarPartos();
+    };
+    const validarArete = () => {
+        const problema = errorArete(arete.value);
+        arete.setCustomValidity(problema ?? '');
+        arete.toggleAttribute('aria-invalid', problema !== null);
+        if (areteError) areteError.textContent = problema ?? '';
+    };
+
+    especie.addEventListener('change', actualizarEspecie);
+    tipo.addEventListener('change', actualizarSexo);
+    raza.addEventListener('change', actualizarRaza);
+    sexo.addEventListener('change', actualizarPartos);
+    esLote.addEventListener('change', actualizarLote);
+    arete.addEventListener('input', () => {
+        arete.value = formatearArete(arete.value);
+        validarArete();
+    });
+    // Una fecha de nacimiento nunca es futura (el servidor también lo valida).
+    const hoy = new Date();
+    nacimiento.max = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+    nacimiento.addEventListener('input', () => {
+        if (!nacimiento.value) estimada.checked = false;
+        estimada.disabled = !nacimiento.value;
+    });
+
+    return {
+        /** Reaplica un borrador (o limpia con {}) respetando las dependencias entre campos. */
+        sincronizar(borrador = {}) {
+            especie.value = catalogo ? (borrador.especieId ?? '') : '';
+            actualizarEspecie();
+            tipo.value = borrador.tipoId ?? '';
+            raza.value = borrador.razaId ?? '';
+            actualizarRaza();
+            actualizarSexo();
+            if (borrador.sexo && !sexo.disabled) sexo.value = borrador.sexo;
+            esLote.checked = borrador.esLote === 'on';
+            actualizarLote();
+            estimada.disabled = !nacimiento.value;
+            validarArete();
+        },
+        mostrarErrorArete(mensaje) { if (areteError) areteError.textContent = mensaje; },
+    };
+}
+
 async function initialize() {
     const form = document.querySelector('#publish-form');
     const submit = document.querySelector('#publish-submit');
@@ -299,6 +440,8 @@ async function initialize() {
     });
     restoreDraft(form);
     const foto = montarFoto(form);
+    const modelo = await montarModelo(form);
+    modelo.sincronizar(readStored(DRAFT_KEY) ?? {});
 
     form.addEventListener('input', () => {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(serialize(form)));
@@ -327,12 +470,16 @@ async function initialize() {
             sessionStorage.removeItem(DRAFT_KEY);
             form.reset();
             foto.reiniciar();
+            modelo.sincronizar({});
             setStatus('success', 'Publicación guardada',
                 'Tu publicación ya está activa y la verán compradores cercanos.',
                 { href: `explorar?publicacion=${Number(resultado.publicacionId)}`, label: 'Ver mi publicación' });
         } catch (error) {
             if (error?.fieldErrors?.imagenUrl) foto.mostrarError(error.fieldErrors.imagenUrl);
-            setStatus('error', 'No se guardó la publicación', error.message);
+            if (error?.fieldErrors?.arete) modelo.mostrarErrorArete(error.fieldErrors.arete);
+            // Con errores por campo (422/409) se muestran todos, no solo "Revise los campos indicados."
+            const detalles = Object.values(error?.fieldErrors ?? {}).filter((texto) => typeof texto === 'string').join(' ');
+            setStatus('error', 'No se guardó la publicación', detalles || error.message);
         } finally {
             form.setAttribute('aria-busy', 'false');
             submit.disabled = false;

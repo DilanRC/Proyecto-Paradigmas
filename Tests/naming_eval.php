@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('treinta_y_siete_tablas', $manifest['table_count'] === 37,
-    'SQL crea exactamente treinta y siete tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
+$evaluate('cuarenta_y_una_tablas', $manifest['table_count'] === 41,
+    'SQL crea exactamente cuarenta y una tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -76,14 +76,14 @@ $evaluate('diagnostico_sin_restriccion', str_contains($diagnostico, 'DETECTAN')
 $evaluate('sin_reglas_referenciales', !str_contains($schema, 'ON UPDATE') && !str_contains($schema, 'ON DELETE'),
     'No existen reglas referenciales porque no existen FK');
 $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador', 'tbanimal',
-    'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
-    'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbbitacora', 'tbcarrito',
+    'tbanimalinteraccion', 'tbanimalproduccionsalud', 'tbanimalpublicacion', 'tbanimalpublicacionanimal',
+    'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbanimaltipo', 'tbbitacora', 'tbcarrito',
     'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
     'tbcompradorpersonatelefonohistorico', 'tbcomprasolicitud',
-    'tbdireccion', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
+    'tbdireccion', 'tbespecie', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
     'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
-    'tbproductorubicacion', 'tbregistroconsulta',
+    'tbproductorubicacion', 'tbraza', 'tbregistroconsulta',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
     'tbtransportistahorario', 'tbtransportistaoferta', 'tbtransportistaresena', 'tbtransportistavehiculo',
     'tbvehiculo', 'tbventa'],
@@ -135,7 +135,6 @@ $evaluate('comercio_historico_preparado', str_contains($schema, 'CREATE TABLE IF
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbcompra')
     && str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbventa')
     && str_contains($schema, 'tbcompraid INT NULL')
-    && !str_contains($schema, 'tbanimalfechanacimiento')
     && !str_contains($schema, 'tbcompraestado'),
     'Animal, observación, publicación, compra y venta quedan listos sin pasado inventado');
 $evaluate('funnel_y_transporte_preparados', str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbanimalinteraccion')

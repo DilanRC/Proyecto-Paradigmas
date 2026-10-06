@@ -75,6 +75,8 @@ const EXPECTED_COLUMNS = [
     'tbanimal' => [
         'tbanimalid', 'tbanimalidentificacion', 'tbanimalsexo', 'tbanimalraza',
         'tbanimalcaracteristicas', 'tbanimalfecharegistroensistema', 'tbanimalorigenregistro',
+        'tbespecieid', 'tbanimaltipoid', 'tbrazaid', 'tbanimalfechanacimiento',
+        'tbanimalfechanacimientoestimada', 'tbanimalpartos', 'tbanimalestado', 'tbproductorid',
     ],
     'tbanimalproduccionsalud' => [
         'tbanimalproduccionsaludid', 'tbanimalid', 'tbanimalproduccionsaludfecha',
@@ -168,6 +170,12 @@ const EXPECTED_COLUMNS = [
         'tbtransportistaofertaradiokm', 'tbtransportistaofertacapacidad', 'tbtransportistaofertaprecio',
         'tbtransportistaofertadescripcion', 'tbtransportistaofertaestado', 'tbtransportistaofertafecha',
     ],
+    'tbespecie' => ['tbespecieid', 'tbespecienombre', 'tbespecieactivo'],
+    'tbanimaltipo' => [
+        'tbanimaltipoid', 'tbespecieid', 'tbanimaltiponombre', 'tbanimaltiposexo', 'tbanimaltipoactivo',
+    ],
+    'tbraza' => ['tbrazaid', 'tbespecieid', 'tbrazanombre', 'tbrazaactivo'],
+    'tbanimalpublicacionanimal' => ['tbanimalpublicacionanimalid', 'tbanimalpublicacionid', 'tbanimalid'],
 ];
 
 function postgresConnection(string $url): PDO
@@ -256,7 +264,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 37 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 41 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -352,6 +360,15 @@ function ensureCurrentColumns(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbdireccionlongitud NUMERIC(10,7) NULL;
         ALTER TABLE public.tbanimalpublicacion
         ADD COLUMN IF NOT EXISTS tbanimalpublicacionimagenurl VARCHAR(500) NULL;
+        ALTER TABLE public.tbanimal
+        ADD COLUMN IF NOT EXISTS tbespecieid INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS tbanimaltipoid INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS tbrazaid INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS tbanimalfechanacimiento DATE NULL,
+        ADD COLUMN IF NOT EXISTS tbanimalfechanacimientoestimada SMALLINT NULL,
+        ADD COLUMN IF NOT EXISTS tbanimalpartos INTEGER NULL,
+        ADD COLUMN IF NOT EXISTS tbanimalestado VARCHAR(20) NULL,
+        ADD COLUMN IF NOT EXISTS tbproductorid INTEGER NULL;
         ALTER TABLE public.tbcompra
         ADD COLUMN IF NOT EXISTS tbcompradorid INTEGER NULL,
         ALTER COLUMN tbproductorcompradorid DROP NOT NULL,
@@ -466,6 +483,116 @@ function eliminarEstadoProductor(PDO $connection): void
     $connection->exec('ALTER TABLE public.tbproductor DROP COLUMN IF EXISTS tbproductorestado');
 }
 
+/**
+ * Catálogos del animal (P2-2). Solo se siembra una tabla VACÍA: lo que un administrador haya cambiado,
+ * agregado o desactivado no se reinserta al redesplegar. Mismos datos que Database/SeedData/104catalogosanimal.sql.
+ */
+function seedCatalogs(PDO $connection): void
+{
+    $catalogos = [
+    'tbespecie' => [
+        [1, 'Bovino', 1],
+        [2, 'Porcino', 1],
+        [3, 'Equino', 1],
+        [4, 'Ovino', 1],
+        [5, 'Caprino', 1],
+        [6, 'Bufalino', 1],
+    ],
+    'tbanimaltipo' => [
+        [1, 1, 'Ternero', 'M', 1],
+        [2, 1, 'Ternera', 'H', 1],
+        [3, 1, 'Torete', 'M', 1],
+        [4, 1, 'Novillo', 'M', 1],
+        [5, 1, 'Vaquilla', 'H', 1],
+        [6, 1, 'Vaca', 'H', 1],
+        [7, 1, 'Toro', 'M', 1],
+        [8, 1, 'Buey', 'M', 1],
+        [9, 2, 'Lechón', null, 1],
+        [10, 2, 'Cerdo de engorde', null, 1],
+        [11, 2, 'Cerda', 'H', 1],
+        [12, 2, 'Verraco', 'M', 1],
+        [13, 3, 'Potro', 'M', 1],
+        [14, 3, 'Potra', 'H', 1],
+        [15, 3, 'Caballo', 'M', 1],
+        [16, 3, 'Yegua', 'H', 1],
+        [17, 4, 'Cordero', 'M', 1],
+        [18, 4, 'Cordera', 'H', 1],
+        [19, 4, 'Carnero', 'M', 1],
+        [20, 4, 'Oveja', 'H', 1],
+        [21, 5, 'Cabrito', 'M', 1],
+        [22, 5, 'Cabrita', 'H', 1],
+        [23, 5, 'Macho cabrío', 'M', 1],
+        [24, 5, 'Cabra', 'H', 1],
+        [25, 6, 'Búfalo', 'M', 1],
+        [26, 6, 'Búfala', 'H', 1],
+    ],
+    'tbraza' => [
+        [1, 1, 'Brahman', 1],
+        [2, 1, 'Holstein', 1],
+        [3, 1, 'Jersey', 1],
+        [4, 1, 'Pardo Suizo', 1],
+        [5, 1, 'Angus', 1],
+        [6, 1, 'Nelore', 1],
+        [7, 1, 'Gyr', 1],
+        [8, 1, 'Girolando', 1],
+        [9, 1, 'Simmental', 1],
+        [10, 1, 'Guzerat', 1],
+        [11, 1, 'Sindi', 1],
+        [12, 1, 'Charolais', 1],
+        [13, 1, 'Santa Gertrudis', 1],
+        [14, 1, 'Brangus', 1],
+        [15, 1, 'Beefmaster', 1],
+        [16, 1, 'Criollo', 1],
+        [17, 1, 'Mestizo', 1],
+        [18, 2, 'Landrace', 1],
+        [19, 2, 'Yorkshire', 1],
+        [20, 2, 'Duroc', 1],
+        [21, 2, 'Pietrain', 1],
+        [22, 2, 'Criollo', 1],
+        [23, 2, 'Mestizo', 1],
+        [24, 3, 'Criollo', 1],
+        [25, 3, 'Cuarto de milla', 1],
+        [26, 3, 'Pura sangre', 1],
+        [27, 3, 'Paso fino', 1],
+        [28, 3, 'Mestizo', 1],
+        [29, 4, 'Pelibuey', 1],
+        [30, 4, 'Katahdin', 1],
+        [31, 4, 'Dorper', 1],
+        [32, 4, 'Criollo', 1],
+        [33, 4, 'Mestizo', 1],
+        [34, 5, 'Saanen', 1],
+        [35, 5, 'Alpina', 1],
+        [36, 5, 'Toggenburg', 1],
+        [37, 5, 'Nubia', 1],
+        [38, 5, 'Criollo', 1],
+        [39, 5, 'Mestizo', 1],
+        [40, 6, 'Murrah', 1],
+        [41, 6, 'Mediterráneo', 1],
+        [42, 6, 'Mestizo', 1],
+    ],
+    ];
+    $columnas = [
+        'tbespecie' => ['tbespecieid', 'tbespecienombre', 'tbespecieactivo'],
+        'tbanimaltipo' => ['tbanimaltipoid', 'tbespecieid', 'tbanimaltiponombre', 'tbanimaltiposexo', 'tbanimaltipoactivo'],
+        'tbraza' => ['tbrazaid', 'tbespecieid', 'tbrazanombre', 'tbrazaactivo'],
+    ];
+    foreach ($catalogos as $tabla => $filas) {
+        if ((int) $connection->query("SELECT COUNT(*) FROM public.{$tabla}")->fetchColumn() > 0) {
+            continue;
+        }
+        $lista = $columnas[$tabla];
+        $insertar = $connection->prepare(sprintf(
+            'INSERT INTO public.%s (%s) VALUES (%s)',
+            $tabla,
+            implode(', ', $lista),
+            implode(', ', array_fill(0, count($lista), '?')),
+        ));
+        foreach ($filas as $fila) {
+            $insertar->execute($fila);
+        }
+    }
+}
+
 /** Registra el único método de pago del alcance vigente sin duplicarlo. */
 function seedInitialData(PDO $connection): void
 {
@@ -498,10 +625,11 @@ try {
     agregarHistoricoDireccion($connection);
     eliminarEstadoProductor($connection);
     seedInitialData($connection);
+    seedCatalogs($connection);
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=37 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=41 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

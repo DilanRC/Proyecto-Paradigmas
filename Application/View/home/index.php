@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-13"></script>
-    <script type="module" src="js/home.js?v=home-7"></script>
+    <script type="module" src="js/home.js?v=home-8"></script>
 </head>
 <body class="public-home" data-portada>
     <div class="public-shell" id="inicio">

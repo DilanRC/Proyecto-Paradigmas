@@ -1167,3 +1167,51 @@ después de dejar de escribir y solo bloquea si el correo ya está registrado.
 Al crear la cuenta en Supabase se mantiene el aviso neutro de `d7b5a88`. El
 límite no elimina la enumeración, solo la vuelve lenta: si se necesita más,
 el siguiente paso es exigir un captcha o retirar otra vez la consulta.
+
+## DEC-ANIMAL-001 - Modelo de animal, catálogos y publicación de lote
+
+**Qué se decidió (P2-2).** El animal gana especie, tipo, raza de catálogo, fecha de nacimiento (real o estimada),
+partos, estado (`ACTIVO`, `PUBLICADO`, `VENDIDO`, `INACTIVO`) y dueño explícito (`tbproductorid`). Todas son columnas
+`NULL` en `tbanimal`, así que los animales existentes no cambian. El esquema pasa a 41 tablas.
+
+**Catálogos con referencia a la especie** (`tbespecie`, `tbanimaltipo`, `tbraza`) y no una tabla genérica de
+catálogos: así PHP valida con una consulta simple que el tipo y la raza pertenecen a la especie, y el sexo se
+deriva del tipo (`M`/`H`/sin sexo). Cada catálogo tiene `activo` (como `tbpagometodo`) para que Jeremi los gestione
+desde el panel de administración (P2-6) sin borrar nada. "Categorización" es lo mismo que "tipo".
+`tbanimalraza` (texto) se conserva y se llena con el nombre de la raza de catálogo, para no romper la búsqueda,
+las tarjetas ni los snapshots de venta.
+
+**Datos iniciales sin pisar al administrador.** MySQL (`104catalogosanimal.sql` y la migración `021`) y Postgres
+(`seedCatalogs()` en `migrate.php`) siembran **solo si la tabla está vacía**: lo que el administrador agregue,
+cambie o desactive no se reinserta al redesplegar. Costo: una especie o raza nueva en una versión futura no llega
+sola a una base ya sembrada; se agrega desde el panel.
+
+**Arete SENASA (DIIO).** 13 dígitos: `188` (Costa Rica) + un dígito de control o separación + provincia de
+procedencia de 2 dígitos + correlativo de 7. Es **opcional**: existen animales sin arete y los datos de prueba usan
+identificaciones libres (`SOL-xxxx`), así que la validación solo corre cuando se envía el campo nuevo `arete`
+(la `animalIdentificacion` libre sigue aceptándose sin formato). Se guardan solo los dígitos (se aceptan espacios y
+guiones al escribir). **Supuesto:** la provincia es `01` a `07` (San José a Limón); el cuarto dígito se acepta
+tal cual porque el cliente no definió su regla. La unicidad se valida en PHP bajo el lock de alta de `tbanimal`
+(no hay `UNIQUE`): no puede haber dos animales **vigentes** (no `VENDIDO` ni `INACTIVO`) con el mismo arete.
+
+**Una publicación puede ser de un animal o de un lote.** Se agrega `tbanimalpublicacionanimal` (enlace
+publicación-animal). La publicación **sigue apuntando a su animal principal** (`tbanimalpublicacion.tbanimalid`), de
+modo que todo lo existente (listados, solicitudes, bitácora) funciona igual. Un lote de N animales crea N filas en
+`tbanimal` con los mismos datos (cada una con su observación de peso/edad) y N filas de enlace, **incluido el
+principal**; una publicación de un animal no tiene filas de enlace. Alternativas descartadas: una columna
+`cantidad` en la publicación (no permite vacunas ni ventas por animal) y publicar N veces (llena Explorar).
+Un lote no lleva arete ni partos (son de un animal) y tiene un máximo de 100 animales.
+
+**Venta de un lote.** `tbcompra` y `tbventa` son hechos por animal: al aceptar una solicitud, `aceptar` registra un
+par por **cada animal** del lote, con su propio snapshot de raza, edad, peso y propósito. El precio acordado se
+reparte en partes iguales en centavos (el primer animal absorbe el resto, así la suma siempre da el total). Los
+animales pasan a `VENDIDO` y su arete queda libre. Para una publicación de un animal el comportamiento es el de siempre.
+
+**Validaciones (PHP, `AnimalValidacionService`).** El tipo y la raza son de la especie elegida y están activos;
+el sexo coincide con el tipo; `partos` es un entero 0-30 solo para hembras; la fecha de nacimiento es válida, no
+futura (hora de Costa Rica) y la marca de "estimada" exige fecha. Nada de esto se revalida en la base: sin llaves ni
+restricciones, igual que el resto del esquema.
+
+**Fecha de nacimiento.** Antes el proyecto evitaba `tbanimalfechanacimiento` para no "inventar un pasado". La
+columna nueva es opcional y solo la llena quien conoce el dato; los animales existentes quedan en `NULL` y la edad
+sigue saliendo de `tbanimalproduccionsalud` cuando no hay fecha. Se ajustaron las tres pruebas que la prohibían.

@@ -146,6 +146,41 @@ erDiagram
         VARCHAR tbanimalcaracteristicas
         DATETIME tbanimalfecharegistroensistema
         VARCHAR tbanimalorigenregistro
+        INT tbespecieid
+        INT tbanimaltipoid
+        INT tbrazaid
+        DATE tbanimalfechanacimiento
+        TINYINT tbanimalfechanacimientoestimada
+        INT tbanimalpartos
+        VARCHAR tbanimalestado
+        INT tbproductorid
+    }
+
+    tbespecie {
+        INT tbespecieid
+        VARCHAR tbespecienombre
+        TINYINT tbespecieactivo
+    }
+
+    tbanimaltipo {
+        INT tbanimaltipoid
+        INT tbespecieid
+        VARCHAR tbanimaltiponombre
+        VARCHAR tbanimaltiposexo
+        TINYINT tbanimaltipoactivo
+    }
+
+    tbraza {
+        INT tbrazaid
+        INT tbespecieid
+        VARCHAR tbrazanombre
+        TINYINT tbrazaactivo
+    }
+
+    tbanimalpublicacionanimal {
+        INT tbanimalpublicacionanimalid
+        INT tbanimalpublicacionid
+        INT tbanimalid
     }
 
     tbanimalproduccionsalud {
@@ -394,6 +429,14 @@ erDiagram
     tbtransportistaoferta ||--o{ tbcomprasolicitud : "flete pedido"
     tbcomprador ||--o{ tbcompra : "compras"
     tbcomprasolicitud ||--o{ tbventa : "origen"
+    tbespecie ||--o{ tbanimaltipo : "tipos"
+    tbespecie ||--o{ tbraza : "razas"
+    tbespecie ||--o{ tbanimal : "especie"
+    tbanimaltipo ||--o{ tbanimal : "tipo"
+    tbraza ||--o{ tbanimal : "raza"
+    tbproductor ||--o{ tbanimal : "dueño"
+    tbanimalpublicacion ||--o{ tbanimalpublicacionanimal : "animales del lote"
+    tbanimal ||--o{ tbanimalpublicacionanimal : "en lote"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
 ```
 

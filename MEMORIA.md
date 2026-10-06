@@ -340,6 +340,18 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   `tbproductoractividad`, `tbtransportistaestadoperiodo` se quedan como están), política de sesión de administrador (P3-4) y la limpieza menor de frontend.
 - **Lo trabaja Jeremi (no tocar):** verificación de identidad y catálogos en el panel de administración (P2-6).
 
+### Modelo de animal (P2-2, en construcción; DEC-ANIMAL-001)
+- Esquema de **41 tablas**: catálogos `tbespecie`, `tbanimaltipo` (con `sexo` M/H o NULL) y `tbraza` (todos con `activo`, para que Jeremi los gestione en el panel admin; **no hay endpoints ni pantallas admin de catálogos en esta línea**) y `tbanimalpublicacionanimal` (enlace de lote). Migración `021modeloanimal.sql`; semilla `104catalogosanimal.sql` (en `compose.yaml`, `instalar-local.*` y `Tools/db-aislada.sh`) y `seedCatalogs()` en `migrate.php`. **Solo se siembra una tabla vacía**: lo que el admin cambie o desactive no se reinserta.
+- Columnas nuevas en `tbanimal` (todas NULL): `tbespecieid`, `tbanimaltipoid`, `tbrazaid`, `tbanimalfechanacimiento` (+ `…estimada`), `tbanimalpartos`, `tbanimalestado` (`ACTIVO|PUBLICADO|VENDIDO|INACTIVO`) y `tbproductorid` (dueño explícito). `tbanimalraza` (texto) se conserva y se llena con el nombre de la raza de catálogo.
+- **API `GET api/v1/catalogos?especieId=`** (sesión; `CatalogosController`): `{ especies, tipos, razas }` activos (con `especieId` filtra tipos y razas). Los formularios la leen una sola vez sin filtro.
+- **`POST api/v1/publicaciones` acepta, todo opcional:** `especieId`, `tipoId`, `razaId`, `fechaNacimiento` (AAAA-MM-DD) + `fechaNacimientoEstimada`, `partos`, `arete` y `loteCantidad` (2-100). Validaciones en `AnimalValidacionService` (422 por campo): tipo y raza activos y de la especie (el tipo/raza exige `especieId`); el **sexo se deriva del tipo** y si se envía debe coincidir; `partos` entero 0-30 solo si el sexo es HEMBRA; fecha válida y no futura (hora de Costa Rica), "estimada" exige fecha; un lote no lleva `arete` ni `partos`. Sin ninguno de estos campos todo funciona como antes (`animalIdentificacion` y `raza` libres siguen igual).
+- **Arete SENASA (supuestos):** 13 dígitos = `188` + 1 dígito de control + provincia `01`-`07` + 7 de correlativo (`1880010002345`). Se valida **solo** cuando llega en el campo nuevo `arete` (PHP: `AnimalValidacionService::arete`; JS: `shared/arete.js`); se aceptan espacios y guiones y se guardan **solo dígitos** en `tbanimalidentificacion`. Supuesto anotado: la provincia es 01-07 y el 4.º dígito se acepta tal cual (el cliente no lo definió). Es opcional: los animales con identificación libre (`SOL-xxxx`) siguen existiendo. **Unicidad en PHP** (bajo el lock de `tbanimal`): 409 si hay otro animal vigente (no `VENDIDO` ni `INACTIVO`) con el mismo arete; un animal vendido libera el suyo.
+- **Lote:** una publicación apunta a su animal principal (`tbanimalpublicacion.tbanimalid`, todo lo anterior funciona igual). Un lote de N crea N animales iguales (cada uno con su observación de edad/peso) y N filas en `tbanimalpublicacionanimal` (incluido el principal); un animal solo no tiene filas. La API devuelve `loteCantidad` (1 = un animal) y, al crear, `animalIds` si es lote. `AnimalComercial::animalesDePublicacion($id)` da los ids.
+- **Venta de un lote:** `SolicitudesCompraController::aceptar` registra `tbcompra` y `tbventa` **por animal** (snapshot propio de raza/edad/peso/propósito); el precio se reparte en partes iguales en centavos (el primero absorbe el resto) y los animales quedan `VENDIDO`. `CompraSolicitud::datosParaVenta` devuelve además `animales`. Una publicación de un animal registra exactamente lo mismo que antes.
+- **Lectura:** cada publicación trae `loteCantidad` y `animal.{especieId, especie, tipoId, tipo, razaId, fechaNacimiento, fechaNacimientoEstimada, partos, estado}` (null si el animal es anterior a P2-2).
+- **Publicar:** listas encadenadas especie → tipo y raza (con "Otra (la escribo)"), sexo fijado por el tipo, fecha de nacimiento (con "estimada"), partos solo si es hembra, arete con máscara y "Publicar un lote". Si el catálogo no carga, queda la raza en texto. Tarjetas (`buildCard`): Tipo (especie · tipo), edad calculada desde la fecha ("(aprox.)" si es estimada), partos y, en lotes, "Lote de N" junto al precio y una fila "Lote".
+- Cambió una decisión vieja: antes tres pruebas **prohibían** `tbanimalfechanacimiento` ("sin pasado inventado"). La columna es opcional y nunca se llena sola; se ajustaron `db_ready_test`, `naming_eval` y `schema_eval`.
+
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
 1. **Columna nueva = 4 lugares** (SQL canónico, migración MySQL, `schema.sql`
@@ -403,6 +415,7 @@ están incluidos ahí.
 
 ### Backend (para el compañero de backend)
 - Editar **nombre, identificación o correo**: sigue sin existir (solo alias, teléfono y foto, ver "Foto de perfil y datos propios").
+- Catálogos del animal (especies, tipos, razas, vacunas): el CRUD en el panel admin es de Jeremi (P2-6); las tablas ya traen `activo`.
 - **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
 
@@ -466,6 +479,13 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · modelo-animal · P2-2 Modelo de animal: catálogos, validaciones, arete, lote y Publicar
+- Esquema, API y pantalla del modelo de animal (ver "Modelo de animal (P2-2)" y `DEC-ANIMAL-001`): 4 tablas nuevas (41 en total), 8 columnas NULL en `tbanimal`, `api/v1/catalogos`, validaciones, arete SENASA, lote y venta de lote por animal.
+- Archivos: `AnimalCatalogo.php`, `AnimalValidacionService.php`, `CatalogosController.php`, `Public/api/catalogos.php`, `AnimalComercial.php`, `AnimalPublicacionController.php`, `CompraSolicitud.php` (`datosParaVenta`) y `SolicitudesCompraController.php` (`aceptar`), `021modeloanimal.sql`, `104catalogosanimal.sql`, `schema.sql`, `migrate.php`, `publicar.js` (`publish-4`), `shared/arete.js`, `explore.js` (`explore-12`; import `foto-4` en `home.js` y `publicar.js`), vistas de Publicar, Explorar e Inicio, `Public/.htaccess`, diccionario, DER, `Decisiones.md` y PDF.
+- Pruebas: nuevas `Tests/api_modelo_animal_test.php` y `Tests/frontend/modelo_animal.test.mjs`; actualizadas `db_ready_test`, `naming_eval` y `schema_eval` (la fecha de nacimiento ya no está prohibida) y todos los conteos de 37 a 41 tablas. `solicitudes_compra_test` y `api_publicaciones_test` pasan sin cambios.
+- Cuidado: **`me-interesa.js` debe subir su import a `explore.js?v=foto-4`** (no se tocó aquí porque lo edita otra rama); hasta entonces un navegador con la copia vieja de `explore.js` no muestra la marca de lote en Me interesa. Una base MySQL existente necesita `Database/Migrations/021modeloanimal.sql`. Migraciones nuevas empiezan en 022.
+- Probado `migrate.php` contra Postgres 16 partiendo del esquema anterior (37 tablas), dos veces seguidas (idempotente, 41 tablas, catálogos sembrados una vez).
 
 ### 2026-10-06 · jefersonbustamante · Migraciones renumeradas (colisión con `backend`)
 - La rama `backend` (Jeremi) ya usa las migraciones `017personadocumentomotivo.sql` y `018personadocumentolectura.sql`. Las mías pasan a `019transportistaoferta.sql` y `020comprasolicitud.sql`; **las siguientes empiezan en 021**. Solo cambió el nombre de los archivos (el contenido y lo aplicado en las bases no cambian).

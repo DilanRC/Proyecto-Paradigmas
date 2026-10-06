@@ -240,13 +240,23 @@ final class SolicitudesCompraController
         $hecho = ['compradorId' => (int) $fila['compradorid'], 'fecha' => gmdate('Y-m-d'), 'hora' => gmdate('H:i:s'),
             'precio' => $precio, 'pagoMetodoId' => $fila['pagometodoid'] === null ? null : (int) $fila['pagometodoid'],
             'origen' => self::ORIGEN];
-        $compraId = $this->animales->ejecutarConBloqueoAlta('tbcompra',
-            fn (): int => $this->animales->registrarCompra($datos['animalId'], null, $datos['fincaId'], $hecho));
-        $this->animales->ejecutarConBloqueoAlta('tbventa',
-            fn (): int => $this->animales->registrarVenta($datos['animalId'], $datos['vendedorId'], null, $datos['fincaId'], $compraId, $hecho + [
-                'solicitudId' => $solicitudId, 'proposito' => $datos['proposito'], 'edadMeses' => $datos['edadMeses'],
-                'peso' => $datos['peso'], 'razaSnapshot' => $datos['raza'],
-            ]));
+        // Compra y venta son hechos POR ANIMAL: un lote (DEC-ANIMAL-001) registra un par por cada animal y el precio
+        // acordado se reparte en partes iguales en centavos (el primer animal absorbe el resto).
+        $animales = $datos['animales'];
+        if ($animales === []) throw new HttpException('La publicación no tiene animales registrados.', 409);
+        $centavos = (int) round($precio * 100);
+        $cuota = intdiv($centavos, count($animales));
+        foreach ($animales as $i => $animal) {
+            $porAnimal = ['precio' => ($cuota + ($i === 0 ? $centavos - $cuota * count($animales) : 0)) / 100] + $hecho;
+            $compraId = $this->animales->ejecutarConBloqueoAlta('tbcompra',
+                fn (): int => $this->animales->registrarCompra($animal['animalId'], null, $datos['fincaId'], $porAnimal));
+            $this->animales->ejecutarConBloqueoAlta('tbventa',
+                fn (): int => $this->animales->registrarVenta($animal['animalId'], $datos['vendedorId'], null, $datos['fincaId'], $compraId, $porAnimal + [
+                    'solicitudId' => $solicitudId, 'proposito' => $animal['proposito'], 'edadMeses' => $animal['edadMeses'],
+                    'peso' => $animal['peso'], 'razaSnapshot' => $animal['raza'],
+                ]));
+        }
+        $this->animales->marcarEstadoAnimales(array_column($animales, 'animalId'), 'VENDIDO');
         $this->animales->cambiarEstadoPublicacion($publicacionId, 'VENDIDO', 'Venta aceptada', self::ORIGEN);
         $this->solicitudes->responder($solicitudId, 'ACEPTADA', null, 'PENDIENTE', $precio);
         foreach ($this->solicitudes->rechazarPendientesDe($publicacionId, $solicitudId, 'La publicación se vendió a otra solicitud.') as $otra) {

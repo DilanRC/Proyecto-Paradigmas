@@ -54,6 +54,32 @@ export function formatAge(edadMeses) {
     return `${edadMeses} ${edadMeses === 1 ? 'mes' : 'meses'}`;
 }
 
+/** Meses completos desde la fecha de nacimiento (AAAA-MM-DD); null si no hay fecha válida o es futura. */
+export function ageFromBirth(fecha, hoy = new Date()) {
+    const partes = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(fecha ?? ''));
+    if (!partes) return null;
+    const [anio, mes, dia] = partes.slice(1).map(Number);
+    let meses = (hoy.getFullYear() - anio) * 12 + (hoy.getMonth() + 1 - mes);
+    if (hoy.getDate() < dia) meses -= 1;
+    return meses >= 0 ? meses : null;
+}
+
+/** Edad en meses del animal: la calculada con la fecha de nacimiento y, si no hay, la observada. */
+export function animalAgeMonths(animal, hoy = new Date()) {
+    return ageFromBirth(animal?.fechaNacimiento, hoy) ?? animal?.edadMeses ?? null;
+}
+
+/** "Bovino · Vaca", "Bovino" o "—" (especie y tipo del catálogo). */
+export function formatKind(animal) {
+    return [animal?.especie, animal?.tipo].filter(Boolean).join(' · ') || '—';
+}
+
+/** Cantidad de animales de la publicación: 1 es un animal; más de 1, un lote. */
+export function lotSize(publicacion) {
+    const n = Number(publicacion?.loteCantidad);
+    return Number.isInteger(n) && n > 1 ? n : 1;
+}
+
 export function formatWeight(peso) {
     if (typeof peso !== 'number' || !Number.isFinite(peso)) return '—';
     return `${Number.isInteger(peso) ? peso : peso.toFixed(1)} kg`;
@@ -230,19 +256,27 @@ export function buildCard(publicacion, { compacta = false } = {}) {
     ubicacion.append(pin, ` ${formatLocation(publicacion.direccion)}`);
     meta.append(ubicacion, element('span', null, formatText(publicacion.animal?.identificacion)));
 
+    // Un lote se marca junto al precio, donde antes iba el sexo.
+    const lote = lotSize(publicacion);
     const precio = element('p', 'explore-card__price');
     precio.append(
         element('strong', null, formatPrice(publicacion.precio)),
-        element('span', null, formatText(publicacion.animal?.sexo)),
+        element('span', null, lote > 1 ? `Lote de ${lote}` : formatText(publicacion.animal?.sexo)),
     );
 
+    const animal = publicacion.animal;
+    const edadMeses = animalAgeMonths(animal);
+    const edadAprox = animal?.fechaNacimiento && animal?.fechaNacimientoEstimada === true && ageFromBirth(animal.fechaNacimiento) !== null;
     const specs = element('dl', 'explore-card__specs');
+    if (animal?.especie || animal?.tipo) specs.append(specEntry('fa-paw', 'Tipo', formatKind(animal)));
     specs.append(
-        specEntry('fa-dna', 'Raza', formatText(publicacion.animal?.raza)),
-        specEntry('fa-hourglass-half', 'Edad', formatAge(publicacion.animal?.edadMeses)),
-        specEntry('fa-weight-scale', 'Peso', formatWeight(publicacion.animal?.peso)),
-        specEntry('fa-bullseye', 'Propósito', formatPurpose(publicacion.animal?.proposito)),
+        specEntry('fa-dna', 'Raza', formatText(animal?.raza)),
+        specEntry('fa-hourglass-half', 'Edad', `${formatAge(edadMeses)}${edadAprox ? ' (aprox.)' : ''}`),
+        specEntry('fa-weight-scale', 'Peso', formatWeight(animal?.peso)),
+        specEntry('fa-bullseye', 'Propósito', formatPurpose(animal?.proposito)),
     );
+    if (Number.isInteger(animal?.partos)) specs.append(specEntry('fa-baby', 'Partos', String(animal.partos)));
+    if (lote > 1) specs.append(specEntry('fa-layer-group', 'Lote', `${lote} animales`));
 
     const vendedor = element('p', 'explore-card__seller');
     const persona = element('i');
