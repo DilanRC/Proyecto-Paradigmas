@@ -10,7 +10,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-7';
+    link.href = 'css/public-product.css?v=product-9';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -73,6 +73,50 @@ function addNavLink(nav, href, icon, label) {
     nav.append(link);
 }
 
+// Carrito = contador de solicitudes de compra aprobadas (como Comprador); enlaza a Mi panel → Mis solicitudes.
+const CART_KEY = 'tindercows:carrito';
+const CART_TTL_MS = 15000;
+
+function createCartLink() {
+    const link = document.createElement('a');
+    link.className = 'public-cart';
+    link.href = 'mi-actividad#mis-solicitudes';
+    link.dataset.publicCart = 'true';
+    link.innerHTML = '<i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span class="public-cart__badge" aria-hidden="true" hidden>0</span>';
+    paintCart(link, 0);
+    return link;
+}
+
+function paintCart(link, count) {
+    const total = Number.isInteger(count) && count > 0 ? count : 0;
+    const badge = link.querySelector('.public-cart__badge');
+    badge.textContent = total > 99 ? '99+' : String(total);
+    badge.hidden = total === 0;
+    link.setAttribute('aria-label', `Mis solicitudes aprobadas: ${total}`);
+}
+
+/** Una consulta por carga de página (con caché de segundos en la pestaña); si falla, el carrito queda en 0 y la navegación no se rompe. */
+async function loadCartCount(link, email) {
+    try {
+        try {
+            const cached = JSON.parse(globalThis.sessionStorage?.getItem(CART_KEY) ?? 'null');
+            if (cached?.email === email && Date.now() - cached.t < CART_TTL_MS) { paintCart(link, cached.n); return; }
+        } catch { /* sin caché */ }
+        const token = await getAccessToken();
+        if (!token) return;
+        const response = await fetch('api/v1/solicitudes-compra?resumen=1', {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+            cache: 'no-store',
+        });
+        if (!response.ok) return;
+        const aprobadas = (await response.json())?.data?.aprobadas;
+        paintCart(link, aprobadas);
+        try { globalThis.sessionStorage?.setItem(CART_KEY, JSON.stringify({ email, n: aprobadas, t: Date.now() })); } catch { /* sin caché */ }
+    } catch {
+        // El contador es un adorno: sin red o sin sesión válida se queda en 0.
+    }
+}
+
 function createAccountMenu(actions, session, profile) {
     const login = actions.querySelector('.public-header__login');
     if (!login || actions.querySelector('[data-public-account]')) return null;
@@ -99,6 +143,9 @@ function createAccountMenu(actions, session, profile) {
         </div>`;
 
     login.replaceWith(menu);
+    const cart = createCartLink();
+    menu.before(cart);
+    void loadCartCount(cart, session.email);
     // Si la foto ya no existe, vuelve la inicial.
     const avatarImg = menu.querySelector('.public-account-menu__avatar img');
     avatarImg?.addEventListener('error', () => { avatarImg.parentElement.textContent = initial; }, { once: true });

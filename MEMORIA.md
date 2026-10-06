@@ -238,8 +238,19 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   - Mi panel: tres bandejas que solo aparecen si tienen filas: **Solicitudes recibidas** (Aceptar o Rechazar), **Fletes que me piden** (Aceptar flete o
     Rechazar) y **Mis solicitudes** (Cancelar). Al aceptar una publicación "a convenir" se pide el precio con `window.prompt`; al rechazar, un motivo opcional.
     Los teléfonos aparecen cuando la API los entrega.
-  - **Sin método de pago en la interfaz:** la API lo acepta (`pagoMetodoId`), pero no hay una lista pública de métodos (`api/v1/metodos-pago` es solo de admin).
-    Si se quiere, hace falta un endpoint de lectura para clientes.
+  - **Método de pago (opcional) en el diálogo:** `GET api/v1/pago-metodos-disponibles` (sesión; `PagoMetodosDisponiblesController`, `PagoMetodo::listarActivos`)
+    devuelve `{ metodos: [{ pagoMetodoId, nombre }] }` solo con los **activos**, sin descripción. `api/v1/metodos-pago` sigue siendo solo del administrador.
+    `shared/solicitud-compra.js` (`solicitud-2`) llena el selector "Método de pago (opcional)" al abrir (si la carga falla o no hay métodos, el campo
+    se oculta y el diálogo sigue) y envía `pagoMetodoId` solo si se eligió. `presentar()` devuelve `pagoMetodo: { id, nombre }` o `null` (además de
+    `pagoMetodoId`) y las bandejas de Mi panel muestran "Método de pago: …". Un método inexistente o inactivo sigue dando 422.
+  - **Carrito = contador (decisión del 06/10):** con sesión, `public-ui.js` (`public-14`) pone junto al menú de cuenta un ícono de carrito
+    (`fa-cart-shopping`) con una insignia que cuenta las solicitudes **ACEPTADAS** del usuario como Comprador; la insignia se oculta en 0 y el ícono
+    siempre enlaza a `mi-actividad#mis-solicitudes` (ancla en la cabecera de "Mis solicitudes"; `mi-actividad.js` hace `scrollIntoView` porque la bandeja
+    nace oculta). Etiqueta accesible "Mis solicitudes aprobadas: N". Dato: `GET api/v1/solicitudes-compra?resumen=1` → `{ aprobadas: N }` con un `COUNT`
+    (`CompraSolicitud::contarAceptadas`; 0 si no es Comprador). Se pide una vez por carga de página y se guarda unos segundos en `sessionStorage`
+    (`tindercows:carrito`, por correo); si falla se queda en 0 y no rompe la navegación. No usa `tbcarrito*`. Estilo: `.public-cart*` en
+    `public-product.css` (`product-9`), insignia con el acento `--tc-primary` y texto `#151a18` (igual que `.public-header__login`, AA en ambos temas).
+    El `@import` de `base.css` sigue apuntando a `product-7` (las vistas enlazan `product-9` directo).
 - Hecho: esquema, API y pantallas. **No se probó en el navegador con una sesión real** (solo pruebas estáticas y de API): revisar a mano el flujo completo
   con dos cuentas (comprador y vendedor) y una tercera con Transportista.
 
@@ -485,6 +496,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · sesion-a-fletes-admin · Método de pago en la solicitud y carrito como contador
+- Endpoint de lectura `api/v1/pago-metodos-disponibles`; selector opcional en el diálogo de solicitud; `pagoMetodo` en la presentación y en las bandejas de Mi panel. Carrito del encabezado con el contador de solicitudes aprobadas y `?resumen=1` (ver "Solicitud de compra"). Sin esquema nuevo.
+- Archivos: `PagoMetodosDisponiblesController.php`, `Public/api/pago-metodos-disponibles.php`, `PagoMetodo.php`, `CompraSolicitud.php` (`contarAceptadas`, join con el método), `SolicitudesCompraController.php` (`procesar` recibe también `$_GET`; `resumen()`), `solicitud-compra.js`, `mi-actividad.js`, `public-ui.js`, `public-product.css`, `solicitud.css`, `Public/.htaccess`.
+- Caché: `public-ui.js` `public-14` y `public-product.css` `product-9` en las 8 vistas públicas; `solicitud-compra.js`/`solicitud.css` `solicitud-2`; `explore-interactions.js` `interactions-4`, `me-interesa.js` `interesa-4`, `mi-actividad.js` `panel-10`.
+- Pruebas: ampliada `Tests/solicitudes_compra_test.php` (método válido/inactivo/inexistente, presentación, lista de disponibles, resumen y 401); nueva `Tests/frontend/carrito.test.mjs`; ampliada `solicitudes_ui.test.mjs`.
 
 ### 2026-10-06 · sesion-a-fletes-admin · Admin: pantalla /admin/fletes (moderación de ofertas)
 - Pantalla y API nuevas (ver "Administrador: fletes"); estado `RETIRADA` de oferta sin cambiar el esquema; el transportista no puede tocar una retirada.

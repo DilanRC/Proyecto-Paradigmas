@@ -42,12 +42,12 @@ test('Explorar tiene "Solicitar compra" como acción principal y la abre sin env
     assert.match(explore, /accion === 'Solicitar compra' \? 'is-primary' : null/);
     const interacciones = read('Public/js/explore-interactions.js');
     assert.match(interacciones, /dataset\.exploreAction === 'Solicitar compra'/);
-    assert.match(interacciones, /solicitud-compra\.js\?v=solicitud-1/);
+    assert.match(interacciones, /solicitud-compra\.js\?v=solicitud-2/);
     assert.doesNotMatch(interacciones.match(/const ACTION_TYPES = \{[^}]*\}/)[0], /Solicitar/);
     const vista = read('Application/View/explorar/index.php');
-    assert.match(vista, /css\/solicitud\.css\?v=solicitud-1/);
+    assert.match(vista, /css\/solicitud\.css\?v=solicitud-2/);
     assert.match(vista, /js\/explore\.js\?v=explore-11/);
-    assert.match(vista, /js\/explore-interactions\.js\?v=interactions-3/);
+    assert.match(vista, /js\/explore-interactions\.js\?v=interactions-4/);
 });
 
 test('Me interesa ofrece solicitar y ver fletes cercanos solo si la publicación sigue activa', () => {
@@ -57,8 +57,8 @@ test('Me interesa ofrece solicitar y ver fletes cercanos solo si la publicación
     assert.match(interesa, /abrir\(true\)/);
     assert.match(interesa, /Ver fletes cercanos/);
     const vista = read('Application/View/me-interesa/index.php');
-    assert.match(vista, /css\/solicitud\.css\?v=solicitud-1/);
-    assert.match(vista, /js\/me-interesa\.js\?v=interesa-3/);
+    assert.match(vista, /css\/solicitud\.css\?v=solicitud-2/);
+    assert.match(vista, /js\/me-interesa\.js\?v=interesa-4/);
 });
 
 test('el diálogo usa la API de solicitudes y los fletes por publicación, sin innerHTML', () => {
@@ -75,4 +75,18 @@ test('el estilo del diálogo usa solo variables --tc-* para el color', () => {
     assert.doesNotMatch(css.replace(/rgba\([^)]*\)/g, '').replace(/#fff\b/g, ''), /#[0-9a-fA-F]{3,6}\b(?![^{]*\{)/);
     assert.match(css, /var\(--tc-primary\)/);
     assert.match(css, /:has\(input:focus-visible\)/);
+});
+
+test('el diálogo ofrece el método de pago opcional, sin romperse si falla la carga, y Mi panel lo muestra', () => {
+    assert.match(dialogo, /api\/v1\/pago-metodos-disponibles/);
+    assert.match(dialogo, /Método de pago \(opcional\)/);
+    assert.match(dialogo, /if \(selectorPago\.value\) cuerpo\.pagoMetodoId = Number\(selectorPago\.value\)/);
+    assert.match(dialogo, /catch \{\s*pago\.hidden = true;/);
+    assert.match(dialogo, /pago\.hidden = true;\n/);
+    assert.match(panel, /Método de pago: \$\{escapeHtml\(s\.pagoMetodo\.nombre\)\}/);
+    const ruta = read('Public/.htaccess');
+    assert.match(ruta, /RewriteRule \^api\/v1\/pago-metodos-disponibles\/\?\$ api\/pago-metodos-disponibles\.php \[END\]/);
+    // El endpoint de clientes pide sesión y no toca el de administrador.
+    assert.match(read('Public/api/pago-metodos-disponibles.php'), /requerirAutenticado/);
+    assert.match(read('Public/.htaccess'), /api\/v1\/metodos-pago/);
 });

@@ -138,6 +138,17 @@ final class CompraSolicitud
         return ['solicitudes' => $solicitudes, 'total' => $total];
     }
 
+    /** Solicitudes ACEPTADAS del comprador: el contador del carrito del encabezado. */
+    public function contarAceptadas(int $compradorId): int
+    {
+        $sentencia = $this->conexion->prepare(
+            "SELECT COUNT(*) FROM tbcomprasolicitud WHERE tbcompradorid = :id AND tbcomprasolicitudestado = 'ACEPTADA'"
+        );
+        $sentencia->execute(['id' => $compradorId]);
+
+        return (int) $sentencia->fetchColumn();
+    }
+
     public function hayPendiente(int $publicacionId, int $compradorId): bool
     {
         $sentencia = $this->conexion->prepare(
@@ -261,7 +272,8 @@ final class CompraSolicitud
         // Alias en minúscula: Postgres los pliega; las claves públicas camelCase se arman en el controlador.
         return 'SELECT s.tbcomprasolicitudid AS solicitudid, s.tbanimalpublicacionid AS publicacionid,
                        s.tbcompradorid AS compradorid, s.tbtransportistaofertaid AS ofertaid,
-                       s.tbpagometodoid AS pagometodoid, s.tbcomprasolicitudprecio AS precio,
+                       s.tbpagometodoid AS pagometodoid, pm.tbpagometodonombre AS pagometodonombre,
+                       s.tbcomprasolicitudprecio AS precio,
                        s.tbcomprasolicitudmensaje AS mensaje, s.tbcomprasolicitudestado AS estado,
                        s.tbcomprasolicitudfleteestado AS fleteestado, s.tbcomprasolicitudfecha AS fecha,
                        s.tbcomprasolicitudrespuestafecha AS respuestafecha,
@@ -285,6 +297,7 @@ final class CompraSolicitud
                 INNER JOIN tbpersona pv ON pv.tbpersonaid = pr.tbpersonaid
                 INNER JOIN tbcomprador c ON c.tbcompradorid = s.tbcompradorid
                 INNER JOIN tbpersona pc ON pc.tbpersonaid = c.tbpersonaid
+                LEFT JOIN tbpagometodo pm ON pm.tbpagometodoid = s.tbpagometodoid
                 LEFT JOIN tbtransportistaoferta o ON o.tbtransportistaofertaid = s.tbtransportistaofertaid
                 LEFT JOIN tbvehiculo ov ON ov.tbvehiculoid = o.tbvehiculoid
                 LEFT JOIN tbtransportista t ON t.tbtransportistaid = o.tbtransportistaid

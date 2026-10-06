@@ -38,6 +38,21 @@ final class PagoMetodo
         ];
     }
 
+    /** Solo los activos, por nombre: lo que un cliente puede proponer. Id y nombre; sin descripción interna. */
+    public function listarActivos(): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbpagometodoid AS pagometodoid, tbpagometodonombre AS nombre FROM tbpagometodo
+             WHERE tbpagometodoactivo = 1 ORDER BY tbpagometodonombre, tbpagometodoid'
+        );
+        $sentencia->execute();
+
+        return array_map(
+            static fn (array $fila): array => ['pagoMetodoId' => (int) $fila['pagometodoid'], 'nombre' => $fila['nombre']],
+            $sentencia->fetchAll()
+        );
+    }
+
     public function buscarPorId(int $id): ?array
     {
         $sentencia = $this->conexion->prepare(

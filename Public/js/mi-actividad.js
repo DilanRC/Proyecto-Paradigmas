@@ -243,7 +243,8 @@ function solicitudAccion(accion, etiqueta, id) {
 /** Fila común: título, precio, flete y el estado; cada bandeja agrega sus líneas y botones. */
 function filaSolicitud(s, lineas, botones, estado = { texto: SOLICITUD_ESTADOS[s.estado] ?? '', vigente: s.estado === 'ACEPTADA' || s.estado === 'PENDIENTE' }) {
     const flete = s.flete ? `<p>Flete: ${escapeHtml(s.flete.vehiculo || 'Transporte')} · ${escapeHtml(s.flete.transportista.nombre)} (${FLETE_ESTADOS[s.flete.estado] ?? ''})</p>` : '';
-    return `<article class="panel-row panel-row--media">${miniatura({ imagenUrl: s.publicacion.imagenUrl })}<div><h3>${escapeHtml(s.publicacion.titulo || 'Publicación')}</h3><p>${formatColones(s.precio)}</p>${flete}${lineas}</div><div class="panel-row__actions"><span class="activity-state" data-state="${estado.vigente ? 'ACTIVO' : 'INACTIVO'}">${estado.texto}</span>${botones}</div></article>`;
+    const pago = s.pagoMetodo ? `<p>Método de pago: ${escapeHtml(s.pagoMetodo.nombre)}</p>` : '';
+    return `<article class="panel-row panel-row--media">${miniatura({ imagenUrl: s.publicacion.imagenUrl })}<div><h3>${escapeHtml(s.publicacion.titulo || 'Publicación')}</h3><p>${formatColones(s.precio)}</p>${pago}${flete}${lineas}</div><div class="panel-row__actions"><span class="activity-state" data-state="${estado.vigente ? 'ACTIVO' : 'INACTIVO'}">${estado.texto}</span>${botones}</div></article>`;
 }
 
 function filaHecha(s) {
@@ -280,6 +281,10 @@ function renderSolicitudes(datos) {
     }
     // Una persona sin vendedor pero con solicitudes también necesita la columna principal.
     document.querySelector('.panel-grid').classList.toggle('panel-grid--sin-principal', !isActive('PRODUCTOR') && !alguna);
+    // El carrito del encabezado enlaza a mi-actividad#mis-solicitudes; la bandeja nace oculta, así que el ancla nativa no alcanza.
+    if (globalThis.location?.hash === '#mis-solicitudes' && solicitudesData.hechas.length) {
+        document.querySelector('#mis-solicitudes')?.scrollIntoView();
+    }
 }
 
 async function loadSolicitudes() {

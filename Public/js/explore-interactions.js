@@ -80,7 +80,7 @@ async function requestPurchase(button) {
         window.location.assign(`entrar?next=${encodeURIComponent('explorar')}`);
         return;
     }
-    const { abrirSolicitudCompra } = await import('./shared/solicitud-compra.js?v=solicitud-1');
+    const { abrirSolicitudCompra } = await import('./shared/solicitud-compra.js?v=solicitud-2');
     abrirSolicitudCompra({
         publicacionId: context.publicacionId,
         titulo: context.card.querySelector('h2')?.textContent ?? 'Publicación',

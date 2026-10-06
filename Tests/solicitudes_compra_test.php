@@ -11,6 +11,7 @@ require_once dirname(__DIR__) . '/Application/Model/PagoMetodo.php';
 require_once dirname(__DIR__) . '/Application/Controller/MiVehiculosController.php';
 require_once dirname(__DIR__) . '/Application/Controller/MiOfertasController.php';
 require_once dirname(__DIR__) . '/Application/Controller/SolicitudesCompraController.php';
+require_once dirname(__DIR__) . '/Application/Controller/PagoMetodosDisponiblesController.php';
 require_once dirname(__DIR__) . '/Application/Controller/FletesController.php';
 require_once dirname(__DIR__) . '/Application/Controller/RegistroPublicoController.php';
 require_once dirname(__DIR__) . '/Application/Service/RegistroPublicoService.php';
@@ -25,6 +26,7 @@ use Application\Controller\SolicitudesCompraController;
 $identificaciones = [];   // personas registradas por la prueba (no el vendedor)
 $vendedores = [];
 $animalIds = [];
+$pagoIds = [];        // métodos de pago creados por la prueba
 
 /** @return array{0:int,1:ActorContext} */
 function sol_registro(string $identificacion, array $capacidades): array
@@ -271,6 +273,35 @@ try {
     test_same(700000.0, $conPrecio['body']['data']['solicitud']['precio'], 'Se guarda el precio acordado');
     test_same(1, sol_contar('SELECT COUNT(*) FROM tbventa WHERE tbcomprasolicitudid = :id AND tbventaprecio = 700000', ['id' => $solConvenir['solicitudId']]), 'La venta usa el precio acordado');
 
+    // Método de pago: solo uno activo; aparece en la presentación y en la lista de disponibles (sin descripción).
+    $pagos = new Application\Model\PagoMetodo($db);
+    $pagos->ejecutarConBloqueoAlta(static function () use ($pagos, &$pagoIds): void {
+        $pagoIds['activo'] = $pagos->crear(['nombre' => 'Prueba pago activo ' . test_token('p'), 'descripcion' => 'Interna', 'activo' => true]);
+        $pagoIds['inactivo'] = $pagos->crear(['nombre' => 'Prueba pago inactivo ' . test_token('p'), 'descripcion' => 'Interna', 'activo' => false]);
+    });
+    test_same(422, $comprasB->procesar('POST', ['publicacionId' => $pubRechazo, 'pagoMetodoId' => $pagoIds['inactivo']])['status'], 'Un método inactivo es 422');
+    $conPago = $comprasB->procesar('POST', ['publicacionId' => $pubRechazo, 'pagoMetodoId' => $pagoIds['activo']]);
+    test_same(201, $conPago['status'], 'Un método activo se acepta');
+    test_same($pagoIds['activo'], $conPago['body']['data']['solicitud']['pagoMetodo']['id'], 'La presentación trae pagoMetodo.id');
+    test_assert(str_starts_with((string) $conPago['body']['data']['solicitud']['pagoMetodo']['nombre'], 'Prueba pago activo'), 'La presentación trae pagoMetodo.nombre');
+    test_same($pagoIds['activo'], $ventas->procesar('GET')['body']['data']['recibidas'][0]['pagoMetodo']['id'], 'El vendedor también ve el método propuesto');
+    test_same(null, $comprasA->procesar('GET')['body']['data']['hechas'][0]['pagoMetodo'], 'Sin método propuesto, pagoMetodo es null');
+    $disponibles = (new Application\Controller\PagoMetodosDisponiblesController($db, $actorA))->procesar('GET');
+    test_same(200, $disponibles['status'], 'Un cliente con sesión lista los métodos disponibles');
+    $idsDisponibles = array_column($disponibles['body']['data']['metodos'], 'pagoMetodoId');
+    test_assert(in_array($pagoIds['activo'], $idsDisponibles, true) && !in_array($pagoIds['inactivo'], $idsDisponibles, true), 'Solo salen los activos');
+    test_same(['pagoMetodoId', 'nombre'], array_keys($disponibles['body']['data']['metodos'][0]), 'Solo id y nombre, sin descripción');
+    test_same(401, (new Application\Controller\PagoMetodosDisponiblesController($db, ActorContext::noAutenticado()))->procesar('GET')['status'], 'Sin sesión es 401');
+
+    // Resumen del carrito: solicitudes ACEPTADAS del comprador (B tiene 1: la de la publicación con flete).
+    test_same(1, $comprasB->procesar('GET', [], ['resumen' => '1'])['body']['data']['aprobadas'], 'El resumen cuenta las aceptadas del comprador');
+    test_same(['aprobadas'], array_keys($comprasB->procesar('GET', [], ['resumen' => '1'])['body']['data']), 'El resumen solo trae el contador');
+    test_same(1, $comprasA->procesar('GET', [], ['resumen' => '1'])['body']['data']['aprobadas'], 'A solo cuenta la aceptada (las otras se cancelaron o rechazaron)');
+    test_same(0, $ventas->procesar('GET', [], ['resumen' => '1'])['body']['data']['aprobadas'], 'El vendedor es comprador pero no pidió nada: 0');
+    test_same(0, $fletes->procesar('GET', [], ['resumen' => '1'])['body']['data']['aprobadas'], 'Quien no es comprador cuenta 0');
+    test_same(401, (new SolicitudesCompraController($db, ActorContext::noAutenticado()))->procesar('GET', [], ['resumen' => '1'])['status'], 'El resumen sin sesión es 401');
+    test_assert(isset($comprasB->procesar('GET', [], ['resumen' => '0'])['body']['data']['hechas']), 'Sin resumen=1 sigue la lista completa');
+
     // Acciones inválidas y bitácora.
     test_same(422, $ventas->procesar('PATCH', ['solicitudId' => $solConvenir['solicitudId'], 'accion' => 'BORRAR'])['status'], 'Acción fuera del catálogo');
     $acciones = $db->prepare("SELECT tbbitacoraaccion FROM tbbitacora WHERE tbbitacoraentidad = 'COMPRA_SOLICITUD' AND tbbitacoraorigen = 'API_SOLICITUDES_COMPRA' AND tbbitacoraregistroidentificacionnumero IN (?, ?)");
@@ -282,6 +313,10 @@ try {
     test_assert($solA2['solicitudId'] > 0, 'Fixture A2');
 } finally {
     sol_cleanup($identificaciones, $vendedores, $animalIds);
+    if ($pagoIds !== []) {
+        $marcas = implode(',', array_fill(0, count($pagoIds), '?'));
+        test_db()->prepare("DELETE FROM tbpagometodo WHERE tbpagometodoid IN ({$marcas})")->execute(array_values($pagoIds));
+    }
 }
 
 function sol_estado_publicacion(int $publicacionId): ?string

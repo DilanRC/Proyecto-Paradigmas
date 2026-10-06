@@ -5,6 +5,7 @@ import { request } from './api.js';
 
 const SOLICITUDES_API = 'api/v1/solicitudes-compra';
 const FLETES_API = 'api/v1/fletes';
+const PAGO_METODOS_API = 'api/v1/pago-metodos-disponibles';
 
 function el(tag, className, text) {
     const nodo = document.createElement(tag);
@@ -72,6 +73,14 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
     area.placeholder = 'Ej.: Me interesa, ¿podemos coordinar la visita?';
     mensaje.append(el('span', null, 'Mensaje para el vendedor (opcional)'), area);
 
+    // Método de pago opcional: se llena al abrir. Si la carga falla o no hay métodos, el campo queda oculto y el diálogo sigue igual.
+    const pago = el('label', 'solicitud-field');
+    pago.hidden = true;
+    const selectorPago = el('select');
+    selectorPago.name = 'pagoMetodoId';
+    selectorPago.append(new Option('Sin preferencia', ''));
+    pago.append(el('span', null, 'Método de pago (opcional)'), selectorPago);
+
     const estado = el('p', 'solicitud-status');
     estado.setAttribute('role', 'status');
     estado.setAttribute('aria-live', 'polite');
@@ -81,7 +90,7 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
     enviar.type = 'submit';
     const acciones = el('div', 'solicitud-actions');
     acciones.append(cancelar, enviar);
-    form.append(encabezado, modos, fletes, mensaje, estado, acciones);
+    form.append(encabezado, modos, fletes, pago, mensaje, estado, acciones);
     dialogo.append(form);
     document.body.append(dialogo);
 
@@ -118,6 +127,17 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
         }
     }
 
+    async function cargarMetodosPago() {
+        try {
+            const respuesta = await request(PAGO_METODOS_API);
+            const metodos = respuesta.data?.metodos ?? [];
+            selectorPago.append(...metodos.map((metodo) => new Option(metodo.nombre, String(metodo.pagoMetodoId))));
+            pago.hidden = metodos.length === 0;
+        } catch {
+            pago.hidden = true;
+        }
+    }
+
     form.addEventListener('change', (evento) => {
         if (evento.target.name !== 'modo') return;
         fletes.hidden = !modoFlete();
@@ -136,6 +156,7 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
             if (!elegida) { mostrar('Elige un flete, o cambia a "Solo el animal".', 'error'); return; }
             cuerpo.ofertaId = Number(elegida.value);
         }
+        if (selectorPago.value) cuerpo.pagoMetodoId = Number(selectorPago.value);
         if (area.value.trim()) cuerpo.mensaje = area.value.trim();
         enviar.disabled = true;
         mostrar('Enviando solicitud…');
@@ -151,6 +172,7 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
     });
 
     dialogo.showModal();
+    cargarMetodosPago();
     if (conFlete) cargarFletes();
     (conFlete ? form.querySelector('input[name="modo"]:checked') : form.querySelector('input[name="modo"]'))?.focus();
 }

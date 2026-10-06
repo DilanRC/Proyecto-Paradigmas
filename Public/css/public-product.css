@@ -74,6 +74,53 @@
     z-index: 80;
 }
 
+/* Carrito: contador de solicitudes aprobadas, junto al menú de cuenta. */
+.public-cart {
+    position: relative;
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--tc-line);
+    border-radius: 999px;
+    color: var(--tc-text-soft);
+    background: var(--tc-bg-elevated);
+    text-decoration: none;
+}
+
+.public-cart:hover,
+.public-cart:focus-visible {
+    color: var(--tc-text);
+    border-color: var(--tc-primary);
+}
+
+.public-cart:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--tc-primary) 55%, transparent);
+    outline-offset: 2px;
+}
+
+.public-cart__badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: grid;
+    min-width: 20px;
+    height: 20px;
+    place-items: center;
+    padding: 0 5px;
+    border-radius: 999px;
+    color: #151a18;
+    background: var(--tc-primary);
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.public-cart__badge[hidden] {
+    display: none;
+}
+
 .public-account-menu__trigger {
     display: inline-flex;
     min-height: 42px;

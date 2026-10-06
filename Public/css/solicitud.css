@@ -138,7 +138,8 @@
     font-weight:800;
 }
 
-.solicitud-field textarea {
+.solicitud-field textarea,
+.solicitud-field select {
     width:100%;
     min-height:84px;
     padding:10px 12px;
@@ -150,10 +151,15 @@
     resize:vertical;
 }
 
-.solicitud-field textarea:focus-visible {
+.solicitud-field textarea:focus-visible,
+.solicitud-field select:focus-visible {
     border-color:var(--tc-primary);
     box-shadow:0 0 0 3px var(--tc-glow);
     outline:none;
+}
+
+.solicitud-field select {
+    min-height:44px;
 }
 
 .solicitud-status {

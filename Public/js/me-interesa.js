@@ -52,7 +52,7 @@ export function savedCard(publicacion) {
     const actions = document.createElement('div');
     actions.className = 'explore-card__actions';
     if (publicacion.estado === 'ACTIVO') {
-        const abrir = (conFlete) => import('./shared/solicitud-compra.js?v=solicitud-1').then(({ abrirSolicitudCompra }) => abrirSolicitudCompra({
+        const abrir = (conFlete) => import('./shared/solicitud-compra.js?v=solicitud-2').then(({ abrirSolicitudCompra }) => abrirSolicitudCompra({
             publicacionId: Number(publicacion.publicacionId),
             titulo: publicacion.titulo || 'Publicación',
             precio: card.querySelector('.explore-card__price strong')?.textContent ?? '',

@@ -57,14 +57,14 @@ final class SolicitudesCompraController
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
     }
 
-    public function procesar(string $metodo, array $cuerpo = []): array
+    public function procesar(string $metodo, array $cuerpo = [], array $consulta = []): array
     {
         try {
             if (!$this->actor->tienePersona()) {
                 throw new HttpException('Debe iniciar sesión para gestionar solicitudes de compra.', 401);
             }
             return match ($metodo) {
-                'GET' => $this->consultar(),
+                'GET' => in_array($consulta['resumen'] ?? null, ['1', 1, 'true', true], true) ? $this->resumen() : $this->consultar(),
                 'POST' => $this->crear($cuerpo),
                 'PATCH' => $this->responder($cuerpo),
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
@@ -72,6 +72,16 @@ final class SolicitudesCompraController
         } catch (HttpException $excepcion) {
             return $this->respuesta(false, $excepcion->getMessage(), $excepcion->datos, $excepcion->estadoHttp, $excepcion->errores);
         }
+    }
+
+    /** `?resumen=1`: solo el contador del carrito (solicitudes ACEPTADAS como Comprador), con un COUNT barato. */
+    private function resumen(): array
+    {
+        $comprador = $this->comprador->buscarPorPersona((int) $this->actor->personaId);
+
+        return $this->respuesta(true, 'Resumen consultado correctamente.', [
+            'aprobadas' => $comprador === null ? 0 : $this->solicitudes->contarAceptadas($comprador['compradorId']),
+        ]);
     }
 
     private function consultar(): array
@@ -288,6 +298,8 @@ final class SolicitudesCompraController
             'mensaje' => $f['mensaje'],
             'precio' => $f['precio'] === null ? null : (float) $f['precio'],
             'pagoMetodoId' => $f['pagometodoid'] === null ? null : (int) $f['pagometodoid'],
+            'pagoMetodo' => $f['pagometodoid'] === null ? null
+                : ['id' => (int) $f['pagometodoid'], 'nombre' => $f['pagometodonombre']],
             'respuestaFecha' => $f['respuestafecha'],
             'respuestaMotivo' => $f['respuestamotivo'],
             'publicacion' => [

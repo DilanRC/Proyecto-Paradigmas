@@ -12,13 +12,13 @@
     <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-8">
+    <link rel="stylesheet" href="css/public-product.css?v=product-9">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-13"></script>
-    <script type="module" src="js/mi-actividad.js?v=panel-9"></script>
+    <script type="module" src="js/public-ui.js?v=public-14"></script>
+    <script type="module" src="js/mi-actividad.js?v=panel-10"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">
@@ -69,7 +69,7 @@
                         </section>
 
                         <section id="sol-hechas-panel" class="activity-panel" aria-labelledby="sol-hechas-title" hidden>
-                            <div class="panel-head"><h2 id="sol-hechas-title">Mis solicitudes<span class="panel-count" id="sol-hechas-count"></span></h2></div>
+                            <div class="panel-head" id="mis-solicitudes"><h2 id="sol-hechas-title">Mis solicitudes<span class="panel-count" id="sol-hechas-count"></span></h2></div>
                             <div id="sol-hechas-list" class="panel-rows" aria-live="polite"></div>
                         </section>
 
