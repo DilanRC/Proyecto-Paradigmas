@@ -324,6 +324,22 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   tarjetas completas con scroll inferior (más de 4).
 - **Explorar no muestra tus propias publicaciones** (viven en Mi panel). `explore.js` envía `excluirPropias: 'true'` y el servidor (`AnimalPublicacionController::consultar` → `listarPublicaciones(..., $excluirVendedorId)`) excluye las del vendedor autenticado; así el total y la paginación salen bien. Sin sesión no excluye nada. Es opcional: Inicio, Mi panel y los demás no lo envían. Una publicación propia ya no abre con `explorar?publicacion=<id>`.
 
+### Decisiones del equipo (06/10) que acotan el trabajo
+- **Respuestas del cliente/equipo:**
+  - "Categorización" es lo mismo que **tipo** del animal.
+  - **Formato del arete SENASA** (DIIO): `188` (código ISO de Costa Rica) + `0` (dígito de control o separación) + `NN` (código de provincia de
+    procedencia: 01 San José, 02 Alajuela…) + `NNNNNNN` (correlativo único de 7 dígitos del animal en la base nacional). Son **13 dígitos**, por ejemplo
+    `1880010002345` (188 · 0 · 01 · 0002345).
+  - Una **publicación puede ser de un animal o de un lote** (ambas).
+  - **Comerciante = Vendedor.** No se crea una actividad nueva (cierra P3-1).
+  - **El carrito se mantiene, pero como un contador:** muestra cuántas **solicitudes de compra aprobadas** tiene la persona y enlaza a Mi panel
+    (Mis solicitudes). No usa las tablas `tbcarrito*`.
+- **Acceso en producción (P0-1): resuelto por decisión.** "Confirm email" está desactivado y el equipo **acepta el riesgo** de vincular la sesión
+  por correo; no se hará la unión por `sub` por ahora. El bucket privado `documentos` ya existe.
+- **Pospuesto (no tocar hasta nuevo aviso):** chat (P3-2), limpieza de tablas sin uso (P3-3: `tbcarrito*`, `tbanimalinteraccion`,
+  `tbproductoractividad`, `tbtransportistaestadoperiodo` se quedan como están), política de sesión de administrador (P3-4) y la limpieza menor de frontend.
+- **Lo trabaja Jeremi (no tocar):** verificación de identidad y catálogos en el panel de administración (P2-6).
+
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
 1. **Columna nueva = 4 lugares** (SQL canónico, migración MySQL, `schema.sql`
@@ -384,11 +400,9 @@ están incluidos ahí.
 - Editar **nombre, identificación o correo**: sigue sin existir (solo alias, teléfono y foto, ver "Foto de perfil y datos propios").
 - **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
   página cargada (25) en el navegador; la API solo filtra por `q` y estado.
-- "Ver fletes cercanos" en `/me-interesa` (depende de P1-3; no hay botón hasta que exista).
 
 ### Pendiente de P2-5 (va con P2-6)
-- Crear el bucket privado `documentos` y su política en Supabase (ver "Configuración de Supabase"). Sin él, la subida
-  falla con "No pudimos subir el documento".
+- ~~Crear el bucket privado `documentos`~~: **resuelto** (06/10).
 - Al reemplazar el documento, el archivo anterior queda en el bucket (no hay política de borrado para la persona). La
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
 
@@ -402,7 +416,7 @@ están incluidos ahí.
     for insert to authenticated
     with check (bucket_id = 'publicaciones' and (storage.foldername(name))[1] = auth.uid()::text);
   ```
-- **Bucket privado `documentos` (P2-5), pendiente de crear.** Lo crea el dueño del proyecto en el SQL Editor:
+- **Bucket privado `documentos` (P2-5): ya creado (06/10).** Si hubiera que recrearlo, en el SQL Editor:
   ```sql
   insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   values ('documentos', 'documentos', false, 5242880,
@@ -419,6 +433,7 @@ están incluidos ahí.
   mismo con `tbadministrador`: un correo agregado como admin **sin cuenta** lo reclama quien se registre primero.
   Cerrarlo: reactivar la confirmación (con SMTP propio, Resend/Brevo/SendGrid, y el Site URL de producción) o hacer
   P0-1 (vincular por el `sub` del JWT). Mientras tanto, agregar como admin solo correos que ya tengan cuenta.
+  **Decisión del 06/10: el equipo acepta este riesgo**; no se hará P0-1 por ahora.
 
 ### Frontend
 - Se quitó el botón **Pasar** de las tarjetas (un toque accidental ocultaría la publicación para siempre; el scroll ya cumple esa función). El API sigue aceptando el tipo `PASAR`, pero ninguna pantalla lo envía.

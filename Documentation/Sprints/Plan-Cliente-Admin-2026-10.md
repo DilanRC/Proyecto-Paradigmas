@@ -89,15 +89,18 @@ alias SQL van **en minúscula** (ver `MEMORIA.md`, Cuidados #3).
 **Problema:** en producción, quien se registra no puede entrar porque Supabase
 exige confirmar el correo y los correos no llegan (no hay servidor de correo propio).
 
-- [ ] Que el dueño del proyecto de Supabase **desactive "Confirm email"** y
+**Estado (2026-10-06): resuelto por decisión del equipo.** Se desactivó "Confirm email" y el equipo acepta el riesgo de vincular por
+correo; la unión por `sub` y el servidor de correo quedan pospuestos.
+
+- [x] Que el dueño del proyecto de Supabase **desactive "Confirm email"** y
       confirme a mano las cuentas que ya existen (Authentication → Users).
-- [ ] Que el dueño agregue al equipo como miembros del proyecto de Supabase.
-- [ ] **Unir la cuenta con la persona por el ID de usuario de Supabase**
+- [x] Que el dueño agregue al equipo como miembros del proyecto de Supabase.
+- [ ] (Pospuesto) **Unir la cuenta con la persona por el ID de usuario de Supabase**
       (`sub` del JWT) en vez de por el correo. Columna nueva
       `tbpersonaauthid VARCHAR(64) NULL` en los 4 lugares. Cambiar la búsqueda en
       `SupabaseActorResolver.php`. Así nadie se puede adueñar de una persona
       creada por un administrador registrándose con su correo.
-- [ ] Más adelante: servidor de correo propio (Resend o Brevo) y volver a
+- [ ] (Pospuesto) Más adelante: servidor de correo propio (Resend o Brevo) y volver a
       activar la confirmación.
 
 ### P0-2 · Mis publicaciones: listar, editar, pausar y cerrar · Carlos (API) + Jeferson (pantalla)
@@ -180,9 +183,9 @@ animal con flete.
       que el vendedor acepta o rechaza. Propuesta: tabla `tbcomprasolicitud`
       (publicación, comprador, oferta de flete opcional, estado `PENDIENTE` /
       `ACEPTADA` / `RECHAZADA` / `CANCELADA`, fecha y mensaje).
-- [ ] Cuando el vendedor acepta: registrar `tbventa` y `tbcompra` (ya existen,
-      sin uso) y la publicación pasa a `VENDIDO`. Si la solicitud traía flete,
-      se crea una solicitud de flete al transportista (P1-2).
+- [x] Cuando el vendedor acepta: registrar `tbventa` y `tbcompra` (adaptadas a un
+      Comprador normal, DEC-COMPRA-001) y la publicación pasa a `VENDIDO`. Si la solicitud traía
+      flete, el transportista lo responde por separado.
 - [x] En la tarjeta de Explorar: botón **"Solicitar compra"**; el diálogo ofrece "Solo el animal" o
       "El animal con flete" (muestra antes los fletes cercanos a la finca).
 - [x] En Mi panel: "Solicitudes recibidas" (vendedor), "Fletes que me piden" (transportista) y
@@ -295,9 +298,9 @@ Es el punto 1 del issue. **Sin IA generativa.**
       - La opción a (OCR con Tesseract) no corre bien en los contenedores de Vercel.
       - La opción b (padrón) no tenemos de dónde importarla de forma legal y estable.
       - La opción c funciona hoy, y el OCR se puede agregar después.
-- [ ] Bucket **privado** en Supabase Storage (`documentos`). Solo el dueño sube y
+- [x] Bucket **privado** en Supabase Storage (`documentos`). Solo el dueño sube y
       solo el administrador lee, con enlaces firmados temporales. Tipos jpg, png,
-      webp y pdf; máximo 5 MB. (Código y SQL listos; falta que el dueño de Supabase lo cree.)
+      webp y pdf; máximo 5 MB. (Creado el 06/10.)
 - [x] Columnas en `tbpersona`: tipo de documento, ruta del archivo y estado de
       verificación (`PENDIENTE`, `VERIFICADO`, `RECHAZADO`). `NULL` para las
       cuentas actuales.
@@ -390,13 +393,14 @@ con estado 1, y hoy se agregan a mano en la base de datos.
 
 ## 4. Preguntas abiertas
 
-- [ ] ¿Quién es el dueño del proyecto de Supabase y cuándo puede desactivar la
-      confirmación de correo? (P0-1)
-- [ ] ¿Oferta de flete como tabla nueva, o solo transportista + horario? (P1-2)
-- [ ] ¿La solicitud de compra necesita aceptación del vendedor, o se reserva
-      directamente? (P1-3)
-- [ ] ¿Opción a, b o c para leer el documento? (P2-5; se recomienda la c)
-- [ ] ¿"Categorización" es lo mismo que "tipo"? ¿Cuál es el formato del arete de SENASA? (P2-2)
-- [ ] ¿Una publicación es un animal o un lote? (P2-2)
-- [ ] ¿Qué es "comerciante"? (P3-1)
-- [ ] ¿Se mantiene el carrito? (P3-3)
+- [x] ¿Quién es el dueño del proyecto de Supabase y cuándo puede desactivar la
+      confirmación de correo? (P0-1) — Resuelto: ya se desactivó y se acepta el riesgo.
+- [x] ¿Oferta de flete como tabla nueva, o solo transportista + horario? (P1-2) — Tabla nueva (DEC-FLETE-001).
+- [x] ¿La solicitud de compra necesita aceptación del vendedor, o se reserva
+      directamente? (P1-3) — El vendedor acepta o rechaza (DEC-COMPRA-001).
+- [x] ¿Opción a, b o c para leer el documento? (P2-5) — Opción c (captura manual y revisión del admin).
+- [x] ¿"Categorización" es lo mismo que "tipo"? — **Sí, es lo mismo (06/10).**
+- [x] ¿Cuál es el formato del arete de SENASA? — **13 dígitos: 188 · 0 · provincia (2) · correlativo (7)**, p. ej. `1880010002345` (06/10).
+- [x] ¿Una publicación es un animal o un lote? — **Puede ser ambas (06/10).**
+- [x] ¿Qué es "comerciante"? (P3-1) — **Es lo mismo que un vendedor (06/10).**
+- [x] ¿Se mantiene el carrito? (P3-3) — **Sí, como contador de solicitudes de compra aprobadas con enlace a Mi panel (06/10).**
