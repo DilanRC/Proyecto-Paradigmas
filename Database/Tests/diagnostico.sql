@@ -276,7 +276,11 @@ WHERE a.tbanimalid IS NULL
 UNION ALL
 SELECT 'tbcompra.tbproductorcompradorid', c.tbcompraid, c.tbproductorcompradorid
 FROM tbcompra c LEFT JOIN tbproductor p ON p.tbproductorid = c.tbproductorcompradorid
-WHERE p.tbproductorid IS NULL
+WHERE c.tbproductorcompradorid IS NOT NULL AND p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbcompra.tbcompradorid', c.tbcompraid, c.tbcompradorid
+FROM tbcompra c LEFT JOIN tbcomprador k ON k.tbcompradorid = c.tbcompradorid
+WHERE c.tbcompradorid IS NOT NULL AND k.tbcompradorid IS NULL
 UNION ALL
 SELECT 'tbcompra.tbfincaorigenid', c.tbcompraid, c.tbfincaorigenid
 FROM tbcompra c LEFT JOIN tbfinca f ON f.tbfincaid = c.tbfincaorigenid
@@ -284,7 +288,7 @@ WHERE c.tbfincaorigenid IS NOT NULL AND f.tbfincaid IS NULL
 UNION ALL
 SELECT 'tbcompra.tbpagometodoid', c.tbcompraid, c.tbpagometodoid
 FROM tbcompra c LEFT JOIN tbpagometodo p ON p.tbpagometodoid = c.tbpagometodoid
-WHERE p.tbpagometodoid IS NULL
+WHERE c.tbpagometodoid IS NOT NULL AND p.tbpagometodoid IS NULL
 UNION ALL
 SELECT 'tbventa.tbanimalid', v.tbventaid, v.tbanimalid
 FROM tbventa v LEFT JOIN tbanimal a ON a.tbanimalid = v.tbanimalid
@@ -296,7 +300,15 @@ WHERE p.tbproductorid IS NULL
 UNION ALL
 SELECT 'tbventa.tbproductorcompradorid', v.tbventaid, v.tbproductorcompradorid
 FROM tbventa v LEFT JOIN tbproductor p ON p.tbproductorid = v.tbproductorcompradorid
-WHERE p.tbproductorid IS NULL
+WHERE v.tbproductorcompradorid IS NOT NULL AND p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbventa.tbcompradorid', v.tbventaid, v.tbcompradorid
+FROM tbventa v LEFT JOIN tbcomprador k ON k.tbcompradorid = v.tbcompradorid
+WHERE v.tbcompradorid IS NOT NULL AND k.tbcompradorid IS NULL
+UNION ALL
+SELECT 'tbventa.tbcomprasolicitudid', v.tbventaid, v.tbcomprasolicitudid
+FROM tbventa v LEFT JOIN tbcomprasolicitud s ON s.tbcomprasolicitudid = v.tbcomprasolicitudid
+WHERE v.tbcomprasolicitudid IS NOT NULL AND s.tbcomprasolicitudid IS NULL
 UNION ALL
 SELECT 'tbventa.tbfincaid', v.tbventaid, v.tbfincaid
 FROM tbventa v LEFT JOIN tbfinca f ON f.tbfincaid = v.tbfincaid
@@ -308,7 +320,7 @@ WHERE v.tbcompraid IS NOT NULL AND c.tbcompraid IS NULL
 UNION ALL
 SELECT 'tbventa.tbpagometodoid', v.tbventaid, v.tbpagometodoid
 FROM tbventa v LEFT JOIN tbpagometodo p ON p.tbpagometodoid = v.tbpagometodoid
-WHERE p.tbpagometodoid IS NULL
+WHERE v.tbpagometodoid IS NOT NULL AND p.tbpagometodoid IS NULL
 UNION ALL
 SELECT 'tbventa.tbventadireccionid', v.tbventaid, v.tbventadireccionid
 FROM tbventa v LEFT JOIN tbdireccion d ON d.tbdireccionid = v.tbventadireccionid

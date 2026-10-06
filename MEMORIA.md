@@ -507,6 +507,12 @@ de trabajo** (no son regresiones):
 
 Cualquier otro fallo es una regresión.
 
+**Pruebas PHP que fallan por el entorno o a veces** (no son regresiones):
+- `Tests/vercel_prune_registry_test.php`: falla también en commits anteriores (la poda termina con código 2 en este entorno Windows).
+- `Tests/registro_publico_test.php` y, rara vez, `Tests/solicitudes_compra_test.php` (el registro de la fixture): intermitentes (201 esperado, 200 recibido); pasan al repetir.
+- `Tests/api_identidad_test.php` imprime "Todos los tests de api_identidad pasaron" en vez de "OK ...": es un éxito.
+- `Tests/api_productores_ubicacion_http_test.php` termina sin salida a propósito (tiene un `return;`).
+
 **Ojo: dos pruebas vacían la bitácora local.** `Tests/transaction_test.php` y `Tests/pagometodo_test.php` achican
 por un momento `tbbitacorasolicitudid` a `VARCHAR(5)` para forzar un fallo, y antes borran **toda fila con
 solicitud de más de 5 caracteres**, que son casi todas. Después de correr toda la batería, `/admin/bitacora` queda casi
@@ -518,6 +524,14 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · jefersonbustamante · Integración de las sesiones paralelas (admin de fletes, pago, carrito, modelo de animal y vacunas)
+- Se fusionaron `sesion-a-fletes-admin` (admin de fletes, método de pago visible, carrito como contador) y `modelo-animal` (P2-2 y P2-3). Conflictos resueltos solo en versiones de las vistas (`public-14`, `explore-12`, `home-8`, `publish-4`, `interactions-4`), rutas documentadas, esta memoria y una prueba.
+- `me-interesa.js` sube su import a `explore.js?v=foto-4` (`interesa-5`) para que Me interesa muestre "Lote de N" y las vacunas.
+- `Database/Tests/diagnostico.sql`: con `tbproductorcompradorid` y `tbpagometodoid` opcionales (DEC-COMPRA-001), el diagnóstico de referencias contaba el `NULL` como "sin destino"; ahora ignora los `NULL` y verifica también `tbcompradorid` y `tbcomprasolicitudid`. **Regla:** toda columna enlace que pase a aceptar `NULL` necesita `IS NOT NULL AND …` en `diagnostico.sql`.
+- **Esquema: 43 tablas.** Una base MySQL existente necesita, en orden, las migraciones `019`, `020`, `021` y `022` (más la `017` y `018` de `backend`, que son de otra persona). Producción las cubre con `migrate.php`: comprobado contra Postgres 16 partiendo del esquema de `origin/dev` (35 tablas), dos corridas seguidas, 43 tablas, catálogos sembrados una vez y RLS en todas.
+- Pruebas: batería PHP completa en el repositorio principal (67 archivos): pasan todas salvo las ya conocidas (ver "Estado de pruebas"). Frontend: 386 pasan y 4 fallan, las conocidas.
+- **Sin probar en navegador:** nada de lo hecho hoy (fletes, solicitudes de compra, admin de fletes, carrito, Publicar con modelo de animal, vacunas) se vio con una sesión real.
 
 ### 2026-10-06 · sesion-a-fletes-admin · Método de pago en la solicitud y carrito como contador
 - Endpoint de lectura `api/v1/pago-metodos-disponibles`; selector opcional en el diálogo de solicitud; `pagoMetodo` en la presentación y en las bandejas de Mi panel. Carrito del encabezado con el contador de solicitudes aprobadas y `?resumen=1` (ver "Solicitud de compra"). Sin esquema nuevo.

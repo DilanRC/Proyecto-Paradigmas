@@ -379,7 +379,7 @@ con estado 1, y hoy se agregan a mano en la base de datos.
       patrón que Métodos de pago.
 - [ ] Verificación de identidad: lista de personas en `PENDIENTE`, ver la foto
       del documento con enlace firmado, y Verificar o Rechazar con motivo (P2-5).
-- [ ] Fletes: ver las ofertas y las solicitudes; pausar ofertas (P1-2 y P1-3).
+- [x] Fletes: ver las ofertas y las solicitudes; retirar o reactivar ofertas (P1-2 y P1-3). Hecho en `/admin/fletes` (06/10).
 
 ### P3-4 · Gestionar administradores y ver la bitácora · Jeremi (+ Jeferson)
 
