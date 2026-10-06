@@ -113,49 +113,56 @@ final class MiPerfilController
         }
 
         $personaId = (int) $this->actor->personaId;
-        $this->conexion->beginTransaction();
-        try {
-            $anterior = $this->personas->buscarPorId($personaId);
-            if ($anterior === null) {
-                throw new HttpException('La persona no existe.', 404);
-            }
-            if ((int) $anterior['tbpersonaestado'] !== 1) {
-                throw new HttpException('La cuenta está inactiva y no puede editar su perfil.', 409);
-            }
-            if (array_key_exists('documentoRuta', $cambios)) {
-                // Un documento nuevo reemplaza la lectura anterior; sin lectura (PDF) queda en NULL.
-                $cambios['documentoLectura'] = $numeroLeido === false ? null : $this->resultadoLectura($numeroLeido, $anterior);
-                $cambios['documentoNumeroLeido'] = $cambios['documentoLectura'] === null ? null : $numeroLeido;
-            }
-            $nueva = $this->personas->actualizarPerfil($personaId, $cambios);
-            // El teléfono es dato sensible: la bitácora solo dice que cambió.
-            $this->bitacora->registrar(
-                'ACTUALIZAR',
-                'PERSONA:' . $personaId,
-                [
-                    'alias' => $anterior['tbpersonaalias'],
-                    'fotoUrl' => $anterior['tbpersonafotourl'] ?? null,
-                    'documentoEstado' => $anterior['tbpersonadocumentoestado'] ?? null,
-                ],
-                [
-                    'alias' => $nueva['tbpersonaalias'],
-                    'fotoUrl' => $nueva['tbpersonafotourl'] ?? null,
-                    'documentoEstado' => $nueva['tbpersonadocumentoestado'] ?? null,
-                    // El resultado de la lectura sí; el número leído no (es la identificación).
-                    'documentoLectura' => $nueva['tbpersonadocumentolectura'] ?? null,
-                    'telefonoCambiado' => ($anterior['tbpersonatelefono'] ?? null) !== ($nueva['tbpersonatelefono'] ?? null),
-                ],
-                $this->solicitudId,
-                entidad: 'PERSONA',
-                origen: 'API_MI_PERFIL',
-            );
-            $this->conexion->commit();
-        } catch (Throwable $error) {
-            if ($this->conexion->inTransaction()) {
-                $this->conexion->rollBack();
-            }
-            throw $error;
-        }
+        // Los consecutivos de la bitácora y del histórico de teléfono salen de MAX()+1:
+        // sus bloqueos deben durar hasta el COMMIT o dos ediciones simultáneas repiten el id.
+        $nueva = $this->personas->ejecutarConBloqueoTelefono(fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
+            function () use ($personaId, $cambios, $numeroLeido): array {
+                $this->conexion->beginTransaction();
+                try {
+                    $anterior = $this->personas->buscarPorId($personaId);
+                    if ($anterior === null) {
+                        throw new HttpException('La persona no existe.', 404);
+                    }
+                    if ((int) $anterior['tbpersonaestado'] !== 1) {
+                        throw new HttpException('La cuenta está inactiva y no puede editar su perfil.', 409);
+                    }
+                    if (array_key_exists('documentoRuta', $cambios)) {
+                        // Un documento nuevo reemplaza la lectura anterior; sin lectura (PDF) queda en NULL.
+                        $cambios['documentoLectura'] = $numeroLeido === false ? null : $this->resultadoLectura($numeroLeido, $anterior);
+                        $cambios['documentoNumeroLeido'] = $cambios['documentoLectura'] === null ? null : $numeroLeido;
+                    }
+                    $nueva = $this->personas->actualizarPerfil($personaId, $cambios);
+                    // El teléfono es dato sensible: la bitácora solo dice que cambió.
+                    $this->bitacora->registrar(
+                        'ACTUALIZAR',
+                        'PERSONA:' . $personaId,
+                        [
+                            'alias' => $anterior['tbpersonaalias'],
+                            'fotoUrl' => $anterior['tbpersonafotourl'] ?? null,
+                            'documentoEstado' => $anterior['tbpersonadocumentoestado'] ?? null,
+                        ],
+                        [
+                            'alias' => $nueva['tbpersonaalias'],
+                            'fotoUrl' => $nueva['tbpersonafotourl'] ?? null,
+                            'documentoEstado' => $nueva['tbpersonadocumentoestado'] ?? null,
+                            // El resultado de la lectura sí; el número leído no (es la identificación).
+                            'documentoLectura' => $nueva['tbpersonadocumentolectura'] ?? null,
+                            'telefonoCambiado' => ($anterior['tbpersonatelefono'] ?? null) !== ($nueva['tbpersonatelefono'] ?? null),
+                        ],
+                        $this->solicitudId,
+                        entidad: 'PERSONA',
+                        origen: 'API_MI_PERFIL',
+                    );
+                    $this->conexion->commit();
+                    return $nueva;
+                } catch (Throwable $error) {
+                    if ($this->conexion->inTransaction()) {
+                        $this->conexion->rollBack();
+                    }
+                    throw $error;
+                }
+            },
+        ));
 
         return $this->respuesta(true, 'Perfil actualizado correctamente.', ['persona' => [
             'personaId' => (int) $nueva['tbpersonaid'],

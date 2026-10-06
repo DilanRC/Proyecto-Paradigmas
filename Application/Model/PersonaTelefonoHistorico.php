@@ -19,6 +19,22 @@ final class PersonaTelefonoHistorico
     {
     }
 
+    /**
+     * Mantiene el bloqueo del consecutivo durante toda la transacción de quien
+     * llama: el id sale de MAX()+1 y, si el bloqueo se suelta antes del COMMIT,
+     * otra conexión calcula el mismo id. NamedLock es reentrante (MySQL y
+     * Postgres), así que registrarCambio puede volver a pedirlo dentro.
+     */
+    public function ejecutarConBloqueoAlta(callable $operacion): mixed
+    {
+        NamedLock::acquire($this->conexion, 'tindercows_persona_telefono_historico');
+        try {
+            return $operacion();
+        } finally {
+            NamedLock::release($this->conexion, 'tindercows_persona_telefono_historico');
+        }
+    }
+
     public function registrarCambio(int $personaId, string $telefonoNuevo, string $fecha): void
     {
         NamedLock::acquire($this->conexion, 'tindercows_persona_telefono_historico');

@@ -329,6 +329,12 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     `api.js` → `auth-gate.js` y `admin-ui.js` → `admin-refinements.css`. Al agregar una ruta admin: sube la versión de
     `auth-gate.js` y de `admin-ui.js`/`admin-refinements.css`, el import de `shared/api.js?v=…` en **todos** los módulos
     admin y el `?v=` de sus `<script>`. Si falta alguno, esa pantalla queda en blanco o sin el ícono nuevo.
+12. **Bitácora y consecutivos: el bloqueo dura hasta el COMMIT.** Los ids salen de MAX()+1 (o del último +1)
+    bajo `NamedLock`. Si un controlador escribe la bitácora dentro de una transacción, debe envolver **toda** la
+    transacción con `Bitacora::ejecutarConBloqueoAlta` (y con el bloqueo de cada tabla cuyo id calcule); si no,
+    el bloqueo se suelta antes del COMMIT y otra conexión repite el id (demostrado: dos eventos con id 56). El
+    `FOR UPDATE` del último id no lo evita en Postgres. `NamedLock` es reentrante, así que anidar es seguro.
+    `Tests/bitacora_bloqueo_test.php` falla si aparece un controlador nuevo sin envolver.
 
 ## 5. Pendientes
 
@@ -348,6 +354,16 @@ están incluidos ahí.
   falla con "No pudimos subir el documento".
 - Al reemplazar el documento, el archivo anterior queda en el bucket (no hay política de borrado para la persona). La
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
+
+### Bitácora sin envolver (controladores antiguos)
+- 9 controladores escriben la bitácora en una transacción sin `Bitacora::ejecutarConBloqueoAlta` (Cuidados #12):
+  `AnimalPublicacionController` (PATCH de Mis publicaciones), `CompradorController`, `FincaController`,
+  `PagoMetodoController`, `ProductorController`, `ProductorUbicacionController`, `TransportistaController`,
+  `TransportistaVehiculoController` y `VehiculoController`. Están en la lista `PENDIENTES` de
+  `Tests/bitacora_bloqueo_test.php`; al arreglar uno, sacarlo de la lista.
+- De la revisión de P1-1 quedan detalles menores: "quitar de Me interesa" registra `CREAR` en la bitácora (debería
+  ser `RETIRAR`), marcar dos veces guarda dos filas, y la lista de guardados se ordena por fecha de publicación.
+- La búsqueda de `listarPublicaciones` usa `LIKE` sin `LOWER`: en Postgres distingue mayúsculas.
 
 ### Frontend (pendiente de P1-5)
 - Mi panel → Mis vehículos: subir la foto con vista previa (mismo componente que Publicar, `shared/storage.js`) y enviarla como
@@ -404,6 +420,11 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-06 · backend · Revisión de P1-1 y P1-4: bitácora con ids repetidos
+- Revisión del API de P1-1 (Me interesa) y P1-4 (perfil). Error encontrado y demostrado: `PublicacionInteraccionController`, `MiPerfilController` y `AdminPublicacionController` (P1-6) escribían la bitácora en una transacción sin mantener su bloqueo hasta el COMMIT, y dos peticiones simultáneas podían repetir el id. Ahora envuelven toda la transacción con el bloqueo de la bitácora y con el de su otro consecutivo (interacción, periodo de estado, o histórico de teléfono vía el nuevo `Persona::ejecutarConBloqueoTelefono`).
+- Comprobado con 2 procesos en paralelo × 25 ediciones del perfil: 50 eventos, 50 ids distintos.
+- Nueva `Tests/bitacora_bloqueo_test.php` (Cuidados #12). Quedan 9 controladores antiguos con el mismo problema (ver Pendientes).
 
 ### 2026-10-06 · backend · Cerrar sesión borra el perfil en caché
 - Al cerrar sesión y pulsar "Crear cuenta", el registro aparecía con los datos de la cuenta anterior (menos contraseña y documento). Causa: `clearAuthSession()` no borraba `tindercows:profile` y `registro.js` usa ese perfil cuando no hay sesión. Ahora se borra en toda salida de sesión (ver "Navegación y sesión").

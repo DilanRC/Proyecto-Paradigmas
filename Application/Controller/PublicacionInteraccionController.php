@@ -115,37 +115,41 @@ final class PublicacionInteraccionController
             throw new HttpException('La publicación ya no está activa.', 409);
         }
 
-        $this->conexion->beginTransaction();
-        try {
-            $interaccionId = $this->interacciones->ejecutarConBloqueoAlta(
-                fn (): int => $this->interacciones->registrar(
-                    (int) $this->actor->personaId,
-                    (int) $publicacionId,
-                    $tipo,
-                    'API_PUBLICACION_INTERACCIONES',
-                    $accion,
-                ),
-            );
-            $resultado = [
-                'interaccionId' => $interaccionId,
-                'publicacionId' => (int) $publicacionId,
-                'tipo' => $tipo,
-                'accion' => $accion,
-            ];
-            $this->bitacora->registrar(
-                'CREAR',
-                'PUBLICACION_INTERACCION:' . $interaccionId,
-                null,
-                $resultado,
-                $this->solicitudId,
-                entidad: 'PUBLICACION_INTERACCION',
-                origen: 'API_PUBLICACION_INTERACCIONES',
-            );
-            $this->conexion->commit();
-        } catch (Throwable $error) {
-            if ($this->conexion->inTransaction()) $this->conexion->rollBack();
-            throw $error;
-        }
+        // Los ids de la interacción y de la bitácora salen del último + 1: sus bloqueos deben durar hasta el COMMIT.
+        $resultado = $this->interacciones->ejecutarConBloqueoAlta(fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
+            function () use ($publicacionId, $tipo, $accion): array {
+                $this->conexion->beginTransaction();
+                try {
+                    $interaccionId = $this->interacciones->registrar(
+                        (int) $this->actor->personaId,
+                        (int) $publicacionId,
+                        $tipo,
+                        'API_PUBLICACION_INTERACCIONES',
+                        $accion,
+                    );
+                    $resultado = [
+                        'interaccionId' => $interaccionId,
+                        'publicacionId' => (int) $publicacionId,
+                        'tipo' => $tipo,
+                        'accion' => $accion,
+                    ];
+                    $this->bitacora->registrar(
+                        'CREAR',
+                        'PUBLICACION_INTERACCION:' . $interaccionId,
+                        null,
+                        $resultado,
+                        $this->solicitudId,
+                        entidad: 'PUBLICACION_INTERACCION',
+                        origen: 'API_PUBLICACION_INTERACCIONES',
+                    );
+                    $this->conexion->commit();
+                    return $resultado;
+                } catch (Throwable $error) {
+                    if ($this->conexion->inTransaction()) $this->conexion->rollBack();
+                    throw $error;
+                }
+            },
+        ));
 
         return $this->respuesta(true, $accion === 'RETIRAR' ? 'Publicación quitada de tu lista.' : 'Interacción guardada correctamente.', $resultado, 201);
     }

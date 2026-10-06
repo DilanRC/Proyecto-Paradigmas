@@ -145,6 +145,12 @@ final class Persona
         ]);
     }
 
+    /** Ver PersonaTelefonoHistorico::ejecutarConBloqueoAlta: envolver toda la transacción que cambia el teléfono. */
+    public function ejecutarConBloqueoTelefono(callable $operacion): mixed
+    {
+        return $this->telefonoHistorico->ejecutarConBloqueoAlta($operacion);
+    }
+
     /** Sin distinguir mayúsculas, igual que RegistroPublicoService al registrar. */
     public function existeCorreo(string $correoElectronico): bool
     {
