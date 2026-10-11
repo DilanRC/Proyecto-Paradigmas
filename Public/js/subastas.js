@@ -475,20 +475,30 @@ function iniciarCrear(animalPreseleccionado) {
         mostrarEstado(estado, 'Cargando tus animales…', 'info');
         dialog.showModal();
         try {
-            const [animales, fincas] = await Promise.all([request('api/v1/mi-animales'), request('api/v1/mi-fincas')]);
-            const disponibles = (animales.data?.animales ?? []).filter((a) => a.estado === 'ACTIVO');
-            const activas = (fincas.data?.fincas ?? []).filter((f) => f.estado === 'ACTIVO');
-            if (!disponibles.length || !activas.length) {
-                mostrarEstado(estado, !activas.length ? 'Primero registra una finca en Mi panel.'
+            // Animales y fincas se cargan por separado: si falla una lista, la otra igual se muestra.
+            const [animales, fincas] = await Promise.allSettled([request('api/v1/mi-animales'), request('api/v1/mi-fincas')]);
+            if (animales.status === 'rejected') throw animales.reason;
+            const todos = animales.value.data?.animales ?? [];
+            const disponibles = todos.filter((a) => a.estado === 'ACTIVO');
+            const activas = fincas.status === 'fulfilled' ? (fincas.value.data?.fincas ?? []).filter((f) => f.estado === 'ACTIVO') : [];
+            const nombre = (a) => [a.arete ? `Arete ${a.arete}` : null, describirAnimal({ tipo: a.tipo?.nombre, especie: a.especie?.nombre, raza: a.raza }), a.peso != null ? `${a.peso} kg` : null].filter(Boolean).join(' · ');
+            const ESTADO_ANIMAL = { PUBLICADO: 'publicado en Explorar', SUBASTA: 'ya está en una subasta', VENDIDO: 'vendido', INACTIVO: 'inactivo' };
+            // Se muestran todos tus animales; los que no están en el inventario aparecen deshabilitados con el motivo.
+            form.elements.animalId.replaceChildren(
+                ...(disponibles.length ? [] : [new Option('Ningún animal disponible en tu inventario', '')]),
+                ...disponibles.map((a) => new Option(nombre(a), String(a.animalId))),
+                ...todos.filter((a) => a.estado !== 'ACTIVO').map((a) => Object.assign(new Option(`${nombre(a)} (${ESTADO_ANIMAL[a.estado] ?? a.estado})`, String(a.animalId)), { disabled: true })),
+            );
+            form.elements.fincaNombre.replaceChildren(...activas.map((f) => new Option(f.nombre, f.nombre)));
+            if (!disponibles.length) {
+                mostrarEstado(estado, todos.length
+                    ? 'Tus animales están publicados o vendidos. Para subastar uno, regístralo en Mi panel → Mis animales (los publicados en Explorar no se subastan).'
                     : 'No tienes animales en tu inventario. Regístralos en Mi panel → Mis animales.', 'error');
+            } else if (!activas.length) {
+                mostrarEstado(estado, fincas.status === 'rejected' ? (fincas.reason?.message || 'No pudimos cargar tus fincas.') : 'Primero registra una finca en Mi panel.', 'error');
             } else {
                 mostrarEstado(estado, '', 'info');
             }
-            form.elements.animalId.replaceChildren(...disponibles.map((a) => new Option(
-                [a.arete ? `Arete ${a.arete}` : null, describirAnimal({ tipo: a.tipo?.nombre, especie: a.especie?.nombre, raza: a.raza }), a.peso != null ? `${a.peso} kg` : null].filter(Boolean).join(' · '),
-                String(a.animalId),
-            )));
-            form.elements.fincaNombre.replaceChildren(...activas.map((f) => new Option(f.nombre, f.nombre)));
             if (animalId) form.elements.animalId.value = String(animalId);
             const elegido = disponibles.find((a) => String(a.animalId) === form.elements.animalId.value);
             if (elegido && !form.elements.titulo.value) form.elements.titulo.value = describirAnimal({ tipo: elegido.tipo?.nombre, especie: elegido.especie?.nombre, raza: elegido.raza });
