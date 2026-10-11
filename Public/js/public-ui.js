@@ -10,7 +10,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-9';
+    link.href = 'css/public-product.css?v=product-10';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -117,6 +117,83 @@ async function loadCartCount(link, email) {
     }
 }
 
+// Campana: avisos de subastas (ganada, terminada, te superaron). Se actualiza en vivo por Supabase Realtime.
+async function fetchNotificaciones(method = 'GET') {
+    const token = await getAccessToken();
+    if (!token) return null;
+    const response = await fetch('api/v1/notificaciones', {
+        method,
+        headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, ...(method === 'PATCH' && { 'Content-Type': 'application/json' }) },
+        body: method === 'PATCH' ? JSON.stringify({ accion: 'LEER' }) : undefined,
+        cache: 'no-store',
+    });
+    return response.ok ? (await response.json())?.data ?? null : null;
+}
+
+function paintBell(bell, datos) {
+    const total = Number.isInteger(datos?.sinLeer) && datos.sinLeer > 0 ? datos.sinLeer : 0;
+    const badge = bell.querySelector('.public-cart__badge');
+    badge.textContent = total > 99 ? '99+' : String(total);
+    badge.hidden = total === 0;
+    bell.querySelector('button').setAttribute('aria-label', total ? `Avisos: ${total} sin leer` : 'Avisos');
+    const panel = bell.querySelector('.public-bell__panel');
+    const lista = Array.isArray(datos?.notificaciones) ? datos.notificaciones : [];
+    panel.replaceChildren(...(lista.length ? lista.map((aviso) => {
+        const item = document.createElement(aviso.enlace ? 'a' : 'div');
+        item.className = `public-bell__item${aviso.leida ? '' : ' is-nueva'}`;
+        if (aviso.enlace && /^[a-z0-9-]+(\?[a-zA-Z0-9=&-]*)?$/.test(aviso.enlace)) item.href = aviso.enlace;
+        const titulo = document.createElement('strong');
+        titulo.textContent = aviso.titulo;
+        const mensaje = document.createElement('span');
+        mensaje.textContent = aviso.mensaje;
+        const fecha = document.createElement('small');
+        fecha.textContent = new Date(aviso.fecha).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' });
+        item.append(titulo, mensaje, fecha);
+        return item;
+    }) : [Object.assign(document.createElement('div'), { className: 'public-account-menu__identity', textContent: 'No tienes avisos todavía.' })]));
+}
+
+function createBell(profile) {
+    const bell = document.createElement('div');
+    bell.className = 'public-account-menu public-bell';
+    bell.dataset.publicBell = 'true';
+    bell.innerHTML = '<button class="public-cart" type="button" aria-expanded="false" aria-controls="public-bell-panel" aria-label="Avisos"><i class="fa-solid fa-bell" aria-hidden="true"></i><span class="public-cart__badge" aria-hidden="true" hidden>0</span></button><div class="public-account-menu__panel public-bell__panel" id="public-bell-panel" hidden></div>';
+    const button = bell.querySelector('button');
+    const panel = bell.querySelector('.public-bell__panel');
+    let datos = null;
+    const cargar = async () => {
+        try { datos = await fetchNotificaciones(); if (datos) paintBell(bell, datos); } catch { /* la campana es un adorno: sin red queda igual */ }
+    };
+    button.addEventListener('click', async () => {
+        const open = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', String(!open));
+        panel.hidden = open;
+        // Al abrir se marcan leídas; la lista sigue mostrando cuáles eran nuevas hasta la próxima carga.
+        if (!open && datos?.sinLeer > 0) {
+            try {
+                const leidas = await fetchNotificaciones('PATCH');
+                if (leidas) {
+                    datos = leidas;
+                    bell.querySelector('.public-cart__badge').hidden = true;
+                    button.setAttribute('aria-label', 'Avisos');
+                }
+            } catch { /* se marcarán la próxima vez */ }
+        }
+    });
+    document.addEventListener('click', (event) => {
+        if (!bell.contains(event.target)) { button.setAttribute('aria-expanded', 'false'); panel.hidden = true; }
+    });
+    void cargar();
+    const personaId = Number(profile?.persona?.personaId);
+    if (Number.isInteger(personaId) && personaId > 0) {
+        import('./shared/tiempo-real.js?v=tiempo-real-1')
+            .then(({ escuchar, agrupar }) => escuchar(`notificaciones-${personaId}`, agrupar(cargar)))
+            .catch(() => {});
+    }
+    setInterval(cargar, 60000);
+    return bell;
+}
+
 function createAccountMenu(actions, session, profile) {
     const login = actions.querySelector('.public-header__login');
     if (!login || actions.querySelector('[data-public-account]')) return null;
@@ -145,6 +222,7 @@ function createAccountMenu(actions, session, profile) {
     login.replaceWith(menu);
     const cart = createCartLink();
     menu.before(cart);
+    cart.before(createBell(profile));
     void loadCartCount(cart, session.email);
     // Si la foto ya no existe, vuelve la inicial.
     const avatarImg = menu.querySelector('.public-account-menu__avatar img');
@@ -205,7 +283,7 @@ async function resolveAdminLink(menu) {
 }
 
 /** Páginas que solo tienen sentido con sesión iniciada. */
-export const PRIVATE_PAGES = Object.freeze(['explorar', 'publicar', 'fletes']);
+export const PRIVATE_PAGES = Object.freeze(['explorar', 'publicar', 'fletes', 'subastas']);
 
 /** Nombre de página de un href o pathname: "/explorar?q=x" → "explorar". */
 export function pageName(href, base = 'http://localhost/') {
@@ -263,6 +341,7 @@ function enhancePublicNavigation() {
     if (session?.authenticated === true) {
         addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
         addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
+        addNavLink(nav, 'subastas', 'fa-gavel', 'Subastas');
         // Con sesión no hay portada: Inicio es Explorar.
         document.querySelectorAll('.public-nav--primary a[href="./"], .public-nav--primary a[href="#inicio"], .public-footer a[href="./"], .public-footer a[href^="./#"]')
             .forEach((link) => link.remove());
@@ -329,7 +408,7 @@ function initialize() {
 }
 
 if (typeof document !== 'undefined'
-    && ['explorar', 'fletes'].includes(pageName(window.location.href))
+    && ['explorar', 'fletes', 'subastas'].includes(pageName(window.location.href))
     && !readSession()) {
     window.location.replace('./');
 }

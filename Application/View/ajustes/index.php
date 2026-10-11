@@ -12,13 +12,13 @@
     <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-9">
+    <link rel="stylesheet" href="css/public-product.css?v=product-10">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-15"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-11"></script>
+    <script type="module" src="js/public-ui.js?v=public-16"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-12"></script>
 </head>
 <body class="public-home activity-page settings-page">
     <div class="public-shell" id="inicio">
@@ -73,12 +73,13 @@
                             <p class="settings-hint">Foto o PDF de hasta 5 MB del documento de tu identificación. Con una foto leemos el número en tu dispositivo para ayudar a la revisión; la foto sale mejor con buena luz, sin reflejos y con solo el documento en el cuadro. Es privado: solo lo ve un administrador.</p>
                         </div>
                         <form id="profile-form" class="profile-form" novalidate hidden>
+<label class="field"><span>Nombre completo</span><input name="nombre" maxlength="150" autocomplete="name" required aria-describedby="profile-nombre-error"><small id="profile-nombre-error" class="field-error" data-profile-error="nombre"></small></label>                            <label class="field"><span>Tipo de identificación</span><select name="identificacionTipo"><option value="CEDULA_FISICA">Cédula física</option><option value="CEDULA_JURIDICA">Cédula jurídica</option><option value="DIMEX">DIMEX</option><option value="NITE">NITE</option><option value="PASAPORTE">Pasaporte</option></select></label>                            <label class="field"><span>Número de identificación</span><input name="identificacionNumero" autocomplete="off" required aria-describedby="profile-identificacion-hint profile-identificacion-error"><small id="profile-identificacion-hint" class="field-help"></small><small id="profile-identificacion-error" class="field-error" data-profile-error="identificacion.numero"></small></label>                            <label class="field"><span>Correo electrónico</span><input name="correoElectronico" type="email" maxlength="150" autocomplete="email" required aria-describedby="profile-correo-help profile-correo-error"><small id="profile-correo-help" class="field-help">Es el correo con el que inicias sesión.</small><small id="profile-correo-error" class="field-error" data-profile-error="correoElectronico"></small></label>
                             <label class="field"><span>Alias <span class="label">opcional</span></span><input name="alias" maxlength="150" autocomplete="off" aria-describedby="profile-alias-error"><small id="profile-alias-error" class="field-error" data-profile-error="alias"></small></label>
                             <label class="field"><span>Teléfono</span><input name="telefono" type="tel" maxlength="20" autocomplete="tel" required aria-describedby="profile-telefono-error"><small id="profile-telefono-error" class="field-error" data-profile-error="telefono"></small></label>
                             <p id="profile-form-status" class="auth-status" role="status" aria-live="polite"></p>
                             <div class="profile-form__actions"><button id="profile-cancel" class="activity-button" type="button">Cancelar</button><button id="profile-save" class="activity-button activity-button--primary" type="submit">Guardar</button></div>
                         </form>
-                        <p class="settings-hint">Tu perfil es uno solo y se usa igual cuando compras, vendes o transportas. El nombre, la identificación y el correo no se editan aquí.</p>
+                        <p class="settings-hint">Tu perfil es uno solo y se usa igual cuando compras, vendes o transportas. Si cambias tu identificación y ya subiste el documento, vuelve a revisión.</p>
                     </section>
 
                     <section class="activity-panel" id="participacion" aria-labelledby="participacion-title" tabindex="-1">

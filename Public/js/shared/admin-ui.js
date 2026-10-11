@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-10';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-11';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-12';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-13';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -61,6 +61,11 @@ const MODULES = {
         icon: 'fa-tags',
         search: 'Nombre',
         hint: 'Especies, tipos, razas y vacunas de los formularios.',
+    },
+    'admin/subastas': {
+        icon: 'fa-gavel',
+        search: 'Título, raza o zona',
+        hint: 'Subastas en vivo y su historial. Solo lectura: los administradores no pujan.',
     },
     'admin/bitacora': {
         icon: 'fa-clock-rotate-left',

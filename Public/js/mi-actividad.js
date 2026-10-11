@@ -7,7 +7,8 @@ import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
-import { montarMisAnimales } from './mis-animales.js?v=animales-4';
+import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
+import { montarMisAnimales } from './mis-animales.js?v=animales-6';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
@@ -603,6 +604,9 @@ async function saveFarm(event) {
         errors.direccionFinca = 'Completa provincia, cantón y distrito, o deja toda la dirección vacía.';
     }
     if (Object.keys(errors).length) { setFarmErrors(errors); return; }
+    // El punto es opcional, pero si se marcó debe estar en la provincia escrita.
+    const desajuste = await validarPuntoConDireccion(payload.direccion);
+    if (desajuste) { setFarmErrors({ direccionFinca: desajuste }); return; }
     const save = document.querySelector('#farm-save');
     save.disabled = true;
     form.setAttribute('aria-busy', 'true');

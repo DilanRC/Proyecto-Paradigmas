@@ -205,6 +205,50 @@ erDiagram
         DATETIME tbanimalvacunacionfecharegistro
     }
 
+    tbsubasta {
+        INT tbsubastaid
+        INT tbproductorid
+        INT tbanimalid
+        INT tbfincaid
+        VARCHAR tbsubastatitulo
+        VARCHAR tbsubastadescripcion
+        VARCHAR tbsubastaimagenurl
+        DECIMAL tbsubastapreciobase
+        DECIMAL tbsubastaincrementominimo
+        DATETIME tbsubastafechainicio
+        DATETIME tbsubastafechafin
+        VARCHAR tbsubastaestado
+        INT tbsubastapujaganadoraid
+        DATETIME tbsubastafechacierre
+    }
+
+    tbsubastapuja {
+        INT tbsubastapujaid
+        INT tbsubastaid
+        INT tbpersonaid
+        DECIMAL tbsubastapujamonto
+        DATETIME tbsubastapujafecha
+    }
+
+    tbsubastacomentario {
+        INT tbsubastacomentarioid
+        INT tbsubastaid
+        INT tbpersonaid
+        VARCHAR tbsubastacomentariotexto
+        DATETIME tbsubastacomentariofecha
+    }
+
+    tbnotificacion {
+        INT tbnotificacionid
+        INT tbpersonaid
+        VARCHAR tbnotificaciontipo
+        VARCHAR tbnotificaciontitulo
+        VARCHAR tbnotificacionmensaje
+        VARCHAR tbnotificacionenlace
+        DATETIME tbnotificacionfecha
+        TINYINT tbnotificacionleida
+    }
+
     tbanimalproduccionsalud {
         INT tbanimalproduccionsaludid
         INT tbanimalid
@@ -461,6 +505,14 @@ erDiagram
     tbanimal ||--o{ tbanimalpublicacionanimal : "en lote"
     tbanimal ||--o{ tbanimalvacunacion : "vacunas"
     tbvacuna ||--o{ tbanimalvacunacion : "vacuna"
+    tbproductor ||--o{ tbsubasta : "abre"
+    tbanimal ||--o{ tbsubasta : "se subasta"
+    tbfinca ||--o{ tbsubasta : "ubica"
+    tbsubasta ||--o{ tbsubastapuja : "pujas"
+    tbpersona ||--o{ tbsubastapuja : "puja"
+    tbsubasta ||--o{ tbsubastacomentario : "comentarios"
+    tbpersona ||--o{ tbsubastacomentario : "comenta"
+    tbpersona ||--o{ tbnotificacion : "avisos"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
 ```
 

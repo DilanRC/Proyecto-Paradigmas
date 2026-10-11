@@ -469,20 +469,21 @@ final class AnimalPublicacionController
             ]);
         }
         $ubicacion = $this->ubicacionConsulta($consulta);
+        $filtros = $this->filtrosConsulta($consulta, $personaId);
 
         if ($ubicacion === null) {
-            $resultado = $this->animales->listarPublicaciones($busqueda, $estado, $pagina, $tamano, $vendedorId, $personaId, false, $excluirId);
+            $resultado = $this->animales->listarPublicaciones($busqueda, $estado, $pagina, $tamano, $vendedorId, $personaId, false, $excluirId, $filtros);
             $resultado['ranking'] = 'RECIENTE';
         } else {
             // La capa de datos conserva su paginación tradicional. Para ordenar
             // correctamente por distancia antes de paginar se obtiene el total
             // filtrado y el servicio aplica Haversine en PHP. Si el catálogo
             // crece de forma sustancial deberá evolucionar a candidatos por zona.
-            $conteo = $this->animales->listarPublicaciones($busqueda, $estado, 1, 1, $vendedorId, null, false, $excluirId);
+            $conteo = $this->animales->listarPublicaciones($busqueda, $estado, 1, 1, $vendedorId, $personaId, false, $excluirId, $filtros);
             $total = (int) ($conteo['total'] ?? 0);
             $todas = $total === 0
                 ? []
-                : $this->animales->listarPublicaciones($busqueda, $estado, 1, $total, $vendedorId, $personaId, false, $excluirId)['publicaciones'];
+                : $this->animales->listarPublicaciones($busqueda, $estado, 1, $total, $vendedorId, $personaId, false, $excluirId, $filtros)['publicaciones'];
             $resultado = $this->cercania->ordenarYPaginar(
                 $todas,
                 $ubicacion['latitud'],
@@ -497,6 +498,32 @@ final class AnimalPublicacionController
         $resultado['tamanoPagina'] = $tamano;
 
         return $this->respuesta(true, 'Publicaciones consultadas correctamente.', $resultado);
+    }
+
+    /**
+     * Filtros de Explorar: zona (texto en provincia, cantón, distrito o pueblo, sin tildes),
+     * rango de precio (deja fuera las "a convenir") y excluirMarcadas (lo que ya está en Me interesa).
+     */
+    private function filtrosConsulta(array $consulta, ?int $personaId): array
+    {
+        $v = self::validarTodos([
+            'ubicacion' => fn () => self::texto($consulta['ubicacion'] ?? null, 'ubicacion', 100),
+            'precioMin' => fn () => self::numero($consulta['precioMin'] ?? null, 'precioMin'),
+            'precioMax' => fn () => self::numero($consulta['precioMax'] ?? null, 'precioMax'),
+        ]);
+        if ($v['precioMin'] !== null && $v['precioMax'] !== null && $v['precioMin'] > $v['precioMax']) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [
+                'precioMax' => 'Debe ser mayor o igual que el precio mínimo.',
+            ]);
+        }
+
+        return [
+            'ubicacion' => $v['ubicacion'] ?? '',
+            'precioMin' => $v['precioMin'],
+            'precioMax' => $v['precioMax'],
+            'excluirMarcadas' => $personaId !== null
+                && filter_var($consulta['excluirMarcadas'] ?? false, FILTER_VALIDATE_BOOLEAN),
+        ];
     }
 
     private function ubicacionConsulta(array $consulta): ?array

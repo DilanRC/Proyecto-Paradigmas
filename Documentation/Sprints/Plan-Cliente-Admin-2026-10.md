@@ -204,6 +204,7 @@ animal con flete.
 - [x] Subida desde el dispositivo con `Public/js/shared/storage.js` (bucket
       `publicaciones` o un bucket `perfiles` con la misma política).
 - [x] Ajustes → Perfil: cambiar o quitar la foto y editar alias y teléfono.
+- [x] Editar nombre, identificación y correo (11/10, Jeferson). El correo cambia también en la cuenta de Supabase.
       La foto aparece en el avatar del encabezado.
 
 ### P1-5 · Fotos de vehículos · Jeremi (API) + Jeferson (pantalla)
@@ -287,7 +288,7 @@ nacimiento, partos, estado del animal y dueño explícito.
 - [x] Sección "Mis animales" en Mi panel: registrar un animal sin publicarlo,
       ver su historial de vacunas (y agregar una) y un botón "Publicar" que crea la
       publicación a partir del animal. API `api/v1/mi-animales` (GET, POST y PATCH `PUBLICAR`).
-      Se muestra el último peso; un historial de pesos queda para después si se pide.
+      Editar el animal e historial de pesos: hechos por Jeferson el 11/10 (PATCH `EDITAR` y `PESAR`).
 - [x] Depende de P2-2 y P2-3.
 
 ### P2-5 · Foto del documento de identidad y verificación · Jeremi (+ Jeferson)

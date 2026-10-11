@@ -119,7 +119,7 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
             fletes.replaceChildren(...ofertas.map((oferta) => opcion(
                 'oferta', String(oferta.ofertaId),
                 `${oferta.vehiculo?.modelo || 'Flete'} · hasta ${oferta.capacidad} cabezas · ${colones(oferta.precio)}`,
-                `${oferta.transportista || ''} · ${ubicacion(oferta.zona)} · a ${Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 })} km de la finca`,
+                `${oferta.transportista || ''} · ${ubicacion(oferta.zona)} · ${oferta.distanciaKm == null ? 'en la misma provincia (sin punto en el mapa)' : `a ${Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 })} km de la finca`}`,
             )));
         } catch (error) {
             fletesCargados = false;

@@ -51,7 +51,7 @@ final class AnimalComercial
         }
     }
 
-    public const ESTADOS_ANIMAL = ['ACTIVO', 'PUBLICADO', 'VENDIDO', 'INACTIVO'];
+    public const ESTADOS_ANIMAL = ['ACTIVO', 'PUBLICADO', 'SUBASTA', 'VENDIDO', 'INACTIVO'];
 
     /**
      * $extra (P2-2, todo opcional): especieId, tipoId, razaId, fechaNacimiento (AAAA-MM-DD),
@@ -153,6 +153,7 @@ final class AnimalComercial
             'especie' => $fila['especieid'] === null ? null : ['id' => (int) $fila['especieid'], 'nombre' => $fila['especie']],
             'tipo' => $fila['tipoid'] === null ? null : ['id' => (int) $fila['tipoid'], 'nombre' => $fila['tipo']],
             'raza' => $fila['raza'] ?? $fila['razatexto'],
+            'razaId' => $fila['razaid'] === null ? null : (int) $fila['razaid'],
             'fechaNacimiento' => $fila['fechanacimiento'],
             'fechaNacimientoEstimada' => $fila['fechaestimada'] === null ? null : (int) $fila['fechaestimada'] === 1,
             'partos' => $fila['partos'] === null ? null : (int) $fila['partos'],
@@ -170,16 +171,98 @@ final class AnimalComercial
         ], $sentencia->fetchAll());
     }
 
-    /** ¿Hay otro animal vigente (no vendido ni inactivo) con este arete? El arete identifica a un solo animal. */
-    public function existeAreteVigente(string $arete): bool
+    /**
+     * ¿Hay otro animal vigente (no vendido ni inactivo) con este arete? El arete identifica a un solo animal.
+     * $excluirAnimalId: al editar, el propio animal no cuenta.
+     */
+    public function existeAreteVigente(string $arete, ?int $excluirAnimalId = null): bool
     {
         $sentencia = $this->conexion->prepare(
             "SELECT COUNT(*) FROM tbanimal
-             WHERE tbanimalidentificacion = :arete AND COALESCE(tbanimalestado, 'ACTIVO') NOT IN ('VENDIDO', 'INACTIVO')"
+             WHERE tbanimalidentificacion = :arete AND COALESCE(tbanimalestado, 'ACTIVO') NOT IN ('VENDIDO', 'INACTIVO')
+               AND tbanimalid <> :excluir"
         );
-        $sentencia->execute(['arete' => $arete]);
+        $sentencia->execute(['arete' => $arete, 'excluir' => $excluirAnimalId ?? 0]);
 
         return (int) $sentencia->fetchColumn() > 0;
+    }
+
+    /** Datos propios del animal (tbanimal), para editarlo y dejar el antes en la bitácora. */
+    public function datosAnimal(int $animalId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbanimalidentificacion AS arete, tbanimalsexo AS sexo, tbanimalraza AS raza,
+                    tbespecieid AS especieid, tbanimaltipoid AS tipoid, tbrazaid AS razaid,
+                    tbanimalfechanacimiento AS fechanacimiento, tbanimalfechanacimientoestimada AS estimada,
+                    tbanimalpartos AS partos
+             FROM tbanimal WHERE tbanimalid = :id'
+        );
+        $sentencia->execute(['id' => $animalId]);
+        $fila = $sentencia->fetch();
+        if ($fila === false) return null;
+        $entero = static fn (mixed $v): ?int => $v === null ? null : (int) $v;
+
+        return [
+            'arete' => $fila['arete'],
+            'sexo' => $fila['sexo'],
+            'raza' => $fila['raza'],
+            'especieId' => $entero($fila['especieid']),
+            'tipoId' => $entero($fila['tipoid']),
+            'razaId' => $entero($fila['razaid']),
+            'fechaNacimiento' => $fila['fechanacimiento'] === null ? null : substr((string) $fila['fechanacimiento'], 0, 10),
+            'fechaNacimientoEstimada' => $fila['estimada'] === null ? null : (int) $fila['estimada'] === 1,
+            'partos' => $entero($fila['partos']),
+        ];
+    }
+
+    /** Reemplaza los datos propios del animal (Mis animales → Editar). Las observaciones no se tocan. */
+    public function actualizarAnimal(int $animalId, array $datos): void
+    {
+        $estimada = $datos['fechaNacimientoEstimada'] ?? null;
+        $this->conexion->prepare(
+            'UPDATE tbanimal SET tbanimalidentificacion = :arete, tbanimalsexo = :sexo, tbanimalraza = :raza,
+                    tbespecieid = :especieId, tbanimaltipoid = :tipoId, tbrazaid = :razaId,
+                    tbanimalfechanacimiento = :fechaNacimiento, tbanimalfechanacimientoestimada = :estimada,
+                    tbanimalpartos = :partos
+             WHERE tbanimalid = :id'
+        )->execute([
+            'arete' => $datos['arete'],
+            'sexo' => $datos['sexo'],
+            'raza' => $datos['raza'],
+            'especieId' => $datos['especieId'],
+            'tipoId' => $datos['tipoId'],
+            'razaId' => $datos['razaId'],
+            'fechaNacimiento' => $datos['fechaNacimiento'],
+            'estimada' => $estimada === null ? null : ($estimada ? 1 : 0),
+            'partos' => $datos['partos'],
+            'id' => $animalId,
+        ]);
+    }
+
+    /**
+     * Observaciones del animal (edad, peso y propósito con su fecha), de la más reciente a la más antigua.
+     * Es el historial de pesos de Mis animales; la primera es la vigente (la que muestran las tarjetas).
+     *
+     * @return array<int,array{observacionId:int,fecha:string,peso:?float,edadMeses:?int,proposito:?string}>
+     */
+    public function observaciones(int $animalId): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbanimalproduccionsaludid AS id, tbanimalproduccionsaludfecha AS fecha,
+                    tbanimalproduccionsaludpeso AS peso, tbanimalproduccionsaludedadmeses AS edadmeses,
+                    tbanimalproduccionsaludproposito AS proposito
+             FROM tbanimalproduccionsalud WHERE tbanimalid = :id
+             ORDER BY tbanimalproduccionsaludfecha DESC, tbanimalproduccionsaludid DESC'
+        );
+        $sentencia->execute(['id' => $animalId]);
+
+        return array_map(static fn (array $fila): array => [
+            'observacionId' => (int) $fila['id'],
+            'fecha' => (string) $fila['fecha'],
+            'peso' => $fila['peso'] === null ? null : (float) $fila['peso'],
+            'edadMeses' => $fila['edadmeses'] === null ? null : (int) $fila['edadmeses'],
+            'proposito' => $fila['proposito'],
+        ], $sentencia->fetchAll());
     }
 
     /** Estado del animal (ACTIVO, PUBLICADO, VENDIDO, INACTIVO) para uno o varios animales. */
@@ -485,10 +568,13 @@ final class AnimalComercial
      * $personaId agrega meInteresa a cada fila; con $soloMarcadas devuelve solo
      * las publicaciones que esa persona tiene en "Me interesa" (sea cual sea su estado).
      * $excluirVendedorId deja fuera las publicaciones de ese vendedor (Explorar no muestra las propias).
+     * $filtros (Explorar, todo opcional): ubicacion (texto, sin distinguir tildes ni mayúsculas),
+     * precioMin y precioMax (dejan fuera las "a convenir") y excluirMarcadas (con $personaId).
+     * Con $soloMarcadas el orden es el de la marca: lo último que guardaste, primero.
      */
     public function listarPublicaciones(string $busqueda, string $estado, int $pagina, int $tamano,
         ?int $productorVendedorId = null, ?int $personaId = null, bool $soloMarcadas = false,
-        ?int $excluirVendedorId = null): array
+        ?int $excluirVendedorId = null, array $filtros = []): array
     {
         $condiciones = ['ep.tbanimalpublicacionestadoperiodofechafin IS NULL'];
         $parametros = [];
@@ -519,7 +605,30 @@ final class AnimalComercial
                 $parametros[":busqueda{$campo}"] = "%{$busqueda}%";
             }
         }
+        if (($filtros['excluirMarcadas'] ?? false) && $personaId !== null) {
+            $condiciones[] = 'NOT ' . sprintf(self::SQL_ME_INTERESA, ':excluirMarcaPersona');
+            $parametros[':excluirMarcaPersona'] = $personaId;
+        }
+        $ubicacion = self::sinTildesTexto((string) ($filtros['ubicacion'] ?? ''));
+        if ($ubicacion !== '') {
+            $condiciones[] = self::sinTildesSql("CONCAT_WS(', ', d.tbdireccionpueblo, d.tbdirecciondistrito,"
+                . " d.tbdireccioncanton, d.tbdireccionprovincia)") . ' LIKE :ubicacion';
+            $parametros[':ubicacion'] = "%{$ubicacion}%";
+        }
+        if (($filtros['precioMin'] ?? null) !== null) {
+            $condiciones[] = 'p.tbanimalpublicacionprecio >= :precioMin';
+            $parametros[':precioMin'] = (string) $filtros['precioMin'];
+        }
+        if (($filtros['precioMax'] ?? null) !== null) {
+            $condiciones[] = 'p.tbanimalpublicacionprecio <= :precioMax';
+            $parametros[':precioMax'] = (string) $filtros['precioMax'];
+        }
         $where = 'WHERE ' . implode(' AND ', $condiciones);
+        $orden = $soloMarcadas && $personaId !== null
+            ? "(SELECT MAX(m.tbanimalpublicacioninteraccionid) FROM tbanimalpublicacioninteraccion m
+                WHERE m.tbpersonaid = :ordenPersona AND m.tbanimalpublicacionid = p.tbanimalpublicacionid
+                  AND m.tbanimalpublicacioninteracciontipo = 'ME_INTERESA') DESC, "
+            : '';
 
         $desde = <<<SQL
             FROM tbanimalpublicacion p
@@ -590,7 +699,7 @@ final class AnimalComercial
                     d.tbdirecciondistrito AS distrito,
                     d.tbdireccionpueblo AS pueblo{$columnaMarca}
              {$desde}
-             ORDER BY p.tbanimalpublicacionfecha DESC, p.tbanimalpublicacionid DESC
+             ORDER BY {$orden}p.tbanimalpublicacionfecha DESC, p.tbanimalpublicacionid DESC
              LIMIT :limite OFFSET :desplazamiento"
         );
         foreach ($parametros as $nombre => $valor) {
@@ -598,6 +707,9 @@ final class AnimalComercial
         }
         if ($personaId !== null) {
             $sentencia->bindValue(':marcaPersona', $personaId, PDO::PARAM_INT);
+        }
+        if ($orden !== '') {
+            $sentencia->bindValue(':ordenPersona', $personaId, PDO::PARAM_INT);
         }
         $sentencia->bindValue(':limite', $tamano, PDO::PARAM_INT);
         $sentencia->bindValue(':desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
@@ -840,6 +952,24 @@ final class AnimalComercial
         ]);
 
         return $periodoId;
+    }
+
+    private const TILDES = ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u',
+        'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u'];
+
+    /** "San José" y "san jose" deben encontrar lo mismo en MySQL y en Postgres. */
+    private static function sinTildesSql(string $expresion): string
+    {
+        $sql = "LOWER({$expresion})";
+        foreach (self::TILDES as $con => $sin) {
+            $sql = "REPLACE({$sql}, '{$con}', '{$sin}')";
+        }
+        return $sql;
+    }
+
+    private static function sinTildesTexto(string $texto): string
+    {
+        return strtr(mb_strtolower(trim($texto), 'UTF-8'), self::TILDES);
     }
 
     private function exigirLock(string $tabla): void

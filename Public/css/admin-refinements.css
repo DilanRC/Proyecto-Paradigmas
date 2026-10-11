@@ -197,6 +197,9 @@ html[data-tc-sidebar='collapsed'] .admin-account-menu__panel {
 /* Catálogos del animal (P2-6) */
 .rural-panel__nav-item[href$='admin/catalogos']::before { content:'\f02c'; } /* tags */
 
+/* Subastas en vivo (DEC-SUBASTA-001) */
+.rural-panel__nav-item[href$='admin/subastas']::before { content:'\f0e3'; } /* gavel */
+
 /* Detalle de la bitácora: datos antes y después (P3-4). Sin colores propios. */
 .detail-grid pre {
   margin: 0;

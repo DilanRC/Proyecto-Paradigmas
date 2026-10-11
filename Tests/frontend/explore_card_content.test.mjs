@@ -17,7 +17,7 @@ const exploreSource = read('Public/js/explore.js');
 const {
     formatPrice, formatLocation, formatAge, formatWeight, formatText, formatSeller,
     formatPurpose, availablePurposes, filterByPurpose, normalizePurpose,
-    filterByLocation, filterByPrice, purposeFromText,
+    purposeFromText,
 } = await import('../../Public/js/explore.js');
 
 test('el proposito se escribe bien en pantalla aunque la base lo guarde gritado', () => {
@@ -129,19 +129,11 @@ test('normalizePurpose vuelve a todos cuando el filtro ya no existe', () => {
     assert.equal(normalizePurpose('', ['CRIA']), 'todos');
 });
 
-test('los filtros de ubicación y precio ignoran tildes y respetan el rango', () => {
-    const items = [
-        { precio: 500000, direccion: { canton: 'San José', provincia: 'San José' } },
-        { precio: 900000, direccion: { canton: 'Grecia', provincia: 'Alajuela' } },
-        { precio: null, direccion: { provincia: 'Alajuela' } },
-    ];
-    assert.equal(filterByLocation(items, 'san jose').length, 1);
-    assert.equal(filterByLocation(items, 'ALAJUELA').length, 2);
-    assert.equal(filterByLocation(items, '  ').length, 3);
-    assert.equal(filterByPrice(items, null, null).length, 3);
-    assert.equal(filterByPrice(items, 600000, null).length, 1);
-    assert.equal(filterByPrice(items, null, 500000).length, 1, 'el máximo es inclusivo');
-    assert.equal(filterByPrice(items, 0, null).length, 2, 'sin precio no entra en un rango');
+test('ubicación, precio y lo ya marcado los filtra la API, no la página cargada', () => {
+    for (const parametro of ["excluirMarcadas: 'true'", "'ubicacion'", "'precioMin'", "'precioMax'"]) {
+        assert.ok(exploreSource.includes(parametro), `Explorar envía ${parametro}`);
+    }
+    assert.doesNotMatch(exploreSource, /filterByLocation|filterByPrice/);
 });
 
 test('el tipo escrito en la portada se traduce al propósito del catálogo', () => {

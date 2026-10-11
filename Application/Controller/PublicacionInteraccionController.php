@@ -105,21 +105,20 @@ final class PublicacionInteraccionController
                 'accion' => 'Use REGISTRAR, o RETIRAR solo para ME_INTERESA.',
             ]);
         }
-        if ($accion === 'RETIRAR') {
-            // Idempotente: quitar algo que no está marcado no escribe nada. Se permite
-            // aunque la publicación ya no esté activa, para limpiar la lista.
-            if (!$this->interacciones->estaMarcada((int) $this->actor->personaId, (int) $publicacionId, $tipo)) {
-                return $this->respuesta(true, 'La publicación ya no estaba en tu lista.', [
-                    'publicacionId' => (int) $publicacionId, 'tipo' => $tipo, 'accion' => $accion, 'cambiado' => false,
-                ], 200);
-            }
-        } elseif (!$this->publicacionActiva((int) $publicacionId)) {
+        // Quitar se permite aunque la publicación ya no esté activa, para limpiar la lista.
+        if ($accion === 'REGISTRAR' && !$this->publicacionActiva((int) $publicacionId)) {
             throw new HttpException('La publicación ya no está activa.', 409);
         }
 
         // Los ids de la interacción y de la bitácora salen del último + 1: sus bloqueos deben durar hasta el COMMIT.
-        $resultado = $this->interacciones->ejecutarConBloqueoAlta(fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
-            function () use ($publicacionId, $tipo, $accion): array {
+        $resultado = $this->interacciones->ejecutarConBloqueoAlta(fn (): ?array => $this->bitacora->ejecutarConBloqueoAlta(
+            function () use ($publicacionId, $tipo, $accion): ?array {
+                // Me interesa es idempotente: marcar lo ya marcado o quitar lo que no está no escribe nada.
+                // Se revisa dentro del bloqueo para que dos toques seguidos no guarden dos filas.
+                if ($tipo === 'ME_INTERESA' && $this->interacciones->estaMarcada(
+                    (int) $this->actor->personaId, (int) $publicacionId, $tipo) === ($accion === 'REGISTRAR')) {
+                    return null;
+                }
                 $this->conexion->beginTransaction();
                 try {
                     $interaccionId = $this->interacciones->registrar(
@@ -152,6 +151,12 @@ final class PublicacionInteraccionController
                 }
             },
         ));
+        if ($resultado === null) {
+            return $this->respuesta(true, $accion === 'RETIRAR' ? 'La publicación ya no estaba en tu lista.'
+                : 'La publicación ya estaba en tu lista.', [
+                'publicacionId' => (int) $publicacionId, 'tipo' => $tipo, 'accion' => $accion, 'cambiado' => false,
+            ], 200);
+        }
 
         return $this->respuesta(true, $accion === 'RETIRAR' ? 'Publicación quitada de tu lista.' : 'Interacción guardada correctamente.', $resultado, 201);
     }

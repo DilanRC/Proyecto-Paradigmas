@@ -16,6 +16,8 @@ test('las acciones dependen del estado del animal', async () => {
     const publicado = accionesAnimal({ animalId: 7, estado: 'PUBLICADO', publicacion: { publicacionId: 31 } });
     assert.doesNotMatch(publicado, /data-animal-accion="publicar"/, 'uno publicado no se publica dos veces');
     assert.match(publicado, /href="explorar\?publicacion=31"/);
+    assert.match(activo, /data-animal-accion="editar"/);
+    assert.match(publicado, /data-animal-accion="pesos"/, 'uno publicado se sigue pesando');
     assert.equal(accionesAnimal({ animalId: 7, estado: 'VENDIDO' }), '', 'vendido: sin acciones');
     assert.equal(nombreAnimal({ animalId: 7, arete: '1880010002345' }), 'Arete 188 0 01 0002345');
     assert.equal(nombreAnimal({ animalId: 7, tipo: { nombre: 'Vaca' }, raza: 'Jersey' }), 'Vaca · Jersey');
@@ -24,12 +26,12 @@ test('las acciones dependen del estado del animal', async () => {
 
 test('Mi panel carga la sección y sus diálogos', () => {
     const vista = read('Application/View/mi-actividad/index.php');
-    for (const id of ['animals-panel', 'animal-add', 'animal-modal', 'animal-publish-modal', 'animal-vaccines-modal', 'animal-publish-foto']) {
+    for (const id of ['animals-panel', 'animal-add', 'animal-modal', 'animal-publish-modal', 'animal-vaccines-modal', 'animal-weights-modal', 'animal-publish-foto']) {
         assert.match(vista, new RegExp(`id="${id}"`), `falta #${id}`);
     }
-    assert.match(vista, /js\/mi-actividad\.js\?v=panel-14/);
+    assert.match(vista, /js\/mi-actividad\.js\?v=panel-17/);
     const panel = read('Public/js/mi-actividad.js');
-    assert.match(panel, /from '\.\/mis-animales\.js\?v=animales-4'/);
+    assert.match(panel, /from '\.\/mis-animales\.js\?v=animales-6'/);
     assert.match(panel, /#animals-panel'\)\.hidden = !isActive\('PRODUCTOR'\)/);
     assert.doesNotMatch(read('Public/js/mis-animales.js'), /\.insertAdjacentHTML\(/);
 });

@@ -106,9 +106,17 @@ try {
     // Validaciones.
     $sinPunto = oferta_cuerpo($vehiculoA);
     unset($sinPunto['direccion']['latitud'], $sinPunto['direccion']['longitud']);
-    $rechazo = $ofertasA->procesar('POST', $sinPunto);
-    test_same(422, $rechazo['status'], 'La zona base exige el punto en el mapa');
-    test_assert(isset($rechazo['body']['errors']['direccion.latitud']), 'El error apunta a la latitud');
+    // El punto es opcional: sin él la oferta se empareja por provincia (sin distancia, al final de la lista).
+    $sinPuntoCreada = $ofertasA->procesar('POST', $sinPunto);
+    test_same(201, $sinPuntoCreada['status'], 'La zona base puede no tener punto en el mapa');
+    $sinPuntoId = (int) $sinPuntoCreada['body']['data']['oferta']['ofertaId'];
+    $consultaB = new FletesController($db, null);
+    $idsSinPunto = static fn (array $q): array => array_column($consultaB->procesar('GET', $q)['body']['data']['ofertas'] ?? [], 'ofertaId');
+    test_assert(in_array($sinPuntoId, $idsSinPunto(['latitud' => '10.6350', 'longitud' => '-85.4377', 'provincia' => 'san jose']), true),
+        'Sin punto aparece si la provincia de quien consulta coincide (sin tildes ni mayúsculas)');
+    test_assert(!in_array($sinPuntoId, $idsSinPunto(['latitud' => '9.9350', 'longitud' => '-84.0800']), true), 'Sin provincia no se puede emparejar');
+    test_assert(!in_array($sinPuntoId, $idsSinPunto(['latitud' => '9.9350', 'longitud' => '-84.0800', 'provincia' => 'Limón']), true), 'Otra provincia no la ve');
+    $ofertasA->procesar('PATCH', ['ofertaId' => $sinPuntoId, 'estado' => 'PAUSADA']);
     foreach ([['radioKm' => 0], ['radioKm' => 501], ['capacidad' => 0], ['capacidad' => 201], ['precio' => -1], ['precio' => 'caro'], ['descripcion' => str_repeat('a', 501)], ['ofertaId' => 1], ['estado' => 'PAUSADA']] as $malo) {
         test_same(422, $ofertasA->procesar('POST', oferta_cuerpo($vehiculoA, $malo))['status'], 'Debe rechazar ' . json_encode($malo));
     }

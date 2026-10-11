@@ -37,9 +37,68 @@ try {
         'Editar el perfil exige sesión');
     test_same(405, $perfil->procesar('GET', [])['status'], 'Solo PATCH');
     test_same(422, $perfil->procesar('PATCH', [])['status'], 'Sin cambios es 422');
-    $ajeno = $perfil->procesar('PATCH', ['nombre' => 'Otro Nombre', 'correoElectronico' => 'x@y.z']);
-    test_same(422, $ajeno['status'], 'El nombre y el correo no se editan aquí');
-    test_assert(isset($ajeno['body']['errors']['nombre'], $ajeno['body']['errors']['correoElectronico']), 'Indica cada campo no editable');
+    $ajeno = $perfil->procesar('PATCH', ['personaId' => 9, 'correo' => 'x@y.z']);
+    test_same(422, $ajeno['status'], 'Campos fuera de la lista no se editan');
+    test_assert(isset($ajeno['body']['errors']['personaId'], $ajeno['body']['errors']['correo']), 'Indica cada campo no editable');
+
+    // Nombre, identificación y correo (la cuenta de Supabase se simula con un transporte falso).
+    test_same('Ana María Pérez', $perfil->procesar('PATCH', ['nombre' => '  Ana   María Pérez '])['body']['data']['persona']['nombre'] ?? null,
+        'El nombre se guarda recortado');
+    test_assert(isset($perfil->procesar('PATCH', ['nombre' => 'A'])['body']['errors']['nombre']), 'Nombre muy corto es 422 en nombre');
+    test_assert(isset($perfil->procesar('PATCH', ['identificacion' => ['tipoCodigo' => 'CEDULA_FISICA', 'numero' => '0-1']])['body']['errors']['identificacion.numero']),
+        'La identificación sigue las reglas del registro');
+    $otra = test_create_completo(['correoElectronico' => 'otra-' . test_token('correo') . '@example.test', 'fincas' => [['nombre' => 'Finca Perfil Otra']]]);
+    $identificaciones[] = $otra['identificacionNumero'];
+    $choque = $perfil->procesar('PATCH', ['identificacion' => ['tipoCodigo' => 'PASAPORTE', 'numero' => $otra['identificacionNumero']]]);
+    test_same(409, $choque['status'], 'La identificación de otra cuenta es 409');
+    $nuevoNumero = '7' . str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+    $cambio = $perfil->procesar('PATCH', ['identificacion' => ['tipoCodigo' => 'CEDULA_FISICA', 'numero' => $nuevoNumero]]);
+    test_same(200, $cambio['status'], 'Cambia la identificación: ' . json_encode($cambio['body']));
+    $identificaciones[] = $nuevoNumero;
+    test_same($nuevoNumero, $cambio['body']['data']['persona']['identificacionNumero'], 'La identificación nueva se guarda');
+    $evento = $db->prepare("SELECT tbbitacoradatosnuevos FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :r ORDER BY tbbitacoraid DESC LIMIT 1");
+    $evento->execute(['r' => 'PERSONA:' . $personaId]);
+    $nuevos = (string) $evento->fetchColumn();
+    test_assert(!str_contains($nuevos, $nuevoNumero) && (json_decode($nuevos, true)['identificacionCambiada'] ?? null) === true, 'La bitácora no guarda la identificación');
+    test_same(200, $perfil->procesar('PATCH', ['identificacion' => ['tipoCodigo' => 'PASAPORTE', 'numero' => $persona['identificacionNumero']]])['status'],
+        'Vuelve a la identificación original');
+
+    if (!getenv('SUPABASE_URL')) putenv('SUPABASE_URL=https://ejemplo.supabase.co');
+    if (!getenv('SUPABASE_SECRET_KEY')) putenv('SUPABASE_SECRET_KEY=sb_secret_prueba');
+    $llamadas = [];
+    $respuestaAuth = ['status' => 200, 'body' => '{}'];
+    $transporte = function (string $url, string $clave, string $cuerpo) use (&$llamadas, &$respuestaAuth): array {
+        $llamadas[] = ['url' => $url, 'cuerpo' => json_decode($cuerpo, true)];
+        return $respuestaAuth;
+    };
+    $uuid = '11111111-2222-4333-8444-555555555555';
+    $conCuenta = new MiPerfilController($db, ActorContext::usuarioVerificado($personaId, $uuid, $fila['tbpersonacorreoelectronico'], null),
+        test_token('perfil-correo'), new Application\Service\SupabaseAuthAdmin($transporte));
+    $correoOtra = $db->prepare('SELECT tbpersonacorreoelectronico FROM tbpersona WHERE tbpersonaidentificacionnumero = :n');
+    $correoOtra->execute(['n' => $otra['identificacionNumero']]);
+    test_same(409, $conCuenta->procesar('PATCH', ['correoElectronico' => strtoupper((string) $correoOtra->fetchColumn())])['status'],
+        'El correo de otra persona es 409 (sin distinguir mayúsculas)');
+    test_same([], $llamadas, 'Un correo repetido no llega a Supabase');
+    test_same(200, $conCuenta->procesar('PATCH', ['correoElectronico' => strtoupper($fila['tbpersonacorreoelectronico'])])['status'], 'El mismo correo no cambia nada');
+    test_same([], $llamadas, 'El mismo correo no llama a Supabase');
+    $correoNuevo = strtolower('perfil-' . test_token('correo') . '@ejemplo.test');
+    $respuestaAuth = ['status' => 422, 'body' => '{"code":422,"error_code":"email_exists"}'];
+    $rechazo = $conCuenta->procesar('PATCH', ['correoElectronico' => $correoNuevo, 'alias' => 'No se guarda']);
+    test_same(409, $rechazo['status'], 'Si Supabase dice que el correo existe, es 409');
+    $correoActual = $db->prepare('SELECT tbpersonacorreoelectronico, tbpersonaalias FROM tbpersona WHERE tbpersonaid = :id');
+    $correoActual->execute(['id' => $personaId]);
+    $guardado = $correoActual->fetch();
+    test_same($fila['tbpersonacorreoelectronico'], $guardado['tbpersonacorreoelectronico'], 'Si Supabase falla, el correo no cambia');
+    test_assert($guardado['tbpersonaalias'] !== 'No se guarda', 'Si Supabase falla, nada del PATCH se guarda');
+    $respuestaAuth = ['status' => 200, 'body' => '{}'];
+    $llamadas = [];
+    $cambioCorreo = $conCuenta->procesar('PATCH', ['correoElectronico' => $correoNuevo]);
+    test_same(200, $cambioCorreo['status'], 'Cambia el correo: ' . json_encode($cambioCorreo['body']));
+    test_same($correoNuevo, $cambioCorreo['body']['data']['persona']['correoElectronico'], 'El correo nuevo se guarda');
+    test_assert(str_ends_with($llamadas[0]['url'] ?? '', '/auth/v1/admin/users/' . $uuid), 'Cambia la cuenta de la sesión');
+    test_same(['email' => $correoNuevo, 'email_confirm' => true], $llamadas[0]['cuerpo'] ?? null, 'Con el correo ya confirmado');
+    test_same(200, $conCuenta->procesar('PATCH', ['correoElectronico' => $fila['tbpersonacorreoelectronico']])['status'], 'Vuelve al correo original');
+    test_same(409, $perfil->procesar('PATCH', ['correoElectronico' => $correoNuevo . 'x'])['status'], 'Sin una cuenta de Supabase válida no cambia el correo');
     test_same(422, $perfil->procesar('PATCH', ['fotoUrl' => 'http://example.com/a.jpg'])['status'], 'La foto exige https');
     test_assert(isset($perfil->procesar('PATCH', ['fotoUrl' => 'javascript:alert(1)'])['body']['errors']['fotoUrl']), 'El error se reporta en fotoUrl');
     test_same(422, $perfil->procesar('PATCH', ['telefono' => '123'])['status'], 'El teléfono debe ser válido');

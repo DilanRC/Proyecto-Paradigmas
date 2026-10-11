@@ -8,6 +8,7 @@ import {
 } from './shared/business-rules.js?v=mascaras-1';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
+import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { request } from './shared/api.js';
 import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
@@ -626,6 +627,11 @@ async function initialize() {
         if (active === 'fincas') {
             const fincas = readFincas();
             errors = { ...validateFincas(fincas, registrationCapabilities(selectedCapabilities(form), extending, solicitada)), ...validarDireccionesFinca(fincas) };
+            // El punto es opcional, pero si se marcó debe estar en la provincia escrita.
+            for (const finca of Object.keys(errors).length ? [] : fincas) {
+                const desajuste = await validarPuntoConDireccion(finca.direccion);
+                if (desajuste) { errors = { fincas: `${finca.nombre || 'La finca'}: ${desajuste}` }; break; }
+            }
         }
         setErrors(errors);
         if (errors.fincas) {

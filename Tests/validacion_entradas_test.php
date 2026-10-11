@@ -13,6 +13,8 @@ foreach (['Vehiculo', 'CompraSolicitud', 'TransportistaOferta', 'PagoMetodo', 'P
     require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
 }
 require_once dirname(__DIR__) . '/Application/Service/RegistroPublicoService.php';
+foreach (['Notificacion', 'Subasta'] as $modelo) require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
+require_once dirname(__DIR__) . '/Application/Controller/SubastasController.php';
 foreach (['MiVehiculosController', 'MiOfertasController', 'AdminPublicacionController', 'AdminDocumentoController', 'MiPerfilController', 'MiFincasController', 'SolicitudesCompraController', 'PublicacionInteraccionController',
           'FletesController', 'RegistroPublicoController'] as $controlador) {
     require_once dirname(__DIR__) . "/Application/Controller/{$controlador}.php";
@@ -123,6 +125,11 @@ try {
     $atacar('Publicar animal', fn (array $c): array => $animales->procesar('PATCH', $c),
         ['animalId' => $animalId, 'accion' => 'PUBLICAR', 'fincaNombre' => 'Finca Validación', 'titulo' => 'Validación'],
         ['animalId', 'accion', 'fincaNombre', 'titulo', 'precio', 'descripcion', 'imagenUrl'], ['animalId', 'precio']);
+    $atacar('Editar animal', fn (array $c): array => $animales->procesar('PATCH', $c), ['animalId' => $animalId, 'accion' => 'EDITAR'],
+        ['animalId', 'especieId', 'tipoId', 'razaId', 'sexo', 'arete', 'fechaNacimiento', 'partos', 'peso', 'edadMeses', 'proposito', 'raza'],
+        ['animalId', 'especieId', 'tipoId', 'razaId', 'partos', 'peso', 'edadMeses']);
+    $atacar('Pesar animal', fn (array $c): array => $animales->procesar('PATCH', $c), ['animalId' => $animalId, 'accion' => 'PESAR', 'peso' => 310],
+        ['animalId', 'peso', 'fecha'], ['animalId', 'peso']);
     $atacar('Vacuna', fn (array $c): array => $vacunas->procesar('POST', [], $c),
         ['animalId' => $animalId, 'vacunaId' => 1, 'fecha' => gmdate('Y-m-d', time() - 86400)],
         ['animalId', 'vacunaId', 'fecha', 'dosis', 'lote', 'aplicadaPor', 'proximaDosis', 'observaciones'], ['animalId', 'vacunaId']);
@@ -132,9 +139,21 @@ try {
     $atacar('Editar catálogo admin', fn (array $c): array => $catalogos->procesar('PATCH', $c),
         ['catalogo' => 'VACUNA', 'id' => 1], ['id', 'nombre'], ['id']);
 
+    // Subastas: abrir, pujar y comentar (sin avisos reales a Supabase).
+    $subastas = new Application\Controller\SubastasController($db, $actor, test_token('val-sub'), new Application\Service\TiempoReal(static function (): void {}));
+    $atacar('Abrir subasta', fn (array $c): array => $subastas->procesar('POST', [], $c),
+        ['animalId' => $animalId, 'fincaNombre' => 'Finca Validación', 'titulo' => 'Validación', 'precioBase' => 1000, 'incrementoMinimo' => 100, 'duracionMinutos' => 60],
+        ['animalId', 'fincaNombre', 'titulo', 'descripcion', 'imagenUrl', 'precioBase', 'incrementoMinimo', 'duracionMinutos'],
+        ['animalId', 'precioBase', 'incrementoMinimo', 'duracionMinutos']);
+    $atacar('Pujar', fn (array $c): array => $subastas->procesar('PATCH', [], $c), ['subastaId' => 999999, 'accion' => 'PUJAR', 'monto' => 1000],
+        ['subastaId', 'monto'], ['subastaId', 'monto']);
+    $atacar('Comentar subasta', fn (array $c): array => $subastas->procesar('PATCH', [], $c), ['subastaId' => 999999, 'accion' => 'COMENTAR', 'texto' => 'Hola'],
+        ['subastaId', 'texto'], ['subastaId']);
+    $atacar('Lista de subastas', fn (array $c): array => $subastas->procesar('GET', $c), [], ['vista', 'q', 'pagina', 'tamanoPagina'], ['pagina', 'tamanoPagina']);
+
     $perfil = new MiPerfilController($db, $actor, test_token('val-perfil'));
     $atacar('Mi perfil', fn (array $c): array => $perfil->procesar('PATCH', $c), [],
-        ['alias', 'telefono', 'fotoUrl', 'documentoRuta', 'documentoLectura']);
+        ['nombre', 'identificacion', 'correoElectronico', 'alias', 'telefono', 'fotoUrl', 'documentoRuta', 'documentoLectura']);
     $fincas = new MiFincasController($db, $actor, test_token('val-finca'));
     $atacar('Agregar finca', fn (array $c): array => $fincas->procesar('POST', $c), ['nombreFinca' => 'Finca ' . test_token('f')],
         ['nombreFinca', 'direccionFinca']);
@@ -150,7 +169,8 @@ try {
         ['latitud', 'longitud', 'capacidadMinima', 'pagina', 'tamanoPagina', 'publicacionId'],
         ['latitud', 'longitud', 'capacidadMinima', 'pagina', 'tamanoPagina']);
     $atacar('Explorar', fn (array $c): array => $publicaciones->procesar('GET', $c, []), [],
-        ['q', 'estado', 'pagina', 'tamanoPagina', 'latitud', 'longitud'], ['pagina', 'tamanoPagina', 'latitud', 'longitud']);
+        ['q', 'estado', 'pagina', 'tamanoPagina', 'latitud', 'longitud', 'ubicacion', 'precioMin', 'precioMax'],
+        ['pagina', 'tamanoPagina', 'latitud', 'longitud', 'precioMin', 'precioMax']);
 
     // Registro público: cada dato de la persona, uno a la vez.
     $correo = strtolower(test_token('val-reg')) . '@example.test';

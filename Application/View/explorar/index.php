@@ -18,14 +18,16 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/base.css?v=product-7">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-9">
+    <link rel="stylesheet" href="css/public-product.css?v=product-10">
     <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
+    <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-15"></script>
-    <script type="module" src="js/explore.js?v=explore-12"></script>
-    <script type="module" src="js/explore-interactions.js?v=interactions-4"></script>
+    <script type="module" src="js/public-ui.js?v=public-16"></script>
+    <script type="module" src="js/explore.js?v=explore-13"></script>
+    <script type="module" src="js/explore-interactions.js?v=interactions-5"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
+    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-1"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
@@ -73,6 +75,15 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     <h1 id="explore-title">Oportunidades para descubrir, comparar y decidir.</h1>
                     <p>Compara publicaciones de ganado, guarda lo que te interesa y registra tus acciones sobre cada oportunidad.</p>
                 </div>
+            </section>
+
+            <section class="subastas-banda" data-subastas-banda aria-labelledby="subastas-banda-titulo" hidden>
+                <div class="subastas-banda__cabecera">
+                    <h2 id="subastas-banda-titulo"><i class="fa-solid fa-gavel" aria-hidden="true"></i> Subastas en vivo</h2>
+                    <span class="subastas-vivo" data-subastas-vivo data-conectado="false">Conectando…</span>
+                    <a class="subastas-banda__ver" href="subastas">Ver todas las subastas</a>
+                </div>
+                <div class="subastas-banda__lista" data-subastas-banda-lista aria-live="polite"></div>
             </section>
 
             <div class="explore-filters" data-explore-filterbar hidden>

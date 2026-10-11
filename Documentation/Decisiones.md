@@ -1237,3 +1237,36 @@ vacuna). En un lote se suman las vacunas de todos sus animales.
 **Reglas.** La fecha de aplicación no es futura (hora de Costa Rica), la próxima dosis no es anterior a la aplicación y
 la vacuna debe existir y estar activa al registrarla (una vacuna desactivada después sigue mostrándose en lo ya
 registrado).
+
+## DEC-SUBASTA-001 - Subastas en tiempo real
+
+**Qué se decidió.** Un vendedor abre una subasta con un animal de su inventario (Mis animales, estado `ACTIVO`): elige
+finca, título, descripción, foto, precio base, incremento mínimo y duración (5 minutos a 30 días). Todas las cuentas la
+ven en Explorar (banda "Subastas en vivo") y en `/subastas` (activas, historial, mis subastas y donde pujé); el
+administrador la ve en `/admin/subastas` pero no puja ni comenta (403). Una persona puede tener varias subastas
+abiertas y pujar en varias a la vez. Cuatro tablas nuevas: `tbsubasta`, `tbsubastapuja`, `tbsubastacomentario` y
+`tbnotificacion`. El esquema pasa a 47 tablas.
+
+**Tiempo real.** WebSockets propios no funcionan en Vercel con PHP (no mantiene conexiones abiertas). Se usa
+**Supabase Realtime (Broadcast)**, que ya es parte del proyecto: el navegador abre un WebSocket nativo con la clave
+pública (sin librerías) y el servidor PHP, después de cada COMMIT, avisa por la API REST de Realtime con la clave secreta.
+El aviso **no lleva datos**: solo dice "cambió" y cada pantalla vuelve a pedir el estado a la API, que es la única fuente
+de verdad. Así, aunque el canal es público y alguien podría mandar un mensaje falso, eso solo provoca una recarga.
+Además las pantallas consultan cada 15-30 s por si el WebSocket no está.
+
+**Reglas de puja.** Sesión de Persona con Comprador activo; no el vendedor, no un administrador, no quien ya va ganando.
+La primera puja es al menos el precio base; las siguientes, al menos la más alta + el incremento mínimo. Todo bajo un
+solo lock de subastas y dentro de una transacción con la bitácora (`SUBASTA`: `CREAR`, `PUJAR`, `COMENTAR`, `CANCELAR`,
+`FINALIZAR`). Quien queda superado recibe un aviso. El vendedor puede cancelar solo si nadie pujó.
+
+**Cierre sin tarea programada.** Cualquier consulta de subastas (o de la campana) cierra primero las vencidas, y el
+contador del navegador consulta al llegar a cero. Con pujas: `FINALIZADA`, gana la más alta, se registran `tbcompra` y
+`tbventa` (como una solicitud aceptada) y el animal queda `VENDIDO`; el ganador y el vendedor reciben un aviso. Sin pujas:
+`DESIERTA` y el animal vuelve al inventario.
+
+**Trato.** Solo el ganador y el vendedor ven los contactos del otro (nombre, teléfono y correo) y la dirección completa de
+la finca. El ganador ve además los fletes que cubren la finca **con el teléfono del transportista** (`api/v1/fletes?subastaId=`):
+ya hay un trato cerrado. Las pujas y los comentarios se muestran con el alias o el primer nombre.
+
+**Descartado por ahora.** Extender el cierre si alguien puja en los últimos segundos (anti-sniping), subastar lotes,
+moderar (cancelar) desde el panel y canales privados de Realtime con políticas (necesitan configuración en Supabase).

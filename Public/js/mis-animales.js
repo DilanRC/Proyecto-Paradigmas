@@ -9,7 +9,7 @@ import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
 const API = 'api/v1/mi-animales';
 const VACUNAS_API = 'api/v1/mi-animales/vacunas';
-const ESTADOS = { ACTIVO: 'En inventario', PUBLICADO: 'Publicado', VENDIDO: 'Vendido', INACTIVO: 'Inactivo' };
+const ESTADOS = { ACTIVO: 'En inventario', PUBLICADO: 'Publicado', SUBASTA: 'En subasta', VENDIDO: 'Vendido', INACTIVO: 'Inactivo' };
 const SEXO_POR_TIPO = { H: 'HEMBRA', M: 'MACHO' };
 
 const $ = (selector) => document.querySelector(selector);
@@ -22,15 +22,19 @@ export function nombreAnimal(animal) {
     return partes.length ? partes.join(' · ') : `Animal #${Number(animal.animalId)}`;
 }
 
-/** Botones de cada fila: vacunas solo si sigue en el inventario; publicar solo si no tiene publicación abierta. */
+/** Botones de cada fila: editar, pesos y vacunas solo si sigue vigente; publicar solo si no tiene publicación abierta. */
 export function accionesAnimal(animal) {
     const id = Number(animal.animalId);
     const boton = (accion, texto) => `<button class="activity-button activity-button--text" type="button" data-animal-accion="${accion}" data-animal-id="${id}">${texto}</button>`;
     const vigente = animal.estado === 'ACTIVO' || animal.estado === 'PUBLICADO';
     const publicacion = Number(animal.publicacion?.publicacionId);
     return [
+        vigente && boton('editar', 'Editar'),
+        vigente && boton('pesos', 'Pesos'),
         vigente && boton('vacunas', 'Vacunas'),
         animal.estado === 'ACTIVO' && boton('publicar', 'Publicar'),
+        animal.estado === 'ACTIVO' && `<a class="activity-button activity-button--text" href="subastas?nueva=${id}">Subastar</a>`,
+        animal.estado === 'SUBASTA' && '<a class="activity-button activity-button--text" href="subastas?vista=MIAS">Ver subasta</a>',
         animal.estado === 'PUBLICADO' && publicacion > 0 && `<a class="activity-button activity-button--text" href="explorar?publicacion=${publicacion}">Ver publicación</a>`,
     ].filter(Boolean).join('');
 }
@@ -93,6 +97,8 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
     let catalogo = null;
     let animalActual = null;
     let disparador = null;
+    // null = registrar uno nuevo; un animal = editar ese animal con el mismo formulario.
+    let editando = null;
 
     const vista = (estado, mensaje = '') => {
         $('#animals-loading').hidden = estado !== 'loading';
@@ -161,15 +167,36 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         if (!fechaNacimiento.value) fechaNacimientoEstimada.checked = false;
     });
 
-    const abrirRegistro = async (boton) => {
+    const abrirRegistro = async (boton, animal = null) => {
         disparador = boton;
         try { await cargarCatalogo(); } catch {
             toast?.error('No pudimos cargar los catálogos. Intenta de nuevo.');
             return;
         }
+        editando = animal;
         formAnimal.reset();
+        $('#animal-modal-title').textContent = animal ? 'Editar animal' : 'Registrar animal';
+        $('#animal-modal-help').textContent = animal
+            ? `${nombreAnimal(animal)}. Un peso, edad o propósito nuevos quedan en su historial.`
+            : 'Queda en tu inventario sin publicarse. Todo es opcional.';
+        formAnimal.querySelector('[type="submit"]').textContent = animal ? 'Guardar cambios' : 'Registrar animal';
+        if (animal?.especie) especieId.value = String(animal.especie.id);
         especieId.dispatchEvent(new Event('change'));
-        fechaNacimientoEstimada.disabled = true;
+        if (animal) {
+            if (animal.tipo) tipoId.value = String(animal.tipo.id);
+            if (animal.razaId) razaId.value = String(animal.razaId);
+            if (animal.sexo) sexo.value = animal.sexo;
+            actualizarSexo();
+            // Una identificación libre antigua (no SENASA) no se muestra: sin tocar el campo, se conserva.
+            if (/^\d{13}$/.test(animal.arete ?? '')) arete.value = formatearArete(animal.arete);
+            fechaNacimiento.value = animal.fechaNacimiento?.slice(0, 10) ?? '';
+            fechaNacimientoEstimada.checked = animal.fechaNacimientoEstimada === true;
+            if (animal.partos != null) partos.value = String(animal.partos);
+            for (const campo of ['peso', 'edadMeses', 'proposito']) {
+                if (animal[campo] != null) formAnimal.elements[campo].value = String(animal[campo]);
+            }
+        }
+        fechaNacimientoEstimada.disabled = !fechaNacimiento.value;
         fechaNacimiento.max = new Date().toLocaleDateString('en-CA');
         mostrarErrores(formAnimal);
         mostrarEstado($('#animal-form-status'), '', 'info');
@@ -197,7 +224,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         event.preventDefault();
         const problema = errorArete(arete.value);
         if (problema) { mostrarErrores(formAnimal, { arete: problema }); return; }
-        if (Object.keys(cuerpoDe(formAnimal)).length === 0) {
+        if (!editando && Object.keys(cuerpoDe(formAnimal)).length === 0) {
             mostrarErrores(formAnimal, { especieId: 'Completa al menos un dato del animal.' });
             mostrarEstado($('#animal-form-status'), 'No se puede registrar un animal sin datos. Completa al menos uno: especie, tipo, raza, arete, peso o edad.', 'error');
             especieId.focus();
@@ -208,7 +235,12 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
             if (sexo.disabled) delete cuerpo.sexo;
             if (cuerpo.arete) cuerpo.arete = cuerpo.arete.replace(/\D/g, '');
             if (cuerpo.fechaNacimiento) cuerpo.fechaNacimientoEstimada = fechaNacimientoEstimada.checked;
-            const respuesta = await request(API, { method: 'POST', body: JSON.stringify(cuerpo) });
+            if (editando) {
+                // Borrar un arete SENASA lo quita; una identificación libre sin tocar se conserva (sin la clave).
+                if (!cuerpo.arete && /^\d{13}$/.test(editando.arete ?? '')) cuerpo.arete = null;
+                Object.assign(cuerpo, { animalId: editando.animalId, accion: 'EDITAR' });
+            }
+            const respuesta = await request(API, { method: editando ? 'PATCH' : 'POST', body: JSON.stringify(cuerpo) });
             render(respuesta.data?.animales);
             cerrar($('#animal-modal'), disparador);
             toast?.success(respuesta.message || 'Animal registrado.');
@@ -282,16 +314,57 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         });
     });
 
+    // Historial de pesos: cada observación con peso, de la más reciente a la más antigua.
+    const formPeso = $('#animal-weight-form');
+    const renderPesos = (observaciones = []) => {
+        const pesos = observaciones.filter((o) => o.peso != null);
+        $('#animal-weights-list').innerHTML = pesos.length
+            ? pesos.map((o) => `<li><strong>${escapeHtml(o.peso)} kg</strong> · ${escapeHtml(formatDate(o.fecha))}${o.edadMeses != null ? ` · ${escapeHtml(o.edadMeses)} meses` : ''}</li>`).join('')
+            : '<li>Sin pesos registrados.</li>';
+    };
+
+    const abrirPesos = async (animal, boton) => {
+        animalActual = animal;
+        disparador = boton;
+        formPeso.reset();
+        formPeso.elements.fecha.max = new Date().toLocaleDateString('en-CA');
+        mostrarErrores(formPeso);
+        mostrarEstado($('#animal-weight-status'), '', 'info');
+        $('#animal-weights-name').textContent = nombreAnimal(animal);
+        $('#animal-weights-list').innerHTML = '<li>Cargando…</li>';
+        abrir($('#animal-weights-modal'));
+        try {
+            renderPesos((await request(`${API}?animalId=${Number(animal.animalId)}`)).data?.observaciones);
+        } catch (error) {
+            $('#animal-weights-list').innerHTML = `<li>${escapeHtml(error?.message || 'No pudimos cargar el historial.')}</li>`;
+        }
+    };
+
+    formPeso.addEventListener('submit', (event) => {
+        event.preventDefault();
+        enviar(formPeso, $('#animal-weight-status'), async () => {
+            const cuerpo = { ...cuerpoDe(formPeso, ['peso']), animalId: animalActual.animalId, accion: 'PESAR' };
+            const respuesta = await request(API, { method: 'PATCH', body: JSON.stringify(cuerpo) });
+            renderPesos(respuesta.data?.observaciones);
+            render(respuesta.data?.animales);
+            formPeso.reset();
+            mostrarEstado($('#animal-weight-status'), respuesta.message || 'Peso registrado.', 'success');
+        });
+    });
+
     $('#animal-add').addEventListener('click', (event) => abrirRegistro(event.currentTarget));
     $('#animals-retry').addEventListener('click', cargar);
     lista.addEventListener('click', (event) => {
         const boton = event.target.closest('[data-animal-accion]');
         const animal = boton && animales.find((item) => Number(item.animalId) === Number(boton.dataset.animalId));
         if (!animal) return;
-        if (boton.dataset.animalAccion === 'publicar') abrirPublicar(animal, boton);
+        const accion = boton.dataset.animalAccion;
+        if (accion === 'publicar') abrirPublicar(animal, boton);
+        else if (accion === 'editar') abrirRegistro(boton, animal);
+        else if (accion === 'pesos') abrirPesos(animal, boton);
         else abrirVacunas(animal, boton);
     });
-    for (const id of ['animal-modal', 'animal-publish-modal', 'animal-vaccines-modal']) {
+    for (const id of ['animal-modal', 'animal-publish-modal', 'animal-vaccines-modal', 'animal-weights-modal']) {
         const dialog = $(`#${id}`);
         dialog.addEventListener('cancel', (event) => { event.preventDefault(); cerrar(dialog, disparador); });
         dialog.querySelectorAll('[data-animal-cerrar]').forEach((boton) => boton.addEventListener('click', () => cerrar(dialog, disparador)));

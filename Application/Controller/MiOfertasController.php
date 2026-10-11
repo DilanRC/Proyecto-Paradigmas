@@ -229,10 +229,7 @@ final class MiOfertasController
         if ($actualizacion) $resultado['ofertaId'] = $this->enteroCampo($cuerpo['ofertaId'] ?? null, 'ofertaId', 1, 2147483647, $errores);
 
         $direccion = $this->validacion->validarDireccionFincaEnCampo($cuerpo['direccion'] ?? null, 'direccion', $errores);
-        // Sin punto en el mapa la oferta no se podría ordenar por cercanía.
-        if (!isset($errores['direccion']) && ($direccion['latitud'] === null || $direccion['longitud'] === null)) {
-            $errores['direccion.latitud'] = $errores['direccion.longitud'] = 'Marca tu zona base en el mapa.';
-        }
+        // El punto en el mapa es opcional: sin él la oferta se empareja por provincia (TransportistaOferta::listarCercanas).
         $resultado['direccion'] = $direccion;
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
 

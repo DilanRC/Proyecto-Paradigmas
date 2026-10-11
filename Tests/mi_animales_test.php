@@ -94,6 +94,39 @@ try {
     test_same(409, $ma->procesar('POST', ['arete' => $arete])['status'], 'El arete no se repite');
     test_same([], $mb->procesar('GET')['body']['data']['animales'], 'Otro vendedor no ve el animal');
 
+    // Editar: reemplaza los datos del formulario; sin `arete` lo conserva; un peso nuevo agrega una observación.
+    $editar = ['animalId' => $animalId, 'accion' => 'EDITAR', 'especieId' => 1, 'tipoId' => 6, 'razaId' => 1, 'partos' => 3, 'peso' => 430, 'proposito' => 'Leche'];
+    test_same(404, $mb->procesar('PATCH', $editar)['status'], 'Editar un animal ajeno es 404');
+    test_same(422, $ma->procesar('PATCH', ['sexo' => 'MACHO'] + $editar)['status'], 'El sexo debe coincidir con el tipo');
+    test_same(422, $ma->procesar('PATCH', ['color' => 'negro'] + $editar)['status'], 'Campo desconocido es 422');
+    $editado = $ma->procesar('PATCH', $editar);
+    test_same(200, $editado['status'], 'Edita el animal: ' . json_encode($editado['body']));
+    $fila = $editado['body']['data']['animales'][0];
+    test_same(3, $fila['partos'], 'Los partos editados se guardan');
+    test_same($arete, $fila['arete'], 'Sin la clave arete se conserva');
+    test_same(430.0, $fila['peso'], 'El peso nuevo es el vigente');
+    $historial = static fn ($controlador): array => $controlador->procesar('GET', ['animalId' => (string) $animalId]);
+    test_same(2, count($historial($ma)['body']['data']['observaciones']), 'El peso anterior queda en el historial');
+    $ma->procesar('PATCH', $editar);
+    test_same(2, count($historial($ma)['body']['data']['observaciones']), 'Guardar sin cambiar el peso no agrega observación');
+    test_same(404, $historial($mb)['status'], 'El historial de un animal ajeno es 404');
+    test_assert((int) $db->query("SELECT COUNT(*) FROM tbbitacora WHERE tbbitacoraentidad = 'ANIMAL' AND tbbitacoraaccion = 'ACTUALIZAR' AND tbbitacoraregistroidentificacionnumero = '{$animalId}'")->fetchColumn() > 0, 'La edición queda en la bitácora');
+
+    // Pesar: con fecha pasada se ordena en su fecha; con la de hoy queda como vigente y conserva el propósito.
+    $pesar = ['animalId' => $animalId, 'accion' => 'PESAR'];
+    test_same(422, $ma->procesar('PATCH', $pesar)['status'], 'El peso es obligatorio');
+    test_same(422, $ma->procesar('PATCH', ['peso' => 400, 'fecha' => '2999-01-01'] + $pesar)['status'], 'La fecha no puede ser futura');
+    test_same(422, $ma->procesar('PATCH', ['peso' => 400, 'fecha' => '2024-02-30'] + $pesar)['status'], 'La fecha debe existir');
+    test_same(404, $mb->procesar('PATCH', ['peso' => 400] + $pesar)['status'], 'Pesar un animal ajeno es 404');
+    test_same(201, $ma->procesar('PATCH', ['peso' => 300, 'fecha' => '2020-01-15'] + $pesar)['status'], 'Registra un peso pasado');
+    $obs = $historial($ma)['body']['data']['observaciones'];
+    test_same(430.0, $obs[0]['peso'], 'Un peso pasado no reemplaza al vigente');
+    test_same(300.0, $obs[2]['peso'], 'El peso pasado queda al final');
+    $hoy = $ma->procesar('PATCH', ['peso' => 445.5] + $pesar);
+    test_same(201, $hoy['status'], 'Registra el peso de hoy');
+    test_same(445.5, $hoy['body']['data']['animales'][0]['peso'], 'El peso de hoy es el vigente');
+    test_same('Leche', $hoy['body']['data']['animales'][0]['proposito'], 'Pesar conserva el propósito');
+
     // Publicar: ajeno 404, finca de otro 422, propio 201 y el animal pasa a PUBLICADO.
     $publicar = ['animalId' => $animalId, 'accion' => 'PUBLICAR', 'fincaNombre' => $a['finca'], 'titulo' => 'Vaca lechera', 'precio' => 650000];
     test_same(404, $mb->procesar('PATCH', ['fincaNombre' => $b['finca']] + $publicar)['status'], 'Un animal ajeno es 404');

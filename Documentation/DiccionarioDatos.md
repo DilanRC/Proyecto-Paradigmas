@@ -637,6 +637,71 @@ publicación) solo expone vacuna, fecha y próxima dosis.
 | `tbanimalvacunacionobservaciones` | `VARCHAR(500) NULL` | Sí | Observaciones. Privadas. | Usuario | - |
 | `tbanimalvacunacionfecharegistro` | `DATETIME NOT NULL` | No | Momento (UTC) en que el sistema registró la vacuna. | Aplicación | - |
 
+## tbsubasta
+
+Subasta en tiempo real de un animal del inventario (`DEC-SUBASTA-001`). Dura lo que eligió el vendedor (5 minutos a
+30 días) y se cierra sola al consultarla después de la hora de fin (no hay tarea programada). Los cambios se avisan
+por Supabase Realtime; la base es la única fuente de verdad. Fechas en UTC.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbsubastaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Vendedor que abrió la subasta (actividad Vendedor activa). | Aplicación | `tbproductor` |
+| `tbanimalid` | `INT NOT NULL` | No | Animal subastado; debe ser propio y estar `ACTIVO` en el inventario. Mientras dura queda `SUBASTA`. | Usuario | `tbanimal` |
+| `tbfincaid` | `INT NOT NULL` | No | Finca donde está el animal (da la zona y el punto para los fletes del ganador). | Usuario | `tbfinca` |
+| `tbsubastatitulo` | `VARCHAR(150) NOT NULL` | No | Título visible. | Usuario | - |
+| `tbsubastadescripcion` | `VARCHAR(500) NULL` | Sí | Descripción opcional. | Usuario | - |
+| `tbsubastaimagenurl` | `VARCHAR(500) NULL` | Sí | Foto opcional; solo `https://`. | Usuario | - |
+| `tbsubastapreciobase` | `DECIMAL(12,2) NOT NULL` | No | Monto mínimo de la primera puja (mayor que cero). | Usuario | - |
+| `tbsubastaincrementominimo` | `DECIMAL(12,2) NOT NULL` | No | Lo mínimo que una puja debe superar a la más alta. | Usuario | - |
+| `tbsubastafechainicio` | `DATETIME NOT NULL` | No | Apertura (UTC). | Aplicación | - |
+| `tbsubastafechafin` | `DATETIME NOT NULL` | No | Hora de cierre (UTC) = inicio + duración elegida. | Aplicación | - |
+| `tbsubastaestado` | `VARCHAR(20) NOT NULL` | No | `ACTIVA`, `FINALIZADA` (con ganador), `DESIERTA` (sin pujas) o `CANCELADA` (por su dueño, sin pujas). | Aplicación | - |
+| `tbsubastapujaganadoraid` | `INT NULL` | Sí | Puja ganadora al finalizar; `NULL` si no terminó o quedó desierta. | Aplicación | `tbsubastapuja` |
+| `tbsubastafechacierre` | `DATETIME NULL` | Sí | Momento (UTC) en que se cerró o canceló. | Aplicación | - |
+
+## tbsubastapuja
+
+Cada puja de una subasta. Solo crece: no se edita ni se borra. PHP exige sesión de Persona con Comprador activo, que
+no sea el vendedor ni un administrador, que no vaya ganando ya y que el monto llegue al mínimo.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbsubastapujaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
+| `tbsubastaid` | `INT NOT NULL` | No | Subasta a la que pertenece. | Usuario | `tbsubasta` |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que pujó (sale del JWT, nunca del cuerpo). | Aplicación | `tbpersona` |
+| `tbsubastapujamonto` | `DECIMAL(12,2) NOT NULL` | No | Monto: el precio base o la más alta + el incremento mínimo, como mínimo. | Usuario | - |
+| `tbsubastapujafecha` | `DATETIME NOT NULL` | No | Momento (UTC) de la puja. | Aplicación | - |
+
+## tbsubastacomentario
+
+Comentarios públicos de una subasta (preguntas sobre el animal). Los escribe cualquier Persona con sesión salvo un
+administrador; se muestran con el alias o el primer nombre.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbsubastacomentarioid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
+| `tbsubastaid` | `INT NOT NULL` | No | Subasta comentada. | Usuario | `tbsubasta` |
+| `tbpersonaid` | `INT NOT NULL` | No | Autor (sale del JWT). | Aplicación | `tbpersona` |
+| `tbsubastacomentariotexto` | `VARCHAR(500) NOT NULL` | No | Texto del comentario. | Usuario | - |
+| `tbsubastacomentariofecha` | `DATETIME NOT NULL` | No | Momento (UTC) del comentario. | Aplicación | - |
+
+## tbnotificacion
+
+Avisos de la campana del encabezado: subasta ganada (`SUBASTA_GANADA`), terminada para el vendedor
+(`SUBASTA_FINALIZADA`, `SUBASTA_DESIERTA`) y puja superada (`SUBASTA_SUPERADA`).
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbnotificacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo su lock. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que recibe el aviso. | Aplicación | `tbpersona` |
+| `tbnotificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de aviso. | Aplicación | - |
+| `tbnotificaciontitulo` | `VARCHAR(150) NOT NULL` | No | Título corto. | Aplicación | - |
+| `tbnotificacionmensaje` | `VARCHAR(500) NOT NULL` | No | Detalle. | Aplicación | - |
+| `tbnotificacionenlace` | `VARCHAR(250) NULL` | Sí | Ruta interna a la que lleva (p. ej. `subastas?id=5`). | Aplicación | - |
+| `tbnotificacionfecha` | `DATETIME NOT NULL` | No | Momento (UTC) del aviso. | Aplicación | - |
+| `tbnotificacionleida` | `TINYINT(1) NOT NULL` | No | 1 cuando la persona abrió la campana. | Usuario | - |
+
 ## Histórico transversal (Tramo 12/13 y avance 3)
 
 La matriz P0-C (`Documentation/MatrizArquitectonicaP0C.md`) supera la
