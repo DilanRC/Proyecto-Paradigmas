@@ -4,6 +4,8 @@ import { request } from './shared/api.js';
 import { errorArete, formatearArete } from './shared/arete.js';
 import { formatDate } from './explore.js?v=foto-3';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
+import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
 const API = 'api/v1/mi-animales';
 const VACUNAS_API = 'api/v1/mi-animales/vacunas';
@@ -170,7 +172,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         fechaNacimientoEstimada.disabled = true;
         fechaNacimiento.max = new Date().toLocaleDateString('en-CA');
         mostrarErrores(formAnimal);
-        $('#animal-form-status').textContent = '';
+        mostrarEstado($('#animal-form-status'), '', 'info');
         abrir($('#animal-modal'));
         especieId.focus();
     };
@@ -179,12 +181,12 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         const boton = form.querySelector('[type="submit"]');
         boton.disabled = true;
         form.setAttribute('aria-busy', 'true');
-        estado.textContent = 'Guardando…';
+        mostrarEstado(estado, 'Guardando…', 'info');
         try {
             await accion();
         } catch (error) {
             mostrarErrores(form, error?.errors ?? {});
-            estado.textContent = error?.message || 'No fue posible guardar.';
+            mostrarEstado(estado, [error?.message || 'No fue posible guardar.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
         } finally {
             boton.disabled = false;
             form.setAttribute('aria-busy', 'false');
@@ -195,6 +197,12 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         event.preventDefault();
         const problema = errorArete(arete.value);
         if (problema) { mostrarErrores(formAnimal, { arete: problema }); return; }
+        if (Object.keys(cuerpoDe(formAnimal)).length === 0) {
+            mostrarErrores(formAnimal, { especieId: 'Completa al menos un dato del animal.' });
+            mostrarEstado($('#animal-form-status'), 'No se puede registrar un animal sin datos. Completa al menos uno: especie, tipo, raza, arete, peso o edad.', 'error');
+            especieId.focus();
+            return;
+        }
         enviar(formAnimal, $('#animal-form-status'), async () => {
             const cuerpo = cuerpoDe(formAnimal, ['especieId', 'tipoId', 'razaId', 'partos', 'peso', 'edadMeses']);
             if (sexo.disabled) delete cuerpo.sexo;
@@ -218,7 +226,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         formPublicar.elements.titulo.value = [animal.tipo?.nombre, animal.raza].filter(Boolean).join(' ') || '';
         foto.reiniciar(null);
         mostrarErrores(formPublicar);
-        $('#animal-publish-status').textContent = '';
+        mostrarEstado($('#animal-publish-status'), '', 'info');
         $('#animal-publish-name').textContent = nombreAnimal(animal);
         abrir($('#animal-publish-modal'));
         formPublicar.elements.titulo.focus();
@@ -250,7 +258,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         formVacuna.reset();
         formVacuna.elements.fecha.max = new Date().toLocaleDateString('en-CA');
         mostrarErrores(formVacuna);
-        $('#animal-vaccine-status').textContent = '';
+        mostrarEstado($('#animal-vaccine-status'), '', 'info');
         $('#animal-vaccines-name').textContent = nombreAnimal(animal);
         $('#animal-vaccines-list').innerHTML = '<li>Cargando…</li>';
         abrir($('#animal-vaccines-modal'));
@@ -269,7 +277,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
             const respuesta = await request(VACUNAS_API, { method: 'POST', body: JSON.stringify(cuerpo) });
             renderVacunas(respuesta.data?.vacunas);
             formVacuna.reset();
-            $('#animal-vaccine-status').textContent = respuesta.message || 'Vacuna registrada.';
+            mostrarEstado($('#animal-vaccine-status'), respuesta.message || 'Vacuna registrada.', 'success');
             await cargar();
         });
     });

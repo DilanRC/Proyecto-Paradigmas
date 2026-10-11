@@ -142,10 +142,10 @@ final class RegistroPublicoController
             // para detectar un cache equivocado; nunca modifica identidad/contacto.
             if (is_array($valor)) {
                 $identificacionEnviada = mb_strtoupper(
-                    preg_replace('/[ -]+/u', '', trim((string) ($valor['identificacionNumero'] ?? ''))) ?? '',
+                    preg_replace('/[ -]+/u', '', is_string($valor['identificacionNumero'] ?? null) ? trim($valor['identificacionNumero']) : '') ?? '',
                     'UTF-8',
                 );
-                $correoEnviado = mb_strtolower(trim((string) ($valor['correoElectronico'] ?? '')), 'UTF-8');
+                $correoEnviado = is_string($valor['correoElectronico'] ?? null) ? mb_strtolower(trim($valor['correoElectronico']), 'UTF-8') : '';
                 if ($identificacionEnviada !== ''
                     && $identificacionEnviada !== $persona['tbpersonaidentificacionnumero']) {
                     $errores['persona.identificacionNumero'] = 'La identificación no corresponde a la sesión.';
@@ -213,12 +213,13 @@ final class RegistroPublicoController
 
     private function nombreCanonico(array $valor): ?string
     {
-        $nombres = trim((string) ($valor['nombres'] ?? ''));
-        $apellidos = trim((string) ($valor['apellidos'] ?? ''));
+        // Si no son texto, validarPersona ya marcó el error; aquí solo se arma el nombre completo.
+        $nombres = is_string($valor['nombres'] ?? null) ? trim($valor['nombres']) : '';
+        $apellidos = is_string($valor['apellidos'] ?? null) ? trim($valor['apellidos']) : '';
         if ($nombres !== '' || $apellidos !== '') {
             return trim($nombres . ' ' . $apellidos);
         }
-        return isset($valor['nombre']) ? trim((string) $valor['nombre']) : null;
+        return is_string($valor['nombre'] ?? null) ? trim($valor['nombre']) : null;
     }
 
     private function rechazarCamposDesconocidos(array $datos, array $permitidos, string $prefijo = ''): array

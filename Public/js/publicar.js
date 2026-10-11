@@ -129,8 +129,13 @@ function setStatus(kind, title, message, enlace = null) {
     target.replaceChildren();
     const heading = document.createElement('h2');
     heading.textContent = title;
-    const copy = document.createElement('p');
-    copy.textContent = message;
+    // Varios errores van en lista, uno por campo.
+    const copy = Array.isArray(message) ? document.createElement('ul') : document.createElement('p');
+    if (Array.isArray(message)) {
+        for (const linea of message) copy.append(Object.assign(document.createElement('li'), { textContent: linea }));
+    } else {
+        copy.textContent = message;
+    }
     target.append(heading, copy);
     if (enlace) {
         const link = document.createElement('a');
@@ -138,6 +143,41 @@ function setStatus(kind, title, message, enlace = null) {
         link.textContent = enlace.label;
         target.append(link);
     }
+}
+
+/**
+ * Marca cada campo que rechazó el servidor (con el mensaje debajo) y devuelve el resumen con el nombre del campo:
+ * "Peso aproximado (kg): No puede ser mayor que 5.000." en vez de solo el mensaje.
+ */
+export function marcarErroresServidor(form, errores = {}) {
+    const resumen = [];
+    for (const [clave, mensaje] of Object.entries(errores)) {
+        if (typeof mensaje !== 'string') continue;
+        const control = form.elements.namedItem(clave);
+        const campo = control?.closest?.('.auth-field, .publish-photo');
+        const etiqueta = campo?.querySelector('label')?.textContent.replace('*', '').trim();
+        resumen.push(etiqueta ? `${etiqueta}: ${mensaje}` : mensaje);
+        if (!campo) continue;
+        control.setAttribute('aria-invalid', 'true');
+        let espacio = campo.querySelector(`[data-error-for="${clave}"]`);
+        if (!espacio) {
+            espacio = document.createElement('small');
+            espacio.className = 'auth-error';
+            espacio.dataset.errorFor = clave;
+            espacio.dataset.errorServidor = '';
+            espacio.setAttribute('role', 'alert');
+            campo.append(espacio);
+        }
+        espacio.textContent = mensaje;
+    }
+    return resumen;
+}
+
+function limpiarErrorServidor(control) {
+    if (!control?.name) return;
+    control.removeAttribute('aria-invalid');
+    const espacio = control.closest('.auth-field')?.querySelector(`[data-error-servidor][data-error-for="${control.name}"]`);
+    if (espacio) espacio.textContent = '';
 }
 
 function validate(form) {
@@ -443,6 +483,7 @@ async function initialize() {
     const modelo = await montarModelo(form);
     modelo.sincronizar(readStored(DRAFT_KEY) ?? {});
 
+    form.addEventListener('input', (event) => limpiarErrorServidor(event.target));
     form.addEventListener('input', () => {
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(serialize(form)));
     });
@@ -466,20 +507,22 @@ async function initialize() {
                 foto.mostrarError(error.message);
                 throw error;
             }
-            const resultado = await crearPublicacion(cuerpoPublicacion(draft, imagenUrl));
+            await crearPublicacion(cuerpoPublicacion(draft, imagenUrl));
             sessionStorage.removeItem(DRAFT_KEY);
             form.reset();
             foto.reiniciar();
             modelo.sincronizar({});
+            // Explorar no muestra tus propias publicaciones (se administran en Mi panel): el enlace va allá.
             setStatus('success', 'Publicación guardada',
-                'Tu publicación ya está activa y la verán compradores cercanos.',
-                { href: `explorar?publicacion=${Number(resultado.publicacionId)}`, label: 'Ver mi publicación' });
+                'Tu publicación ya está activa y los compradores la verán en Explorar. Tú la ves y la editas en Mi panel → Mis publicaciones.',
+                { href: 'mi-actividad', label: 'Ver en Mis publicaciones' });
         } catch (error) {
             if (error?.fieldErrors?.imagenUrl) foto.mostrarError(error.fieldErrors.imagenUrl);
             if (error?.fieldErrors?.arete) modelo.mostrarErrorArete(error.fieldErrors.arete);
-            // Con errores por campo (422/409) se muestran todos, no solo "Revise los campos indicados."
-            const detalles = Object.values(error?.fieldErrors ?? {}).filter((texto) => typeof texto === 'string').join(' ');
-            setStatus('error', 'No se guardó la publicación', detalles || error.message);
+            // Con errores por campo (422/409) se muestran todos, cada uno con el nombre de su campo.
+            const resumen = marcarErroresServidor(form, error?.fieldErrors ?? {});
+            setStatus('error', 'No se guardó la publicación. Corrige estos datos:', resumen.length ? resumen : error.message);
+            form.querySelector('[aria-invalid="true"]')?.focus();
         } finally {
             form.setAttribute('aria-busy', 'false');
             submit.disabled = false;

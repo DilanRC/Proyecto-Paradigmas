@@ -208,7 +208,7 @@ final class MiAnimalesVacunasController
             if ($obligatorio) $errores[$campo] = 'Este campo es obligatorio.';
             return null;
         }
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
             $errores[$campo] = 'Debe ser un entero positivo.';
             return null;
@@ -236,6 +236,10 @@ final class MiAnimalesVacunasController
     /** AAAA-MM-DD válida; la de aplicación no puede ser futura (hora de Costa Rica). */
     private function fecha(mixed $valor, string $campo, array &$errores, bool $obligatoria, bool $noFutura): ?string
     {
+        if ($valor !== null && !is_string($valor)) {
+            $errores[$campo] = 'Usa una fecha válida (AAAA-MM-DD).';
+            return null;
+        }
         $texto = is_string($valor) ? trim($valor) : '';
         if ($texto === '') {
             if ($obligatoria) $errores[$campo] = 'Este campo es obligatorio.';

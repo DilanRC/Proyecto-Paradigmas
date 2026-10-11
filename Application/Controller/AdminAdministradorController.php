@@ -105,7 +105,7 @@ final class AdminAdministradorController
     private function cambiarEstado(array $cuerpo): array
     {
         $this->rechazarCampos($cuerpo, ['administradorId', 'activo']);
-        $id = filter_var($cuerpo['administradorId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $id = filter_var(is_bool($cuerpo['administradorId'] ?? null) ? false : $cuerpo['administradorId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         $activo = $cuerpo['activo'] ?? null;
         if ($id === false || !is_bool($activo)) {
             throw new HttpException('Revise los campos indicados.', 422, null, array_filter([

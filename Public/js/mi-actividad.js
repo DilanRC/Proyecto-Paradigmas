@@ -7,7 +7,9 @@ import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
-import { montarMisAnimales } from './mis-animales.js?v=animales-1';
+import { montarMisAnimales } from './mis-animales.js?v=animales-4';
+import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
 const ACTIVITY_API = 'api/v1/actividad';
 const VEHICLES_API = 'api/v1/mi-vehiculos';
@@ -419,7 +421,7 @@ function openPublicationModal(id, trigger = null) {
     form.elements.descripcion.value = item.descripcion ?? '';
     setPublicationErrors({});
     publicationPhoto.reiniciar(safeImageUrl(item.imagenUrl));
-    document.querySelector('#publication-form-status').textContent = '';
+    mostrarEstado(document.querySelector('#publication-form-status'), '', 'info');
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else { dialog.hidden = false; dialog.setAttribute('open', ''); }
     form.elements.titulo.focus();
@@ -440,11 +442,11 @@ async function savePublication(event) {
     const status = document.querySelector('#publication-form-status');
     const save = document.querySelector('#publication-save');
     const titulo = form.elements.titulo.value.trim();
-    if (!titulo) { setPublicationErrors({ titulo: 'Este dato es obligatorio.' }); status.textContent = 'Revise los datos señalados.'; return; }
+    if (!titulo) { setPublicationErrors({ titulo: 'Este dato es obligatorio.' }); mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
     setPublicationErrors({});
     save.disabled = true;
     form.setAttribute('aria-busy', 'true');
-    status.textContent = 'Guardando publicación…';
+    mostrarEstado(status, 'Guardando publicación…', 'info');
     try {
         const imagenUrl = await publicationPhoto.resolver();
         const response = await patchPublication({
@@ -460,7 +462,7 @@ async function savePublication(event) {
     } catch (error) {
         setPublicationErrors(error?.errors ?? {});
         if (error?.errors?.imagenUrl) publicationPhoto.mostrarError(error.errors.imagenUrl);
-        status.textContent = error?.message || 'No fue posible guardar la publicación.';
+        mostrarEstado(status, [error?.message || 'No fue posible guardar la publicación.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
     } finally {
         save.disabled = false;
         form.setAttribute('aria-busy', 'false');
@@ -509,7 +511,7 @@ function openFarmModal(id = null, trigger = null) {
     document.querySelector('#farm-deactivate').hidden = !farm;
     form.elements.nombreFinca.value = farm?.nombre ?? '';
     setFarmErrors({});
-    document.querySelector('#farm-form-status').textContent = '';
+    mostrarEstado(document.querySelector('#farm-form-status'), '', 'info');
     const details = document.querySelector('#farm-address');
     if (details) details.open = Boolean(farm?.direccion);
     const province = details?.querySelector('[data-farm-province]');
@@ -615,7 +617,7 @@ async function saveFarm(event) {
         toast?.success(response.message || 'Finca guardada correctamente.');
     } catch (error) {
         if (error?.status === 422 && error.errors) setFarmErrors(error.errors);
-        document.querySelector('#farm-form-status').textContent = error?.message || 'No fue posible guardar la finca.';
+        mostrarEstado(document.querySelector('#farm-form-status'), [error?.message || 'No fue posible guardar la finca.', ...erroresSinLugar(document.querySelector('#farm-form'), error?.errors)].join(' '), 'error');
         toast?.error(error?.message || 'No fue posible guardar la finca.');
     } finally {
         save.disabled = false;
@@ -659,7 +661,7 @@ function openVehicleModal(id = null, trigger = null) {
     for (const field of ['placa', 'vin', 'modelo']) form.elements[field].value = vehicle?.[field] ?? '';
     setFormErrors({});
     vehiclePhoto.reiniciar(safeImageUrl(vehicle?.fotoUrl));
-    document.querySelector('#vehicle-form-status').textContent = '';
+    mostrarEstado(document.querySelector('#vehicle-form-status'), '', 'info');
     if (typeof dialog.showModal === 'function') dialog.showModal();
     else { dialog.hidden = false; dialog.setAttribute('open', ''); }
     document.querySelector('#vehicle-placa')?.focus();
@@ -682,10 +684,10 @@ async function saveVehicle(event) {
     const datos = Object.fromEntries(new FormData(form).entries());
     const errors = Object.fromEntries(['placa', 'vin', 'modelo'].filter((field) => !String(datos[field] ?? '').trim()).map((field) => [field, 'Este dato es obligatorio.']));
     setFormErrors(errors);
-    if (Object.keys(errors).length > 0) { status.textContent = 'Revise los datos señalados.'; return; }
+    if (Object.keys(errors).length > 0) { mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
     save.disabled = true;
     form.setAttribute('aria-busy', 'true');
-    status.textContent = 'Guardando vehículo…';
+    mostrarEstado(status, 'Guardando vehículo…', 'info');
     try {
         // Sin cambio no se envía fotoUrl: en PUT eso conserva la foto guardada.
         const fotoUrl = await vehiclePhoto.resolver();
@@ -699,7 +701,7 @@ async function saveVehicle(event) {
     } catch (error) {
         setFormErrors(error?.errors ?? {});
         if (error?.errors?.fotoUrl) vehiclePhoto.mostrarError(error.errors.fotoUrl);
-        status.textContent = error?.message || 'No fue posible guardar el vehículo.';
+        mostrarEstado(status, [error?.message || 'No fue posible guardar el vehículo.', ...erroresSinLugar(document.querySelector('#vehicle-form'), error?.errors)].join(' '), 'error');
         toast?.error(error?.message || 'No fue posible guardar el vehículo.');
     } finally {
         save.disabled = false;

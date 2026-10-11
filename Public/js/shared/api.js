@@ -31,11 +31,14 @@ export function getBearer() {
 const MENSAJE_HTTP = {
     400: 'La solicitud no se pudo interpretar.',
     401: 'Debe iniciar sesión para completar esta operación.',
+    403: 'Su cuenta no tiene permiso para esta operación.',
     404: 'El registro no existe o fue retirado.',
-    405: 'La operacion no esta permitida sobre este recurso.',
+    405: 'La operación no está permitida sobre este recurso.',
     409: 'El registro entra en conflicto con uno existente.',
+    413: 'La solicitud es demasiado grande. Use un texto más corto o una imagen más liviana.',
     415: 'El formato de la solicitud no es admitido.',
     422: 'Revise los campos indicados.',
+    429: 'Hizo demasiadas solicitudes seguidas. Espere un momento e intente de nuevo.',
 };
 
 /** Clasificacion estable por codigo, para que la UI decida sin mirar numeros. */
@@ -55,7 +58,9 @@ export function describeHttpFailure(status, payload = {}) {
         type: 'http',
         status,
         kind,
-        message: payload.message || MENSAJE_HTTP[status] || 'No fue posible completar la operacion.',
+        message: payload.message || MENSAJE_HTTP[status] || (status >= 500
+            ? 'El servidor tuvo un problema. Intente de nuevo en unos minutos.'
+            : 'No fue posible completar la operación.'),
         errors: payload.errors ?? null,
         data: payload.data ?? null,
         retryable: kind === 'server',
@@ -69,7 +74,7 @@ export function describeNetworkFailure(error) {
         type: 'network',
         status: null,
         kind: 'network',
-        message: 'No fue posible comunicarse con el servidor. Revise su conexion.',
+        message: 'No fue posible comunicarse con el servidor. Revise su conexión.',
         errors: null,
         data: null,
         retryable: true,
@@ -84,7 +89,7 @@ export function describeInvalidResponse(status) {
         type: 'http',
         status,
         kind: 'invalid-response',
-        message: 'El servidor no devolvio una respuesta valida.',
+        message: MENSAJE_HTTP[status] || 'El servidor no devolvió una respuesta válida. Intente de nuevo en unos minutos.',
         errors: null,
         data: null,
         retryable: true,

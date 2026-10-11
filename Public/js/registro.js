@@ -19,6 +19,7 @@ import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 import { validarDocumento } from './shared/storage.js?v=documento-2';
 import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-2';
+import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 
 const DRAFT_KEY = REGISTRATION_DRAFT_KEY;
 const PROFILE_KEY = 'tindercows:profile';
@@ -820,7 +821,7 @@ async function initialize() {
             }
             const fieldErrors = error?.errors ?? {};
             if (Object.keys(fieldErrors).length > 0) setErrors(fieldErrors);
-            setStatus(status, error?.message || 'No fue posible completar el registro. Revise los datos e intente nuevamente.', 'error');
+            setStatus(status, [error?.message || 'No fue posible completar el registro. Revise los datos e intente nuevamente.', ...erroresSinLugar(form, fieldErrors)].join(' '), 'error');
             finishButton.disabled = false;
             submitInProgress = false;
         } finally {

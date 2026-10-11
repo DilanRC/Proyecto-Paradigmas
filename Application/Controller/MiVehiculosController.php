@@ -10,10 +10,12 @@ use Application\Model\Bitacora;
 use Application\Model\Transportista;
 use Application\Model\TransportistaVehiculo;
 use Application\Model\Vehiculo;
+use Application\Service\ValidacionService;
 use PDO;
 use Throwable;
 
 require_once __DIR__ . '/AnimalPublicacionController.php';
+require_once dirname(__DIR__) . '/Service/ValidacionService.php';
 
 final class MiVehiculosController
 {
@@ -223,18 +225,18 @@ final class MiVehiculosController
     private function textoCampo(mixed $valor, string $campo, int $maximo, array &$errores, int $minimo): string
     {
         if (!is_string($valor)) {
-            $errores[$campo] = 'El campo es obligatorio.';
+            $errores[$campo] = $valor === null ? 'Este campo es obligatorio.' : 'Debe ser texto.';
             return '';
         }
         $texto = preg_replace('/\s+/u', ' ', trim($valor)) ?? trim($valor);
-        $longitud = mb_strlen($texto);
-        if ($longitud < $minimo || $longitud > $maximo) $errores[$campo] = "Debe contener entre {$minimo} y {$maximo} caracteres.";
+        $mensaje = ValidacionService::mensajeLongitud(mb_strlen($texto), $minimo, $maximo);
+        if ($mensaje !== null) $errores[$campo] = $mensaje;
         return $texto;
     }
 
     private function enteroCampo(mixed $valor, string $campo, array &$errores): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
             $errores[$campo] = 'Debe ser un entero positivo.';
             return 0;

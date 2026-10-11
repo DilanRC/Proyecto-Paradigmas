@@ -51,8 +51,8 @@ final class AdminBitacoraController
         if (!is_string($q) || mb_strlen($q) > 150) {
             $errores['q'] = 'Use hasta 150 caracteres.';
         }
-        $pagina = filter_var($consulta['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $tamano = filter_var($consulta['tamanoPagina'] ?? 25, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+        $pagina = filter_var(is_bool($consulta['pagina'] ?? 1) ? false : $consulta['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+        $tamano = filter_var(is_bool($consulta['tamanoPagina'] ?? 25) ? false : $consulta['tamanoPagina'] ?? 25, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
         if ($pagina === false) $errores['pagina'] = 'Debe ser un entero positivo.';
         if ($tamano === false) $errores['tamanoPagina'] = 'Debe estar entre 1 y 100.';
         if ($errores !== []) {

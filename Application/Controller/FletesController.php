@@ -38,7 +38,7 @@ final class FletesController
         $errores = [];
         // Con publicacionId el punto es el de la finca del animal (sus coordenadas no se exponen al navegador).
         if (($consulta['publicacionId'] ?? '') !== '') {
-            $publicacionId = $this->entero($consulta['publicacionId'], 'publicacionId', 1, PHP_INT_MAX, $errores);
+            $publicacionId = $this->entero($consulta['publicacionId'], 'publicacionId', 1, 2147483647, $errores);
             $punto = $errores === [] ? $this->solicitudes->puntoDeFinca($publicacionId) : null;
             if ($errores === [] && $punto === null) {
                 $errores['publicacionId'] = 'La finca de esta publicación no tiene su ubicación en el mapa.';
@@ -50,7 +50,7 @@ final class FletesController
             $longitud = $this->coordenada($consulta['longitud'] ?? null, 'longitud', 180, $errores);
         }
         $capacidad = $this->entero($consulta['capacidadMinima'] ?? 1, 'capacidadMinima', 1, 200, $errores);
-        $pagina = $this->entero($consulta['pagina'] ?? 1, 'pagina', 1, PHP_INT_MAX, $errores);
+        $pagina = $this->entero($consulta['pagina'] ?? 1, 'pagina', 1, 2147483647, $errores);
         $tamano = $this->entero($consulta['tamanoPagina'] ?? 25, 'tamanoPagina', 1, 50, $errores);
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
 
@@ -77,9 +77,9 @@ final class FletesController
 
     private function entero(mixed $valor, string $campo, int $minimo, int $maximo, array &$errores): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
         if ($entero === false) {
-            $errores[$campo] = 'Valor no válido.';
+            $errores[$campo] = "Debe ser un número entero entre {$minimo} y " . number_format($maximo, 0, ',', '.') . '.';
             return 0;
         }
         return $entero;

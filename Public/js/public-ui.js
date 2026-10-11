@@ -341,7 +341,17 @@ if (typeof document !== 'undefined'
     window.location.replace('explorar');
 }
 
+/**
+ * La rueda del ratón sobre un campo numérico enfocado cambia su valor sin que la persona lo note (un precio o un
+ * peso distinto al escrito). Se quita el foco: la rueda vuelve a desplazar la página y el valor no cambia.
+ */
+export function soltarNumeroConRueda(event) {
+    const campo = event.target;
+    if (campo?.type === 'number' && campo === campo.ownerDocument?.activeElement) campo.blur();
+}
+
 if (typeof document !== 'undefined') {
+    document.addEventListener('wheel', soltarNumeroConRueda, { passive: true });
     ensureProductStyles();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, { once: true });
     else initialize();

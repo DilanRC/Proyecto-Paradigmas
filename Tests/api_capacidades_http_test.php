@@ -64,7 +64,9 @@ test_same(401, $basic['status'], 'Autorización Basic sin sesión activa respond
 // La acción/motivo se validan con éxito autenticado: sin sesión jamás
 // se llega a ellos (el guard es la primera barrera).
 // ============================================================
-$sinCuerpo = test_http_raw_status('POST', '{}', $url);
-test_same(400, $sinCuerpo, 'Cuerpo JSON vacío responde 400 antes del guard');
+$lista = test_http_raw_status('POST', '[1,2]', $url);
+test_same(400, $lista, 'Un cuerpo que no es objeto responde 400 antes del guard');
+// "{}" es un objeto vacío válido: llega al guard y, sin sesión, es 401.
+test_same(401, test_http_raw_status('POST', '{}', $url), 'Un objeto vacío sin sesión responde 401');
 
 echo "OK capacidades HTTP: 401 SIN_SESION, OPTIONS 204, 405/415/400 preceden al guard.\n";

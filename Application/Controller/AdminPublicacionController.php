@@ -64,8 +64,8 @@ final class AdminPublicacionController
                 'estado' => 'Use ' . implode(', ', self::ESTADOS_FILTRO) . '.',
             ]);
         }
-        $pagina = filter_var($consulta['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $tamano = filter_var($consulta['tamanoPagina'] ?? 25, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+        $pagina = filter_var(is_bool($consulta['pagina'] ?? 1) ? false : $consulta['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+        $tamano = filter_var(is_bool($consulta['tamanoPagina'] ?? 25) ? false : $consulta['tamanoPagina'] ?? 25, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
         if ($pagina === false || $tamano === false) {
             throw new HttpException('La paginación no es válida.', 422, null, [
                 'pagina' => 'Debe ser un entero positivo.',
@@ -81,17 +81,17 @@ final class AdminPublicacionController
 
     private function moderar(array $cuerpo): array
     {
-        $publicacionId = filter_var($cuerpo['publicacionId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $publicacionId = filter_var(is_bool($cuerpo['publicacionId'] ?? null) ? false : $cuerpo['publicacionId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($publicacionId === false) {
-            throw new HttpException('publicacionId debe ser un entero positivo.', 422);
+            throw new HttpException('Revise los campos indicados.', 422, null, ['publicacionId' => 'Debe ser un número entero positivo.']);
         }
-        $estado = mb_strtoupper(trim((string) ($cuerpo['estado'] ?? '')), 'UTF-8');
+        $estado = is_string($cuerpo['estado'] ?? null) ? mb_strtoupper(trim($cuerpo['estado']), 'UTF-8') : '';
         if (!in_array($estado, self::ESTADOS_MODERABLES, true)) {
             throw new HttpException('Revise los campos indicados.', 422, null, [
                 'estado' => 'Use ' . implode(', ', self::ESTADOS_MODERABLES) . '.',
             ]);
         }
-        $motivo = trim((string) ($cuerpo['motivo'] ?? ''));
+        $motivo = is_string($cuerpo['motivo'] ?? null) ? trim($cuerpo['motivo']) : '';
         if (mb_strlen($motivo) > 250) {
             throw new HttpException('Revise los campos indicados.', 422, null, ['motivo' => 'No puede superar 250 caracteres.']);
         }

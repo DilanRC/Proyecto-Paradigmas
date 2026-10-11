@@ -5,6 +5,8 @@ import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=
 import { UBICACION_USUARIO_EVENT, capturarUbicacionAutomatica, leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
 import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=foto-3';
 import { montarEditorDireccion } from './shared/editor-direccion.js?v=oferta-1';
+import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
 const FLETES_API = 'api/v1/fletes';
 const OFERTAS_API = 'api/v1/mi-ofertas';
@@ -169,7 +171,7 @@ function abrirOferta(id = null, trigger = null) {
     form.elements.precio.value = oferta?.precio ?? '';
     form.elements.descripcion.value = oferta?.descripcion ?? '';
     mostrarErrores();
-    $('#oferta-form-status').textContent = '';
+    mostrarEstado($('#oferta-form-status'), '', 'info');
     editor = montarEditorDireccion($('#oferta-zona'), oferta?.zona ?? null, { titulo: 'Punto exacto de tu zona base', opcional: false, lugar: 'tu zona base' });
     if (typeof dialogo.showModal === 'function') dialogo.showModal();
     else { dialogo.hidden = false; dialogo.setAttribute('open', ''); }
@@ -203,7 +205,7 @@ async function guardarOferta(event) {
     mostrarErrores();
     guardar.disabled = true;
     form.setAttribute('aria-busy', 'true');
-    estado.textContent = 'Guardando oferta…';
+    mostrarEstado(estado, 'Guardando oferta…', 'info');
     try {
         const respuesta = await request(OFERTAS_API, { method: editandoId ? 'PUT' : 'POST', body: JSON.stringify(cuerpo) });
         ofertas = respuesta.data?.ofertas ?? ofertas;
@@ -214,7 +216,7 @@ async function guardarOferta(event) {
     } catch (error) {
         if (error?.status === 401) { endExpiredSession(); return; }
         mostrarErrores(error?.errors ?? {});
-        estado.textContent = error?.message || 'No fue posible guardar la oferta.';
+        mostrarEstado(estado, [error?.message || 'No fue posible guardar la oferta.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
     } finally {
         guardar.disabled = false;
         form.setAttribute('aria-busy', 'false');

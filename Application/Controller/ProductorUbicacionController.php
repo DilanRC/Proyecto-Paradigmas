@@ -259,7 +259,7 @@ final class ProductorUbicacionController
 
             return 0;
         }
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
             $errores[$campo] = 'Debe ser un entero positivo.';
 
@@ -271,7 +271,7 @@ final class ProductorUbicacionController
 
     private function enteroConsulta(mixed $valor, string $campo, array &$errores): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
             $errores[$campo] = "{$campo} debe ser un entero positivo.";
 

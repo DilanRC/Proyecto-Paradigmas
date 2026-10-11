@@ -6,7 +6,7 @@
 // separado y el dialogo de direccion de finca no puede pintar sus errores
 // sobre el formulario principal.
 
-import { describeValidity, mapFieldErrors, pickFirstInvalid } from './field-errors.js';
+import { describeValidity, mapFieldErrors, mostrarErroresSinLugar, pickFirstInvalid } from './field-errors.js?v=errores-1';
 import { clearFormDraftAfterSuccessfulClose, enableFormDraft } from './form-draft.js';
 
 /** Estado de deshabilitado previo a un envio, por formulario. */
@@ -33,13 +33,14 @@ export function bindFormErrors(form, { collapsePrefixes = [] } = {}) {
             const slot = container(field);
             if (slot) slot.textContent = message;
         }
+        mostrarErroresSinLugar(form, Object.fromEntries(entries.map(({ field, message }) => [field, message])));
         first?.focus();
         return entries;
     }
 
     function clearErrors() {
         form.querySelectorAll('[aria-invalid]').forEach((c) => c.removeAttribute('aria-invalid'));
-        form.querySelectorAll('[data-error-for]').forEach((slot) => { slot.textContent = ''; });
+        form.querySelectorAll('[data-error-for], [data-errores-generales]').forEach((slot) => { slot.textContent = ''; });
     }
 
     function clearControlError(event) {
