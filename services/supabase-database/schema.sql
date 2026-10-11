@@ -426,6 +426,55 @@ CREATE TABLE IF NOT EXISTS public.tbanimalvacunacion (
     tbanimalvacunacionfecharegistro TIMESTAMP WITHOUT TIME ZONE NOT NULL
 );
 
+-- Subastas en tiempo real (DEC-SUBASTA-001). Un vendedor subasta un animal de su inventario por un tiempo fijo;
+-- las personas pujan y comentan. Sin llaves: PHP valida dueño, montos, tiempos y estados. Fechas en UTC.
+-- Estado: ACTIVA, FINALIZADA (con ganador), DESIERTA (sin pujas) o CANCELADA (por su dueño, sin pujas).
+CREATE TABLE IF NOT EXISTS public.tbsubasta (
+    tbsubastaid INTEGER NOT NULL,
+    tbproductorid INTEGER NOT NULL,
+    tbanimalid INTEGER NOT NULL,
+    tbfincaid INTEGER NOT NULL,
+    tbsubastatitulo VARCHAR(150) NOT NULL,
+    tbsubastadescripcion VARCHAR(500) NULL,
+    tbsubastaimagenurl VARCHAR(500) NULL,
+    tbsubastapreciobase NUMERIC(12,2) NOT NULL,
+    tbsubastaincrementominimo NUMERIC(12,2) NOT NULL,
+    tbsubastafechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbsubastafechafin TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbsubastaestado VARCHAR(20) NOT NULL,
+    tbsubastapujaganadoraid INTEGER NULL,
+    tbsubastafechacierre TIMESTAMP WITHOUT TIME ZONE NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbsubastapuja (
+    tbsubastapujaid INTEGER NOT NULL,
+    tbsubastaid INTEGER NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
+    tbsubastapujamonto NUMERIC(12,2) NOT NULL,
+    tbsubastapujafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS public.tbsubastacomentario (
+    tbsubastacomentarioid INTEGER NOT NULL,
+    tbsubastaid INTEGER NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
+    tbsubastacomentariotexto VARCHAR(500) NOT NULL,
+    tbsubastacomentariofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+);
+
+-- Avisos para una persona (la campana del encabezado): subasta ganada, terminada o superada.
+CREATE TABLE IF NOT EXISTS public.tbnotificacion (
+    tbnotificacionid INTEGER NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
+    tbnotificaciontipo VARCHAR(40) NOT NULL,
+    tbnotificaciontitulo VARCHAR(150) NOT NULL,
+    tbnotificacionmensaje VARCHAR(500) NOT NULL,
+    tbnotificacionenlace VARCHAR(250) NULL,
+    tbnotificacionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbnotificacionleida SMALLINT NOT NULL
+);
+
+
 ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbadministrador ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbproductor ENABLE ROW LEVEL SECURITY;
@@ -469,3 +518,7 @@ ALTER TABLE public.tbraza ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalpublicacionanimal ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbvacuna ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbanimalvacunacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbsubasta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbsubastapuja ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbsubastacomentario ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbnotificacion ENABLE ROW LEVEL SECURITY;

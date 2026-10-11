@@ -25,10 +25,17 @@ try {
     $fila = $buscar->fetch();
     test_assert(is_array($fila), 'La fixture debe dejar una Persona');
     $personaId = (int) $fila['tbpersonaid'];
+    // Cualquier publicación activa sirve (antes se fijaba la 1, que deja de existir si se vuelve a sembrar la base).
+    $activa = $db->prepare("SELECT ep.tbanimalpublicacionid FROM tbanimalpublicacionestadoperiodo ep
+        WHERE ep.tbanimalpublicacionestadoperiodofechafin IS NULL AND ep.tbanimalpublicacionestadoperiodoestado = 'ACTIVO'
+        ORDER BY ep.tbanimalpublicacionid LIMIT 1");
+    $activa->execute();
+    $publicacionId = (int) $activa->fetchColumn();
+    test_assert($publicacionId > 0, 'La prueba necesita una publicación activa (Tools/seed-publicaciones-demo.php)');
 
     $sinSesion = new PublicacionInteraccionController($db, ActorContext::noAutenticado());
     test_same(401, $sinSesion->procesar('POST', [
-        'publicacionId' => 1, 'tipo' => 'ME_INTERESA',
+        'publicacionId' => $publicacionId, 'tipo' => 'ME_INTERESA',
     ])['status'], 'Una interacción sin sesión debe rechazarse');
 
     $actor = ActorContext::usuarioVerificado(
@@ -39,7 +46,7 @@ try {
     );
     $controlador = new PublicacionInteraccionController($db, $actor, test_token('interaccion'));
     $respuesta = $controlador->procesar('POST', [
-        'publicacionId' => 1,
+        'publicacionId' => $publicacionId,
         'tipo' => 'me_interesa',
     ]);
     test_same(201, $respuesta['status'], 'Una Persona autenticada debe guardar la interacción');
@@ -54,7 +61,7 @@ try {
     $consulta->execute(['id' => $interaccionId]);
     $guardada = $consulta->fetch();
     test_same($personaId, (int) ($guardada['tbpersonaid'] ?? 0), 'La interacción debe pertenecer a la Persona autenticada');
-    test_same(1, (int) ($guardada['tbanimalpublicacionid'] ?? 0), 'La interacción debe apuntar a la publicación');
+    test_same($publicacionId, (int) ($guardada['tbanimalpublicacionid'] ?? 0), 'La interacción debe apuntar a la publicación');
     test_same('ME_INTERESA', $guardada['tbanimalpublicacioninteracciontipo'] ?? null, 'El tipo debe normalizarse');
 
     $bitacora = $db->prepare(
@@ -68,9 +75,9 @@ try {
     test_same('API_PUBLICACION_INTERACCIONES', $evento['tbbitacoraorigen'] ?? null, 'La bitácora debe indicar el endpoint');
 
     // Quitar de la lista queda como RETIRAR, no como CREAR.
-    $retiro = $controlador->procesar('POST', ['publicacionId' => 1, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR']);
+    $retiro = $controlador->procesar('POST', ['publicacionId' => $publicacionId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR']);
     test_same(201, $retiro['status'], 'Retirar el interés responde 201');
-    $accion = $db->prepare('SELECT tbbitacoraaccion FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :registro');
+    $accion = $db->prepare('SELECT tbbitacoraaccion FROM tbbitacora WHERE tbbitacoraregistroidentificacionnumero = :registro ORDER BY tbbitacoraid DESC LIMIT 1');
     $accion->execute(['registro' => 'PUBLICACION_INTERACCION:' . $retiro['body']['data']['interaccionId']]);
     test_same('RETIRAR', $accion->fetchColumn(), 'La bitácora registra la acción RETIRAR');
 

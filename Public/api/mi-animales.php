@@ -36,7 +36,7 @@ if ($conCuerpo && strtolower(trim(explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0
 }
 
 try {
-    $cuerpo = $conCuerpo ? readJsonBody() : [];
+    $cuerpo = $conCuerpo ? readJsonBody() : $_GET;
     $conexion = Database::getConnection();
     $actor = SupabaseActorResolver::fromGlobals($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);

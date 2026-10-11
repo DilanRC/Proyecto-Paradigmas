@@ -153,8 +153,9 @@ final class TransportistaOferta
      * Con $personaId deja fuera las ofertas de esa persona: tus propias ofertas viven en "Mis ofertas".
      * ponytail: se calcula en PHP sobre todas las activas; con miles de ofertas, filtrar por caja de coordenadas en SQL.
      */
+    /** $conContacto: agrega el teléfono del transportista (solo para el ganador de una subasta, que ya tiene trato). */
     public function listarCercanas(float $latitud, float $longitud, int $capacidadMinima, int $pagina, int $tamano,
-        ?int $personaId = null): array
+        ?int $personaId = null, bool $conContacto = false): array
     {
         $sentencia = $this->conexion->prepare(
             $this->seleccion() . ' INNER JOIN tbtransportista t ON t.tbtransportistaid = o.tbtransportistaid
@@ -175,7 +176,9 @@ final class TransportistaOferta
                 $latitud, $longitud, (float) $fila['latitud'], (float) $fila['longitud']
             );
             if ($distancia > (int) $fila['radiokm']) continue;
-            $ofertas[] = $this->mapearPublica($fila, round($distancia, 2));
+            $oferta = $this->mapearPublica($fila, round($distancia, 2));
+            if ($conContacto) $oferta['telefono'] = $fila['transportistatelefono'];
+            $ofertas[] = $oferta;
         }
         usort($ofertas, static fn (array $a, array $b): int
             => [$a['distanciaKm'], -$a['ofertaId']] <=> [$b['distanciaKm'], -$b['ofertaId']]);
@@ -289,7 +292,10 @@ final class TransportistaOferta
                        d.tbdireccionsenas AS senas, d.tbdireccionlatitud AS latitud, d.tbdireccionlongitud AS longitud,
                        (SELECT p2.tbpersonanombre FROM tbtransportista t2
                          INNER JOIN tbpersona p2 ON p2.tbpersonaid = t2.tbpersonaid
-                         WHERE t2.tbtransportistaid = o.tbtransportistaid) AS transportistanombre
+                         WHERE t2.tbtransportistaid = o.tbtransportistaid) AS transportistanombre,
+                       (SELECT p3.tbpersonatelefono FROM tbtransportista t3
+                         INNER JOIN tbpersona p3 ON p3.tbpersonaid = t3.tbpersonaid
+                         WHERE t3.tbtransportistaid = o.tbtransportistaid) AS transportistatelefono
                 FROM tbtransportistaoferta o
                 INNER JOIN tbvehiculo v ON v.tbvehiculoid = o.tbvehiculoid
                 INNER JOIN tbdireccion d ON d.tbdireccionid = o.tbdireccionid';

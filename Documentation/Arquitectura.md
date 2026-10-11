@@ -54,15 +54,17 @@ Proyecto-Paradigmas/
 | Una regla de negocio | `Application/Service/` |
 | Una tabla | `Database/SqlScripts/000instalacioncompleta.sql` + migración en `Database/Migrations/` + `Application/Model/` |
 
-## WebSockets (futuro)
+## Tiempo real (subastas y avisos)
 
-PHP con Apache no mantiene conexiones abiertas, así que el tiempo real va como
-servicio aparte, igual que `supabase-server`:
+PHP en Vercel no mantiene conexiones abiertas, así que no hay un servidor WebSocket propio: se usa
+**Supabase Realtime (Broadcast)** (`DEC-SUBASTA-001`).
 
-```text
-services/realtime-server/    ← servidor WebSocket (Node)
-contracts/realtime-v1.*      ← mensajes/eventos que intercambia
-```
+| Pieza | Dónde |
+|---|---|
+| Aviso desde el servidor (después del COMMIT, con `SUPABASE_SECRET_KEY`) | `Application/Service/TiempoReal.php` |
+| Cliente en el navegador (WebSocket nativo, reconexión, latido) | `Public/js/shared/tiempo-real.js` |
+| Cierre de subastas vencidas (sin tarea programada) | `Application/Service/SubastaCierreService.php` |
 
-Se agrega como servicio nuevo en `compose.yaml` y el navegador se conecta desde
-un módulo en `Public/js/shared/`. El código PHP existente no necesita moverse.
+Tópicos: `subastas` (la lista), `subasta-<id>` (una subasta) y `notificaciones-<personaId>` (la campana). El aviso
+no lleva datos: quien escucha vuelve a pedir el estado a la API. Para usarlo en otra pantalla:
+`escuchar('<tópico>', agrupar(recargar))` en el navegador y `$tiempoReal->avisar(['<tópico>'])` en PHP.

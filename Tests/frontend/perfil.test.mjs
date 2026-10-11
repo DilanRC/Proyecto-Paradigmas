@@ -15,6 +15,28 @@ test('cambiosPerfil envía solo lo que cambió y un alias vacío se convierte en
     assert.deepEqual(cambiosPerfil({ alias: '', telefono: '' }, { alias: null, telefono: '' }), {});
 });
 
+test('cambiosPerfil compara nombre, identificación y correo como el servidor', async () => {
+    const { cambiosPerfil } = await import('../../Public/js/ajustes.js');
+    const persona = { nombre: 'Ana Pérez', identificacionTipo: 'CEDULA_FISICA', identificacionNumero: '111111111', correoElectronico: 'ana@ejemplo.cr' };
+    const iguales = { nombre: ' Ana  Pérez ', identificacionTipo: 'CEDULA_FISICA', identificacionNumero: '1-1111-1111', correoElectronico: 'ANA@ejemplo.cr' };
+    assert.deepEqual(cambiosPerfil(iguales, persona), {}, 'guiones, espacios y mayúsculas no son cambios');
+    assert.deepEqual(cambiosPerfil({ ...iguales, identificacionTipo: 'PASAPORTE', identificacionNumero: '111111111' }, persona),
+        { identificacion: { tipoCodigo: 'PASAPORTE', numero: '111111111' } }, 'cambiar solo el tipo también cuenta');
+    assert.deepEqual(cambiosPerfil({ ...iguales, correoElectronico: ' Nuevo@Ejemplo.cr ' }, persona), { correoElectronico: 'nuevo@ejemplo.cr' });
+    assert.deepEqual(cambiosPerfil({ ...iguales, nombre: 'Ana María Pérez' }, persona), { nombre: 'Ana María Pérez' });
+});
+
+test('Ajustes → Perfil edita nombre, identificación y correo con las reglas compartidas', () => {
+    for (const nombre of ['nombre', 'identificacionTipo', 'identificacionNumero', 'correoElectronico']) {
+        assert.ok(view.includes(`name="${nombre}"`), `falta el campo ${nombre}`);
+    }
+    assert.ok(view.includes('data-profile-error="identificacion.numero"'), 'el error del servidor tiene su lugar');
+    assert.match(js, /errorIdentificacion/, 'la identificación usa las reglas del servidor');
+    assert.match(js, /telefonoValido/, 'el teléfono usa telefono.js');
+    assert.match(js, /refreshAuthSession\(\)/, 'con el correo nuevo se renueva la sesión');
+    assert.match(view, /js\/ajustes\.js\?v=ajustes-12/);
+});
+
 test('Ajustes → Perfil permite cambiar y quitar la foto y editar alias y teléfono', () => {
     for (const id of ['profile-avatar', 'profile-photo-file', 'profile-photo-change', 'profile-photo-remove', 'profile-form', 'profile-edit']) {
         assert.ok(view.includes(`id="${id}"`), `falta ${id}`);

@@ -7,7 +7,7 @@ import test from 'node:test';
 const read = (ruta) => readFileSync(ruta, 'utf8').replace(/\r\n/g, '\n');
 const ui = read('Public/js/public-ui.js');
 const css = read('Public/css/public-product.css');
-const VISTAS_PUBLICAS = ['ajustes', 'explorar', 'fletes', 'home', 'me-interesa', 'mi-actividad', 'publicar'];
+const VISTAS_PUBLICAS = ['ajustes', 'explorar', 'fletes', 'home', 'me-interesa', 'mi-actividad', 'publicar', 'subastas'];
 
 test('el carrito solo existe con sesión (dentro del menú de cuenta) y enlaza a Mis solicitudes', () => {
     assert.match(ui, /link\.href = 'mi-actividad#mis-solicitudes'/);
@@ -46,10 +46,10 @@ test('la insignia usa solo tokens del sitio y el CSS y el JS suben de versión e
     assert.match(css, /\.public-cart:focus-visible \{\s*outline:/);
     for (const vista of VISTAS_PUBLICAS) {
         const html = read(`Application/View/${vista}/index.php`);
-        assert.match(html, /js\/public-ui\.js\?v=public-15/, `${vista} sin public-15`);
-        assert.match(html, /css\/public-product\.css\?v=product-9/, `${vista} sin product-9`);
+        assert.match(html, /js\/public-ui\.js\?v=public-16/, `${vista} sin public-16`);
+        assert.match(html, /css\/public-product\.css\?v=product-10/, `${vista} sin product-10`);
     }
-    assert.match(read('Application/View/public/info.php'), /js\/public-ui\.js\?v=public-15/);
+    assert.match(read('Application/View/public/info.php'), /js\/public-ui\.js\?v=public-16/);
 });
 
 test('la API devuelve solo el contador y el cliente no usa tablas de carrito', () => {

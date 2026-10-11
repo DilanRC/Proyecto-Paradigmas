@@ -166,20 +166,6 @@ export function normalizeText(valor) {
     return String(valor ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
-// ponytail: ubicación y precio filtran la página ya cargada (25); pasar a la
-// API cuando el catálogo supere una página.
-export function filterByLocation(items, texto) {
-    const buscado = normalizeText(texto);
-    if (buscado === '') return items;
-    return items.filter((item) => normalizeText(formatLocation(item?.direccion)).includes(buscado));
-}
-
-export function filterByPrice(items, minimo, maximo) {
-    if (minimo === null && maximo === null) return items;
-    return items.filter((item) => typeof item?.precio === 'number'
-        && (minimo === null || item.precio >= minimo)
-        && (maximo === null || item.precio <= maximo));
-}
 
 /** "engorde" o "Doble propósito" escritos a mano → clave del catálogo, o null. */
 export function purposeFromText(texto) {
@@ -351,12 +337,10 @@ export function buildCard(publicacion, { compacta = false } = {}) {
     return article;
 }
 
+// Ubicación y precio los filtra la API (sobre todo el catálogo); el propósito,
+// la página cargada.
 function visibleItems() {
-    return filterByPrice(
-        filterByLocation(filterByPurpose(state.items, state.proposito), state.ubicacion),
-        state.precioMin,
-        state.precioMax,
-    );
+    return filterByPurpose(state.items, state.proposito);
 }
 
 /** Lleva a la tarjeta que se abrió con "Ver" desde la portada y la resalta. */
@@ -426,16 +410,24 @@ function render() {
     deck.replaceChildren(...items.map(buildCard));
 }
 
+let turnoCarga = 0;
+
 async function load() {
+    // Al escribir rápido en los filtros, solo vale la última respuesta.
+    const turno = ++turnoCarga;
     state.cargando = true;
     state.error = null;
     render();
 
     const parametros = new URLSearchParams({
         estado: 'ACTIVO', pagina: '1', tamanoPagina: String(TAMANO_PAGINA),
-        // Tus propias publicaciones viven en Mi panel, no en Explorar.
+        // Tus propias publicaciones viven en Mi panel, y lo que marcaste, en Me interesa.
         excluirPropias: 'true',
+        excluirMarcadas: 'true',
     });
+    if (state.ubicacion !== '') parametros.set('ubicacion', state.ubicacion);
+    if (state.precioMin !== null) parametros.set('precioMin', String(state.precioMin));
+    if (state.precioMax !== null) parametros.set('precioMax', String(state.precioMax));
     const ubicacion = leerUbicacionUsuario();
     if (ubicacion) {
         parametros.set('latitud', ubicacion.latitud);
@@ -448,14 +440,14 @@ async function load() {
             method: 'POST',
             body: JSON.stringify({ consulta: Object.fromEntries(parametros) }),
         });
-        const lista = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
-        // Lo que ya marcaste con Me interesa vive en /me-interesa, no en el deck.
-        state.items = lista.filter((item) => item.meInteresa !== true);
+        if (turno !== turnoCarga) return;
+        state.items = Array.isArray(respuesta.data?.publicaciones) ? respuesta.data.publicaciones : [];
     } catch (error) {
+        if (turno !== turnoCarga) return;
         state.items = [];
         state.error = error.message ?? 'No fue posible cargar las publicaciones.';
     } finally {
-        state.cargando = false;
+        if (turno === turnoCarga) state.cargando = false;
     }
     renderPurposeFilters();
     render();
@@ -486,11 +478,15 @@ function initializeFilterBar() {
     const minimo = document.querySelector('[data-explore-precio-min]');
     const maximo = document.querySelector('[data-explore-precio-max]');
     if (ubicacion) ubicacion.value = state.ubicacion;
+    let temporizador = null;
     const aplicar = () => {
-        state.ubicacion = ubicacion?.value.trim() ?? '';
-        state.precioMin = parsePrice(minimo?.value);
-        state.precioMax = parsePrice(maximo?.value);
-        render();
+        clearTimeout(temporizador);
+        temporizador = setTimeout(() => {
+            state.ubicacion = ubicacion?.value.trim() ?? '';
+            state.precioMin = parsePrice(minimo?.value);
+            state.precioMax = parsePrice(maximo?.value);
+            load();
+        }, 400);
     };
     for (const campo of [ubicacion, minimo, maximo]) campo?.addEventListener('input', aplicar);
 }

@@ -39,6 +39,7 @@ Estas rutas pasan por `Public/js/shared/auth-gate.js`. El gate controla la naveg
 | `/vehiculos.php` | Vehículos. |
 | `/pagometodos.php` | Métodos de pago. |
 | `/catalogos.php` (`/admin/catalogos`) | Catálogos del animal. |
+| `/adminsubastas.php` (`/admin/subastas`) | Subastas en vivo (solo lectura). |
 
 El login acepta `?next=<ruta-permitida>` para volver a un destino local permitido. La lista contempla `/explorar.php` y las cinco rutas administrativas anteriores. Un acceso público sin `next` nunca abre administración: vuelve a `/explorar.php`.
 
@@ -63,6 +64,9 @@ El login acepta `?next=<ruta-permitida>` para volver a un destino local permitid
 | `/api/v1/mi-vehiculos` |
 | `/api/v1/mi-ofertas` |
 | `/api/v1/fletes` |
+| `/api/v1/subastas` |
+| `/api/v1/notificaciones` |
+| `/api/v1/admin/subastas` |
 | `/api/v1/solicitudes-compra` |
 | `/api/v1/catalogos` |
 | `/api/v1/mi-animales` |

@@ -27,7 +27,7 @@ test('quitar usa RETIRAR y lo no disponible se avisa sin desaparecer', () => {
 test('la tarjeta guardada es la compacta de la portada y Explorar oculta lo marcado', () => {
     const explore = readFileSync('Public/js/explore.js', 'utf8');
     assert.ok(js.includes('compacta: true'));
-    assert.ok(explore.includes('item.meInteresa !== true'), 'el deck no muestra lo ya marcado');
+    assert.ok(explore.includes("excluirMarcadas: 'true'"), 'el deck no muestra lo ya marcado (lo filtra la API)');
     assert.ok(explore.includes("explore:interaction-saved"), 'al marcar, la tarjeta sale del deck');
 });
 

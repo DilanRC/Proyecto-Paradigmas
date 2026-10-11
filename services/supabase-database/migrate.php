@@ -183,6 +183,19 @@ const EXPECTED_COLUMNS = [
         'tbanimalvacunacionlote', 'tbanimalvacunacionaplicadapor', 'tbanimalvacunacionproximadosis',
         'tbanimalvacunacionobservaciones', 'tbanimalvacunacionfecharegistro',
     ],
+    'tbsubasta' => [
+        'tbsubastaid', 'tbproductorid', 'tbanimalid', 'tbfincaid', 'tbsubastatitulo', 'tbsubastadescripcion',
+        'tbsubastaimagenurl', 'tbsubastapreciobase', 'tbsubastaincrementominimo', 'tbsubastafechainicio',
+        'tbsubastafechafin', 'tbsubastaestado', 'tbsubastapujaganadoraid', 'tbsubastafechacierre',
+    ],
+    'tbsubastapuja' => ['tbsubastapujaid', 'tbsubastaid', 'tbpersonaid', 'tbsubastapujamonto', 'tbsubastapujafecha'],
+    'tbsubastacomentario' => [
+        'tbsubastacomentarioid', 'tbsubastaid', 'tbpersonaid', 'tbsubastacomentariotexto', 'tbsubastacomentariofecha',
+    ],
+    'tbnotificacion' => [
+        'tbnotificacionid', 'tbpersonaid', 'tbnotificaciontipo', 'tbnotificaciontitulo', 'tbnotificacionmensaje',
+        'tbnotificacionenlace', 'tbnotificacionfecha', 'tbnotificacionleida',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -271,7 +284,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 43 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 47 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -652,7 +665,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=43 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=47 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

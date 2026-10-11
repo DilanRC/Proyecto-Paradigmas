@@ -43,6 +43,12 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 | Navegación pública, menú de cuenta | `Public/js/public-ui.js` |
 | Cerrar sesión (único) | `signOutEverywhere()` en `Public/js/shared/auth-gate.js` |
 | Estilos de formularios | `Public/css/onboarding.css` (`signup-*`, `publish-*`) |
+| Subastas en vivo (`/subastas`, `?id=` el detalle) | `Application/View/subastas/` + `Public/js/subastas.js` + `Public/css/subastas.css` + API `Public/api/subastas.php` (`SubastasController`) |
+| Banda "Subastas en vivo" de Explorar | `Public/js/subastas-vivo.js` (marcado `data-subastas-banda` en `explorar/index.php`) |
+| Tiempo real (Supabase Realtime) | Navegador `Public/js/shared/tiempo-real.js`; servidor `Application/Service/TiempoReal.php` |
+| Cierre de subastas vencidas | `Application/Service/SubastaCierreService.php` |
+| Campana de avisos (encabezado) | `createBell()` en `Public/js/public-ui.js` + API `Public/api/notificaciones.php` |
+| Admin: subastas (`/admin/subastas`, solo lectura) | `Application/View/adminsubastas/` + `Public/js/adminsubastas.js` + API `Public/api/admin-subastas.php` |
 
 ## 3. Decisiones vigentes
 
@@ -109,8 +115,8 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   mensajes de `ValidacionService::validarIdentificacion()` (`REGLAS_SERVIDOR`), y el registro usa `telefono.js`
   (`telefonoValido`, `PATRON_TELEFONO`, `aplicarRestriccionTelefono`), igual que los paneles admin. Ambas se aplican en
   `validatePersonaDraft`. `Tests/frontend/mascaras.test.mjs` compara las reglas JS con las del PHP: **si cambias una
-  regla de identificación en PHP, cambia también `REGLAS_SERVIDOR`**. Ajustes → Perfil todavía no usa `telefono.js`
-  (el servidor sí valida).
+  regla de identificación en PHP, cambia también `REGLAS_SERVIDOR`**. Ajustes → Perfil usa las mismas reglas
+  (`errorIdentificacion` y `telefono.js`) desde el 11/10.
 - **Ojo, decisión revertida:** el 29/09 Dilan había retirado esta consulta del correo para no revelar qué correos
   existen (`d7b5a88`). Se reabrió el 04/10 por decisión del equipo, con el límite por IP (DEC-REG-001). La prueba
   que lo prohibía ahora exige que la consulta pase por el endpoint con límite. El aviso neutro al crear la cuenta en
@@ -155,15 +161,26 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ### Foto de perfil y datos propios
 - Columna `tbpersonafotourl VARCHAR(500) NULL` (migración `013personafoto.sql`, en los 4 lugares + diccionario/DER/PDF).
   Las cuentas anteriores quedan en NULL y muestran el avatar con iniciales.
-- `PATCH api/v1/mi-perfil` `{ alias?, telefono?, fotoUrl? }` (sesión): solo cambian las claves enviadas; `alias: ""` o
-  `fotoUrl: null` las dejan en NULL. El nombre, la identificación y el correo **no** se editan (422). La foto exige
+- `PATCH api/v1/mi-perfil` `{ nombre?, identificacion?, correoElectronico?, alias?, telefono?, fotoUrl? }` (sesión): solo
+  cambian las claves enviadas; `alias: ""` o `fotoUrl: null` las dejan en NULL. Otras claves → 422. La foto exige
   `https://` (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`) y el teléfono usa `ValidacionService`. Un teléfono
   nuevo deja histórico (`Persona::actualizarPerfil`); la bitácora (`PERSONA`, `API_MI_PERFIL`) **no guarda el teléfono**,
   solo `telefonoCambiado`.
 - `api/v1/actividad` devuelve `persona.fotoUrl`; de ahí sale el perfil en caché del navegador y el avatar del encabezado
   (imagen solo si es https; si falla, vuelve la inicial).
 - Ajustes → Perfil: foto (reutiliza `shared/storage.js`, mismo bucket `publicaciones`), "Quitar foto" y "Editar datos"
-  (alias y teléfono). El avatar del encabezado se actualiza al recargar la página.
+  (nombre, identificación, correo, alias y teléfono). El avatar del encabezado se actualiza al recargar la página.
+- **Nombre, identificación y correo (11/10)**, todo bajo el lock de alta de Persona (el mismo del registro):
+  - `nombre`: 3 a 150 caracteres (`ValidacionService::textoCampo`).
+  - `identificacion` `{ tipoCodigo, numero }`: mismas reglas que el registro (`validarIdentificacion`); la de otra Persona → 409
+    en `identificacion.numero`. Si la persona ya subió un documento, **vuelve a `PENDIENTE`** (sin motivo) y la lectura
+    automática se recalcula contra el número nuevo. La bitácora solo guarda `identificacionCambiada`, nunca el número.
+  - `correoElectronico`: se normaliza en minúscula. El de otra Persona o el de un **administrador** → 409 (tomar el correo
+    de un admin daría acceso al panel). Como la sesión se vincula con la Persona **por el correo**, el servidor cambia
+    también el correo de la cuenta de Supabase (`Application/Service/SupabaseAuthAdmin.php`, `PUT /auth/v1/admin/users/{sub}`
+    con `email_confirm: true` y `SUPABASE_SECRET_KEY`) dentro de la transacción: si Supabase lo rechaza (correo ya usado → 409,
+    otro error → 502), no se guarda nada del PATCH. Después, `ajustes.js` renueva la sesión (`refreshAuthSession`) para que el
+    token traiga el correo nuevo. Un admin que cambie su correo deja de ser admin (`tbadministrador` va por correo).
 
 ### Foto del vehículo
 - Columna `tbvehiculofotourl VARCHAR(500) NULL` (migración `014vehiculofoto.sql`, en los 4 lugares + diccionario/DER/PDF).
@@ -284,8 +301,9 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   sale de la base, nunca del navegador); `PATCH { personaId, estado: VERIFICADO|RECHAZADO, motivo }` decide.
   `Cache-Control: no-store`. Bitácora `PERSONA` con `VER_DOCUMENTO` (cada vez que un admin abre un documento),
   `VERIFICAR_DOCUMENTO` y `RECHAZAR_DOCUMENTO`, con `realizadoPor`.
-- `SUPABASE_SECRET_KEY` llega a la app PHP: en local por `compose.yaml`; **en producción hay que configurarla en las
-  variables de entorno de Vercel** (sin ella, "Ver documento" responde 503). Nunca se manda al navegador.
+- `SUPABASE_SECRET_KEY` llega a la app PHP: en local por `compose.yaml`; en producción está en las variables de entorno
+  de Vercel (configurada, confirmado el 11/10). Sin ella, "Ver documento" y el cambio de correo responden 503. Nunca se
+  manda al navegador.
 - **Lectura automática del número (opción a del plan, como ayuda):** con una **foto** (no PDF) de una identificación
   numérica (cédula física, jurídica, DIMEX, NITE), `shared/escaner-documento.js` lee el número **en el dispositivo**
   con Tesseract.js (CDN jsdelivr, se descarga solo al elegir una foto; es el primer script externo de la app). Prueba 4
@@ -364,8 +382,11 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   crece; la **marca vigente** es la última acción del par persona/publicación: `REGISTRAR` la marca y
   `RETIRAR` la quita (`PublicacionInteraccion::estaMarcada()`).
 - `POST api/v1/publicaciones/interacciones` acepta `accion` (`REGISTRAR` por defecto, `RETIRAR` solo
-  con `ME_INTERESA`). `RETIRAR` es idempotente (200 con `cambiado:false` si ya no estaba) y se permite
+  con `ME_INTERESA`). Con `ME_INTERESA` ambas son idempotentes (200 con `cambiado:false` si ya estaba marcada o
+  ya no estaba; la revisión va dentro del lock, así dos toques seguidos guardan una sola fila). `RETIRAR` se permite
   aunque la publicación ya no esté activa; marcar una no activa sigue dando 409.
+- La lista de guardados se ordena por **cuándo se marcó** (la última interacción `ME_INTERESA`), no por la fecha de la
+  publicación: volver a marcar algo lo sube al inicio.
 - `GET api/v1/publicaciones/interacciones?tipo=ME_INTERESA&pagina&tamanoPagina` (sesión): trae las
   marcadas con los datos de la tarjeta y **en cualquier estado** (la vendida o pausada sigue ahí; la
   pantalla la muestra como "No disponible").
@@ -375,7 +396,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - `/me-interesa` está en el menú del avatar y en Mi panel; usa la tarjeta **compacta** de la portada
   (`buildCard(..., { compacta: true })`, con "Ver más información") y le agrega "Quitar de Me interesa".
 - En Explorar, al tocar "Me interesa" la tarjeta sale del deck, y lo ya marcado no vuelve a aparecer ahí
-  (`meInteresa !== true` al cargar): vive en `/me-interesa`.
+  (Explorar envía `excluirMarcadas: 'true'` y lo filtra el servidor): vive en `/me-interesa`.
 
 ### Portada, Explorar y tarjetas
 - Inicio: hero con buscador, carrusel de publicaciones (4/2/1 por vista,
@@ -385,6 +406,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Explorar: hero con foto, filtros de tipo/ubicación/precio y fila de
   tarjetas completas con scroll inferior (más de 4).
 - **Explorar no muestra tus propias publicaciones** (viven en Mi panel). `explore.js` envía `excluirPropias: 'true'` y el servidor (`AnimalPublicacionController::consultar` → `listarPublicaciones(..., $excluirVendedorId)`) excluye las del vendedor autenticado; así el total y la paginación salen bien. Sin sesión no excluye nada. Es opcional: Inicio, Mi panel y los demás no lo envían. Una publicación propia ya no abre con `explorar?publicacion=<id>`.
+- **Filtros de Explorar en el servidor (11/10):** `api/v1/publicaciones` acepta `ubicacion` (texto de hasta 100; busca en pueblo, distrito, cantón y provincia juntos, sin distinguir mayúsculas **ni tildes** en MySQL y Postgres: `AnimalComercial::sinTildesSql` con `REPLACE`), `precioMin` y `precioMax` (inclusivos; dejan fuera las "a convenir"; mínimo > máximo → 422) y `excluirMarcadas` (con sesión). Se aplican antes de contar y paginar, también al ordenar por cercanía. `explore.js` (`explore-13`) los envía 400 ms después de dejar de escribir y solo acepta la última respuesta. El filtro de **propósito** (chips) sigue siendo del navegador, sobre la página cargada.
 
 ### Decisiones del equipo (06/10) que acotan el trabajo
 - **Respuestas del cliente/equipo:**
@@ -425,8 +447,47 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ### Mis animales (P2-4) y catálogos admin (P2-6)
 - **API `api/v1/mi-animales`** (sesión; `MiAnimalesController`): `GET` inventario (`AnimalComercial::inventarioPropio`: dueño explícito o animal principal de una publicación suya; los demás animales de un lote no se listan sueltos; con la última observación, la publicación más reciente y cuántas vacunas tiene). `POST` registra un animal sin publicar (`tbanimalestado = ACTIVO`, `tbproductorid` = el vendedor, valida con `AnimalValidacionService::validar`; un lote → 422; arete repetido → 409). `PATCH { animalId, accion: 'PUBLICAR', fincaNombre, titulo, precio?, descripcion?, imagenUrl? }` publica un animal `ACTIVO` propio (ajeno → 404; ya publicado → 409) y lo marca `PUBLICADO`. Bitácora `ANIMAL` y `PUBLICACION` con origen `API_MI_ANIMALES`.
 - **El estado del animal sigue a su publicación** (`cambiarEstadoPublicacion`): `ACTIVO`/`PAUSADO` → `PUBLICADO`, `VENDIDO` → `VENDIDO`, `RETIRADO` → vuelve a `ACTIVO` (al inventario, se puede publicar de nuevo).
+- **Editar y pesos (11/10):** `PATCH { animalId, accion: 'EDITAR', ...campos del alta }` reemplaza los datos del animal con los del formulario (lo que no llega queda vacío), salvo dos excepciones: **sin la clave `arete` se conserva la identificación** (los animales viejos tienen una libre, `SOL-…`, que el formulario no muestra) y sin `raza` ni `razaId` se conserva la raza escrita a mano. Arete de otro animal vigente → 409. Peso, edad o propósito distintos de los vigentes **agregan una observación** (`tbanimalproduccionsalud`); el historial nunca se reescribe. `PATCH { animalId, accion: 'PESAR', peso, fecha? }` agrega un pesaje (fecha no futura; hoy por omisión, y entonces queda como vigente) copiando el propósito y estimando la edad desde la observación vigente. `GET ?animalId=` devuelve `observaciones` (la más reciente primero). Solo animales propios y no `VENDIDO`/`INACTIVO` (409). Bitácora `ANIMAL` con `ACTUALIZAR` y `PESAR`. El inventario devuelve también `razaId`. Pantalla: botones "Editar" (mismo diálogo del alta, relleno) y "Pesos" (historial + alta rápida) en Mis animales (`mis-animales.js?v=animales-5`, `panel-15`).
+- **En subasta:** un animal en una subasta abierta (`tbanimalestado = SUBASTA`) no se edita, pesa ni publica (409) y en Mis animales muestra "En subasta" con "Ver subasta"; uno `ACTIVO` muestra "Subastar" (`subastas?nueva=<id>`). `mis-animales.js?v=animales-6`, `panel-16`.
+- **Ojo:** el peso vigente es la **última observación por fecha**, y de ella salen también la edad y el propósito de las tarjetas. Toda observación nueva debe copiar los datos vigentes que no cambian (como hacen `EDITAR` y `PESAR`); una con solo el peso borraría la edad y el propósito de la tarjeta.
 - **Pantalla:** sección "Mis animales" en Mi panel (módulo `Public/js/mis-animales.js`, importado desde `mi-actividad.js`): registrar (especie → tipo y raza, sexo fijado por el tipo, partos solo hembras, arete con máscara), vacunas (historial + alta rápida con `api/v1/mi-animales/vacunas`) y Publicar (finca, título, precio, descripción y foto).
 - **Catálogos en el panel:** `/admin/catalogos` y API `api/v1/admin/catalogos` (solo administrador; `AdminCatalogoController`): `GET` las cuatro listas con inactivos, `POST { catalogo: ESPECIE|TIPO|RAZA|VACUNA, nombre, especieId (tipo y raza), sexo: M|H|null (tipo) }`, `PATCH { catalogo, id, nombre?, activo? }`. **Sin DELETE** (los animales los referencian) y **sin cambiar la especie ni el sexo** después de crear. Nombre único por especie sin distinguir mayúsculas (409). No se reactiva un tipo o raza de una especie inactiva (409). Bitácora `CATALOGO` (`CREAR`, `ACTUALIZAR`, `DESACTIVAR`, `REACTIVAR`), registro `TIPO:5`.
+
+### Subastas en tiempo real (DEC-SUBASTA-001)
+- **Qué hay:** un vendedor abre una subasta con un animal `ACTIVO` de su inventario (finca, título, descripción, foto, precio base,
+  incremento mínimo y duración de 5 minutos a 30 días). Se ve en Explorar (banda "Subastas en vivo"), en `/subastas` (Activas,
+  Historial, Mis subastas, Donde pujé) y en `/admin/subastas`. Varias subastas abiertas y varias pujas a la vez, sin límite.
+- **Esquema de 47 tablas:** `tbsubasta`, `tbsubastapuja`, `tbsubastacomentario` y `tbnotificacion`, en los 4 lugares (migración
+  `023subastas.sql`; las siguientes empiezan en **024**). Estado del animal nuevo: `SUBASTA` (`AnimalComercial::ESTADOS_ANIMAL`).
+- **Tiempo real = Supabase Realtime (Broadcast), sin librerías ni servidor propio.** El navegador abre un WebSocket nativo con la
+  clave pública (`shared/tiempo-real.js`: `escuchar(tópico, fn)`, `alCambiarConexion`, `agrupar`); PHP avisa **después del COMMIT**
+  por la API REST de Realtime con `SUPABASE_SECRET_KEY` (`TiempoReal::avisar`). Tópicos `subastas`, `subasta-<id>` y
+  `notificaciones-<personaId>`. **El aviso no lleva datos**: quien lo recibe vuelve a pedir el estado a la API (los canales son
+  públicos; un mensaje falso solo provoca una recarga). Además las pantallas consultan cada 15-30 s. Si Realtime falla, la petición
+  no falla (se anota en el log). Probado contra el proyecto real de Supabase (cliente Node con `tiempo-real.js` + aviso desde PHP).
+- **API `api/v1/subastas`** (sesión de Persona; `SubastasController`): `GET ?vista=ACTIVAS|HISTORIAL|MIAS|PARTICIPO&q&pagina&tamanoPagina`,
+  `GET ?id=` (detalle con `pujas`, `comentarios`, `minimoSiguiente`, `puedoPujar`, `motivoNoPuja`, `puedoCancelar` y `trato`),
+  `POST` abre, `PATCH { subastaId, accion: PUJAR (monto) | COMENTAR (texto) | CANCELAR }`. Todas las respuestas traen `ahora` (hora
+  del servidor, para los contadores). Errores por campo como el resto (Cuidados #14).
+- **Reglas:** abrir exige Vendedor activo, finca activa propia y animal propio `ACTIVO` (409 si no); pujar exige Comprador activo; ni
+  el vendedor, ni un **administrador** (correo activo en `tbadministrador`, 403 en abrir/pujar/comentar), ni quien ya va ganando
+  pueden pujar. Primera puja ≥ precio base; siguientes ≥ más alta + incremento (422 en `monto` con el mínimo). Cancelar: solo su
+  dueño, activa y sin pujas. Quien queda superado recibe un aviso `SUBASTA_SUPERADA`.
+- **Cierre sin tarea programada:** cada petición a subastas, a la campana o al admin llama primero a
+  `SubastaCierreService::cerrarVencidas()`; el contador del navegador consulta al llegar a cero. Con pujas → `FINALIZADA`, se
+  registran `tbcompra` y `tbventa` (lugar "Subasta en línea", con el Comprador del ganador) y el animal queda `VENDIDO`; avisos
+  `SUBASTA_GANADA` (ganador) y `SUBASTA_FINALIZADA` (vendedor). Sin pujas → `DESIERTA`, el animal vuelve a `ACTIVO`, aviso
+  `SUBASTA_DESIERTA`. La bitácora del cierre no lleva actor (la hace el sistema).
+- **Trato:** solo el ganador y el vendedor de una `FINALIZADA` reciben `trato` (precio final, nombre/teléfono/correo del otro y la
+  dirección completa de la finca). El ganador además pide `api/v1/fletes?subastaId=` y ve los fletes que cubren la finca **con el
+  teléfono del transportista** (excepción consciente a "teléfonos solo con trato": aquí ya hay trato). Las pujas y comentarios
+  muestran alias o "Nombre I." (`SubastasController::nombrePublico`); el admin ve nombres completos.
+- **Campana:** `GET api/v1/notificaciones` (últimas 20 y `sinLeer`), `PATCH { accion: 'LEER' }`. `public-ui.js` (`public-16`) la pone
+  junto al carrito y escucha `notificaciones-<personaId>` (el `personaId` sale del perfil en caché; sin él, consulta cada 60 s).
+  Estilos `.public-bell*` en `public-product.css` (`product-10`, en todas las vistas públicas).
+- **Bloqueos:** un solo `NamedLock` `tindercows_subastas` para las tres tablas de subasta; orden subastas → `tbanimal` (o
+  `tbcompra`/`tbventa` al cerrar) → notificación → bitácora → transacción (Cuidados #12).
+- **Admin:** cadena de caché subida a **`auth-gate-11`, `admin-13`, `login.js?v=front-15`** y la versión del script de las 13 vistas admin.
 
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
@@ -445,9 +506,9 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
    muestra "El servidor no devolvió una respuesta válida". La clave pública
    camelCase se arma en PHP al mapear la fila. `Tests/sql_alias_minuscula_test.php`
    falla si vuelve a aparecer un alias con mayúsculas.
-4. **Finales de línea:** `git stash` puede reescribir archivos con CRLF en
-   Windows. Las pruebas que buscan `\n` en `Public/css/base.css` y
-   `Public/js/shared/api.js` fallan con CRLF; normalizar con
+4. **Finales de línea:** `git stash` (o un `git pull` en una copia con `core.autocrlf=true`) puede dejar archivos con
+   CRLF en Windows. Las pruebas que buscan `\n` en `Public/css/base.css`, `Public/js/shared/api.js`,
+   `Public/js/public-ui.js` y `Public/js/documentos.js` fallan con CRLF; normalizar con
    `sed -i 's/\r$//' <archivo>` (para git el contenido es idéntico).
 5. **Supabase por defecto** solo envía correos a miembros del equipo y con
    límite por hora: un correo de confirmación puede no llegar nunca.
@@ -509,6 +570,11 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     - Las pruebas que usan "hoy" deben usar `AnimalValidacionService::hoy()` (Costa Rica), no `gmdate`: de 6 p. m. a
       medianoche UTC ya es mañana y la fecha cuenta como futura.
 
+15. **Tiempo real: avisar después del COMMIT y nunca confiar en el mensaje.** `TiempoReal::avisar()` va fuera de la transacción
+    (si se avisa antes, otra pantalla recarga y todavía no ve el cambio). El navegador trata cada aviso como "algo cambió" y vuelve a
+    pedir el estado: no agregues datos al aviso ni los uses para pintar (los canales de Broadcast son públicos). Una pantalla nueva que
+    quiera tiempo real: `escuchar('<tópico>', agrupar(recargar))` + una consulta periódica de respaldo.
+
 ## 5. Pendientes
 
 Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
@@ -516,10 +582,12 @@ Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
 están incluidos ahí.
 
 ### Backend (para el compañero de backend)
-- Editar **nombre, identificación o correo**: sigue sin existir (solo alias, teléfono y foto, ver "Foto de perfil y datos propios").
-- Mis animales: un **historial de pesos** (hoy se muestra el último) y editar un animal ya registrado, si el cliente lo pide.
-- **Filtros de Explorar en el servidor.** Ubicación y precio filtran solo la
-  página cargada (25) en el navegador; la API solo filtra por `q` y estado.
+- ~~Editar nombre, identificación o correo~~, ~~historial de pesos y editar animal~~ y ~~filtros de Explorar en el
+  servidor~~: **resueltos** el 11/10.
+- El filtro de **propósito** de Explorar (chips) sigue filtrando solo la página cargada (25).
+- **Subastas, descartado por ahora (DEC-SUBASTA-001):** extender el cierre si alguien puja en los últimos segundos (anti-sniping),
+  subastar lotes, que el admin cancele o modere una subasta y canales privados de Realtime con políticas (necesitan configurar
+  "Realtime authorization" en Supabase). **Sin probar en el navegador con sesiones reales:** revisar a mano con 2-3 cuentas.
 
 ### Pendiente de P2-5 (va con P2-6)
 - ~~Crear el bucket privado `documentos`~~: **resuelto** (06/10).
@@ -527,11 +595,9 @@ están incluidos ahí.
   limpieza de 90 días de P2-6 debe borrar también los archivos que ya no están en `tbpersonadocumentoruta`.
   **Sigue sin hacerse** (06/10): borra archivos del bucket de producción y necesita una tarea programada; se deja para
   acordarla con Dilan.
-- Recordar a Dilan: `SUPABASE_SECRET_KEY` en Vercel (sin ella `/admin/documentos` responde 503 al ver la foto).
-
-### Detalles menores de la revisión de P1-1
-- Marcar dos veces "Me interesa" guarda dos filas, y la lista de guardados se ordena por fecha de publicación.
-  (La bitácora del retiro y las búsquedas sin `LOWER` ya se corrigieron el 06/10.)
+- ~~`SUPABASE_SECRET_KEY` en Vercel~~: **resuelto** (confirmado el 11/10).
+- Los detalles menores de la revisión de P1-1 (marcar dos veces guardaba dos filas; la lista de guardados ordenada por
+  fecha de publicación) se corrigieron el 11/10.
 
 ### Frontend (pendiente de P1-5)
 - (Resuelto con P1-2: la foto del vehículo ya se muestra en las filas de fletes.)
@@ -594,6 +660,37 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-11 · jefersonbustamante · Subastas en tiempo real (DEC-SUBASTA-001)
+- Subastas con pujas y comentarios en vivo, cierre automático con ganador, avisos en una campana y vista de solo lectura para el admin
+  (ver "Subastas en tiempo real"). Tiempo real con Supabase Realtime (Broadcast) y WebSocket nativo; sin dependencias nuevas.
+- Esquema: 4 tablas nuevas en los 4 lugares + `Database/Migrations/023subastas.sql` (aplicada en la base local), diccionario, DER,
+  `Decisiones.md` y los PDF regenerados (con un contenedor `python:3.12-slim`, no hay Python en la máquina). Conteo de 43 → 47 en
+  README, GuiaDefensa, Respaldos, `Database/Tests`, `services/supabase-database` y las pruebas de esquema. `diagnostico.sql` revisa
+  las referencias nuevas.
+- Backend: `Subasta`, `Notificacion`, `TiempoReal`, `SubastaCierreService`, `SubastasController`, `NotificacionesController`,
+  `AdminSubastasController`, endpoints `subastas.php`, `notificaciones.php` y `admin-subastas.php`; `FletesController` acepta
+  `subastaId` (carga `Model/Subasta.php` él mismo) y `TransportistaOferta::listarCercanas` puede incluir el teléfono.
+- Frontend: página `/subastas` (`subastas-1`), banda de Explorar (`subastas-vivo-1`), campana y enlace "Subastas" en
+  `public-ui.js` (`public-16`, `product-10` en todas las vistas públicas), "Subastar" en Mis animales, `/admin/subastas` y la cadena
+  admin (`auth-gate-11`, `admin-13`, `front-15`).
+- De paso: `AnimalCatalogo::crear` usaba `->query()` (regla de sentencias preparadas, `naming_eval` en rojo): ahora `prepare()`.
+  `publicacion_interaccion_test` ya no da por hecho que existe la publicación 1.
+- Pruebas: nuevas `Tests/subastas_test.php` y `Tests/frontend/subastas.test.mjs`; ampliadas `validacion_entradas_test`,
+  `api_auth_admin_http_test`, `admin_cache_chain`, `carrito`, `navegacion_publica` y `mis_animales`. SQL probado en Postgres 16 y
+  `migrate.php` dos veces sobre una base limpia (47 tablas). Batería PHP en verde salvo las conocidas; frontend con solo las 4 conocidas.
+- Cuidado: una base MySQL existente necesita `Database/Migrations/023subastas.sql`. **No se probó en el navegador con sesiones reales.**
+
+### 2026-10-11 · jefersonbustamante · Filtros de Explorar en el servidor, editar animal e historial de pesos, editar identidad y arreglos de Me interesa
+- Se trajo `origin/dev` (PR #44 y #45 de `backend`) por fast-forward antes de empezar.
+- **Explorar:** ubicación, precio y lo ya marcado se filtran en la API (ver "Portada, Explorar y tarjetas"). Archivos: `AnimalPublicacionController::filtrosConsulta`, `AnimalComercial::listarPublicaciones` (parámetro `$filtros`), `explore.js` (`explore-13`; se quitaron `filterByLocation` y `filterByPrice`).
+- **Me interesa:** marcar dos veces ya no guarda dos filas y la lista se ordena por cuándo se marcó (ver "Me interesa"). Archivos: `PublicacionInteraccionController`, `AnimalComercial::listarPublicaciones`.
+- **Mis animales:** acciones `EDITAR` y `PESAR` y `GET ?animalId=` (ver "Mis animales (P2-4)"). Archivos: `MiAnimalesController`, `AnimalComercial` (`datosAnimal`, `actualizarAnimal`, `observaciones`, `existeAreteVigente` con exclusión, `razaId` en el inventario), `Public/api/mi-animales.php` (el GET recibe `$_GET`), `mis-animales.js` (`animales-5`), `mi-actividad.js` (`panel-15`), vista de Mi panel (diálogo `animal-weights-modal`).
+- **Identidad:** nombre, identificación y correo editables desde Ajustes (ver "Foto de perfil y datos propios"). Archivos: nuevo `Application/Service/SupabaseAuthAdmin.php`, `MiPerfilController`, `Persona::actualizarPerfil`, `ajustes.js` (`ajustes-12`), vista de Ajustes.
+- Sin cambios de esquema ni de PDF. Contrato de API ampliado (claves nuevas opcionales), documentado en `RutasPublicas.md`.
+- Pruebas: ampliadas `api_publicaciones_test`, `mi_animales_test`, `api_mi_perfil_test` (con un transporte falso para Supabase), `validacion_entradas_test` (los campos nuevos), `perfil.test.mjs`, `mis_animales.test.mjs`, `explore_card_content.test.mjs` y `me_interesa.test.mjs`; `publicacion_interaccion_test` ahora lee el evento más reciente de la bitácora (fallaba con filas de corridas anteriores). Las consultas nuevas se ejecutaron contra Postgres 16 con `schema.sql`. Batería PHP completa en verde salvo las conocidas; frontend: 412 pasan y fallan solo las 4 conocidas.
+- Cuidado: tras el pull, `public-ui.js`, `api.js` y `documentos.js` quedaron con CRLF y 3 pruebas fallaban; se normalizaron (Cuidados #4, ampliado).
+- **Sin probar en el navegador con una sesión real.** El cambio de correo modifica la cuenta **real** de Supabase también desde local (la app local usa el mismo proyecto).
 
 ### 2026-10-10 · backend · Revisión de validaciones y mensajes de error
 - Prueba nueva `Tests/validacion_entradas_test.php`: datos hostiles en publicar, editar publicación, Mis animales, vacunas,

@@ -326,6 +326,42 @@ SELECT 'tbventa.tbventadireccionid', v.tbventaid, v.tbventadireccionid
 FROM tbventa v LEFT JOIN tbdireccion d ON d.tbdireccionid = v.tbventadireccionid
 WHERE v.tbventadireccionid IS NOT NULL AND d.tbdireccionid IS NULL
 UNION ALL
+SELECT 'tbsubasta.tbproductorid', s.tbsubastaid, s.tbproductorid
+FROM tbsubasta s LEFT JOIN tbproductor p ON p.tbproductorid = s.tbproductorid
+WHERE p.tbproductorid IS NULL
+UNION ALL
+SELECT 'tbsubasta.tbanimalid', s.tbsubastaid, s.tbanimalid
+FROM tbsubasta s LEFT JOIN tbanimal a ON a.tbanimalid = s.tbanimalid
+WHERE a.tbanimalid IS NULL
+UNION ALL
+SELECT 'tbsubasta.tbfincaid', s.tbsubastaid, s.tbfincaid
+FROM tbsubasta s LEFT JOIN tbfinca f ON f.tbfincaid = s.tbfincaid
+WHERE f.tbfincaid IS NULL
+UNION ALL
+SELECT 'tbsubasta.tbsubastapujaganadoraid', s.tbsubastaid, s.tbsubastapujaganadoraid
+FROM tbsubasta s LEFT JOIN tbsubastapuja pu ON pu.tbsubastapujaid = s.tbsubastapujaganadoraid
+WHERE s.tbsubastapujaganadoraid IS NOT NULL AND pu.tbsubastapujaid IS NULL
+UNION ALL
+SELECT 'tbsubastapuja.tbsubastaid', pu.tbsubastapujaid, pu.tbsubastaid
+FROM tbsubastapuja pu LEFT JOIN tbsubasta s ON s.tbsubastaid = pu.tbsubastaid
+WHERE s.tbsubastaid IS NULL
+UNION ALL
+SELECT 'tbsubastapuja.tbpersonaid', pu.tbsubastapujaid, pu.tbpersonaid
+FROM tbsubastapuja pu LEFT JOIN tbpersona pe ON pe.tbpersonaid = pu.tbpersonaid
+WHERE pe.tbpersonaid IS NULL
+UNION ALL
+SELECT 'tbsubastacomentario.tbsubastaid', c.tbsubastacomentarioid, c.tbsubastaid
+FROM tbsubastacomentario c LEFT JOIN tbsubasta s ON s.tbsubastaid = c.tbsubastaid
+WHERE s.tbsubastaid IS NULL
+UNION ALL
+SELECT 'tbsubastacomentario.tbpersonaid', c.tbsubastacomentarioid, c.tbpersonaid
+FROM tbsubastacomentario c LEFT JOIN tbpersona pe ON pe.tbpersonaid = c.tbpersonaid
+WHERE pe.tbpersonaid IS NULL
+UNION ALL
+SELECT 'tbnotificacion.tbpersonaid', n.tbnotificacionid, n.tbpersonaid
+FROM tbnotificacion n LEFT JOIN tbpersona pe ON pe.tbpersonaid = n.tbpersonaid
+WHERE pe.tbpersonaid IS NULL
+UNION ALL
 SELECT 'tbanimalpublicacionestadoperiodo.tbanimalpublicacionid', ep.tbanimalpublicacionestadoperiodoid, ep.tbanimalpublicacionid
 FROM tbanimalpublicacionestadoperiodo ep LEFT JOIN tbanimalpublicacion ap ON ap.tbanimalpublicacionid = ep.tbanimalpublicacionid
 WHERE ap.tbanimalpublicacionid IS NULL;

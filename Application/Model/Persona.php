@@ -272,7 +272,7 @@ final class Persona
     }
 
     /**
-     * Edición que hace la propia persona: alias, teléfono y foto. Solo cambian
+     * Edición que hace la propia persona: nombre, identificación, correo, alias, teléfono y foto. Solo cambian
      * las claves presentes en $cambios (alias, telefono, fotoUrl). Un teléfono
      * nuevo deja su histórico, igual que actualizar(). Debe correr dentro de una
      * transacción (bloquea la fila y toma NamedLock para el histórico).
@@ -291,6 +291,10 @@ final class Persona
         }
 
         $columnas = [
+            'nombre' => 'tbpersonanombre',
+            'identificacionTipo' => 'tbpersonaidentificaciontipo',
+            'identificacionNumero' => 'tbpersonaidentificacionnumero',
+            'correo' => 'tbpersonacorreoelectronico',
             'alias' => 'tbpersonaalias',
             'telefono' => 'tbpersonatelefono',
             'fotoUrl' => 'tbpersonafotourl',

@@ -24,8 +24,8 @@ $checks = [];
 $evaluate = static function (string $criterio, bool $cumple, string $evidencia) use (&$checks): void {
     $checks[] = compact('criterio', 'cumple', 'evidencia');
 };
-$evaluate('cuarenta_y_tres_tablas', $manifest['table_count'] === 43,
-    'SQL crea exactamente cuarenta y tres tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
+$evaluate('cuarenta_y_siete_tablas', $manifest['table_count'] === 47,
+    'SQL crea exactamente cuarenta y siete tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
 $evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
@@ -80,10 +80,10 @@ $evaluate('tablas_singulares', $manifest['tables_sorted'] === ['tbadministrador'
     'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacioninteraccion', 'tbanimaltipo', 'tbanimalvacunacion', 'tbbitacora', 'tbcarrito',
     'tbcarritoanimal', 'tbcarritoestadoperiodo', 'tbcompra', 'tbcomprador',
     'tbcompradorpersonatelefonohistorico', 'tbcomprasolicitud',
-    'tbdireccion', 'tbespecie', 'tbfinca', 'tbfincadireccion', 'tbpagometodo', 'tbpersona',
+    'tbdireccion', 'tbespecie', 'tbfinca', 'tbfincadireccion', 'tbnotificacion', 'tbpagometodo', 'tbpersona',
     'tbproductor', 'tbproductoractividad', 'tbproductorclasificacionperiodo',
     'tbproductordireccion', 'tbproductorestadoperiodo', 'tbproductorpersonatelefonohistorico',
-    'tbproductorubicacion', 'tbraza', 'tbregistroconsulta',
+    'tbproductorubicacion', 'tbraza', 'tbregistroconsulta', 'tbsubasta', 'tbsubastacomentario', 'tbsubastapuja',
     'tbtransportista', 'tbtransportistaestadoperiodo', 'tbtransportistaflete',
     'tbtransportistahorario', 'tbtransportistaoferta', 'tbtransportistaresena', 'tbtransportistavehiculo', 'tbvacuna',
     'tbvehiculo', 'tbventa'],

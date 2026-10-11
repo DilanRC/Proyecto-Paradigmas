@@ -590,3 +590,8 @@
 .featured [data-featured-more] { flex:0 0 auto; white-space:nowrap; }
 
 .featured-carousel { margin-top:28px; }
+/* Campana del encabezado: se apoya en .public-cart y en el panel del menú de cuenta. */
+.public-bell__panel { width:min(340px, calc(100vw - 32px)); max-height:min(70vh, 480px); overflow-y:auto; }
+.public-bell__panel .public-bell__item { display:grid; align-items:start; gap:2px; min-height:0; padding:9px 10px; }
+.public-bell__item small { color:var(--tc-text-soft); }
+.public-bell__item.is-nueva strong::before { content:'● '; color:var(--tc-success); }

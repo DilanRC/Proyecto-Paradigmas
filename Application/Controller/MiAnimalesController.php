@@ -21,8 +21,8 @@ use PDO;
 use Throwable;
 
 /**
- * Inventario del vendedor (P2-4): ver sus animales, registrar uno sin publicarlo y publicarlo después.
- * Un animal ajeno responde 404. Cada alta queda en la bitácora.
+ * Inventario del vendedor (P2-4): ver sus animales, registrar uno sin publicarlo, editarlo, llevar su
+ * historial de pesos y publicarlo después. Un animal ajeno responde 404. Cada cambio queda en la bitácora.
  */
 final class MiAnimalesController
 {
@@ -59,11 +59,15 @@ final class MiAnimalesController
                 throw new HttpException('Debe iniciar sesión para ver sus animales.', 401);
             }
             return match ($metodo) {
-                'GET' => $this->respuesta(true, 'Inventario consultado correctamente.', [
+                'GET' => array_key_exists('animalId', $cuerpo) ? $this->historial($cuerpo) : $this->respuesta(true, 'Inventario consultado correctamente.', [
                     'animales' => $this->animales->inventarioPropio($this->productorId(false)),
                 ]),
                 'POST' => $this->registrar($cuerpo),
-                'PATCH' => $this->publicar($cuerpo),
+                'PATCH' => match ($cuerpo['accion'] ?? null) {
+                    'EDITAR' => $this->editar($cuerpo),
+                    'PESAR' => $this->pesar($cuerpo),
+                    default => $this->publicar($cuerpo),
+                },
                 default => $this->respuesta(false, 'Método no permitido.', null, 405),
             };
         } catch (HttpException $excepcion) {
@@ -155,7 +159,7 @@ final class MiAnimalesController
         $permitidos = ['animalId', 'accion', 'fincaNombre', 'titulo', 'precio', 'descripcion', 'imagenUrl'];
         $errores = [];
         foreach (array_diff(array_keys($cuerpo), $permitidos) as $campo) $errores[$campo] = 'Campo no permitido.';
-        if (($cuerpo['accion'] ?? null) !== 'PUBLICAR') $errores['accion'] = 'La única acción disponible es PUBLICAR.';
+        if (($cuerpo['accion'] ?? null) !== 'PUBLICAR') $errores['accion'] = 'Use PUBLICAR, EDITAR o PESAR.';
         $animalId = filter_var(is_bool($cuerpo['animalId'] ?? null) ? false : $cuerpo['animalId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($animalId === false) $errores['animalId'] = 'Debe ser un entero positivo.';
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
@@ -203,6 +207,174 @@ final class MiAnimalesController
         return $this->respuesta(true, 'Publicación creada correctamente.', $resultado + [
             'animales' => $this->animales->inventarioPropio($productorId),
         ], 201);
+    }
+
+    /** GET ?animalId=: historial de pesos (observaciones) de un animal propio, de la más reciente a la más antigua. */
+    private function historial(array $consulta): array
+    {
+        $animalId = $this->animalId($consulta);
+        $productorId = $this->productorId(false);
+        if ($this->vacunaciones->animalPropio($animalId, $productorId) === null) {
+            throw new HttpException('El animal no existe en tu cuenta.', 404);
+        }
+
+        return $this->respuesta(true, 'Historial consultado correctamente.', [
+            'observaciones' => $this->animales->observaciones($animalId),
+        ]);
+    }
+
+    /**
+     * PATCH { animalId, accion: 'EDITAR', ...los campos del alta }: reemplaza los datos del animal con los del formulario
+     * (un campo que no llega queda vacío). Excepciones: sin la clave `arete` se conserva la identificación (los animales
+     * viejos tienen una libre, no un arete SENASA) y sin `raza` ni `razaId` se conserva la raza escrita a mano.
+     * Peso, edad o propósito distintos de los vigentes agregan una observación nueva: el historial no se reescribe.
+     */
+    private function editar(array $cuerpo): array
+    {
+        $campos = ['animalId', 'accion', 'especieId', 'tipoId', 'razaId', 'sexo', 'arete', 'fechaNacimiento',
+            'fechaNacimientoEstimada', 'partos', 'peso', 'edadMeses', 'proposito', 'raza'];
+        $desconocidos = array_diff(array_keys($cuerpo), $campos);
+        if ($desconocidos !== []) {
+            throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
+        }
+        $animalId = $this->animalId($cuerpo);
+        $texto = AnimalPublicacionController::texto(...);
+        $numero = AnimalPublicacionController::numero(...);
+        $v = AnimalPublicacionController::validarTodos([
+            'modelo' => fn () => AnimalValidacionService::validar($this->catalogo, $cuerpo),
+            'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),
+            'sexo' => fn () => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
+            'proposito' => fn () => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
+            'edadMeses' => fn () => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
+            'peso' => fn () => $numero($cuerpo['peso'] ?? null, 'peso'),
+        ]);
+        $modelo = $v['modelo'];
+        $productorId = $this->productorId(true);
+
+        $this->animales->ejecutarConBloqueoAlta('tbanimal', fn (): array => $this->animales->ejecutarConBloqueoAlta(
+            'tbanimalproduccionsalud',
+            fn (): array => $this->enTransaccion(function () use ($animalId, $productorId, $cuerpo, $modelo, $v): array {
+                $this->exigirAnimalVigente($animalId, $productorId);
+                $anterior = $this->animales->datosAnimal($animalId);
+                $conArete = array_key_exists('arete', $cuerpo);
+                $arete = $conArete ? $modelo['arete'] : $anterior['arete'];
+                if ($conArete && $arete !== null && $this->animales->existeAreteVigente($arete, $animalId)) {
+                    throw new HttpException('Revise los campos indicados.', 409, null, ['arete' => 'Ya hay un animal con ese arete.']);
+                }
+                $razaLibre = !array_key_exists('raza', $cuerpo) && !array_key_exists('razaId', $cuerpo) && $anterior['razaId'] === null;
+                $nuevo = [
+                    'arete' => $arete,
+                    'sexo' => $modelo['sexo'] ?? $v['sexo'],
+                    'raza' => $modelo['razaNombre'] ?? ($razaLibre ? $anterior['raza'] : $v['raza']),
+                    'especieId' => $modelo['especieId'],
+                    'tipoId' => $modelo['tipoId'],
+                    'razaId' => $modelo['razaId'],
+                    'fechaNacimiento' => $modelo['fechaNacimiento'],
+                    'fechaNacimientoEstimada' => $modelo['fechaNacimientoEstimada'],
+                    'partos' => $modelo['partos'],
+                ];
+                $this->animales->actualizarAnimal($animalId, $nuevo);
+
+                // Peso, edad o propósito nuevos: una observación más, completando con los datos vigentes.
+                $vigente = $this->animales->observaciones($animalId)[0] ?? ['peso' => null, 'edadMeses' => null, 'proposito' => null];
+                $observacion = ['peso' => $vigente['peso'], 'edadMeses' => $vigente['edadMeses'], 'proposito' => $vigente['proposito']];
+                $antes = $observacion;
+                if ($v['peso'] !== null) $observacion['peso'] = $v['peso'];
+                if ($v['edadMeses'] !== null) $observacion['edadMeses'] = (int) $v['edadMeses'];
+                if ($v['proposito'] !== null) $observacion['proposito'] = $v['proposito'];
+                if ($observacion !== $antes) {
+                    $this->animales->registrarObservacion($animalId, ['origen' => self::ORIGEN] + $observacion);
+                    $nuevo += $observacion;
+                }
+                $this->bitacora->registrar('ACTUALIZAR', (string) $animalId, $anterior, $nuevo, $this->solicitudId,
+                    entidad: 'ANIMAL', origen: self::ORIGEN);
+                return $nuevo;
+            }),
+        ));
+
+        return $this->respuesta(true, 'Animal actualizado.', [
+            'animales' => $this->animales->inventarioPropio($productorId),
+        ]);
+    }
+
+    /**
+     * PATCH { animalId, accion: 'PESAR', peso, fecha? }: agrega un peso al historial (fecha AAAA-MM-DD, hoy por omisión,
+     * nunca futura). Conserva el propósito vigente y estima la edad sumando los meses desde la observación vigente.
+     */
+    private function pesar(array $cuerpo): array
+    {
+        $desconocidos = array_diff(array_keys($cuerpo), ['animalId', 'accion', 'peso', 'fecha']);
+        if ($desconocidos !== []) {
+            throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
+        }
+        $animalId = $this->animalId($cuerpo);
+        $hoy = AnimalValidacionService::hoy();
+        $datos = AnimalPublicacionController::validarTodos([
+            'peso' => fn () => AnimalPublicacionController::numero($cuerpo['peso'] ?? null, 'peso')
+                ?? throw new HttpException('Revise los campos indicados.', 422, null, ['peso' => 'Este campo es obligatorio.']),
+            'fecha' => function () use ($cuerpo, $hoy): string {
+                $fecha = $cuerpo['fecha'] ?? null;
+                if ($fecha === null || $fecha === '') return $hoy;
+                $partes = is_string($fecha) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha) === 1 ? explode('-', $fecha) : null;
+                if ($partes === null || !checkdate((int) $partes[1], (int) $partes[2], (int) $partes[0])) {
+                    throw new HttpException('Revise los campos indicados.', 422, null, ['fecha' => 'Usa una fecha válida (AAAA-MM-DD).']);
+                }
+                if ($fecha > $hoy) {
+                    throw new HttpException('Revise los campos indicados.', 422, null, ['fecha' => 'La fecha no puede ser futura.']);
+                }
+                return $fecha;
+            },
+        ]);
+        $productorId = $this->productorId(true);
+
+        $this->animales->ejecutarConBloqueoAlta('tbanimalproduccionsalud', fn (): array => $this->enTransaccion(
+            function () use ($animalId, $productorId, $datos, $hoy): array {
+                $this->exigirAnimalVigente($animalId, $productorId);
+                $vigente = $this->animales->observaciones($animalId)[0] ?? null;
+                // Un peso de hoy queda como el vigente; uno de otro día se ordena en su fecha.
+                $fecha = $datos['fecha'] === $hoy ? date('Y-m-d H:i:s') : $datos['fecha'] . ' 12:00:00';
+                $edad = null;
+                if ($vigente !== null && $vigente['edadMeses'] !== null) {
+                    [$a1, $m1] = array_map('intval', explode('-', substr($vigente['fecha'], 0, 7)));
+                    [$a2, $m2] = array_map('intval', explode('-', substr($fecha, 0, 7)));
+                    $edad = $vigente['edadMeses'] + ($a2 - $a1) * 12 + ($m2 - $m1);
+                    if ($edad < 0) $edad = null;
+                }
+                $nuevo = ['fecha' => $fecha, 'peso' => $datos['peso'], 'edadMeses' => $edad, 'proposito' => $vigente['proposito'] ?? null];
+                $this->animales->registrarObservacion($animalId, ['origen' => self::ORIGEN] + $nuevo);
+                $this->bitacora->registrar('PESAR', (string) $animalId, null, $nuevo, $this->solicitudId,
+                    entidad: 'ANIMAL', origen: self::ORIGEN);
+                return $nuevo;
+            },
+        ));
+
+        return $this->respuesta(true, 'Peso registrado.', [
+            'observaciones' => $this->animales->observaciones($animalId),
+            'animales' => $this->animales->inventarioPropio($productorId),
+        ], 201);
+    }
+
+    private function animalId(array $cuerpo): int
+    {
+        $animalId = filter_var(is_bool($cuerpo['animalId'] ?? null) ? false : $cuerpo['animalId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+        if ($animalId === false) {
+            throw new HttpException('Revise los campos indicados.', 422, null, ['animalId' => 'Debe ser un entero positivo.']);
+        }
+        return $animalId;
+    }
+
+    /** Solo se edita o pesa un animal propio que sigue en el inventario o publicado (no vendido ni inactivo). */
+    private function exigirAnimalVigente(int $animalId, int $productorId): void
+    {
+        $animal = $this->vacunaciones->animalPropio($animalId, $productorId);
+        if ($animal === null) throw new HttpException('El animal no existe en tu cuenta.', 404);
+        if (in_array($animal['estado'], ['VENDIDO', 'INACTIVO'], true)) {
+            throw new HttpException('El animal ya fue vendido o está inactivo: no se puede cambiar.', 409);
+        }
+        // Quien puja vio estos datos: no cambian mientras la subasta está abierta.
+        if ($animal['estado'] === 'SUBASTA') {
+            throw new HttpException('El animal está en una subasta abierta: se podrá cambiar cuando termine.', 409);
+        }
     }
 
     private function productorId(bool $escritura): int

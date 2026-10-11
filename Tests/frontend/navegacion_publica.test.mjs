@@ -26,12 +26,12 @@ test('cerrar sesión y una sesión vencida llevan a Inicio', () => {
 });
 
 test('sin sesión solo queda Inicio y las páginas privadas piden cuenta', () => {
-    assert.match(publicUi, /export const PRIVATE_PAGES = Object\.freeze\(\['explorar', 'publicar', 'fletes'\]\)/);
+    assert.match(publicUi, /export const PRIVATE_PAGES = Object\.freeze\(\['explorar', 'publicar', 'fletes', 'subastas'\]\)/);
     // Publicar y Fletes solo se agregan al menú con sesión.
     assert.match(publicUi, /if \(session\?\.authenticated === true\) \{\n\s+addNavLink\(nav, 'publicar'/);
     assert.match(publicUi, /hideAnonymousLinks\(\);\n\s+initializeAnonymousGate\(\);/);
-    // Entrar por URL a /explorar o /fletes sin sesión vuelve a Inicio.
-    assert.match(publicUi, /\['explorar', 'fletes'\]\.includes\(pageName\(window\.location\.href\)\)\n\s+&& !readSession\(\)\) \{\n\s+window\.location\.replace\('\.\/'\);/);
+    // Entrar por URL a /explorar, /fletes o /subastas sin sesión vuelve a Inicio.
+    assert.match(publicUi, /\['explorar', 'fletes', 'subastas'\]\.includes\(pageName\(window\.location\.href\)\)\n\s+&& !readSession\(\)\) \{\n\s+window\.location\.replace\('\.\/'\);/);
 });
 
 test('el destino privado se reconstruye para volver tras iniciar sesión', async () => {

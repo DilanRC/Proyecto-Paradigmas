@@ -4,7 +4,9 @@
 
 import { request } from './shared/api.js';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
+import { endExpiredSession, readAuthSession, refreshAuthSession } from './shared/supabase-auth.js?v=session-3';
+import { TIPOS_NUMERICOS, aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
+import { TITULO_TELEFONO, aplicarRestriccionTelefono, telefonoValido } from './shared/telefono.js?v=mascaras-1';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { createToast } from './shared/toast.js';
 import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-2';
@@ -55,6 +57,23 @@ function sensitiveRow(label, value, key) {
 /** Solo lo que cambió: el API no toca lo que no se envía. */
 export function cambiosPerfil(valores = {}, persona = {}) {
     const cambios = {};
+    if ('nombre' in valores) {
+        const nombre = String(valores.nombre ?? '').trim().replace(/\s+/g, ' ');
+        if (nombre !== String(persona.nombre ?? '')) cambios.nombre = nombre;
+    }
+    if ('identificacionTipo' in valores) {
+        const tipoCodigo = String(valores.identificacionTipo ?? '');
+        const numero = String(valores.identificacionNumero ?? '').trim();
+        // Igual que el servidor: las cédulas y el DIMEX se guardan sin espacios ni guiones.
+        const normalizado = (TIPOS_NUMERICOS.includes(tipoCodigo) ? numero.replace(/[ -]+/g, '') : numero).toUpperCase();
+        if (tipoCodigo !== String(persona.identificacionTipo ?? '') || normalizado !== String(persona.identificacionNumero ?? '')) {
+            cambios.identificacion = { tipoCodigo, numero };
+        }
+    }
+    if ('correoElectronico' in valores) {
+        const correo = String(valores.correoElectronico ?? '').trim().toLowerCase();
+        if (correo !== String(persona.correoElectronico ?? '').toLowerCase()) cambios.correoElectronico = correo;
+    }
     const alias = String(valores.alias ?? '').trim();
     if (alias !== String(persona.alias ?? '')) cambios.alias = alias === '' ? null : alias;
     const telefono = String(valores.telefono ?? '').trim();
@@ -187,11 +206,35 @@ function toggleProfileForm(abrir) {
     form.hidden = !abrir;
     document.querySelector('#profile-edit').hidden = abrir;
     if (!abrir) return;
-    form.elements.alias.value = activityData?.persona?.alias ?? '';
-    form.elements.telefono.value = activityData?.persona?.telefono ?? '';
+    const persona = activityData?.persona ?? {};
+    form.elements.nombre.value = persona.nombre ?? '';
+    form.elements.identificacionTipo.value = persona.identificacionTipo ?? 'CEDULA_FISICA';
+    form.elements.identificacionNumero.value = persona.identificacionNumero ?? '';
+    aplicarRestriccionIdentificacion(form.elements.identificacionNumero, form.elements.identificacionTipo.value,
+        { hint: document.querySelector('#profile-identificacion-hint') });
+    form.elements.correoElectronico.value = persona.correoElectronico ?? '';
+    form.elements.alias.value = persona.alias ?? '';
+    form.elements.telefono.value = persona.telefono ?? '';
     setProfileErrors({});
     mostrarEstado(document.querySelector('#profile-form-status'), '', 'info');
-    form.elements.alias.focus();
+    form.elements.nombre.focus();
+}
+
+/** Las mismas reglas que el servidor, antes de enviar (el servidor revalida). */
+function erroresPerfil(form, cambios) {
+    const errores = {};
+    if ('nombre' in cambios && cambios.nombre.length < 3) errores.nombre = 'Debe tener al menos 3 caracteres.';
+    if (cambios.identificacion) {
+        const mensaje = cambios.identificacion.numero === ''
+            ? 'Este campo es obligatorio.'
+            : errorIdentificacion(cambios.identificacion.tipoCodigo, cambios.identificacion.numero);
+        if (mensaje) errores['identificacion.numero'] = mensaje;
+    }
+    if ('correoElectronico' in cambios && !form.elements.correoElectronico.checkValidity()) {
+        errores.correoElectronico = 'Ingrese un correo electrónico válido.';
+    }
+    if ('telefono' in cambios && !telefonoValido(cambios.telefono)) errores.telefono = TITULO_TELEFONO;
+    return errores;
 }
 
 async function saveProfile(event) {
@@ -201,13 +244,22 @@ async function saveProfile(event) {
     const guardar = document.querySelector('#profile-save');
     const cambios = cambiosPerfil(Object.fromEntries(new FormData(form).entries()), activityData?.persona);
     if (Object.keys(cambios).length === 0) { toggleProfileForm(false); return; }
-    setProfileErrors({});
+    const errores = erroresPerfil(form, cambios);
+    setProfileErrors(errores);
+    if (Object.keys(errores).length > 0) {
+        mostrarEstado(status, 'Revisa los campos indicados.', 'error');
+        return;
+    }
     guardar.disabled = true;
     mostrarEstado(status, 'Guardando…', 'info');
     try {
         const response = await patchPerfil(cambios);
+        // La sesión se vincula por el correo: con el correo nuevo hay que renovar el token.
+        if (cambios.correoElectronico) await refreshAuthSession().catch(() => {});
         toggleProfileForm(false);
-        toast?.success(response.message || 'Perfil actualizado.');
+        toast?.success(cambios.correoElectronico
+            ? 'Perfil actualizado. Desde ahora inicias sesión con tu correo nuevo.'
+            : (response.message || 'Perfil actualizado.'));
     } catch (error) {
         setProfileErrors(error?.errors ?? {});
         mostrarEstado(status, [error?.message || 'No pudimos guardar tus datos.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
@@ -220,6 +272,13 @@ function initializeProfileUi() {
     document.querySelector('#profile-edit')?.addEventListener('click', () => toggleProfileForm(true));
     document.querySelector('#profile-cancel')?.addEventListener('click', () => toggleProfileForm(false));
     document.querySelector('#profile-form')?.addEventListener('submit', saveProfile);
+    const formPerfil = document.querySelector('#profile-form');
+    if (formPerfil) {
+        formPerfil.elements.identificacionTipo.addEventListener('change', () => aplicarRestriccionIdentificacion(
+            formPerfil.elements.identificacionNumero, formPerfil.elements.identificacionTipo.value,
+            { hint: document.querySelector('#profile-identificacion-hint') }));
+        aplicarRestriccionTelefono(formPerfil.elements.telefono);
+    }
     document.querySelector('#profile-photo-change')?.addEventListener('click', () => document.querySelector('#profile-photo-file').click());
     document.querySelector('#profile-photo-file')?.addEventListener('change', changePhoto);
     document.querySelector('#profile-photo-remove')?.addEventListener('click', removePhoto);

@@ -1,0 +1,300 @@
+/* Subastas en vivo (página /subastas y la banda de Explorar). Solo variables --tc-*; el coral queda para el botón
+   principal (Abrir subasta, Pujar), que ya lo pone .activity-button--primary. */
+
+.subastas-heading {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:18px;
+}
+
+.subastas-heading h1 { margin:0 0 6px; }
+
+.subastas-heading__actions {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:12px;
+}
+
+/* Indicador "En vivo": punto verde cuando el WebSocket está conectado. */
+.subastas-vivo {
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    color:var(--tc-text-soft);
+    font-size:.82rem;
+    font-weight:700;
+}
+
+.subastas-vivo::before {
+    content:'';
+    width:9px;
+    height:9px;
+    border-radius:50%;
+    background:var(--tc-line-strong);
+}
+
+.subastas-vivo[data-conectado='true'] { color:var(--tc-success); }
+
+.subastas-vivo[data-conectado='true']::before {
+    background:var(--tc-success);
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--tc-success) 22%, transparent);
+}
+
+.subastas-tools {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    margin-bottom:18px;
+}
+
+.subastas-tabs {
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+}
+
+.subastas-tabs button {
+    min-height:40px;
+    padding:0 14px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:999px;
+    color:var(--tc-text-soft);
+    background:transparent;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+}
+
+.subastas-tabs button[aria-selected='true'] {
+    color:var(--tc-text);
+    border-color:var(--tc-text);
+    background:var(--tc-bg-elevated);
+}
+
+.subastas-tabs button:focus-visible,
+.subasta-card a:focus-visible {
+    outline:3px solid color-mix(in srgb, var(--tc-primary) 55%, transparent);
+    outline-offset:2px;
+}
+
+.subastas-buscar { min-width:min(320px, 100%); margin:0; }
+
+.subastas-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
+    gap:16px;
+}
+
+.subasta-card {
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border:1px solid var(--tc-line);
+    border-radius:18px;
+    background:var(--tc-surface);
+}
+
+.subasta-card__foto,
+.subasta-foto {
+    position:relative;
+    display:grid;
+    aspect-ratio:4 / 3;
+    place-items:center;
+    overflow:hidden;
+    color:var(--tc-text-soft);
+    background:var(--tc-bg-elevated);
+    font-size:2.4rem;
+}
+
+.subasta-card__foto img,
+.subasta-foto img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+}
+
+.subasta-card__foto .subasta-estado {
+    position:absolute;
+    top:10px;
+    left:10px;
+}
+
+.subasta-card__cuerpo {
+    display:grid;
+    flex:1;
+    gap:6px;
+    padding:14px 16px 16px;
+}
+
+.subasta-card__cuerpo h2 { margin:0; font-size:1.05rem; line-height:1.3; }
+
+.subasta-card__meta,
+.subasta-card__reloj,
+.subasta-card__tuya { margin:0; color:var(--tc-text-soft); font-size:.88rem; }
+
+.subasta-card__precio { margin:0; color:var(--tc-text-soft); }
+.subasta-card__precio strong { color:var(--tc-text); font-size:1.25rem; }
+.subasta-card__reloj { display:flex; gap:6px; align-items:center; font-weight:700; }
+.subasta-card__tuya { font-weight:800; }
+.subasta-card .activity-button { margin-top:6px; justify-content:center; }
+
+.subasta-estado {
+    display:inline-flex;
+    padding:3px 10px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:999px;
+    color:var(--tc-text);
+    background:var(--tc-bg-elevated);
+    font-size:.75rem;
+    font-weight:800;
+    letter-spacing:.03em;
+}
+
+.subasta-estado[data-estado='ACTIVA'] {
+    color:var(--tc-success);
+    border-color:var(--tc-success);
+    background:var(--tc-success-bg);
+}
+
+/* Detalle */
+.subasta-detalle > .panel-link { display:inline-flex; margin-bottom:14px; }
+
+.subasta-layout {
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(280px, 360px);
+    gap:18px;
+    align-items:start;
+}
+
+.subasta-principal,
+.subasta-lateral { display:grid; gap:16px; min-width:0; }
+
+.subasta-lateral { position:sticky; top:16px; }
+
+.subasta-foto { border-radius:18px; max-height:420px; }
+
+.subasta-principal h1 { margin:.2rem 0 .4rem; overflow-wrap:anywhere; }
+
+.subasta-datos {
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));
+    gap:10px 16px;
+    margin:12px 0 0;
+}
+
+.subasta-datos div { min-width:0; }
+.subasta-datos dt { color:var(--tc-text-soft); font-size:.78rem; font-weight:700; }
+.subasta-datos dd { margin:2px 0 0; overflow-wrap:anywhere; }
+
+.subasta-trato { border-color:var(--tc-success); }
+.subasta-trato h2 { margin-top:0; }
+
+.subasta-precio__etiqueta { margin:0; color:var(--tc-text-soft); font-weight:700; }
+.subasta-precio__monto { margin:2px 0; font-size:2rem; font-weight:800; line-height:1.1; }
+.subasta-precio__extra { margin:0; color:var(--tc-text-soft); }
+
+.subasta-reloj {
+    display:flex;
+    gap:8px;
+    align-items:center;
+    margin:14px 0;
+    padding:10px 12px;
+    border:1px solid var(--tc-line);
+    border-radius:12px;
+    font-size:1.05rem;
+    font-weight:800;
+    font-variant-numeric:tabular-nums;
+}
+
+.subasta-pujar { display:grid; gap:10px; }
+.subasta-pujar .activity-button { justify-content:center; }
+
+.subasta-lista,
+.subasta-comentarios {
+    display:grid;
+    gap:8px;
+    margin:0;
+    padding:0;
+    list-style:none;
+}
+
+.subasta-lista li,
+.subasta-comentarios li {
+    padding:9px 11px;
+    border:1px solid var(--tc-line);
+    border-radius:12px;
+    overflow-wrap:anywhere;
+}
+
+.subasta-lista li span { color:var(--tc-text-soft); }
+.subasta-lista li.es-mia,
+.subasta-comentarios li.es-mio { border-color:var(--tc-text-soft); background:var(--tc-bg-elevated); }
+.subasta-lista__vacia { color:var(--tc-text-soft); }
+
+.subasta-comentarios { max-height:360px; overflow-y:auto; margin-bottom:12px; }
+.subasta-comentarios p { margin:4px 0 0; white-space:pre-wrap; }
+.subasta-comentarios__hora { margin-left:8px; color:var(--tc-text-soft); font-size:.78rem; }
+
+.subasta-comentar { display:grid; gap:10px; }
+.subasta-comentar .activity-button { justify-self:end; }
+
+.subasta-tel { color:var(--tc-text); font-weight:800; }
+
+/* Banda "Subastas en vivo" en Explorar */
+.subastas-banda {
+    display:grid;
+    gap:12px;
+    margin:0 0 22px;
+    padding:16px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:18px;
+    background:var(--tc-surface);
+}
+
+.subastas-banda__cabecera {
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.subastas-banda__cabecera h2 { margin:0; font-size:1.15rem; }
+.subastas-banda__ver { margin-left:auto; color:var(--tc-text); font-weight:800; }
+
+.subastas-banda__lista {
+    display:grid;
+    grid-auto-flow:column;
+    grid-auto-columns:minmax(230px, 280px);
+    gap:12px;
+    overflow-x:auto;
+    padding-bottom:4px;
+}
+
+.subastas-banda__item {
+    display:grid;
+    gap:4px;
+    padding:12px;
+    border:1px solid var(--tc-line);
+    border-radius:14px;
+    color:var(--tc-text);
+    background:var(--tc-bg-elevated);
+    text-decoration:none;
+}
+
+.subastas-banda__item:hover,
+.subastas-banda__item:focus-visible { border-color:var(--tc-text-soft); }
+.subastas-banda__item:focus-visible { outline:3px solid color-mix(in srgb, var(--tc-primary) 55%, transparent); outline-offset:2px; }
+.subastas-banda__item strong { font-size:1.1rem; }
+.subastas-banda__item span { color:var(--tc-text-soft); font-size:.85rem; }
+
+@media (max-width: 860px) {
+    .subasta-layout { grid-template-columns:minmax(0, 1fr); }
+    .subasta-lateral { position:static; order:-1; }
+}

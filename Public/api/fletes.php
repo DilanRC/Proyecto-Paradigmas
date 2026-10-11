@@ -15,7 +15,7 @@ require_once $raiz . '/Application/Auth/ActorContext.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
 require_once $raiz . '/Application/Service/AuthGuard.php';
 require_once $raiz . '/Application/Service/PublicacionCercaniaService.php';
-foreach (['NamedLock', 'Persona', 'Direccion', 'TransportistaOferta', 'CompraSolicitud'] as $modelo) {
+foreach (['NamedLock', 'Persona', 'Direccion', 'TransportistaOferta', 'CompraSolicitud', 'Subasta'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Controller/FletesController.php';

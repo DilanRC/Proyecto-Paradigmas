@@ -7,7 +7,7 @@ import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
-import { montarMisAnimales } from './mis-animales.js?v=animales-4';
+import { montarMisAnimales } from './mis-animales.js?v=animales-6';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 

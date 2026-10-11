@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Application\Controller;
 
+// Los fletes del ganador de una subasta salen del punto de su finca.
+require_once dirname(__DIR__) . '/Model/Subasta.php';
+
 use Application\Auth\ActorContext;
 use Application\HttpException;
 use Application\Model\CompraSolicitud;
 use Application\Model\Direccion;
+use Application\Model\Subasta;
 use Application\Model\TransportistaOferta;
 use PDO;
 
@@ -16,11 +20,13 @@ final class FletesController
 {
     private TransportistaOferta $ofertas;
     private CompraSolicitud $solicitudes;
+    private Subasta $subastas;
 
     public function __construct(PDO $conexion, private readonly ?ActorContext $actor = null)
     {
         $this->ofertas = new TransportistaOferta($conexion, new Direccion($conexion));
         $this->solicitudes = new CompraSolicitud($conexion);
+        $this->subastas = new Subasta($conexion);
     }
 
     public function procesar(string $metodo, array $consulta = []): array
@@ -36,8 +42,24 @@ final class FletesController
     private function consultar(array $consulta): array
     {
         $errores = [];
-        // Con publicacionId el punto es el de la finca del animal (sus coordenadas no se exponen al navegador).
-        if (($consulta['publicacionId'] ?? '') !== '') {
+        $conContacto = false;
+        if (($consulta['subastaId'] ?? '') !== '') {
+            // El ganador de una subasta ve los fletes que cubren la finca, con el teléfono del transportista: ya hay trato.
+            $subastaId = $this->entero($consulta['subastaId'], 'subastaId', 1, 2147483647, $errores);
+            $subasta = $errores === [] ? $this->subastas->buscar($subastaId) : null;
+            if ($errores === [] && ($subasta === null || $subasta['estado'] !== 'FINALIZADA'
+                || $subasta['ganadorPersonaId'] !== ($this->actor?->tienePersona() ? (int) $this->actor->personaId : -1))) {
+                throw new HttpException('La subasta no existe o no la ganaste.', 404);
+            }
+            $ubicacion = $subasta === null ? null : $this->subastas->ubicacionFinca($subasta['fincaId']);
+            if ($errores === [] && ($ubicacion['latitud'] ?? null) === null) {
+                $errores['subastaId'] = 'La finca de esta subasta no tiene su ubicación en el mapa.';
+            }
+            $latitud = (float) ($ubicacion['latitud'] ?? 0.0);
+            $longitud = (float) ($ubicacion['longitud'] ?? 0.0);
+            $conContacto = true;
+        } elseif (($consulta['publicacionId'] ?? '') !== '') {
+            // Con publicacionId el punto es el de la finca del animal (sus coordenadas no se exponen al navegador).
             $publicacionId = $this->entero($consulta['publicacionId'], 'publicacionId', 1, 2147483647, $errores);
             $punto = $errores === [] ? $this->solicitudes->puntoDeFinca($publicacionId) : null;
             if ($errores === [] && $punto === null) {
@@ -57,6 +79,7 @@ final class FletesController
         $resultado = $this->ofertas->listarCercanas(
             $latitud, $longitud, $capacidad, $pagina, $tamano,
             $this->actor?->tienePersona() ? (int) $this->actor->personaId : null,
+            $conContacto,
         );
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;

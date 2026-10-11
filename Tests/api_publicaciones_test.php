@@ -287,12 +287,51 @@ try {
     test_same([], $ids($comprador->procesar('GET', [], [])), 'Sin marcas la lista está vacía');
 
     test_same(201, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA'])['status'], 'Marcar Me interesa');
+    $doble = $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA']);
+    test_same(200, $doble['status'], 'Marcar dos veces es idempotente');
+    test_same(false, $doble['body']['data']['cambiado'] ?? null, 'El segundo REGISTRAR no escribe');
+    $filas = $db->prepare("SELECT COUNT(*) FROM tbanimalpublicacioninteraccion
+        WHERE tbpersonaid = :persona AND tbanimalpublicacionid = :publicacion AND tbanimalpublicacioninteracciontipo = 'ME_INTERESA'");
+    $filas->execute(['persona' => $personaOtroId, 'publicacion' => $guardableId]);
+    test_same(1, (int) $filas->fetchColumn(), 'Dos toques en Me interesa guardan una sola fila');
     test_same([$guardableId], $ids($comprador->procesar('GET', [], ['tipo' => 'ME_INTERESA'])), 'La marcada aparece en la lista');
+
+    // La lista se ordena por cuándo se marcó, no por la fecha de la publicación.
+    $tercera = $publicador->procesar('POST', [], [
+        'fincaNombre' => 'Finca Publicaciones',
+        'animalIdentificacion' => 'API-' . test_token('animal'),
+        'titulo' => 'Para guardar B ' . test_token('titulo'),
+        'precio' => 650000,
+    ]);
+    $terceraId = (int) $tercera['body']['data']['publicacionId'];
+    $animalIds[] = (int) $tercera['body']['data']['animalId'];
+    $comprador->procesar('POST', ['publicacionId' => $terceraId, 'tipo' => 'ME_INTERESA']);
+    test_same([$terceraId, $guardableId], $ids($comprador->procesar('GET', [], [])), 'Lo último que marcaste sale primero');
+    $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR']);
+    $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA']);
+    test_same([$guardableId, $terceraId], $ids($comprador->procesar('GET', [], [])), 'Volver a marcar la sube al inicio');
+
+    // Filtros de Explorar en el servidor: zona sin tildes, precio y lo ya marcado.
+    $explorar = static fn (array $consulta): array => array_map('intval', array_column(
+        $ajeno->procesar('GET', $consulta + ['q' => 'Para guardar'], [])['body']['data']['publicaciones'] ?? [], 'publicacionId'));
+    test_same([$terceraId, $guardableId], $explorar(['ubicacion' => 'san carlos']), 'Ubicación filtra por cantón');
+    test_same(2, count($explorar(['ubicacion' => 'AGUAS ZÁRCAS, san carlos'])), 'Ubicación ignora tildes y mayúsculas');
+    test_same([], $explorar(['ubicacion' => 'Limón']), 'Otra zona no devuelve nada');
+    test_same([$terceraId], $explorar(['precioMin' => '600000']), 'Precio mínimo');
+    test_same([$guardableId], $explorar(['precioMax' => '500000']), 'Precio máximo inclusivo');
+    test_same([], $explorar(['excluirMarcadas' => 'true']), 'excluirMarcadas deja fuera lo que está en Me interesa');
+    test_same(422, $ajeno->procesar('GET', ['precioMin' => '9', 'precioMax' => '1'], [])['status'], 'Mínimo mayor que máximo es 422');
+    test_same(422, $ajeno->procesar('POST', [], ['consulta' => ['ubicacion' => ['x']]])['status'], 'Ubicación que no es texto es 422');
+    test_same(2, $ajeno->procesar('GET', ['q' => 'Para guardar', 'ubicacion' => 'san carlos', 'latitud' => '10', 'longitud' => '-84'], [])['body']['data']['total'] ?? null,
+        'Los filtros también aplican al ordenar por cercanía');
+    $comprador->procesar('POST', ['publicacionId' => $terceraId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR']);
+    $guardable = static fn (array $lista): array => array_values(array_filter($lista,
+        static fn (array $p): bool => (int) $p['publicacionId'] === $guardableId))[0];
     $conMarca = $ajeno->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'];
-    test_same(true, $conMarca[0]['meInteresa'] ?? null, 'El listado trae meInteresa=true con sesión');
+    test_same(true, $guardable($conMarca)['meInteresa'] ?? null, 'El listado trae meInteresa=true con sesión');
     $propiaMarca = $publicador->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'];
-    test_same(false, $propiaMarca[0]['meInteresa'] ?? null, 'Otra persona ve meInteresa=false');
-    test_assert(!array_key_exists('meInteresa', test_publicacion_controller()->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'][0]),
+    test_same(false, $guardable($propiaMarca)['meInteresa'] ?? null, 'Otra persona ve meInteresa=false');
+    test_assert(!array_key_exists('meInteresa', $guardable(test_publicacion_controller()->procesar('GET', ['q' => 'Para guardar'], [])['body']['data']['publicaciones'])),
         'Sin sesión no hay campo meInteresa');
 
     test_same(201, $comprador->procesar('POST', ['publicacionId' => $guardableId, 'tipo' => 'ME_INTERESA', 'accion' => 'RETIRAR'])['status'], 'Retirar de Me interesa');

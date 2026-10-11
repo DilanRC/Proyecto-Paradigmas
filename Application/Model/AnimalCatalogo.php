@@ -82,7 +82,9 @@ final class AnimalCatalogo
     public function crear(string $catalogo, string $nombre, ?int $especieId, ?string $sexo): int
     {
         $t = self::TABLAS[$catalogo];
-        $id = (int) $this->conexion->query("SELECT COALESCE(MAX({$t['id']}), 0) + 1 FROM {$t['tabla']}")->fetchColumn();
+        $siguiente = $this->conexion->prepare("SELECT COALESCE(MAX({$t['id']}), 0) + 1 FROM {$t['tabla']}");
+        $siguiente->execute();
+        $id = (int) $siguiente->fetchColumn();
         $columnas = [$t['id'] => $id, $t['nombre'] => $nombre, $t['activo'] => 1];
         if ($t['especie']) $columnas['tbespecieid'] = $especieId;
         if ($t['sexo'] !== null) $columnas[$t['sexo']] = $sexo;
