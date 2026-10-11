@@ -10,6 +10,8 @@ import { createToast } from './shared/toast.js';
 import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-2';
 import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-2';
 import { safeImageUrl } from './explore.js?v=foto-3';
+import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
 const ACTIVITY_API = 'api/v1/actividad';
 const REGISTRO_API = 'api/v1/registro';
@@ -188,7 +190,7 @@ function toggleProfileForm(abrir) {
     form.elements.alias.value = activityData?.persona?.alias ?? '';
     form.elements.telefono.value = activityData?.persona?.telefono ?? '';
     setProfileErrors({});
-    document.querySelector('#profile-form-status').textContent = '';
+    mostrarEstado(document.querySelector('#profile-form-status'), '', 'info');
     form.elements.alias.focus();
 }
 
@@ -201,14 +203,14 @@ async function saveProfile(event) {
     if (Object.keys(cambios).length === 0) { toggleProfileForm(false); return; }
     setProfileErrors({});
     guardar.disabled = true;
-    status.textContent = 'Guardando…';
+    mostrarEstado(status, 'Guardando…', 'info');
     try {
         const response = await patchPerfil(cambios);
         toggleProfileForm(false);
         toast?.success(response.message || 'Perfil actualizado.');
     } catch (error) {
         setProfileErrors(error?.errors ?? {});
-        status.textContent = error?.message || 'No pudimos guardar tus datos.';
+        mostrarEstado(status, [error?.message || 'No pudimos guardar tus datos.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
     } finally {
         guardar.disabled = false;
     }
@@ -318,7 +320,7 @@ async function changeCapability(input) {
     pendingChanges.add(id);
     input.disabled = true;
     const status = document.querySelector('#activity-status');
-    status.textContent = nextActive ? 'Reactivando actividad…' : 'Desactivando actividad…';
+    mostrarEstado(status, nextActive ? 'Reactivando actividad…' : 'Desactivando actividad…', 'info');
     try {
         // Primera activación de Transportista: la misma ampliación de cuenta que
         // hacía el formulario de registro, sin datos extra que pedir.
@@ -328,11 +330,11 @@ async function changeCapability(input) {
         const refreshed = await loadActivity({ quiet: true });
         if (refreshed) {
             const mensaje = mensajeActivacion(id, nextActive, response.message);
-            status.textContent = mensaje;
+            mostrarEstado(status, mensaje, 'success');
             toast?.success(mensaje);
         }
     } catch (error) {
-        status.textContent = error?.message || 'No fue posible cambiar la actividad.';
+        mostrarEstado(status, error?.message || 'No fue posible cambiar la actividad.', 'error');
         toast?.error(error?.message || 'No fue posible cambiar la actividad.');
         renderActivities(activityData?.capacidades ?? {});
     } finally {

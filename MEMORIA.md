@@ -492,6 +492,23 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
     Así un esquema a medias no rompe `instalacion_limpia_test` ni la app de quien trabaja al lado. Limitación: las pruebas que llaman por HTTP
     (`instalacion_limpia_test`, `*_http_test`) necesitan Apache y solo corren en el repositorio principal.
 
+14. **Validar cada dato que entra (lo que ya dio 500 o guardó basura).** `Tests/validacion_entradas_test.php` manda a cada
+    campo de los formularios una lista, un objeto, `true`, un texto de 5000 caracteres y números fuera de rango, y exige 4xx
+    con un mensaje por campo. Al agregar un campo o un endpoint, súmalo ahí. Reglas:
+    - **Nunca `(string) $cuerpo[...]` sin revisar el tipo**: una lista se guarda como el texto "Array" (y el aviso de PHP rompía el JSON).
+    - **Enteros con `max_range => 2147483647`** (los ids son `INTEGER` en Postgres: uno mayor hace fallar la consulta) y
+      **rechazar booleanos** (`filter_var(true, FILTER_VALIDATE_INT)` devuelve 1).
+    - **Números con tope**: precio ≤ 9.999.999.999,99 (`NUMERIC(12,2)`), peso ≤ 5000 kg, edad ≤ 600 meses (`AnimalPublicacionController::MAXIMOS`).
+    - **Todo texto con largo máximo** igual o menor al de su columna (si no, Postgres/MySQL estricto responden 500).
+    - El sexo del animal solo acepta `HEMBRA`/`MACHO` (o `H`/`M`).
+    - `readJsonBody()` rechaza (400) cuerpos de más de 1 MB y caracteres de control (Postgres no guarda el carácter nulo).
+    - Las imágenes Docker cargan `docker/php-errores.ini` (`display_errors = Off`, errores al log): un aviso nunca sale en la respuesta.
+    - Mensajes: dicen qué falta y cuánto (`ValidacionService::mensajeLongitud`: "Este campo es obligatorio.", "No puede superar N
+      caracteres."); un 422 siempre trae `errors` por campo. En el navegador, `erroresSinLugar()` / `mostrarErroresSinLugar()`
+      (`shared/field-errors.js?v=errores-1`) muestran los errores de campos que el formulario no tiene en pantalla.
+    - Las pruebas que usan "hoy" deben usar `AnimalValidacionService::hoy()` (Costa Rica), no `gmdate`: de 6 p. m. a
+      medianoche UTC ya es mañana y la fecha cuenta como futura.
+
 ## 5. Pendientes
 
 Plan completo, priorizado y repartido entre Carlos, Jeremi y Jeferson:
@@ -577,6 +594,36 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-10 · backend · Revisión de validaciones y mensajes de error
+- Prueba nueva `Tests/validacion_entradas_test.php`: datos hostiles en publicar, editar publicación, Mis animales, vacunas,
+  perfil, fincas, vehículos, ofertas de flete, solicitud de compra, Me interesa, búsqueda de fletes y de Explorar, registro y
+  moderación del admin. Encontró y se corrigieron:
+  - **Errores 500:** ids sin tope (Postgres `INTEGER`), precio/peso/edad sin máximo, sexo sin límite de largo, carácter nulo.
+  - **Datos basura:** listas guardadas como "Array" (títulos, motivos, alias, nombre de finca), `true` tomado como el id 1 o
+    como cantidad 1, una próxima dosis inválida guardada vacía, una acción de Me interesa inválida tomada como REGISTRAR.
+  - **Mensajes poco claros:** 422 sin decir el campo (Explorar, editar o moderar publicación, búsquedas del admin),
+    "El campo es obligatorio." cuando el dato sí venía pero con el tipo equivocado, "Debe contener entre 0 y N caracteres",
+    "El precio debe ser mayor que cero." para un precio demasiado alto, "Valor no válido." en fletes.
+- `Configuration::readJsonBody` (1 MB y caracteres de control), `docker/php-errores.ini` en `Dockerfile` y `Dockerfile.vercel`.
+- `api.js`: tildes en los mensajes y textos para 403, 413, 429 y 5xx. Los formularios de cliente y los del admin (vía
+  `bindFormErrors`) muestran los errores sin campo en pantalla. Versiones: `ajustes-10`, `fletes-3`, `panel-12`, `signup-11`,
+  `mis-animales.js?v=animales-2`.
+- Pruebas nuevas: `api_entrada_http_test.php` (por HTTP) y `Tests/frontend/errores_sin_lugar.test.mjs`. Se corrigió
+  `mi_animales_vacunas_test` (usaba la fecha UTC).
+- Cuidado nuevo: Cuidados #14.
+- Publicar (tras probarlo a mano): el servidor devuelve **todos** los errores juntos (`AnimalPublicacionController::validarTodos`,
+  también en Mis animales); el formulario marca cada campo con su mensaje debajo y el resumen lleva el nombre del campo
+  ("Peso aproximado (kg): No puede ser mayor que 5.000."). Precio, peso y edad tienen `max` en el HTML (el navegador avisa
+  antes de enviar). El aviso de éxito enlaza a **Mi panel → Mis publicaciones**: Explorar no muestra las propias. `publish-5`.
+- `readJsonBody`: `{}` (formulario sin datos) ya no se confunde con una lista (antes respondía "El cuerpo debe ser un objeto
+  JSON."); sus mensajes ya no usan "cuerpo" ni "JSON". Registrar un animal sin ningún dato → 422 "No se puede registrar un
+  animal sin datos…" (y campos desconocidos → 422). La rueda del ratón ya no cambia un campo numérico enfocado
+  (`public-ui.js` → `soltarNumeroConRueda`, `public-15`). Versiones: `panel-13`, `mis-animales.js?v=animales-3`.
+- Línea de estado `.auth-status`: es **verde por defecto**, así que un error escrito con `textContent` salía verde. Los
+  formularios de Mi panel, Mis animales, Ajustes y Fletes usan `mostrarEstado(nodo, texto, 'error'|'info'|'success')`
+  (`shared/estado.js?v=estado-1`). Al escribir un error en una línea de estado, usa `'error'`. Versiones: `ajustes-11`,
+  `fletes-4`, `panel-14`, `animales-4`.
 
 ### 2026-10-06 · backend · P2-4 Mis animales, P2-6 catálogos admin y arreglos para producción
 - **P2-4:** API `api/v1/mi-animales` (`MiAnimalesController`, `AnimalComercial::inventarioPropio`) y sección "Mis

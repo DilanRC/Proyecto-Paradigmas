@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-9">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-14"></script>
-    <script type="module" src="js/publicar.js?v=publish-4"></script>
+    <script type="module" src="js/public-ui.js?v=public-15"></script>
+    <script type="module" src="js/publicar.js?v=publish-5"></script>
 </head>
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">
@@ -57,7 +57,7 @@
                             <div class="signup-grid">
                                 <div class="auth-field auth-field--wide"><label for="publish-titulo">Título *</label><input id="publish-titulo" name="titulo" maxlength="150" required autocomplete="off" placeholder="Ej. Novilla Brahman lista para cría"></div>
                                 <div class="auth-field"><label for="publish-finca">Finca *</label><select name="fincaNombre" id="publish-finca" required><option value="">Seleccione una finca</option></select><small class="field-help">Solo aparecen tus fincas activas.</small></div>
-                                <div class="auth-field"><label for="publish-precio">Precio de referencia (₡)</label><input id="publish-precio" name="precio" type="number" min="0" step="1" inputmode="numeric" placeholder="Ej. 950000"></div>
+                                <div class="auth-field"><label for="publish-precio">Precio de referencia (₡)</label><input id="publish-precio" name="precio" type="number" min="0" max="9999999999" step="1" inputmode="numeric" placeholder="Ej. 950000"></div>
                             </div>
                         </div>
 
@@ -100,8 +100,8 @@
                                 <div class="auth-field"><label for="publish-proposito">Propósito</label><select id="publish-proposito" name="proposito"><option value="">Sin indicar</option><option value="CRIA">Cría</option><option value="ENGORDE">Engorde</option><option value="LECHE">Leche</option><option value="DOBLE PROPOSITO">Doble propósito</option></select></div>
                                 <div class="auth-field"><label for="publish-nacimiento">Fecha de nacimiento</label><input id="publish-nacimiento" name="fechaNacimiento" type="date"><small class="field-help">Si no la sabes exacta, escribe una aproximada y márcala como estimada.</small></div>
                                 <div class="auth-field"><span id="publish-estimada-etiqueta">&nbsp;</span><label class="signup-radio" for="publish-estimada"><input id="publish-estimada" name="fechaNacimientoEstimada" type="checkbox" value="true" aria-describedby="publish-estimada-etiqueta"><span>La fecha es estimada</span></label></div>
-                                <div class="auth-field"><label for="publish-edad">Edad aproximada (meses)</label><input id="publish-edad" name="edadMeses" type="number" min="0" step="1" inputmode="numeric"><small class="field-help">Se usa si no pones la fecha de nacimiento.</small></div>
-                                <div class="auth-field"><label for="publish-peso">Peso aproximado (kg)</label><input id="publish-peso" name="peso" type="number" min="0" step="0.1" inputmode="decimal"></div>
+                                <div class="auth-field"><label for="publish-edad">Edad aproximada (meses)</label><input id="publish-edad" name="edadMeses" type="number" min="0" max="600" step="1" inputmode="numeric"><small class="field-help">Se usa si no pones la fecha de nacimiento.</small></div>
+                                <div class="auth-field"><label for="publish-peso">Peso aproximado (kg)</label><input id="publish-peso" name="peso" type="number" min="0" max="5000" step="0.1" inputmode="decimal"></div>
                                 <div class="auth-field" data-partos hidden><label for="publish-partos">Partos</label><input id="publish-partos" name="partos" type="number" min="0" max="30" step="1" inputmode="numeric"></div>
                                 <div class="auth-field" data-arete><label for="publish-arete">Arete SENASA</label><input id="publish-arete" name="arete" inputmode="numeric" maxlength="17" autocomplete="off" placeholder="188 0 01 0002345" aria-describedby="publish-arete-ayuda"><small id="publish-arete-ayuda" class="field-help">Opcional. 13 dígitos: 188, un dígito de control, la provincia (01 a 07) y 7 del correlativo.</small><small class="auth-error" data-error-for="arete" role="alert"></small></div>
                                 <div class="auth-field auth-field--wide"><label class="signup-radio" for="publish-es-lote"><input id="publish-es-lote" name="esLote" type="checkbox" value="on" aria-controls="publish-lote-cantidad-campo"><span>Publicar un lote (varios animales iguales)</span></label></div>

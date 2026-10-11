@@ -82,3 +82,40 @@ export function describeValidity(control) {
     // Motivo desconocido: se prefiere el mensaje del navegador a no decir nada.
     return control.validationMessage || 'Revise este campo.';
 }
+
+/** ¿El formulario tiene dónde mostrar el error de esta clave? (un control con ese nombre o un espacio data-…-error). */
+function tieneLugar(form, clave) {
+    const nombres = [clave, clave.split('.').pop()];
+    if (nombres.some((nombre) => form.elements?.namedItem?.(nombre))) return true;
+    return [...form.querySelectorAll('*')].some((nodo) => [...nodo.attributes].some((atributo) =>
+        (atributo.name === 'data-error-for' || /^data-[a-z-]+-error$/.test(atributo.name)) && nombres.includes(atributo.value)));
+}
+
+/**
+ * Mensajes de error que el formulario no tiene dónde pintar: un dato que no está en pantalla (por ejemplo el lote o
+ * un campo que solo valida el servidor). Sin esto la persona solo veía "Revise los campos indicados." sin saber qué.
+ */
+export function erroresSinLugar(form, errors) {
+    return Object.entries(errors ?? {}).filter(([clave]) => !tieneLugar(form, clave)).map(([, mensaje]) => String(mensaje));
+}
+
+/** Los pinta en una línea de aviso antes de las acciones del formulario (o la limpia si no hay). */
+export function mostrarErroresSinLugar(form, errors) {
+    const mensajes = erroresSinLugar(form, errors);
+    let aviso = form.querySelector('[data-errores-generales]');
+    if (mensajes.length === 0) {
+        if (aviso) aviso.textContent = '';
+        return mensajes;
+    }
+    if (!aviso) {
+        aviso = document.createElement('p');
+        aviso.className = 'field-error field__error';
+        aviso.setAttribute('role', 'alert');
+        aviso.dataset.erroresGenerales = '';
+        const acciones = form.querySelector('[type="submit"]')?.parentElement;
+        if (acciones && acciones !== form) acciones.before(aviso);
+        else form.append(aviso);
+    }
+    aviso.textContent = mensajes.join(' ');
+    return mensajes;
+}
