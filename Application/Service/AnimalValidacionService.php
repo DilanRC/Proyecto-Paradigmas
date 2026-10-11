@@ -28,8 +28,11 @@ final class AnimalValidacionService
      */
     public static function arete(mixed $valor): array
     {
-        if ($valor === null || trim((string) $valor) === '') {
+        if ($valor === null || (is_string($valor) && trim($valor) === '')) {
             return ['arete' => null, 'error' => null];
+        }
+        if (!is_string($valor) && !is_int($valor)) {
+            return ['arete' => null, 'error' => 'El arete debe escribirse como texto: 13 dígitos.'];
         }
         $digitos = preg_replace('/[\s-]+/', '', trim((string) $valor)) ?? '';
         $valido = preg_match('/^\d{13}$/', $digitos) === 1
@@ -70,18 +73,18 @@ final class AnimalValidacionService
         $entero = static function (string $campo, int $minimo, int $maximo) use ($cuerpo, &$errores): ?int {
             $valor = $cuerpo[$campo] ?? null;
             if ($valor === null || $valor === '') return null;
-            $n = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
+            $n = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
             if ($n === false) {
-                $errores[$campo] = $minimo === 1 && $maximo === PHP_INT_MAX
+                $errores[$campo] = $minimo === 1 && $maximo === 2147483647
                     ? 'Debe ser un entero positivo.' : "Debe ser un entero entre {$minimo} y {$maximo}.";
                 return null;
             }
             return $n;
         };
 
-        $especieId = $entero('especieId', 1, PHP_INT_MAX);
-        $tipoId = $entero('tipoId', 1, PHP_INT_MAX);
-        $razaId = $entero('razaId', 1, PHP_INT_MAX);
+        $especieId = $entero('especieId', 1, 2147483647);
+        $tipoId = $entero('tipoId', 1, 2147483647);
+        $razaId = $entero('razaId', 1, 2147483647);
         $partos = $entero('partos', 0, self::PARTOS_MAXIMO);
         $lote = $entero('loteCantidad', 1, self::LOTE_MAXIMO) ?? 1;
 
@@ -117,9 +120,13 @@ final class AnimalValidacionService
         }
 
         // Sexo: el tipo lo fija (M/H); si además se envía, debe coincidir.
-        $sexoTexto = trim((string) ($cuerpo['sexo'] ?? ''));
+        $sexoTexto = is_string($cuerpo['sexo'] ?? null) ? trim($cuerpo['sexo']) : '';
         $sexoEnviado = self::sexoCodigo($sexoTexto);
-        $sexo = $sexoTexto === '' ? null : $sexoTexto;
+        if ((($cuerpo['sexo'] ?? null) !== null && !is_string($cuerpo['sexo'])) || $sexoEnviado === '?') {
+            $errores['sexo'] = 'Use HEMBRA o MACHO.';
+            $sexoEnviado = null;
+        }
+        $sexo = match ($sexoEnviado) { 'H' => 'HEMBRA', 'M' => 'MACHO', default => null };
         if ($tipo !== null && $tipo['sexo'] !== null) {
             if ($sexoEnviado !== null && $sexoEnviado !== $tipo['sexo']) {
                 $errores['sexo'] = 'El sexo no coincide con el tipo de animal.';
@@ -133,8 +140,10 @@ final class AnimalValidacionService
 
         // Fecha de nacimiento: real o estimada, nunca futura.
         $fecha = null;
-        $texto = trim((string) ($cuerpo['fechaNacimiento'] ?? ''));
-        if ($texto !== '') {
+        $texto = is_string($cuerpo['fechaNacimiento'] ?? null) ? trim($cuerpo['fechaNacimiento']) : '';
+        if (($cuerpo['fechaNacimiento'] ?? null) !== null && !is_string($cuerpo['fechaNacimiento'])) {
+            $errores['fechaNacimiento'] = 'Usa una fecha válida (AAAA-MM-DD).';
+        } elseif ($texto !== '') {
             $partes = explode('-', $texto);
             $esFecha = preg_match('/^\d{4}-\d{2}-\d{2}$/', $texto) === 1
                 && checkdate((int) $partes[1], (int) $partes[2], (int) $partes[0]);

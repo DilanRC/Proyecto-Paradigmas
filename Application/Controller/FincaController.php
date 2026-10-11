@@ -244,7 +244,7 @@ final class FincaController
         $identificacion = $this->normalizarIdentificacion($this->textoConsulta($consulta['identificacionNumero'], 250));
         $nombreFinca = trim($this->textoConsulta($consulta['nombreFinca'], 150));
         if ($identificacion === '' || $nombreFinca === '') {
-            throw new HttpException('Los parámetros no son válidos.', 422);
+            throw new HttpException('Indique la identificación y el nombre de la finca.', 422);
         }
 
         return [$identificacion, $nombreFinca];
@@ -340,7 +340,7 @@ final class FincaController
     private function textoConsulta(mixed $valor, int $maximo): string
     {
         if (!is_string($valor) || mb_strlen($valor) > $maximo) {
-            throw new HttpException('La consulta no es válida.', 422);
+            throw new HttpException("La búsqueda no es válida: escriba texto de hasta {$maximo} caracteres.", 422);
         }
 
         return trim($valor);

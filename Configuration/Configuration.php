@@ -54,18 +54,32 @@ function readJsonBody(): array
     $content = file_get_contents('php://input');
 
     if ($content === false || trim($content) === '') {
-        throw new \UnexpectedValueException('El cuerpo JSON no puede estar vacío.');
+        throw new \UnexpectedValueException('No recibimos los datos del formulario. Recarga la página e intenta de nuevo.');
+    }
+    // Las fotos van a Supabase Storage: ningún formulario envía tanto texto.
+    if (strlen($content) > 1048576) {
+        throw new \UnexpectedValueException('La solicitud es demasiado grande (máximo 1 MB).');
     }
 
     try {
         $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
     } catch (\JsonException $exception) {
-        throw new \UnexpectedValueException('El cuerpo no contiene JSON válido.', 0, $exception);
+        throw new \UnexpectedValueException('Los datos del formulario llegaron dañados. Recarga la página e intenta de nuevo.', 0, $exception);
     }
 
-    if (!is_array($data) || array_is_list($data)) {
-        throw new \UnexpectedValueException('El cuerpo debe ser un objeto JSON.');
+    // Un formulario sin datos envía "{}", que también se decodifica como []: se distingue de una
+    // lista ("[...]") por su primer carácter. Si faltan datos, cada endpoint lo dice con su mensaje.
+    if (!is_array($data) || (array_is_list($data) && !str_starts_with(ltrim($content), '{'))) {
+        throw new \UnexpectedValueException('Los datos del formulario no tienen el formato esperado. Recarga la página e intenta de nuevo.');
     }
+    // Postgres no guarda el carácter nulo (la consulta falla con 500) y ningún
+    // campo necesita caracteres de control: se rechazan todos salvo tabulación
+    // y saltos de línea (las descripciones los usan).
+    array_walk_recursive($data, static function (mixed $valor): void {
+        if (is_string($valor) && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $valor) === 1) {
+            throw new \UnexpectedValueException('Un campo trae caracteres no permitidos. Escríbalo de nuevo sin copiar y pegar símbolos especiales.');
+        }
+    });
 
     return $data;
 }

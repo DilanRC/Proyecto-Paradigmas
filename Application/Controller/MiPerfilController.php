@@ -73,8 +73,10 @@ final class MiPerfilController
         $errores = [];
         $cambios = [];
         if (array_key_exists('alias', $cuerpo)) {
-            $alias = $cuerpo['alias'] === null ? '' : trim((string) $cuerpo['alias']);
-            if (mb_strlen($alias) > 150) {
+            $alias = is_string($cuerpo['alias']) ? trim($cuerpo['alias']) : '';
+            if ($cuerpo['alias'] !== null && !is_string($cuerpo['alias'])) {
+                $errores['alias'] = 'Debe ser texto.';
+            } elseif (mb_strlen($alias) > 150) {
                 $errores['alias'] = 'No puede superar 150 caracteres.';
             }
             $cambios['alias'] = $alias === '' ? null : $alias;

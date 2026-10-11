@@ -137,7 +137,7 @@ final class AnimalPublicacionController
         if (array_key_exists('imagenUrl', $cuerpo)) $campos['imagenUrl'] = self::imagenUrl($cuerpo['imagenUrl']);
         $estado = null;
         if (array_key_exists('estado', $cuerpo)) {
-            $estado = mb_strtoupper(trim((string) $cuerpo['estado']), 'UTF-8');
+            $estado = is_string($cuerpo['estado']) ? mb_strtoupper(trim($cuerpo['estado']), 'UTF-8') : '';
             $validos = array_values(array_diff(self::ESTADOS, ['TODOS']));
             if (!in_array($estado, $validos, true)) {
                 throw new HttpException('Revise los campos indicados.', 422, null, [
@@ -290,6 +290,10 @@ final class AnimalPublicacionController
 
     public static function texto(mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string
     {
+        // Una lista u objeto se convertiría en el texto "Array": se rechaza con un mensaje claro.
+        if ($valor !== null && !is_string($valor) && !is_int($valor) && !is_float($valor)) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser texto.']);
+        }
         if ($valor === null || trim((string) $valor) === '') {
             if ($obligatorio) {
                 throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Este campo es obligatorio.']);
@@ -303,11 +307,19 @@ final class AnimalPublicacionController
         return $valor;
     }
 
+    /** Topes por campo: los de la columna (precio NUMERIC(12,2)) o uno razonable para el dato. */
+    private const MAXIMOS = ['precio' => 9999999999.99, 'peso' => 5000, 'edadMeses' => 600];
+
     public static function numero(mixed $valor, string $campo, bool $entero = false): ?float
     {
         if ($valor === null || $valor === '') return null;
-        if (!is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número no negativo.']);
+        if (is_bool($valor) || !is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número mayor o igual a cero.']);
+        }
+        $maximo = self::MAXIMOS[$campo] ?? 2147483647;
+        if ((float) $valor > $maximo) {
+            $texto = number_format($maximo, $maximo == floor($maximo) ? 0 : 2, ',', '.');
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => "No puede ser mayor que {$texto}."]);
         }
         if ($entero && floor((float) $valor) !== (float) $valor) {
             throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un entero no negativo.']);
@@ -315,18 +327,59 @@ final class AnimalPublicacionController
         return (float) $valor;
     }
 
+    /**
+     * Corre todas las reglas y junta sus errores en un solo 422: la persona ve de una vez todo lo que debe
+     * corregir (antes solo el primero, p. ej. el peso, y el precio aparecía recién al reenviar).
+     *
+     * @param array<string,callable():mixed> $reglas
+     * @return array<string,mixed>
+     */
+    public static function validarTodos(array $reglas): array
+    {
+        $datos = [];
+        $errores = [];
+        foreach ($reglas as $clave => $regla) {
+            try {
+                $datos[$clave] = $regla();
+            } catch (HttpException $error) {
+                if ($error->errores === []) throw $error;
+                $errores += $error->errores;
+                $datos[$clave] = null;
+            }
+        }
+        if ($errores !== []) {
+            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
+        }
+
+        return $datos;
+    }
+
     private function validarPublicacion(array $cuerpo): array
     {
         $texto = self::texto(...);
         $numero = self::numero(...);
-        $identificacion = $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100);
-        $raza = $texto($cuerpo['raza'] ?? null, 'raza', 120);
-        $sexo = $texto($cuerpo['sexo'] ?? null, 'sexo', 40);
-        // Modelo de animal (P2-2): catálogos, sexo por tipo, partos, nacimiento, arete y lote. Todo opcional.
-        $modelo = AnimalValidacionService::validar($this->catalogo, $cuerpo);
+        $v = self::validarTodos([
+            'animalIdentificacion' => fn () => $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100),
+            'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),
+            'sexo' => fn () => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
+            // Modelo de animal (P2-2): catálogos, sexo por tipo, partos, nacimiento, arete y lote. Todo opcional.
+            'modelo' => fn () => AnimalValidacionService::validar($this->catalogo, $cuerpo),
+            'fincaNombre' => fn () => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
+            'proposito' => fn () => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
+            'edadMeses' => fn () => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
+            'peso' => fn () => $numero($cuerpo['peso'] ?? null, 'peso'),
+            'titulo' => fn () => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
+            'descripcion' => fn () => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
+            'precio' => fn () => $numero($cuerpo['precio'] ?? null, 'precio'),
+            'imagenUrl' => fn () => self::imagenUrl($cuerpo['imagenUrl'] ?? null),
+        ]);
+        $modelo = $v['modelo'];
+        $identificacion = $v['animalIdentificacion'];
+        $raza = $v['raza'];
+        $sexo = $v['sexo'];
 
         return [
-            'fincaNombre' => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
+            'fincaNombre' => $v['fincaNombre'],
             // El arete (13 dígitos SENASA) reemplaza a la identificación libre; la raza de catálogo, al texto libre.
             'animalIdentificacion' => $modelo['arete'] ?? $identificacion,
             'arete' => $modelo['arete'],
@@ -339,13 +392,13 @@ final class AnimalPublicacionController
             'fechaNacimientoEstimada' => $modelo['fechaNacimientoEstimada'],
             'partos' => $modelo['partos'],
             'loteCantidad' => $modelo['loteCantidad'],
-            'proposito' => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
-            'edadMeses' => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
-            'peso' => $numero($cuerpo['peso'] ?? null, 'peso'),
-            'titulo' => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
-            'descripcion' => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
-            'precio' => $numero($cuerpo['precio'] ?? null, 'precio'),
-            'imagenUrl' => self::imagenUrl($cuerpo['imagenUrl'] ?? null),
+            'proposito' => $v['proposito'],
+            'edadMeses' => $v['edadMeses'],
+            'peso' => $v['peso'],
+            'titulo' => $v['titulo'],
+            'descripcion' => $v['descripcion'],
+            'precio' => $v['precio'],
+            'imagenUrl' => $v['imagenUrl'],
         ];
     }
 
@@ -356,10 +409,13 @@ final class AnimalPublicacionController
      */
     public static function imagenUrl(mixed $valor, string $campo = 'imagenUrl'): ?string
     {
-        if ($valor === null || trim((string) $valor) === '') {
+        if ($valor === null || (is_string($valor) && trim($valor) === '')) {
             return null;
         }
-        $url = trim((string) $valor);
+        if (!is_string($valor)) {
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser la dirección (URL) de la imagen.']);
+        }
+        $url = trim($valor);
         $partes = parse_url($url);
         $valida = mb_strlen($url) <= 500
             && filter_var($url, FILTER_VALIDATE_URL) !== false
@@ -378,7 +434,7 @@ final class AnimalPublicacionController
 
     private function consultar(array $consulta): array
     {
-        $busqueda = $this->textoConsulta($consulta['q'] ?? '', 150);
+        $busqueda = $this->textoConsulta($consulta['q'] ?? '', 'q', 150);
         // mias=true: solo las publicaciones del vendedor autenticado, en todos sus estados.
         $mias = filter_var($consulta['mias'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $vendedorId = null;
@@ -397,7 +453,7 @@ final class AnimalPublicacionController
         }
         // Con sesión, cada publicación trae meInteresa (ver api/v1/publicaciones/interacciones).
         $personaId = $this->actor?->tienePersona() ? (int) $this->actor->personaId : null;
-        $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? ($mias ? 'TODOS' : 'ACTIVO'), 10), 'UTF-8');
+        $estado = mb_strtoupper($this->textoConsulta($consulta['estado'] ?? ($mias ? 'TODOS' : 'ACTIVO'), 'estado', 10), 'UTF-8');
         if (!in_array($estado, self::ESTADOS, true)) {
             throw new HttpException('El filtro de estado no es válido.', 422, null, [
                 'estado' => 'Use ' . implode(', ', self::ESTADOS) . '.',
@@ -445,8 +501,10 @@ final class AnimalPublicacionController
 
     private function ubicacionConsulta(array $consulta): ?array
     {
-        $tieneLatitud = array_key_exists('latitud', $consulta) && trim((string) $consulta['latitud']) !== '';
-        $tieneLongitud = array_key_exists('longitud', $consulta) && trim((string) $consulta['longitud']) !== '';
+        $presente = static fn (string $campo): bool => array_key_exists($campo, $consulta)
+            && !(is_string($consulta[$campo]) && trim($consulta[$campo]) === '') && $consulta[$campo] !== null;
+        $tieneLatitud = $presente('latitud');
+        $tieneLongitud = $presente('longitud');
         if (!$tieneLatitud && !$tieneLongitud) return null;
         if ($tieneLatitud !== $tieneLongitud) {
             throw new HttpException('Latitud y longitud deben enviarse juntas.', 422, null, [
@@ -455,7 +513,10 @@ final class AnimalPublicacionController
             ]);
         }
         if (!is_numeric($consulta['latitud']) || !is_numeric($consulta['longitud'])) {
-            throw new HttpException('Las coordenadas no son válidas.', 422);
+            throw new HttpException('Las coordenadas no son válidas.', 422, null, array_filter([
+                'latitud' => is_numeric($consulta['latitud']) ? null : 'Debe ser un número entre -90 y 90.',
+                'longitud' => is_numeric($consulta['longitud']) ? null : 'Debe ser un número entre -180 y 180.',
+            ]));
         }
         $latitud = (float) $consulta['latitud'];
         $longitud = (float) $consulta['longitud'];
@@ -469,10 +530,12 @@ final class AnimalPublicacionController
         return ['latitud' => $latitud, 'longitud' => $longitud];
     }
 
-    private function textoConsulta(mixed $valor, int $maximo): string
+    private function textoConsulta(mixed $valor, string $campo, int $maximo): string
     {
         if (!is_string($valor) || mb_strlen($valor) > $maximo) {
-            throw new HttpException('La consulta no es válida.', 422);
+            throw new HttpException('La consulta no es válida.', 422, null, [
+                $campo => is_string($valor) ? "No puede superar {$maximo} caracteres." : 'Debe ser texto.',
+            ]);
         }
 
         return trim($valor);
@@ -480,9 +543,9 @@ final class AnimalPublicacionController
 
     private function enteroConsulta(mixed $valor, string $campo): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
-            throw new HttpException("{$campo} debe ser un entero positivo.", 422);
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número entero positivo.']);
         }
 
         return $entero;

@@ -125,7 +125,7 @@ final class MiOfertasController
     {
         $this->rechazarCamposDesconocidos($cuerpo, ['ofertaId', 'estado']);
         $errores = [];
-        $id = $this->enteroCampo($cuerpo['ofertaId'] ?? null, 'ofertaId', 1, PHP_INT_MAX, $errores);
+        $id = $this->enteroCampo($cuerpo['ofertaId'] ?? null, 'ofertaId', 1, 2147483647, $errores);
         $estado = is_string($cuerpo['estado'] ?? null) ? mb_strtoupper(trim($cuerpo['estado']), 'UTF-8') : '';
         if (!in_array($estado, TransportistaOferta::ESTADOS, true)) {
             $errores['estado'] = 'Use ' . implode(' o ', TransportistaOferta::ESTADOS) . '.';
@@ -220,13 +220,13 @@ final class MiOfertasController
         $this->rechazarCamposDesconocidos($cuerpo, $actualizacion ? ['ofertaId', ...$permitidos] : $permitidos);
         $errores = [];
         $resultado = [
-            'vehiculoId' => $this->enteroCampo($cuerpo['vehiculoId'] ?? null, 'vehiculoId', 1, PHP_INT_MAX, $errores),
+            'vehiculoId' => $this->enteroCampo($cuerpo['vehiculoId'] ?? null, 'vehiculoId', 1, 2147483647, $errores),
             'radioKm' => $this->enteroCampo($cuerpo['radioKm'] ?? null, 'radioKm', 1, 500, $errores),
             'capacidad' => $this->enteroCampo($cuerpo['capacidad'] ?? null, 'capacidad', 1, 200, $errores),
             'precio' => $this->precioCampo($cuerpo['precio'] ?? null, $errores),
             'descripcion' => $this->descripcionCampo($cuerpo['descripcion'] ?? null, $errores),
         ];
-        if ($actualizacion) $resultado['ofertaId'] = $this->enteroCampo($cuerpo['ofertaId'] ?? null, 'ofertaId', 1, PHP_INT_MAX, $errores);
+        if ($actualizacion) $resultado['ofertaId'] = $this->enteroCampo($cuerpo['ofertaId'] ?? null, 'ofertaId', 1, 2147483647, $errores);
 
         $direccion = $this->validacion->validarDireccionFincaEnCampo($cuerpo['direccion'] ?? null, 'direccion', $errores);
         // Sin punto en el mapa la oferta no se podría ordenar por cercanía.
@@ -271,9 +271,9 @@ final class MiOfertasController
 
     private function enteroCampo(mixed $valor, string $campo, int $minimo, int $maximo, array &$errores): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]);
         if ($entero === false) {
-            $errores[$campo] = $maximo === PHP_INT_MAX
+            $errores[$campo] = $maximo === 2147483647
                 ? 'Debe ser un entero positivo.'
                 : "Debe ser un entero entre {$minimo} y {$maximo}.";
             return 0;

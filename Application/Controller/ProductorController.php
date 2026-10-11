@@ -539,16 +539,16 @@ final class ProductorController
     private function textoConsulta(mixed $valor, int $maximo): string
     {
         if (!is_string($valor) || mb_strlen($valor) > $maximo) {
-            throw new HttpException('La consulta no es válida.', 422);
+            throw new HttpException("La búsqueda no es válida: escriba texto de hasta {$maximo} caracteres.", 422);
         }
         return trim($valor);
     }
 
     private function enteroConsulta(mixed $valor, string $campo): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
-            throw new HttpException("{$campo} debe ser un entero positivo.", 422);
+            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número entero positivo.']);
         }
         return $entero;
     }

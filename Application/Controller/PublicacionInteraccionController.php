@@ -63,8 +63,8 @@ final class PublicacionInteraccionController
         if ($tipo !== 'ME_INTERESA') {
             throw new HttpException('Solo se puede listar ME_INTERESA.', 422, null, ['tipo' => 'Use ME_INTERESA.']);
         }
-        $pagina = filter_var($consulta['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        $tamano = filter_var($consulta['tamanoPagina'] ?? 25, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
+        $pagina = filter_var(is_bool($consulta['pagina'] ?? 1) ? false : $consulta['pagina'] ?? 1, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
+        $tamano = filter_var(is_bool($consulta['tamanoPagina'] ?? 25) ? false : $consulta['tamanoPagina'] ?? 25, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 100]]);
         if ($pagina === false || $tamano === false) {
             throw new HttpException('La paginación no es válida.', 422, null, [
                 'pagina' => 'Debe ser un entero positivo.',
@@ -85,8 +85,8 @@ final class PublicacionInteraccionController
         if (!$this->actor->tienePersona()) {
             throw new HttpException('Debe iniciar sesión para registrar la interacción.', 401);
         }
-        $publicacionId = filter_var($cuerpo['publicacionId'] ?? null, FILTER_VALIDATE_INT, [
-            'options' => ['min_range' => 1],
+        $publicacionId = filter_var(is_bool($cuerpo['publicacionId'] ?? null) ? false : $cuerpo['publicacionId'] ?? null, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1, 'max_range' => 2147483647],
         ]);
         $tipo = is_string($cuerpo['tipo'] ?? null)
             ? mb_strtoupper(trim($cuerpo['tipo']), 'UTF-8')
@@ -97,7 +97,9 @@ final class PublicacionInteraccionController
                 'tipo' => 'Use ME_INTERESA, PASAR o CONTACTAR.',
             ]);
         }
-        $accion = is_string($cuerpo['accion'] ?? null) ? mb_strtoupper(trim($cuerpo['accion']), 'UTF-8') : 'REGISTRAR';
+        // Sin acción es REGISTRAR; una acción que no es texto se rechaza (antes se tomaba como REGISTRAR).
+        $accion = !array_key_exists('accion', $cuerpo) || $cuerpo['accion'] === null ? 'REGISTRAR'
+            : (is_string($cuerpo['accion']) ? mb_strtoupper(trim($cuerpo['accion']), 'UTF-8') : '');
         if (!in_array($accion, ['REGISTRAR', 'RETIRAR'], true) || ($accion === 'RETIRAR' && $tipo !== 'ME_INTERESA')) {
             throw new HttpException('Revise la publicación y la acción solicitadas.', 422, null, [
                 'accion' => 'Use REGISTRAR, o RETIRAR solo para ME_INTERESA.',

@@ -28,7 +28,7 @@ final class CatalogosController
 
             $especieId = null;
             if (($consulta['especieId'] ?? '') !== '') {
-                $especieId = filter_var($consulta['especieId'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                $especieId = filter_var(is_bool($consulta['especieId']) ? false : $consulta['especieId'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
                 if ($especieId === false) {
                     throw new HttpException('Revise los campos indicados.', 422, null, ['especieId' => 'Debe ser un entero positivo.']);
                 }

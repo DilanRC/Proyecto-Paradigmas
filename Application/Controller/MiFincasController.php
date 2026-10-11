@@ -232,15 +232,16 @@ final class MiFincasController
 
     private function textoCampo(mixed $valor, string $campo, int $maximo, array &$errores): string
     {
-        if (!is_string($valor)) { $errores[$campo] = 'El nombre es obligatorio.'; return ''; }
+        if (!is_string($valor)) { $errores[$campo] = $valor === null ? 'El nombre es obligatorio.' : 'Debe ser texto.'; return ''; }
         $texto = preg_replace('/\s+/u', ' ', trim($valor)) ?? trim($valor);
-        if ($texto === '' || mb_strlen($texto) > $maximo) $errores[$campo] = "Debe contener entre 1 y {$maximo} caracteres.";
+        if ($texto === '') $errores[$campo] = 'El nombre es obligatorio.';
+        elseif (mb_strlen($texto) > $maximo) $errores[$campo] = "No puede superar {$maximo} caracteres.";
         return $texto;
     }
 
     private function enteroCampo(mixed $valor, string $campo, array &$errores): int
     {
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) { $errores[$campo] = 'Debe ser un entero positivo.'; return 0; }
         return $entero;
     }

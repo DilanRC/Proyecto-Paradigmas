@@ -341,7 +341,7 @@ final class SolicitudesCompraController
             if ($obligatorio) $errores[$campo] = 'Debe ser un entero positivo.';
             return null;
         }
-        $entero = filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $entero = filter_var(is_bool($valor) ? false : $valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($entero === false) {
             $errores[$campo] = 'Debe ser un entero positivo.';
             return null;
@@ -367,8 +367,12 @@ final class SolicitudesCompraController
     private function precio(mixed $valor, array &$errores): ?float
     {
         if ($valor === null || (is_string($valor) && trim($valor) === '')) return null;
-        if (!is_numeric($valor) || (float) $valor <= 0 || (float) $valor > 9999999999.99) {
-            $errores['precio'] = 'El precio debe ser mayor que cero.';
+        if (is_bool($valor) || !is_numeric($valor) || (float) $valor <= 0) {
+            $errores['precio'] = 'El precio debe ser un número mayor que cero.';
+            return null;
+        }
+        if ((float) $valor > 9999999999.99) {
+            $errores['precio'] = 'El precio no puede ser mayor que 9.999.999.999,99.';
             return null;
         }
         return round((float) $valor, 2);

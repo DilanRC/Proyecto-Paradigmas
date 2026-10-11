@@ -59,7 +59,7 @@ final class AdminCatalogoController
         $nombre = $this->nombre($cuerpo['nombre'] ?? null, $catalogo, $errores);
         $especieId = null;
         if ($t['especie']) {
-            $especieId = filter_var($cuerpo['especieId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $especieId = filter_var(is_bool($cuerpo['especieId'] ?? null) ? false : $cuerpo['especieId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
             $especie = $especieId === false ? null : $this->catalogo->especie($especieId);
             if ($especie === null || !$especie['activo']) $errores['especieId'] = 'Elige una especie activa.';
         }
@@ -86,7 +86,7 @@ final class AdminCatalogoController
         $catalogo = $this->catalogoDe($cuerpo);
         $this->rechazarCampos($cuerpo, ['catalogo', 'id', 'nombre', 'activo']);
         $errores = [];
-        $id = filter_var($cuerpo['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $id = filter_var(is_bool($cuerpo['id'] ?? null) ? false : $cuerpo['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($id === false) $errores['id'] = 'Debe ser un entero positivo.';
         $cambios = [];
         if (array_key_exists('nombre', $cuerpo)) $cambios['nombre'] = $this->nombre($cuerpo['nombre'], $catalogo, $errores);

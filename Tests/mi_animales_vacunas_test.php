@@ -101,8 +101,9 @@ try {
     $brucelosis = (int) array_search('Brucelosis', $nombres, true);
     $rabia = (int) array_search('Rabia paralítica bovina', $nombres, true);
     test_assert($aftosa > 0 && $brucelosis > 0 && $rabia > 0, 'Aftosa, brucelosis y rabia están en el catálogo');
-    $hoy = gmdate('Y-m-d');
-    $ayer = gmdate('Y-m-d', time() - 86400);
+    // La misma fecha que valida el servidor (Costa Rica): en UTC, de 6 p. m. a medianoche ya es mañana.
+    $hoy = \Application\Service\AnimalValidacionService::hoy();
+    $ayer = (new DateTimeImmutable($hoy))->modify('-1 day')->format('Y-m-d');
 
     // Sesión y actividad.
     test_same(401, (new MiAnimalesVacunasController($db, ActorContext::noAutenticado()))->procesar('GET', ['animalId' => $animalUno])['status'], 'Sin sesión es 401');

@@ -9,6 +9,7 @@ RUN apt-get update \
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
 COPY docker/apache/servername.conf /etc/apache2/conf-available/servername.conf
 COPY docker/apache/container-entrypoint.sh /usr/local/bin/tindercows-entrypoint
+COPY docker/php-errores.ini /usr/local/etc/php/conf.d/zz-tindercows-errores.ini
 
 COPY Application /var/www/html/Application
 COPY Configuration /var/www/html/Configuration

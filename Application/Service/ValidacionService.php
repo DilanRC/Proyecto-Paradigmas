@@ -316,7 +316,7 @@ final class ValidacionService
                 }
             }
 
-            $nombre = trim((string) ($finca['nombre'] ?? ''));
+            $nombre = is_string($finca['nombre'] ?? null) ? trim($finca['nombre']) : '';
             if ($nombre === '' || mb_strlen($nombre) > 150) {
                 $errores["fincas.{$indice}.nombre"] = 'El nombre debe contener entre 1 y 150 caracteres.';
                 continue;
@@ -406,16 +406,16 @@ final class ValidacionService
     public function textoCampo(mixed $valor, string $campo, int $maximo, array &$errores, int $minimo = 0, bool $compactar = true): string
     {
         if (!is_string($valor)) {
-            $errores[$campo] = 'El campo es obligatorio.';
+            $errores[$campo] = $valor === null ? 'Este campo es obligatorio.' : 'Debe ser texto.';
             return '';
         }
         $texto = trim($valor);
         if ($compactar) {
             $texto = preg_replace('/\s+/u', ' ', $texto) ?? $texto;
         }
-        $longitud = mb_strlen($texto);
-        if ($longitud < $minimo || $longitud > $maximo) {
-            $errores[$campo] = "Debe contener entre {$minimo} y {$maximo} caracteres.";
+        $mensaje = self::mensajeLongitud(mb_strlen($texto), $minimo, $maximo);
+        if ($mensaje !== null) {
+            $errores[$campo] = $mensaje;
         }
         return $texto;
     }
@@ -425,11 +425,24 @@ final class ValidacionService
         if ($valor === null || $valor === '') {
             return null;
         }
-        if (!is_string($valor) || mb_strlen(trim($valor)) > $maximo) {
+        if (!is_string($valor)) {
+            $errores[$campo] = 'Debe ser texto.';
+            return null;
+        }
+        if (mb_strlen(trim($valor)) > $maximo) {
             $errores[$campo] = "No puede superar {$maximo} caracteres.";
             return null;
         }
         return trim($valor);
+    }
+
+    /** null si la longitud está bien; si no, el mensaje que explica qué falta o sobra. */
+    public static function mensajeLongitud(int $longitud, int $minimo, int $maximo): ?string
+    {
+        if ($longitud === 0 && $minimo > 0) return 'Este campo es obligatorio.';
+        if ($longitud < $minimo) return "Debe tener al menos {$minimo} caracteres.";
+        if ($longitud > $maximo) return "No puede superar {$maximo} caracteres.";
+        return null;
     }
 
     private function validarNombrePersona(mixed $valor, string $campo, array &$errores): string

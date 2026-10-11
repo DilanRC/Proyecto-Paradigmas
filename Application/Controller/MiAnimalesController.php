@@ -74,18 +74,43 @@ final class MiAnimalesController
     /** POST: registra un animal en el inventario (estado ACTIVO), sin publicación. */
     private function registrar(array $cuerpo): array
     {
+        $campos = ['especieId', 'tipoId', 'razaId', 'sexo', 'arete', 'fechaNacimiento', 'fechaNacimientoEstimada', 'partos',
+            'peso', 'edadMeses', 'proposito', 'raza', 'loteCantidad'];
+        $desconocidos = array_diff(array_keys($cuerpo), $campos);
+        if ($desconocidos !== []) {
+            throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
+        }
+        // Todo es opcional, pero un animal sin ningún dato no sirve en el inventario.
+        $conDatos = array_filter(array_diff_key($cuerpo, ['fechaNacimientoEstimada' => 0]),
+            static fn (mixed $valor): bool => $valor !== null && $valor !== '');
+        if ($conDatos === []) {
+            throw new HttpException('No se puede registrar un animal sin datos. Completa al menos uno: especie, tipo, raza, arete, peso o edad.', 422, null, [
+                'especieId' => 'Completa al menos un dato del animal.',
+            ]);
+        }
         $texto = AnimalPublicacionController::texto(...);
         $numero = AnimalPublicacionController::numero(...);
-        $modelo = AnimalValidacionService::validar($this->catalogo, $cuerpo);
-        if ($modelo['loteCantidad'] > 1) {
-            throw new HttpException('Revise los campos indicados.', 422, null, ['loteCantidad' => 'Registra los animales uno por uno.']);
-        }
+        $v = AnimalPublicacionController::validarTodos([
+            'modelo' => function () use ($cuerpo): array {
+                $modelo = AnimalValidacionService::validar($this->catalogo, $cuerpo);
+                if ($modelo['loteCantidad'] > 1) {
+                    throw new HttpException('Revise los campos indicados.', 422, null, ['loteCantidad' => 'Registra los animales uno por uno.']);
+                }
+                return $modelo;
+            },
+            'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),
+            'sexo' => fn () => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
+            'proposito' => fn () => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
+            'edadMeses' => fn () => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
+            'peso' => fn () => $numero($cuerpo['peso'] ?? null, 'peso'),
+        ]);
+        $modelo = $v['modelo'];
         $datos = [
-            'raza' => $modelo['razaNombre'] ?? $texto($cuerpo['raza'] ?? null, 'raza', 120),
-            'sexo' => $modelo['sexo'] ?? $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
-            'proposito' => $texto($cuerpo['proposito'] ?? null, 'proposito', 80),
-            'edadMeses' => $numero($cuerpo['edadMeses'] ?? null, 'edadMeses', true),
-            'peso' => $numero($cuerpo['peso'] ?? null, 'peso'),
+            'raza' => $modelo['razaNombre'] ?? $v['raza'],
+            'sexo' => $modelo['sexo'] ?? $v['sexo'],
+            'proposito' => $v['proposito'],
+            'edadMeses' => $v['edadMeses'],
+            'peso' => $v['peso'],
         ];
         $productorId = $this->productorId(true);
 
@@ -131,18 +156,18 @@ final class MiAnimalesController
         $errores = [];
         foreach (array_diff(array_keys($cuerpo), $permitidos) as $campo) $errores[$campo] = 'Campo no permitido.';
         if (($cuerpo['accion'] ?? null) !== 'PUBLICAR') $errores['accion'] = 'La única acción disponible es PUBLICAR.';
-        $animalId = filter_var($cuerpo['animalId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $animalId = filter_var(is_bool($cuerpo['animalId'] ?? null) ? false : $cuerpo['animalId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 2147483647]]);
         if ($animalId === false) $errores['animalId'] = 'Debe ser un entero positivo.';
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
 
         $texto = AnimalPublicacionController::texto(...);
-        $datos = [
-            'fincaNombre' => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
-            'titulo' => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
-            'descripcion' => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
-            'precio' => AnimalPublicacionController::numero($cuerpo['precio'] ?? null, 'precio'),
-            'imagenUrl' => AnimalPublicacionController::imagenUrl($cuerpo['imagenUrl'] ?? null),
-        ];
+        $datos = AnimalPublicacionController::validarTodos([
+            'fincaNombre' => fn () => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
+            'titulo' => fn () => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
+            'descripcion' => fn () => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
+            'precio' => fn () => AnimalPublicacionController::numero($cuerpo['precio'] ?? null, 'precio'),
+            'imagenUrl' => fn () => AnimalPublicacionController::imagenUrl($cuerpo['imagenUrl'] ?? null),
+        ]);
         $productorId = $this->productorId(true);
         $fincaId = $this->fincas->buscarIdActivo($productorId, $datos['fincaNombre']);
         if ($fincaId === null) {
