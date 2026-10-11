@@ -7,6 +7,7 @@ import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=foto-3
 import { montarEditorDireccion } from './shared/editor-direccion.js?v=oferta-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
+import { provinciaDePunto, validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
 
 const FLETES_API = 'api/v1/fletes';
 const OFERTAS_API = 'api/v1/mi-ofertas';
@@ -48,8 +49,11 @@ function stateFromActivity(payload) {
 // ---------- Fletes disponibles (cercanos a la ubicación de la persona) ----------
 
 function filaCercana(oferta) {
-    const km = Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 });
-    return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo || 'Flete')} · hasta ${Number(oferta.capacidad)} cabezas</h3><p>${escapeHtml(formatLocation(oferta.zona))} · a ${km} km (cubre ${Number(oferta.radioKm)} km)</p><p>${escapeHtml(oferta.transportista || '')} · ${escapeHtml(formatPrice(oferta.precio))}</p>${oferta.descripcion ? `<p>${escapeHtml(oferta.descripcion)}</p>` : ''}</div></article>`;
+    // Una oferta sin punto en el mapa se empareja por provincia: no tiene distancia.
+    const distancia = oferta.distanciaKm == null
+        ? 'en tu provincia'
+        : `a ${Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 })} km (cubre ${Number(oferta.radioKm)} km)`;
+    return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo || 'Flete')} · hasta ${Number(oferta.capacidad)} cabezas</h3><p>${escapeHtml(formatLocation(oferta.zona))} · ${distancia}</p><p>${escapeHtml(oferta.transportista || '')} · ${escapeHtml(formatPrice(oferta.precio))}</p>${oferta.descripcion ? `<p>${escapeHtml(oferta.descripcion)}</p>` : ''}</div></article>`;
 }
 
 async function cargarCercanos() {
@@ -74,6 +78,10 @@ async function cargarCercanos() {
     const consulta = new URLSearchParams({
         latitud: ubicacion.latitud, longitud: ubicacion.longitud, capacidadMinima: String(capacidad), tamanoPagina: '50',
     });
+    // Con la provincia también salen las ofertas que no marcaron punto en el mapa.
+    const provincia = await provinciaDePunto(ubicacion);
+    if (turno !== turnoCercanos) return;
+    if (provincia) consulta.set('provincia', provincia);
     try {
         const respuesta = await request(`${FLETES_API}?${consulta}`);
         if (turno !== turnoCercanos) return;
@@ -172,7 +180,7 @@ function abrirOferta(id = null, trigger = null) {
     form.elements.descripcion.value = oferta?.descripcion ?? '';
     mostrarErrores();
     mostrarEstado($('#oferta-form-status'), '', 'info');
-    editor = montarEditorDireccion($('#oferta-zona'), oferta?.zona ?? null, { titulo: 'Punto exacto de tu zona base', opcional: false, lugar: 'tu zona base' });
+    editor = montarEditorDireccion($('#oferta-zona'), oferta?.zona ?? null, { titulo: 'Punto exacto de tu zona base', opcional: true, lugar: 'tu zona base' });
     if (typeof dialogo.showModal === 'function') dialogo.showModal();
     else { dialogo.hidden = false; dialogo.setAttribute('open', ''); }
     form.elements.vehiculoId.focus();
@@ -203,6 +211,9 @@ async function guardarOferta(event) {
     };
     if (editandoId) cuerpo.ofertaId = editandoId;
     mostrarErrores();
+    // El punto es opcional, pero si se marcó debe estar en la provincia escrita.
+    const desajuste = await validarPuntoConDireccion(cuerpo.direccion);
+    if (desajuste) { mostrarEstado(estado, desajuste, 'error'); return; }
     guardar.disabled = true;
     form.setAttribute('aria-busy', 'true');
     mostrarEstado(estado, 'Guardando oferta…', 'info');

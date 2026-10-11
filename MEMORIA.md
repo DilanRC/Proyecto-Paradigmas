@@ -201,7 +201,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   - `GET` lista las propias en todos los estados (con zona exacta y vehículo).
   - `POST { vehiculoId, direccion, radioKm, capacidad, precio?, descripcion? }` publica (201, queda `ACTIVA`). `PUT` lo mismo + `ofertaId`.
     `PATCH { ofertaId, estado: ACTIVA|PAUSADA }` pausa o reactiva (idempotente). No hay DELETE: se pausa.
-  - Reglas: la `direccion` usa el mismo objeto que las fincas pero el **punto (latitud y longitud) es obligatorio**; `radioKm` 1–500,
+  - Reglas: la `direccion` usa el mismo objeto que las fincas; el **punto (latitud y longitud) es opcional desde el 11/10** (antes obligatorio); `radioKm` 1–500,
     `capacidad` 1–200, `precio` ≥ 0 o `null` (a convenir). El vehículo debe ser propio (404 si no) y estar activo (409). Una oferta
     ajena responde 404. Sin la actividad Transportista: 409.
   - Locks en orden oferta → dirección → bitácora, dentro de una transacción. Bitácora entidad `OFERTA_FLETE`, origen `API_MI_OFERTAS`
@@ -212,6 +212,14 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   La vista de cliente **no trae placa, VIN, señas ni coordenadas**: solo modelo y foto del vehículo y provincia/cantón/distrito/pueblo.
   La distancia se calcula en PHP con `PublicacionCercaniaService::calcularDistanciaKm` (ver el `ponytail:` de `listarCercanas` si crece).
 - `api/v1/fletes` también acepta **`publicacionId`** en vez de `latitud`/`longitud`: el servidor usa el punto de la finca del animal (sus coordenadas no se exponen) y devuelve los fletes que la cubren, con `distanciaKm` desde la finca; 422 si la finca no tiene punto en el mapa. Es lo que usará "Comprar con flete" y "Ver fletes cercanos".
+- **Ofertas sin punto en el mapa (11/10):** se emparejan por **provincia** (sin tildes ni mayúsculas) y salen al final, con `distanciaKm: null`.
+  `api/v1/fletes` acepta `provincia` opcional junto a `latitud`/`longitud` (Fletes la saca del punto del navegador con Nominatim); con
+  `publicacionId` o `subastaId` usa la provincia de la finca, y una finca **sin punto** ya no da 422: busca solo por provincia
+  (`CompraSolicitud::ubicacionDeFinca`). Las pantallas muestran "en tu provincia" / "en la misma provincia" en vez de los km.
+- **Punto del mapa = opcional en todos lados, pero debe coincidir con la provincia escrita** (`shared/punto-direccion.js`:
+  `validarPuntoConDireccion`, `desajusteProvincia`). Se revisa en el navegador al guardar (oferta de flete, finca de Mi panel, fincas del
+  registro y del admin de productores) con la provincia que Nominatim da para el punto. Solo la provincia (el pueblo o cantón del mapa puede
+  llamarse distinto). Si Nominatim no responde, no bloquea. **No hay validación en el servidor** (habría que llamar a Nominatim desde PHP).
 - `api/v1/fletes` **no devuelve las ofertas de quien consulta** (viven en "Mis ofertas"), igual que Explorar con las publicaciones propias.
 - **Pantalla `/fletes`** (`fletes.js`, `fletes-1`): "Fletes disponibles" (lista las ofertas cercanas a la ubicación del navegador, con filtro de
   capacidad mínima; sin ubicación pide "Usar mi ubicación") y, con Transportista activo, "Mis ofertas" (Publicar, Editar, Pausar/Reactivar).
@@ -660,6 +668,14 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-11 · jefersonbustamante · Punto del mapa opcional en los fletes y validado contra la provincia
+- Ver "Oferta de flete (P1-2)". Archivos: `MiOfertasController` (sin el punto obligatorio), `TransportistaOferta::listarCercanas` (latitud/longitud
+  opcionales y `$provincia`), `FletesController`, `CompraSolicitud::ubicacionDeFinca`, nuevo `Public/js/shared/punto-direccion.js`, `fletes.js`
+  (`fletes-5`), `mi-actividad.js` (`panel-17`), `registro.js` (`signup-12`), `productores.js` (`sections-9`), `subastas.js` (`subastas-3`) y
+  `solicitud-compra.js` (`solicitud-3`; `interactions-5`, `interesa-6`).
+- Revisado el mapa: MapLibre 6.9.0 (unpkg), estilo de OpenFreeMap, límites de Costa Rica y Nominatim responden 200.
+- Pruebas: `mi_ofertas_test` (oferta sin punto por provincia) y nueva `Tests/frontend/punto_direccion.test.mjs`.
 
 ### 2026-10-11 · jefersonbustamante · Subastas en tiempo real (DEC-SUBASTA-001)
 - Subastas con pujas y comentarios en vivo, cierre automático con ganador, avisos en una campana y vista de solo lectura para el admin

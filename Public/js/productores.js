@@ -9,6 +9,7 @@ import {
 } from './shared/list-state.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { createToast } from './shared/toast.js';
+import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
 
 const API_URL = 'api/v1/productores';
 const FINCAS_DIRECCION_URL = 'api/v1/fincas/direccion';
@@ -575,6 +576,11 @@ function initialize() {
             if (!elements.form.checkValidity()) { errores.markFirstInvalid(); return; }
             const original = $('#identificacion-original').value;
             const editing = original !== '';
+            // El punto de cada finca es opcional, pero si se marcó debe estar en la provincia escrita.
+            for (const finca of listaFincas.obtenerFincas()) {
+                const desajuste = await validarPuntoConDireccion(finca.direccion);
+                if (desajuste) { toast.error(`${finca.nombre}: ${desajuste}`); return; }
+            }
             const data = buildProductorPayload({
                 tipoCodigo: elements.types.value,
                 numero: $('#identificacion-numero').value,

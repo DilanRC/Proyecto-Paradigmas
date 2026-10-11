@@ -311,6 +311,27 @@ final class CompraSolicitud
         return $fila === false ? null : ['latitud' => (float) $fila['latitud'], 'longitud' => (float) $fila['longitud']];
     }
 
+    /** Provincia y punto (si lo tiene) de la finca de una publicación; null si la finca no tiene dirección. */
+    public function ubicacionDeFinca(int $publicacionId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT d.tbdireccionprovincia AS provincia, d.tbdireccionlatitud AS latitud, d.tbdireccionlongitud AS longitud
+             FROM tbanimalpublicacion p
+             INNER JOIN tbfincadireccion fd ON fd.tbfincaid = p.tbfincaid
+             INNER JOIN tbdireccion d ON d.tbdireccionid = fd.tbdireccionid
+             WHERE p.tbanimalpublicacionid = :id ORDER BY fd.tbdireccionid DESC LIMIT 1'
+        );
+        $sentencia->execute(['id' => $publicacionId]);
+        $fila = $sentencia->fetch();
+        if ($fila === false) return null;
+
+        return [
+            'provincia' => $fila['provincia'],
+            'latitud' => $fila['latitud'] === null ? null : (float) $fila['latitud'],
+            'longitud' => $fila['longitud'] === null ? null : (float) $fila['longitud'],
+        ];
+    }
+
     private function seleccion(): string
     {
         // Alias en minúscula: Postgres los pliega; las claves públicas camelCase se arman en el controlador.

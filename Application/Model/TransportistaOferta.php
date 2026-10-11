@@ -148,40 +148,51 @@ final class TransportistaOferta
     }
 
     /**
-     * Ofertas ACTIVAS que cubren el punto (distancia <= radio), de la más cercana a la más lejana.
+     * Ofertas ACTIVAS que cubren el lugar consultado. Con punto (latitud/longitud): las que tienen punto y lo cubren
+     * (distancia <= radio), de la más cercana a la más lejana. Con $provincia: además las que no marcaron punto en el
+     * mapa y son de esa provincia (o todas las de la provincia si no hay punto que consultar), al final y sin distancia.
      * Solo de transportistas, personas y vehículos activos. La zona exacta no se expone.
      * Con $personaId deja fuera las ofertas de esa persona: tus propias ofertas viven en "Mis ofertas".
+     * $conContacto: agrega el teléfono del transportista (solo para el ganador de una subasta, que ya tiene trato).
      * ponytail: se calcula en PHP sobre todas las activas; con miles de ofertas, filtrar por caja de coordenadas en SQL.
      */
-    /** $conContacto: agrega el teléfono del transportista (solo para el ganador de una subasta, que ya tiene trato). */
-    public function listarCercanas(float $latitud, float $longitud, int $capacidadMinima, int $pagina, int $tamano,
-        ?int $personaId = null, bool $conContacto = false): array
+    public function listarCercanas(?float $latitud, ?float $longitud, int $capacidadMinima, int $pagina, int $tamano,
+        ?int $personaId = null, bool $conContacto = false, ?string $provincia = null): array
     {
         $sentencia = $this->conexion->prepare(
             $this->seleccion() . ' INNER JOIN tbtransportista t ON t.tbtransportistaid = o.tbtransportistaid
              INNER JOIN tbpersona pe ON pe.tbpersonaid = t.tbpersonaid
              WHERE o.tbtransportistaofertaestado = :estado AND t.tbtransportistaestado = 1
                AND pe.tbpersonaestado = 1 AND v.tbvehiculoestado = 1
-               AND o.tbtransportistaofertacapacidad >= :capacidadMinima
-               AND d.tbdireccionlatitud IS NOT NULL AND d.tbdireccionlongitud IS NOT NULL'
+               AND o.tbtransportistaofertacapacidad >= :capacidadMinima'
             . ($personaId === null ? '' : ' AND t.tbpersonaid <> :personaId')
         );
         $parametros = ['estado' => 'ACTIVA', 'capacidadMinima' => $capacidadMinima];
         if ($personaId !== null) $parametros['personaId'] = $personaId;
         $sentencia->execute($parametros);
 
+        $normalizar = static fn (?string $texto): string => strtr(mb_strtolower(trim((string) $texto), 'UTF-8'),
+            ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u']);
+        $provinciaBuscada = $normalizar($provincia);
+        $conPunto = $latitud !== null && $longitud !== null;
         $ofertas = [];
         foreach ($sentencia->fetchAll() as $fila) {
-            $distancia = PublicacionCercaniaService::calcularDistanciaKm(
-                $latitud, $longitud, (float) $fila['latitud'], (float) $fila['longitud']
-            );
-            if ($distancia > (int) $fila['radiokm']) continue;
-            $oferta = $this->mapearPublica($fila, round($distancia, 2));
+            $ofertaConPunto = $fila['latitud'] !== null && $fila['longitud'] !== null;
+            if ($conPunto && $ofertaConPunto) {
+                $distancia = PublicacionCercaniaService::calcularDistanciaKm($latitud, $longitud, (float) $fila['latitud'], (float) $fila['longitud']);
+                if ($distancia > (int) $fila['radiokm']) continue;
+                $oferta = $this->mapearPublica($fila, round($distancia, 2));
+            } elseif ($provinciaBuscada !== '' && $normalizar($fila['provincia']) === $provinciaBuscada && (!$conPunto || !$ofertaConPunto)) {
+                $oferta = $this->mapearPublica($fila, null);
+            } else {
+                continue;
+            }
             if ($conContacto) $oferta['telefono'] = $fila['transportistatelefono'];
             $ofertas[] = $oferta;
         }
+        // Primero las que tienen distancia (de la más cercana), luego las emparejadas solo por provincia.
         usort($ofertas, static fn (array $a, array $b): int
-            => [$a['distanciaKm'], -$a['ofertaId']] <=> [$b['distanciaKm'], -$b['ofertaId']]);
+            => [$a['distanciaKm'] === null, $a['distanciaKm'] ?? 0, -$a['ofertaId']] <=> [$b['distanciaKm'] === null, $b['distanciaKm'] ?? 0, -$b['ofertaId']]);
 
         return [
             'ofertas' => array_values(array_slice($ofertas, ($pagina - 1) * $tamano, $tamano)),
@@ -343,7 +354,7 @@ final class TransportistaOferta
     }
 
     /** Vista para clientes: sin placa, señas ni coordenadas exactas. */
-    private function mapearPublica(array $fila, float $distanciaKm): array
+    private function mapearPublica(array $fila, ?float $distanciaKm): array
     {
         return [
             'ofertaId' => (int) $fila['ofertaid'],

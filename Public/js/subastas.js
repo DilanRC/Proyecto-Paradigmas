@@ -338,7 +338,7 @@ async function cargarFletes(tienePunto) {
         listaFletes.replaceChildren(...(ofertas.length ? ofertas.map((o) => {
             const li = el('li');
             li.append(el('strong', null, o.transportista ?? 'Transportista'),
-                el('span', null, ` · ${o.vehiculo?.modelo ?? 'Vehículo'} · hasta ${o.capacidad} cabezas · a ${o.distanciaKm} km · ${o.precio == null ? 'precio a convenir' : formatPrice(o.precio)}`));
+                el('span', null, ` · ${o.vehiculo?.modelo ?? 'Vehículo'} · hasta ${o.capacidad} cabezas${o.distanciaKm == null ? ' · en la misma provincia' : ` · a ${o.distanciaKm} km`} · ${o.precio == null ? 'precio a convenir' : formatPrice(o.precio)}`));
             if (o.telefono) {
                 const tel = el('a', 'subasta-tel', o.telefono);
                 tel.href = `tel:${String(o.telefono).replace(/[^\d+]/g, '')}`;

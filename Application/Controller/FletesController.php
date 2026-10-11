@@ -52,24 +52,29 @@ final class FletesController
                 throw new HttpException('La subasta no existe o no la ganaste.', 404);
             }
             $ubicacion = $subasta === null ? null : $this->subastas->ubicacionFinca($subasta['fincaId']);
-            if ($errores === [] && ($ubicacion['latitud'] ?? null) === null) {
-                $errores['subastaId'] = 'La finca de esta subasta no tiene su ubicación en el mapa.';
+            if ($errores === [] && ($ubicacion['latitud'] ?? null) === null && ($ubicacion['provincia'] ?? '') === '') {
+                $errores['subastaId'] = 'La finca de esta subasta no tiene dirección: no se pueden buscar fletes.';
             }
-            $latitud = (float) ($ubicacion['latitud'] ?? 0.0);
-            $longitud = (float) ($ubicacion['longitud'] ?? 0.0);
+            $latitud = $ubicacion['latitud'] ?? null;
+            $longitud = $ubicacion['longitud'] ?? null;
+            $provincia = $ubicacion['provincia'] ?? null;
             $conContacto = true;
         } elseif (($consulta['publicacionId'] ?? '') !== '') {
             // Con publicacionId el punto es el de la finca del animal (sus coordenadas no se exponen al navegador).
             $publicacionId = $this->entero($consulta['publicacionId'], 'publicacionId', 1, 2147483647, $errores);
-            $punto = $errores === [] ? $this->solicitudes->puntoDeFinca($publicacionId) : null;
-            if ($errores === [] && $punto === null) {
-                $errores['publicacionId'] = 'La finca de esta publicación no tiene su ubicación en el mapa.';
+            // Sin punto en el mapa se usa la provincia de la finca.
+            $ubicacion = $errores === [] ? $this->solicitudes->ubicacionDeFinca($publicacionId) : null;
+            if ($errores === [] && $ubicacion === null) {
+                $errores['publicacionId'] = 'La finca de esta publicación no tiene dirección: no se pueden buscar fletes.';
             }
-            $latitud = $punto['latitud'] ?? 0.0;
-            $longitud = $punto['longitud'] ?? 0.0;
+            $latitud = $ubicacion['latitud'] ?? null;
+            $longitud = $ubicacion['longitud'] ?? null;
+            $provincia = $ubicacion['provincia'] ?? null;
         } else {
             $latitud = $this->coordenada($consulta['latitud'] ?? null, 'latitud', 90, $errores);
             $longitud = $this->coordenada($consulta['longitud'] ?? null, 'longitud', 180, $errores);
+            // Opcional: la provincia de quien consulta, para sumar las ofertas que no marcaron punto en el mapa.
+            $provincia = is_string($consulta['provincia'] ?? null) && mb_strlen($consulta['provincia']) <= 100 ? $consulta['provincia'] : null;
         }
         $capacidad = $this->entero($consulta['capacidadMinima'] ?? 1, 'capacidadMinima', 1, 200, $errores);
         $pagina = $this->entero($consulta['pagina'] ?? 1, 'pagina', 1, 2147483647, $errores);
@@ -80,6 +85,7 @@ final class FletesController
             $latitud, $longitud, $capacidad, $pagina, $tamano,
             $this->actor?->tienePersona() ? (int) $this->actor->personaId : null,
             $conContacto,
+            $provincia,
         );
         $resultado['pagina'] = $pagina;
         $resultado['tamanoPagina'] = $tamano;

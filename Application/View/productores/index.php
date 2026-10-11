@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <script type="module" src="js/productores.js?v=sections-8"></script>
+    <script type="module" src="js/productores.js?v=sections-9"></script>
 </head>
 <body class="rural-panel">
     <aside class="rural-panel__sidebar">
