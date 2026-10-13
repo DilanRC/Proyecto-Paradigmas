@@ -199,9 +199,9 @@ for database in "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         exit 1
     fi
     constraint_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
-        WHERE CONSTRAINT_SCHEMA = '${database}';")"
+        WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE <> 'PRIMARY KEY';")"
     if [[ "$constraint_count" -ne 0 ]]; then
-        echo "Error: ${database} contiene ${constraint_count} restricciones." >&2
+        echo "Error: ${database} contiene ${constraint_count} restricciones además de las llaves primarias." >&2
         exit 1
     fi
     foreign_key_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
@@ -214,8 +214,11 @@ for database in "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
     check_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
         WHERE CONSTRAINT_SCHEMA = '${database}' AND CONSTRAINT_TYPE = 'CHECK';")"
-    if [[ "$primary_key_count" -ne 0 || "$check_count" -ne 0 ]]; then
-        echo "Error: ${database} contiene PK=${primary_key_count} o CHECK=${check_count}." >&2
+    table_count="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = '${database}' AND TABLE_TYPE = 'BASE TABLE';")"
+    # Calidad: una llave primaria por tabla y ninguna otra restricción.
+    if [[ "$primary_key_count" -ne "$table_count" || "$check_count" -ne 0 ]]; then
+        echo "Error: ${database} tiene PK=${primary_key_count} para ${table_count} tablas o CHECK=${check_count}." >&2
         exit 1
     fi
     tables_csv="$(mysql_query "SELECT GROUP_CONCAT(TABLE_NAME ORDER BY TABLE_NAME) FROM information_schema.TABLES
@@ -225,9 +228,9 @@ for database in "$RESTORE_DATABASE" "$PARTS_DATABASE"; do
         exit 1
     fi
     invalid_indexes="$(mysql_query "SELECT COUNT(*) FROM information_schema.STATISTICS
-        WHERE TABLE_SCHEMA = '${database}';")"
+        WHERE TABLE_SCHEMA = '${database}' AND INDEX_NAME <> 'PRIMARY';")"
     if [[ "$invalid_indexes" -ne 0 ]]; then
-        echo "Error: ${database} contiene ${invalid_indexes} índices." >&2
+        echo "Error: ${database} contiene ${invalid_indexes} índices fuera de la llave primaria." >&2
         exit 1
     fi
     productor_id_extra="$(mysql_query "SELECT EXTRA FROM information_schema.COLUMNS
@@ -280,11 +283,12 @@ mysql_query "SELECT pr.tbproductorid, pe.tbpersonaidentificacionnumero, pe.tbper
     ORDER BY pr.tbproductorid LIMIT 1;" >/dev/null
 
 restored_tables="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}' AND TABLE_TYPE = 'BASE TABLE';")"
-restored_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${RESTORE_DATABASE}';")"
+restored_primary_keys="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${RESTORE_DATABASE}' AND CONSTRAINT_TYPE = 'PRIMARY KEY';")"
+restored_constraints="$(mysql_query "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = '${RESTORE_DATABASE}' AND CONSTRAINT_TYPE <> 'PRIMARY KEY';")"
 restored_indexes="$(mysql_query "SELECT COUNT(DISTINCT TABLE_NAME, INDEX_NAME)
-    FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}';")"
+    FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = '${RESTORE_DATABASE}' AND INDEX_NAME <> 'PRIMARY';")"
 
-echo "Restauración correcta: tablas=$restored_tables, restricciones=$restored_constraints, indices=$restored_indexes."
+echo "Restauración correcta: tablas=$restored_tables, llaves primarias=$restored_primary_keys, otras restricciones=$restored_constraints, otros índices=$restored_indexes."
 echo "La consulta funcional de productores se ejecutó correctamente."
 echo "Respaldo validado sin modificar MANIFEST ni SHA256: $backup_database."
 echo "La base temporal ${RESTORE_DATABASE} se eliminará al finalizar."

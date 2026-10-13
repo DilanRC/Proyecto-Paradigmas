@@ -68,8 +68,9 @@ sí lo es: no hagas commit con pruebas nuevas en rojo.
 - Responde y documenta en español.
 
 **Base de datos (backend)**
-- El esquema no usa PK, FK, UNIQUE, DEFAULT, AUTO_INCREMENT, triggers ni
-  rutinas: las reglas viven en PHP. Nombres en minúscula `tb<tabla><campo>`.
+- **Cada tabla tiene su llave primaria** `PRIMARY KEY (<tabla>id)` (lo exige Calidad; una tabla nueva
+  debe traerla). Fuera de eso el esquema no usa FK, UNIQUE, CHECK, DEFAULT, AUTO_INCREMENT, índices,
+  triggers ni rutinas: las reglas viven en PHP y PHP sigue generando los identificadores. Nombres en minúscula `tb<tabla><campo>`.
 - Una columna nueva se agrega en **cuatro** lugares, o producción se rompe:
   1. `Database/SqlScripts/000instalacioncompleta.sql`
   2. `Database/Migrations/0NN<nombre>.sql` (bases MySQL existentes)

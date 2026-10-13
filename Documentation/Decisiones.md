@@ -69,6 +69,9 @@ modificar sus dumps, `MANIFEST.md` ni `SHA256SUMS.txt`.
 
 ## DEC-C04-002 - Cero restricciones de integridad
 
+> **Sustituida en parte por DEC-CALIDAD-PK-001 (12/10/2026):** cada tabla tiene ahora su llave primaria. Lo demás
+> sigue vigente.
+
 El esquema no define claves, restricciones, índices, valores `DEFAULT`,
 `AUTO_INCREMENT`, triggers, rutinas ni eventos. Las
 asociaciones y validaciones son una política de aplicación. SQL directo puede
@@ -1270,3 +1273,27 @@ ya hay un trato cerrado. Las pujas y los comentarios se muestran con el alias o 
 
 **Descartado por ahora.** Extender el cierre si alguien puja en los últimos segundos (anti-sniping), subastar lotes,
 moderar (cancelar) desde el panel y canales privados de Realtime con políticas (necesitan configuración en Supabase).
+
+## DEC-CALIDAD-PK-001 - Una llave primaria por tabla
+
+**Qué pidió Calidad.** "Cada tabla debe tener su llave primaria. No trabajamos con claves foráneas y restricciones de
+negocio en la BD." La regla anterior (DEC-C04-002) se había leído como "cero claves" y el esquema no declaraba ninguna.
+
+**Qué se decidió.** Las 47 tablas declaran `PRIMARY KEY (<tabla>id)` sobre el identificador que ya tenían (`INT NOT NULL`,
+o `BIGINT UNSIGNED NOT NULL` en la bitácora). No se agregó ninguna columna ni se cambió un tipo. Siguen prohibidas las
+llaves foráneas, `UNIQUE`, `CHECK`, `DEFAULT`, `AUTO_INCREMENT`, los índices adicionales, los triggers y las rutinas: el
+único índice de cada tabla es el que crea su llave.
+
+**Qué no cambia.** PHP sigue calculando cada identificador con `MAX(id)+1` bajo `NamedLock` y validando relaciones,
+unicidad lógica (cédula, correo, arete) y dominios. La llave primaria solo agrega una red: si dos peticiones llegaran a
+calcular el mismo identificador, el motor rechaza la segunda en vez de guardar dos filas iguales.
+
+**Bases existentes.** MySQL/MariaDB: `Database/Migrations/025llavesprimarias.sql`. Antes del primer `ALTER` cuenta los
+identificadores repetidos de las 47 tablas y, si hay alguno, se detiene sin cambiar nada; se puede repetir. PostgreSQL:
+`ensurePrimaryKeys()` en `services/supabase-database/migrate.php` agrega la llave a cada tabla que no la tiene y deja sin
+tocar (con un aviso) la que tenga identificadores repetidos o nulos, para no tumbar el despliegue.
+
+**Comprobado.** Instalación limpia y migración de una base con datos en MariaDB 10.4.32 y MySQL 5.7.44; base nueva, base
+con el esquema anterior y base con un identificador repetido en PostgreSQL 16. Gates: `Tests/schema_test.php` (una llave
+`<tabla>id` por tabla y ningún otro índice ni restricción), `Tests/naming_gate.php`, `Tests/naming_eval.php` y las pruebas
+de `services/supabase-database`.

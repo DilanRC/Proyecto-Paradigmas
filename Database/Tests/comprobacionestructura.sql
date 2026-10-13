@@ -85,17 +85,26 @@ DESCRIBE tbsubastapuja;
 DESCRIBE tbsubastacomentario;
 DESCRIBE tbnotificacion;
 
--- Comprobación 2: el avance no introdujo llaves, restricciones ni índices.
--- Resultado esperado: cero filas en las tres consultas.
-SELECT '--- restricciones declaradas (esperado: 0 filas)' AS comprobacion;
+-- Comprobación 2: cada tabla tiene su llave primaria y nada más: sin llaves
+-- foráneas, UNIQUE, CHECK ni índices adicionales.
+SELECT '--- tablas sin llave primaria (esperado: 0 filas)' AS comprobacion;
+SELECT t.table_name
+FROM information_schema.tables t
+WHERE t.table_schema = DATABASE()
+  AND NOT EXISTS (
+      SELECT 1 FROM information_schema.table_constraints c
+      WHERE c.constraint_schema = t.table_schema AND c.table_name = t.table_name
+        AND c.constraint_type = 'PRIMARY KEY');
+
+SELECT '--- otras restricciones declaradas (esperado: 0 filas)' AS comprobacion;
 SELECT table_name, constraint_name, constraint_type
 FROM information_schema.table_constraints
-WHERE constraint_schema = DATABASE();
+WHERE constraint_schema = DATABASE() AND constraint_type <> 'PRIMARY KEY';
 
-SELECT '--- indices declarados (esperado: 0 filas)' AS comprobacion;
+SELECT '--- indices fuera de la llave primaria (esperado: 0 filas)' AS comprobacion;
 SELECT table_name, index_name
 FROM information_schema.statistics
-WHERE table_schema = DATABASE()
+WHERE table_schema = DATABASE() AND index_name <> 'PRIMARY'
 GROUP BY table_name, index_name;
 
 SELECT '--- columnas automaticas (esperado: 0 filas)' AS comprobacion;

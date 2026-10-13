@@ -1,11 +1,11 @@
 USE bdmercadoganadero;
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 
--- Consultas de diagnóstico del modelo sin restricciones.
+-- Consultas de diagnóstico del modelo sin llaves foráneas ni reglas de negocio en la base.
 --
 -- IMPORTANTE: estas consultas DETECTAN inconsistencias. No las IMPIDEN. El
--- motor acepta duplicados, huérfanos y cardinalidades inválidas porque el
--- esquema no declara llaves ni restricciones. Impedirlas corresponde a la capa
+-- motor acepta duplicados lógicos, huérfanos y cardinalidades inválidas porque el
+-- esquema solo declara la llave primaria de cada tabla. Impedirlas corresponde a la capa
 -- de aplicación y queda fuera del alcance de este avance.
 --
 -- Resultado esperado sobre datos válidos: 0 filas en todas las consultas.

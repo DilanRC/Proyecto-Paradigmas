@@ -26,11 +26,11 @@ $evaluate = static function (string $criterio, bool $cumple, string $evidencia) 
 };
 $evaluate('cuarenta_y_siete_tablas', $manifest['table_count'] === 47,
     'SQL crea exactamente cuarenta y siete tablas, incluida la política administrativa, históricos de teléfono y el límite de consultas del registro');
-$evaluate('cero_restricciones_indices', !str_contains($schema, 'PRIMARY KEY')
+$evaluate('solo_llave_primaria_por_tabla', substr_count($schema, 'PRIMARY KEY (') === $manifest['table_count']
     && !str_contains($schema, 'FOREIGN KEY') && !str_contains($schema, 'CHECK (')
     && !str_contains($schema, 'CONSTRAINT ') && !str_contains($schema, 'AUTO_INCREMENT')
     && !str_contains($schema, 'CREATE INDEX') && !str_contains($schema, 'UNIQUE'),
-    'El esquema no contiene claves, restricciones, índices ni AUTO_INCREMENT');
+    'Cada tabla declara su llave primaria; no hay llaves foráneas, otras restricciones, índices ni AUTO_INCREMENT');
 $evaluate('sin_logica_motor', !str_contains($schema, 'DEFAULT ')
     && !str_contains($schema, 'CURRENT_TIMESTAMP') && !str_contains($schema, 'CREATE TRIGGER')
     && !str_contains($schema, 'CREATE PROCEDURE') && !str_contains($schema, 'CREATE FUNCTION')
@@ -112,7 +112,7 @@ $evaluate('restauracion_sin_falso_positivo', str_contains($restoreTool, 'AS sign
     'El comparador propaga errores SQL y agrupa metadatos por una firma con alias');
 $evaluate('restauracion_cero_restricciones', str_contains($restoreTool, 'constraint_count')
     && str_contains($restoreTool, 'check_count') && str_contains($restoreTool, 'foreign_key_count'),
-    'La restauración exige cero restricciones, PK, FK y CHECK');
+    'La restauración exige una llave primaria por tabla y cero FK y CHECK');
 $evaluate('restauracion_sin_logica_motor', str_contains($restoreTool, 'automatic_columns')
     && str_contains($restoreTool, 'programmable_objects'),
     'La restauración exige cero defaults, generación automática y objetos programables');

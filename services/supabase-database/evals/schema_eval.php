@@ -48,7 +48,9 @@ $checks = [
         && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbtransportistaflete')
         && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbtransportistaresena'),
     'sin_tbvendedor' => !str_contains($schema, 'tbvendedor'),
-    'sin_automatismos' => !preg_match('/PRIMARY KEY|FOREIGN KEY|DEFAULT |CREATE INDEX|UNIQUE/', $schema),
+    'sin_automatismos' => !preg_match('/FOREIGN KEY|DEFAULT |CREATE INDEX|UNIQUE/', $schema),
+    'llave_primaria_por_tabla' => substr_count($schema, 'PRIMARY KEY (') === 47
+        && str_contains($migration, 'ensurePrimaryKeys($connection)'),
     'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 47,
     'migracion_serializada' => str_contains($migration, 'pg_advisory_xact_lock'),
     'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),

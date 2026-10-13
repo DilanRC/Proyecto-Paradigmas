@@ -31,8 +31,9 @@ try {
     $report['base_datos'] = ['conexion' => 'correcta', 'motor' => $driver, 'version' => $db->getAttribute(PDO::ATTR_SERVER_VERSION)];
     if ($driver === 'mysql') {
         $report['base_datos']['tablas'] = (int) $db->query('SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()')->fetchColumn();
-        $report['base_datos']['restricciones'] = (int) $db->query("SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND constraint_type IN ('PRIMARY KEY', 'FOREIGN KEY', 'UNIQUE', 'CHECK')")->fetchColumn();
-        $report['base_datos']['indices'] = (int) $db->query('SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE()')->fetchColumn();
+        $report['base_datos']['restricciones'] = (int) $db->query("SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND constraint_type IN ('FOREIGN KEY', 'UNIQUE', 'CHECK')")->fetchColumn();
+        $report['base_datos']['llaves_primarias'] = (int) $db->query("SELECT COUNT(*) FROM information_schema.table_constraints WHERE constraint_schema = DATABASE() AND constraint_type = 'PRIMARY KEY'")->fetchColumn();
+        $report['base_datos']['indices'] = (int) $db->query('SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND index_name <> \'PRIMARY\'')->fetchColumn();
         $report['base_datos']['triggers'] = (int) $db->query('SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema = DATABASE()')->fetchColumn();
         $report['base_datos']['rutinas'] = (int) $db->query('SELECT COUNT(*) FROM information_schema.routines WHERE routine_schema = DATABASE()')->fetchColumn();
         $source = file_get_contents(dirname(__DIR__) . '/Database/SqlScripts/000instalacioncompleta.sql');
@@ -41,6 +42,7 @@ try {
         $report['base_datos']['tablas_faltantes'] = count(array_diff($matches[1], $actualTables));
         $report['base_datos']['esquema_minimo'] = count($matches[1]) > 0
             && $report['base_datos']['tablas_faltantes'] === 0
+            && $report['base_datos']['llaves_primarias'] === $report['base_datos']['tablas']
             && $report['base_datos']['restricciones'] === 0 && $report['base_datos']['indices'] === 0
             && $report['base_datos']['triggers'] === 0 && $report['base_datos']['rutinas'] === 0;
     } else {

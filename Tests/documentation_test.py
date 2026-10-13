@@ -28,7 +28,7 @@ assert "TraceEnable Off" in xampp and "ErrorDocument 405 /api/metodo-no-permitid
 assert "PHP 8.0 no puede" not in xampp and "requiere PHP 8.3" not in xampp
 
 required = {
-    "DER.pdf": ["tbproductor", "tbproductordireccion", "tbfinca", "tbbitacora", "tbcomprador", "cero claves", "restricciones, índices", "AUTO_INCREMENT"],
+    "DER.pdf": ["tbproductor", "tbproductordireccion", "tbfinca", "tbbitacora", "tbcomprador", "llave primaria por tabla", "restricciones, índices", "AUTO_INCREMENT"],
     "DAplicacion.pdf": ["JavaScript", "fetch/AJAX", "ProductorController", "PDO::prepare()", "respuesta HTTP JSON", "sin recargar"],
     "AvanceSemanal.pdf": ["Cristian Brenes", "cinco tablas", "tbcomprador", "restricciones", "cero índices", "tbproductorid", "sentencias preparadas"],
 }

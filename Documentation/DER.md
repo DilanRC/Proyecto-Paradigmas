@@ -1,11 +1,25 @@
 # DER - Persona, contextos de negocio e históricos
 
-> Estado vigente de `feat/Front-2.0` para Avance 2. Las relaciones mostradas son conceptuales: MySQL y PostgreSQL no declaran PK, FK, UNIQUE, CHECK, AUTO_INCREMENT, índices ni lógica programable. La base conserva cero claves y restricciones, índices ni AUTO_INCREMENT; PHP valida relaciones, genera IDs y controla transacciones.
+> Estado vigente de `feat/Front-2.0` para Avance 2. Las relaciones mostradas son conceptuales: MySQL y PostgreSQL declaran una llave primaria por tabla (`<tabla>id`, marcada PK) y nada más: sin FK, UNIQUE, CHECK, AUTO_INCREMENT, índices adicionales ni lógica programable. PHP valida relaciones, genera IDs y controla transacciones.
 
 ```mermaid
 erDiagram
-    tbpersona {
+    tbadministrador {
+        INT tbadministradorid PK
+        VARCHAR tbadministradorcorreoelectronico
+        TINYINT tbadministradorestado
+    }
+    tbanimalpublicacioninteraccion {
+        INT tbanimalpublicacioninteraccionid PK
         INT tbpersonaid
+        INT tbanimalpublicacionid
+        VARCHAR tbanimalpublicacioninteracciontipo
+        VARCHAR tbanimalpublicacioninteraccionaccion
+        DATETIME tbanimalpublicacioninteraccionfecha
+        VARCHAR tbanimalpublicacioninteraccionorigen
+    }
+    tbpersona {
+        INT tbpersonaid PK
         VARCHAR tbpersonaidentificacionnumero
         VARCHAR tbpersonaidentificaciontipo
         VARCHAR tbpersonanombre
@@ -23,38 +37,38 @@ erDiagram
     }
 
     tbproductor {
-        INT tbproductorid
+        INT tbproductorid PK
         INT tbpersonaid
     }
 
     tbcomprador {
-        INT tbcompradorid
+        INT tbcompradorid PK
         INT tbpersonaid
         TINYINT tbcompradorestado
     }
 
     tbtransportista {
-        INT tbtransportistaid
+        INT tbtransportistaid PK
         INT tbpersonaid
         TINYINT tbtransportistaestado
     }
 
     tbproductorpersonatelefonohistorico {
-        INT tbproductorpersonatelefonohistoricoid
+        INT tbproductorpersonatelefonohistoricoid PK
         INT tbproductorid
         VARCHAR tbproductorpersonatelefonohistoriconuevo
         DATETIME tbproductorpersonatelefonohistoricofecha
     }
 
     tbcompradorpersonatelefonohistorico {
-        INT tbcompradorpersonatelefonohistoricoid
+        INT tbcompradorpersonatelefonohistoricoid PK
         INT tbcompradorid
         VARCHAR tbcompradorpersonatelefonohistoriconuevo
         DATETIME tbcompradorpersonatelefonohistoricofecha
     }
 
     tbproductordireccion {
-        INT tbproductordireccionid
+        INT tbproductordireccionid PK
         INT tbproductorid
         INT tbdireccionid
         DATETIME tbproductordireccionfechainicio
@@ -62,7 +76,7 @@ erDiagram
     }
 
     tbdireccion {
-        INT tbdireccionid
+        INT tbdireccionid PK
         VARCHAR tbdireccionprovincia
         VARCHAR tbdireccioncanton
         VARCHAR tbdirecciondistrito
@@ -71,20 +85,20 @@ erDiagram
     }
 
     tbfinca {
-        INT tbfincaid
+        INT tbfincaid PK
         INT tbproductorid
         VARCHAR tbfincanombre
         TINYINT tbfincaestado
     }
 
     tbfincadireccion {
-        INT tbfincadireccionid
+        INT tbfincadireccionid PK
         INT tbfincaid
         INT tbdireccionid
     }
 
     tbproductorestadoperiodo {
-        INT tbproductorestadoperiodoid
+        INT tbproductorestadoperiodoid PK
         INT tbproductorid
         TINYINT tbproductorestadoperiodoestado
         DATETIME tbproductorestadoperiodofechainicio
@@ -93,7 +107,7 @@ erDiagram
     }
 
     tbproductorubicacion {
-        INT tbproductorubicacionid
+        INT tbproductorubicacionid PK
         INT tbproductorid
         DECIMAL tbproductorubicacionlatitud
         DECIMAL tbproductorubicacionlongitud
@@ -103,7 +117,7 @@ erDiagram
     }
 
     tbproductoractividad {
-        INT tbproductoractividadid
+        INT tbproductoractividadid PK
         INT tbproductorid
         VARCHAR tbproductoractividadtipo
         DATETIME tbproductoractividadfecha
@@ -111,7 +125,7 @@ erDiagram
     }
 
     tbproductorclasificacionperiodo {
-        INT tbproductorclasificacionperiodoid
+        INT tbproductorclasificacionperiodoid PK
         INT tbproductorid
         VARCHAR tbproductorclasificacionperiodotipo
         DATETIME tbproductorclasificacionperiodofechainicio
@@ -120,14 +134,14 @@ erDiagram
     }
 
     tbpagometodo {
-        INT tbpagometodoid
+        INT tbpagometodoid PK
         VARCHAR tbpagometodonombre
         VARCHAR tbpagometododescripcion
         TINYINT tbpagometodoactivo
     }
 
     tbvehiculo {
-        INT tbvehiculoid
+        INT tbvehiculoid PK
         VARCHAR tbvehiculoplaca
         VARCHAR tbvehiculovin
         VARCHAR tbvehiculomodelo
@@ -136,13 +150,13 @@ erDiagram
     }
 
     tbtransportistavehiculo {
-        INT tbtransportistavehiculoid
+        INT tbtransportistavehiculoid PK
         INT tbtransportistaid
         INT tbvehiculoid
     }
 
     tbanimal {
-        INT tbanimalid
+        INT tbanimalid PK
         VARCHAR tbanimalidentificacion
         VARCHAR tbanimalsexo
         VARCHAR tbanimalraza
@@ -160,13 +174,13 @@ erDiagram
     }
 
     tbespecie {
-        INT tbespecieid
+        INT tbespecieid PK
         VARCHAR tbespecienombre
         TINYINT tbespecieactivo
     }
 
     tbanimaltipo {
-        INT tbanimaltipoid
+        INT tbanimaltipoid PK
         INT tbespecieid
         VARCHAR tbanimaltiponombre
         VARCHAR tbanimaltiposexo
@@ -174,26 +188,26 @@ erDiagram
     }
 
     tbraza {
-        INT tbrazaid
+        INT tbrazaid PK
         INT tbespecieid
         VARCHAR tbrazanombre
         TINYINT tbrazaactivo
     }
 
     tbanimalpublicacionanimal {
-        INT tbanimalpublicacionanimalid
+        INT tbanimalpublicacionanimalid PK
         INT tbanimalpublicacionid
         INT tbanimalid
     }
 
     tbvacuna {
-        INT tbvacunaid
+        INT tbvacunaid PK
         VARCHAR tbvacunanombre
         TINYINT tbvacunaactivo
     }
 
     tbanimalvacunacion {
-        INT tbanimalvacunacionid
+        INT tbanimalvacunacionid PK
         INT tbanimalid
         INT tbvacunaid
         DATE tbanimalvacunacionfecha
@@ -206,7 +220,7 @@ erDiagram
     }
 
     tbsubasta {
-        INT tbsubastaid
+        INT tbsubastaid PK
         INT tbproductorid
         INT tbanimalid
         INT tbfincaid
@@ -223,7 +237,7 @@ erDiagram
     }
 
     tbsubastapuja {
-        INT tbsubastapujaid
+        INT tbsubastapujaid PK
         INT tbsubastaid
         INT tbpersonaid
         DECIMAL tbsubastapujamonto
@@ -231,7 +245,7 @@ erDiagram
     }
 
     tbsubastacomentario {
-        INT tbsubastacomentarioid
+        INT tbsubastacomentarioid PK
         INT tbsubastaid
         INT tbpersonaid
         VARCHAR tbsubastacomentariotexto
@@ -239,7 +253,7 @@ erDiagram
     }
 
     tbnotificacion {
-        INT tbnotificacionid
+        INT tbnotificacionid PK
         INT tbpersonaid
         VARCHAR tbnotificaciontipo
         VARCHAR tbnotificaciontitulo
@@ -250,7 +264,7 @@ erDiagram
     }
 
     tbanimalproduccionsalud {
-        INT tbanimalproduccionsaludid
+        INT tbanimalproduccionsaludid PK
         INT tbanimalid
         DATETIME tbanimalproduccionsaludfecha
         VARCHAR tbanimalproduccionsaludorigen
@@ -266,7 +280,7 @@ erDiagram
     }
 
     tbanimalpublicacion {
-        INT tbanimalpublicacionid
+        INT tbanimalpublicacionid PK
         INT tbanimalid
         INT tbproductorvendedorid
         INT tbfincaid
@@ -279,7 +293,7 @@ erDiagram
     }
 
     tbanimalpublicacionestadoperiodo {
-        INT tbanimalpublicacionestadoperiodoid
+        INT tbanimalpublicacionestadoperiodoid PK
         INT tbanimalpublicacionid
         VARCHAR tbanimalpublicacionestadoperiodoestado
         DATETIME tbanimalpublicacionestadoperiodofechainicio
@@ -289,7 +303,7 @@ erDiagram
     }
 
     tbcompra {
-        INT tbcompraid
+        INT tbcompraid PK
         INT tbanimalid
         INT tbproductorcompradorid
         INT tbcompradorid
@@ -303,7 +317,7 @@ erDiagram
     }
 
     tbventa {
-        INT tbventaid
+        INT tbventaid PK
         INT tbanimalid
         INT tbproductorvendedorid
         INT tbproductorcompradorid
@@ -325,7 +339,7 @@ erDiagram
     }
 
     tbanimalinteraccion {
-        INT tbanimalinteraccionid
+        INT tbanimalinteraccionid PK
         INT tbproductorid
         INT tbanimalid
         VARCHAR tbanimalinteracciontipo
@@ -335,13 +349,13 @@ erDiagram
     }
 
     tbcarrito {
-        INT tbcarritoid
+        INT tbcarritoid PK
         INT tbproductorid
         DATETIME tbcarritofechacreacion
     }
 
     tbcarritoanimal {
-        INT tbcarritoanimalid
+        INT tbcarritoanimalid PK
         INT tbcarritoid
         INT tbanimalid
         VARCHAR tbcarritoanimalaccion
@@ -350,7 +364,7 @@ erDiagram
     }
 
     tbcarritoestadoperiodo {
-        INT tbcarritoestadoperiodoid
+        INT tbcarritoestadoperiodoid PK
         INT tbcarritoid
         VARCHAR tbcarritoestadoperiodoestado
         DATETIME tbcarritoestadoperiodofechainicio
@@ -360,7 +374,7 @@ erDiagram
     }
 
     tbtransportistaestadoperiodo {
-        INT tbtransportistaestadoperiodoid
+        INT tbtransportistaestadoperiodoid PK
         INT tbtransportistaid
         TINYINT tbtransportistaestadoperiodoestado
         DATETIME tbtransportistaestadoperiodofechainicio
@@ -370,7 +384,7 @@ erDiagram
     }
 
     tbtransportistahorario {
-        INT tbtransportistahorarioid
+        INT tbtransportistahorarioid PK
         INT tbtransportistaid
         VARCHAR tbtransportistahorariodiasemana
         TIME tbtransportistahorariohorainicio
@@ -381,7 +395,7 @@ erDiagram
     }
 
     tbtransportistaflete {
-        INT tbtransportistafleteid
+        INT tbtransportistafleteid PK
         INT tbtransportistaid
         INT tbproductororigenid
         INT tbfincaorigenid
@@ -399,7 +413,7 @@ erDiagram
     }
 
     tbtransportistaresena {
-        INT tbtransportistaresenaid
+        INT tbtransportistaresenaid PK
         INT tbtransportistaid
         INT tbpersonaid
         INT tbtransportistafleteid
@@ -410,13 +424,13 @@ erDiagram
     }
 
     tbregistroconsulta {
-        INT tbregistroconsultaid
+        INT tbregistroconsultaid PK
         CHAR tbregistroconsultaclave
         DATETIME tbregistroconsultafecha
     }
 
     tbtransportistaoferta {
-        INT tbtransportistaofertaid
+        INT tbtransportistaofertaid PK
         INT tbtransportistaid
         INT tbvehiculoid
         INT tbdireccionid
@@ -429,7 +443,7 @@ erDiagram
     }
 
     tbcomprasolicitud {
-        INT tbcomprasolicitudid
+        INT tbcomprasolicitudid PK
         INT tbanimalpublicacionid
         INT tbcompradorid
         INT tbtransportistaofertaid
@@ -445,7 +459,7 @@ erDiagram
     }
 
     tbbitacora {
-        BIGINT tbbitacoraid
+        BIGINT tbbitacoraid PK
         VARCHAR tbbitacoraentidad
         VARCHAR tbbitacoraregistroidentificacionnumero
         VARCHAR tbbitacoraaccion
@@ -461,6 +475,8 @@ erDiagram
     tbpersona ||--o| tbproductor : "persona-productor"
     tbpersona ||--o| tbcomprador : "persona-comprador"
     tbpersona ||--o| tbtransportista : "persona-transportista"
+    tbpersona ||--o{ tbanimalpublicacioninteraccion : "persona-interaccion"
+    tbanimalpublicacion ||--o{ tbanimalpublicacioninteraccion : "publicacion-interaccion"
     tbproductor ||--o{ tbproductorpersonatelefonohistorico : "telefono historico"
     tbcomprador ||--o{ tbcompradorpersonatelefonohistorico : "telefono historico"
     tbproductor ||--o{ tbproductordireccion : "residencia"
@@ -532,8 +548,9 @@ De forma similar, algunos hechos comerciales actuales todavía usan nombres como
 
 ## Regla física
 
-El SQL canónico mantiene cero claves y cero restricciones, índices u objetos
-programables: PK/FK/UNIQUE/CHECK/AUTO_INCREMENT/triggers/procedimientos/defaults
-automáticos no existen en el esquema. Los IDs, relaciones, validación,
+El SQL canónico declara una llave primaria por tabla sobre `<tabla>id` y ninguna otra
+regla: no hay llaves foráneas, otras restricciones, índices adicionales ni objetos
+programables (FK/UNIQUE/CHECK/AUTO_INCREMENT/triggers/procedimientos/defaults
+automáticos no existen en el esquema). Los IDs, relaciones, validación,
 concurrencia y rollback corresponden a PHP mediante sentencias preparadas,
 locks y transacciones.

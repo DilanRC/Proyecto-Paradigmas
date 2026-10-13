@@ -500,7 +500,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
 1. **Columna nueva = 4 lugares** (SQL canónico, migración MySQL, `schema.sql`
-   de Postgres y `migrate.php`). Producción corre `migrate.php` al arrancar el
+   de Postgres y `migrate.php`). Una **tabla** nueva lleva además su `PRIMARY KEY (<tabla>id)`. Producción corre `migrate.php` al arrancar el
    contenedor; si falta ahí, el SELECT falla en producción.
 2. **Versiones de caché `?v=`**: súbelas al cambiar CSS/JS. Si un módulo
    compartido gana un `export`, versiona su `import` donde se usa (ya pasa con
@@ -668,6 +668,31 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-12 · fix/xampp-linux-local · Una llave primaria por tabla (DEC-CALIDAD-PK-001)
+- **Regla corregida.** Calidad pide: "Cada tabla debe tener su llave primaria. No trabajamos con claves foráneas y
+  restricciones de negocio en la BD". El proyecto lo había leído como "cero claves". Ahora las **47 tablas** declaran
+  `PRIMARY KEY (<tabla>id)` sobre el identificador que ya tenían; no hay columnas nuevas. Siguen prohibidos FK, UNIQUE, CHECK,
+  DEFAULT, AUTO_INCREMENT, índices adicionales, triggers y rutinas, y **PHP sigue generando los ids** con `MAX+1` bajo `NamedLock`.
+- Lugares: `000instalacioncompleta.sql`, migración `025llavesprimarias.sql` (MySQL/MariaDB), `schema.sql` de Postgres y
+  `ensurePrimaryKeys()` en `migrate.php`. **Las migraciones siguientes empiezan en `026`.**
+- **Tabla nueva = trae su `PRIMARY KEY (<tabla>id)`** en el SQL canónico y en `schema.sql`; si no, fallan `schema_test`,
+  `naming_gate` y las pruebas de `services/supabase-database`.
+- La migración 025 cuenta primero los ids repetidos y se detiene antes del primer `ALTER` si hay alguno
+  (`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS`); se puede repetir. En Postgres, una tabla con ids repetidos o nulos se
+  deja sin llave y `migrate.php` escribe `supabase_primary_key_pendiente tablas=...` en la salida de error **sin tumbar el
+  despliegue**: revisar ese aviso en los logs de Vercel después del primer despliegue con este cambio.
+- Gates que cambiaron de "cero restricciones" a "solo la llave primaria": `Tests/schema_test.php`, `naming_gate.php`,
+  `naming_eval.php`, `pagometodo_test.php`, `Database/Tests/personacapacidades_gate.php`, `comprobacionestructura.sql`,
+  las pruebas y la evaluación de `services/supabase-database`, `Tools/diagnostico-local.php` (`llaves_primarias`) y
+  `Tools/test-restore.sh`. **Los respaldos anteriores (`Database/Backups/`) no tienen llaves:** `test-restore.sh` los rechaza
+  hasta que se genere un respaldo nuevo.
+- Documentación: `AGENTS.md`, README, `Decisiones.md` (DEC-CALIDAD-PK-001; DEC-C04-002 queda sustituida en parte),
+  `GuiaDefensa.md`, `Respaldos.md`, guía de XAMPP, DER (marca `PK`) y diccionario. De paso se agregaron al diccionario las
+  fichas de `tbadministrador`, los dos históricos de teléfono y `tbanimalpublicacioninteraccion`, y al DER
+  `tbadministrador` y `tbanimalpublicacioninteraccion`, que nunca estuvieron.
+- Comprobado: instalación limpia (instalador y SQL) y migración de una base con datos en MariaDB 10.4.32 y MySQL 5.7.44;
+  base nueva, esquema anterior e id repetido en PostgreSQL 16. **No se aplicó a producción.**
 
 ### 2026-10-12 · fix/xampp-linux-local · La app corre en XAMPP real (PHP 8.0, MariaDB 10.4, MySQL 5.7)
 - **Mínimo real: PHP 8.0.** Los Dockerfiles siguen en PHP 8.3 (despliegue), pero ya no es el mínimo. Se quitaron las clases y

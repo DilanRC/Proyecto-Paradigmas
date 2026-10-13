@@ -53,7 +53,10 @@ $check(!str_contains($schema, 'tbproductoridentificacionnumero')
     'La identidad no debe repetirse en perfiles');
 $check(str_contains($migration, "'Efectivo', 'Pago realizado en efectivo', 1"),
     'La migración registra el método de pago inicial');
-foreach (['PRIMARY KEY', 'FOREIGN KEY', 'DEFAULT ', 'CREATE INDEX', 'UNIQUE'] as $forbidden) {
+$check(substr_count($schema, 'PRIMARY KEY (') === 47, 'Cada tabla debe declarar su llave primaria');
+$check(str_contains($migration, 'ensurePrimaryKeys($connection)')
+    && str_contains($migration, 'ADD PRIMARY KEY'), 'Las bases existentes deben recibir la llave primaria');
+foreach (['FOREIGN KEY', 'DEFAULT ', 'CREATE INDEX', 'UNIQUE'] as $forbidden) {
     $check(!str_contains($schema, $forbidden), "Constructo SQL prohibido: {$forbidden}");
 }
 $check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización de migración');

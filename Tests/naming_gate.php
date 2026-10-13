@@ -36,7 +36,15 @@ foreach ($requiredTables as $table) {
     }
 }
 
-foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ',
+foreach ($manifest['tables_sorted'] as $table) {
+    if (!preg_match('/CREATE TABLE IF NOT EXISTS ' . $table . ' \\((?:(?!ENGINE=).)*PRIMARY KEY \\(' . $table . 'id\\)\\s*\\) ENGINE=/s', $sql)) {
+        throw new RuntimeException("Falta la llave primaria {$table}id que exige Calidad en {$table}");
+    }
+}
+if (substr_count($sql, 'PRIMARY KEY') !== count($manifest['tables_sorted'])) {
+    throw new RuntimeException('Cada tabla debe declarar exactamente una llave primaria');
+}
+foreach (['FOREIGN KEY', 'CHECK (', 'CONSTRAINT ', 'REFERENCES ',
     'AUTO_INCREMENT', 'CREATE INDEX', 'CREATE UNIQUE INDEX', 'UNIQUE KEY', 'UNIQUE ('] as $forbiddenSql) {
     if (str_contains($sql, $forbiddenSql)) {
         throw new RuntimeException("El esquema no puede contener {$forbiddenSql}");

@@ -24,16 +24,23 @@ foreach ($tableRows as $table) {
     test_same('utf8mb4_unicode_ci', $table['TABLE_COLLATION'], "{$table['TABLE_NAME']} debe usar utf8mb4_unicode_ci");
 }
 
-$constraints = $db->prepare("SELECT CONSTRAINT_TYPE, COUNT(*) AS cantidad
+// Calidad: una llave primaria por tabla, sobre su identificador, y ninguna otra
+// restricción. El único índice permitido es el que crea esa llave.
+$constraints = $db->prepare("SELECT TABLE_NAME, CONSTRAINT_TYPE
     FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE()
-    GROUP BY CONSTRAINT_TYPE ORDER BY CONSTRAINT_TYPE");
+      AND CONSTRAINT_TYPE <> 'PRIMARY KEY' ORDER BY TABLE_NAME");
 $constraints->execute();
-test_same([], $constraints->fetchAll(), 'El esquema no debe contener PRIMARY KEY, FOREIGN KEY, UNIQUE ni CHECK');
+test_same([], $constraints->fetchAll(), 'El esquema no debe contener FOREIGN KEY, UNIQUE ni CHECK');
 
-$indexes = $db->prepare("SELECT TABLE_NAME, INDEX_NAME FROM information_schema.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME");
+$indexes = $db->prepare("SELECT TABLE_NAME, INDEX_NAME, COLUMN_NAME FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX");
 $indexes->execute();
-test_same([], $indexes->fetchAll(), 'El modelo no debe contener índices');
+$expectedKeys = array_map(
+    static fn (string $table): array => ['TABLE_NAME' => $table, 'INDEX_NAME' => 'PRIMARY', 'COLUMN_NAME' => $table . 'id'],
+    $manifest['tables_sorted']
+);
+test_same($expectedKeys, $indexes->fetchAll(),
+    'Cada tabla debe tener solo su llave primaria <tabla>id y ningún otro índice');
 
 $implicitNull = str_contains((string) $db->getAttribute(PDO::ATTR_SERVER_VERSION), 'MariaDB')
     ? " AND NOT (IS_NULLABLE = 'YES' AND COLUMN_DEFAULT = 'NULL')"

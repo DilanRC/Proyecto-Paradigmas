@@ -74,7 +74,8 @@ y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
 `Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
 `Documentation/DiccionarioDatos.md` y `Database/Tests/README.md`.
 
-El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
+Cada tabla tiene su llave primaria (`<tabla>id`), como pide Calidad. El esquema no contiene llaves foráneas,
+otras restricciones, índices adicionales, valores `DEFAULT`,
 columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
 consecutivos y `tbproductordireccion`/`tbfinca` usan `tbproductorid` como
 asociación lógica. No existen tablas de participante, roles ni catálogos de
@@ -374,9 +375,9 @@ incorrecto, se conserva su bitácora y se crea el registro correcto. La
 identificación existente no se modifica directamente.
 
 POST instancia una dirección vacía y PUT completa o edita esa misma fila. Ambos
-flujos evitan fincas duplicadas como políticas de aplicación. Sin PK, FK,
-UNIQUE ni CHECK, SQL directo puede insertar duplicados, huérfanos o valores
-fuera del dominio.
+flujos evitan fincas duplicadas como políticas de aplicación. Sin FK,
+UNIQUE ni CHECK, SQL directo puede insertar duplicados lógicos, huérfanos o valores
+fuera del dominio; la llave primaria solo impide repetir un identificador.
 
 La migración a persona compartida respalda primero, detecta identificaciones
 duplicadas y datos incompatibles, y aborta antes de retirar columnas ante

@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS tbpersona (
     tbpersonadocumentofecha DATETIME NULL,
     tbpersonadocumentomotivo VARCHAR(250) NULL,
     tbpersonadocumentonumeroleido VARCHAR(20) NULL,
-    tbpersonadocumentolectura VARCHAR(20) NULL
+    tbpersonadocumentolectura VARCHAR(20) NULL,
+    PRIMARY KEY (tbpersonaid)
 ) ENGINE=InnoDB;
 
 -- Política técnica de acceso administrativo. No es un rol de negocio ni se
@@ -35,12 +36,14 @@ CREATE TABLE IF NOT EXISTS tbpersona (
 CREATE TABLE IF NOT EXISTS tbadministrador (
     tbadministradorid INT NOT NULL,
     tbadministradorcorreoelectronico VARCHAR(150) NOT NULL,
-    tbadministradorestado TINYINT(1) NOT NULL
+    tbadministradorestado TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbadministradorid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbproductor (
     tbproductorid INT NOT NULL,
-    tbpersonaid INT NOT NULL
+    tbpersonaid INT NOT NULL,
+    PRIMARY KEY (tbproductorid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -51,7 +54,8 @@ CREATE TABLE IF NOT EXISTS tbproductordireccion (
     tbproductorid INT NOT NULL,
     tbdireccionid INT NOT NULL,
     tbproductordireccionfechainicio DATETIME NULL,
-    tbproductordireccionfechafin DATETIME NULL
+    tbproductordireccionfechafin DATETIME NULL,
+    PRIMARY KEY (tbproductordireccionid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -61,7 +65,8 @@ CREATE TABLE IF NOT EXISTS tbfinca (
     tbfincaid INT NOT NULL,
     tbproductorid INT NOT NULL,
     tbfincanombre VARCHAR(150) NOT NULL,
-    tbfincaestado TINYINT(1) NOT NULL
+    tbfincaestado TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbfincaid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -78,7 +83,8 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacoraactortipo VARCHAR(30) NOT NULL,
     tbbitacorausuarioid BIGINT UNSIGNED NULL,
     tbbitacoraorigen VARCHAR(100) NOT NULL,
-    tbbitacorasolicitudid VARCHAR(100) NOT NULL
+    tbbitacorasolicitudid VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbbitacoraid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -87,7 +93,8 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS tbcomprador (
     tbcompradorid INT NOT NULL,
     tbpersonaid INT NOT NULL,
-    tbcompradorestado TINYINT(1) NOT NULL
+    tbcompradorestado TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbcompradorid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -101,7 +108,8 @@ CREATE TABLE IF NOT EXISTS tbdireccion (
     tbdireccionpueblo VARCHAR(150) NULL,
     tbdireccionsenas VARCHAR(500) NULL,
     tbdireccionlatitud DECIMAL(10,7) NULL,
-    tbdireccionlongitud DECIMAL(10,7) NULL
+    tbdireccionlongitud DECIMAL(10,7) NULL,
+    PRIMARY KEY (tbdireccionid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -110,7 +118,8 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS tbfincadireccion (
     tbfincadireccionid INT NOT NULL,
     tbfincaid INT NOT NULL,
-    tbdireccionid INT NOT NULL
+    tbdireccionid INT NOT NULL,
+    PRIMARY KEY (tbfincadireccionid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -120,7 +129,8 @@ CREATE TABLE IF NOT EXISTS tbpagometodo (
     tbpagometodoid INT NOT NULL,
     tbpagometodonombre VARCHAR(100) NOT NULL,
     tbpagometododescripcion VARCHAR(250) NOT NULL,
-    tbpagometodoactivo TINYINT(1) NOT NULL
+    tbpagometodoactivo TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbpagometodoid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -129,7 +139,8 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS tbtransportista (
     tbtransportistaid INT NOT NULL,
     tbpersonaid INT NOT NULL,
-    tbtransportistaestado TINYINT(1) NOT NULL
+    tbtransportistaestado TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbtransportistaid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -141,7 +152,8 @@ CREATE TABLE IF NOT EXISTS tbvehiculo (
     tbvehiculovin VARCHAR(50) NOT NULL,
     tbvehiculomodelo VARCHAR(100) NOT NULL,
     tbvehiculoestado TINYINT(1) NOT NULL,
-    tbvehiculofotourl VARCHAR(500) NULL
+    tbvehiculofotourl VARCHAR(500) NULL,
+    PRIMARY KEY (tbvehiculoid)
 ) ENGINE=InnoDB;
 
 USE bdmercadoganadero;
@@ -150,7 +162,8 @@ SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS tbtransportistavehiculo (
     tbtransportistavehiculoid INT NOT NULL,
     tbtransportistaid INT NOT NULL,
-    tbvehiculoid INT NOT NULL
+    tbvehiculoid INT NOT NULL,
+    PRIMARY KEY (tbtransportistavehiculoid)
 ) ENGINE=InnoDB;
 
 -- Histórico confirmado por Calidad: Productor + Persona + Teléfono + Histórico.
@@ -159,7 +172,8 @@ CREATE TABLE IF NOT EXISTS tbproductorpersonatelefonohistorico (
     tbproductorpersonatelefonohistoricoid INT NOT NULL,
     tbproductorid INT NOT NULL,
     tbproductorpersonatelefonohistoriconuevo VARCHAR(20) NOT NULL,
-    tbproductorpersonatelefonohistoricofecha DATETIME NOT NULL
+    tbproductorpersonatelefonohistoricofecha DATETIME NOT NULL,
+    PRIMARY KEY (tbproductorpersonatelefonohistoricoid)
 ) ENGINE=InnoDB;
 
 -- Histórico confirmado por Calidad para Comprador con la misma estructura.
@@ -167,7 +181,8 @@ CREATE TABLE IF NOT EXISTS tbcompradorpersonatelefonohistorico (
     tbcompradorpersonatelefonohistoricoid INT NOT NULL,
     tbcompradorid INT NOT NULL,
     tbcompradorpersonatelefonohistoriconuevo VARCHAR(20) NOT NULL,
-    tbcompradorpersonatelefonohistoricofecha DATETIME NOT NULL
+    tbcompradorpersonatelefonohistoricofecha DATETIME NOT NULL,
+    PRIMARY KEY (tbcompradorpersonatelefonohistoricoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbproductorestadoperiodo (
@@ -176,7 +191,8 @@ CREATE TABLE IF NOT EXISTS tbproductorestadoperiodo (
     tbproductorestadoperiodoestado TINYINT(1) NOT NULL,
     tbproductorestadoperiodofechainicio DATETIME NOT NULL,
     tbproductorestadoperiodofechafin DATETIME NULL,
-    tbproductorestadoperiodomotivo VARCHAR(250) NULL
+    tbproductorestadoperiodomotivo VARCHAR(250) NULL,
+    PRIMARY KEY (tbproductorestadoperiodoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbproductorubicacion (
@@ -186,7 +202,8 @@ CREATE TABLE IF NOT EXISTS tbproductorubicacion (
     tbproductorubicacionlongitud DECIMAL(10,7) NOT NULL,
     tbproductorubicacionprecision DECIMAL(10,2) NULL,
     tbproductorubicacionfecha DATETIME NOT NULL,
-    tbproductorubicacionorigen VARCHAR(40) NOT NULL
+    tbproductorubicacionorigen VARCHAR(40) NOT NULL,
+    PRIMARY KEY (tbproductorubicacionid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbproductoractividad (
@@ -194,7 +211,8 @@ CREATE TABLE IF NOT EXISTS tbproductoractividad (
     tbproductorid INT NOT NULL,
     tbproductoractividadtipo VARCHAR(60) NOT NULL,
     tbproductoractividadfecha DATETIME NOT NULL,
-    tbproductoractividadorigen VARCHAR(100) NOT NULL
+    tbproductoractividadorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbproductoractividadid)
 ) ENGINE=InnoDB;
 
 -- Estructura transitoria: conserva señales analíticas ya consumidas por dev.
@@ -205,7 +223,8 @@ CREATE TABLE IF NOT EXISTS tbproductorclasificacionperiodo (
     tbproductorclasificacionperiodotipo VARCHAR(30) NOT NULL,
     tbproductorclasificacionperiodofechainicio DATETIME NOT NULL,
     tbproductorclasificacionperiodofechafin DATETIME NULL,
-    tbproductorclasificacionperiodomotivo VARCHAR(250) NULL
+    tbproductorclasificacionperiodomotivo VARCHAR(250) NULL,
+    PRIMARY KEY (tbproductorclasificacionperiodoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimal (
@@ -223,7 +242,8 @@ CREATE TABLE IF NOT EXISTS tbanimal (
     tbanimalfechanacimientoestimada TINYINT(1) NULL,
     tbanimalpartos INT NULL,
     tbanimalestado VARCHAR(20) NULL,
-    tbproductorid INT NULL
+    tbproductorid INT NULL,
+    PRIMARY KEY (tbanimalid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud (
@@ -239,7 +259,8 @@ CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud (
     tbanimalproduccionsaludpartos INT NULL,
     tbanimalproduccionsaludlitrosleche DECIMAL(10,2) NULL,
     tbanimalproduccionsaludproduccion LONGTEXT NULL,
-    tbanimalproduccionsaludsalud LONGTEXT NULL
+    tbanimalproduccionsaludsalud LONGTEXT NULL,
+    PRIMARY KEY (tbanimalproduccionsaludid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalpublicacion (
@@ -252,7 +273,8 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacion (
     tbanimalpublicaciontitulo VARCHAR(150) NULL,
     tbanimalpublicaciondescripcion VARCHAR(500) NULL,
     tbanimalpublicacionimagenurl VARCHAR(500) NULL,
-    tbanimalpublicacionorigen VARCHAR(100) NOT NULL
+    tbanimalpublicacionorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbanimalpublicacionid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalpublicacionestadoperiodo (
@@ -262,7 +284,8 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacionestadoperiodo (
     tbanimalpublicacionestadoperiodofechainicio DATETIME NOT NULL,
     tbanimalpublicacionestadoperiodofechafin DATETIME NULL,
     tbanimalpublicacionestadoperiodomotivo VARCHAR(250) NULL,
-    tbanimalpublicacionestadoperiodoorigen VARCHAR(100) NOT NULL
+    tbanimalpublicacionestadoperiodoorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbanimalpublicacionestadoperiodoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbcompra (
@@ -276,7 +299,8 @@ CREATE TABLE IF NOT EXISTS tbcompra (
     tbcompralugar VARCHAR(250) NULL,
     tbcompraprecio DECIMAL(12,2) NOT NULL,
     tbpagometodoid INT NULL,
-    tbcompraorigen VARCHAR(100) NOT NULL
+    tbcompraorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbcompraid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbventa (
@@ -298,7 +322,8 @@ CREATE TABLE IF NOT EXISTS tbventa (
     tbventaedadmeses INT NULL,
     tbventapeso DECIMAL(10,2) NULL,
     tbventarazasnapshot VARCHAR(100) NULL,
-    tbventaorigen VARCHAR(100) NOT NULL
+    tbventaorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbventaid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalinteraccion (
@@ -308,7 +333,8 @@ CREATE TABLE IF NOT EXISTS tbanimalinteraccion (
     tbanimalinteracciontipo VARCHAR(30) NOT NULL,
     tbanimalinteraccionaccion VARCHAR(30) NOT NULL,
     tbanimalinteraccionfecha DATETIME NOT NULL,
-    tbanimalinteraccionorigen VARCHAR(100) NULL
+    tbanimalinteraccionorigen VARCHAR(100) NULL,
+    PRIMARY KEY (tbanimalinteraccionid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalpublicacioninteraccion (
@@ -318,13 +344,15 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacioninteraccion (
     tbanimalpublicacioninteracciontipo VARCHAR(30) NOT NULL,
     tbanimalpublicacioninteraccionaccion VARCHAR(30) NOT NULL,
     tbanimalpublicacioninteraccionfecha DATETIME NOT NULL,
-    tbanimalpublicacioninteraccionorigen VARCHAR(100) NOT NULL
+    tbanimalpublicacioninteraccionorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbanimalpublicacioninteraccionid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbcarrito (
     tbcarritoid INT NOT NULL,
     tbproductorid INT NOT NULL,
-    tbcarritofechacreacion DATETIME NOT NULL
+    tbcarritofechacreacion DATETIME NOT NULL,
+    PRIMARY KEY (tbcarritoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbcarritoanimal (
@@ -333,7 +361,8 @@ CREATE TABLE IF NOT EXISTS tbcarritoanimal (
     tbanimalid INT NOT NULL,
     tbcarritoanimalaccion VARCHAR(30) NOT NULL,
     tbcarritoanimalfecha DATETIME NOT NULL,
-    tbcarritoanimalorigen VARCHAR(100) NULL
+    tbcarritoanimalorigen VARCHAR(100) NULL,
+    PRIMARY KEY (tbcarritoanimalid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbcarritoestadoperiodo (
@@ -343,7 +372,8 @@ CREATE TABLE IF NOT EXISTS tbcarritoestadoperiodo (
     tbcarritoestadoperiodofechainicio DATETIME NOT NULL,
     tbcarritoestadoperiodofechafin DATETIME NULL,
     tbcarritoestadoperiodomotivo VARCHAR(250) NULL,
-    tbcarritoestadoperiodoorigen VARCHAR(100) NOT NULL
+    tbcarritoestadoperiodoorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbcarritoestadoperiodoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbtransportistaestadoperiodo (
@@ -353,7 +383,8 @@ CREATE TABLE IF NOT EXISTS tbtransportistaestadoperiodo (
     tbtransportistaestadoperiodofechainicio DATETIME NULL,
     tbtransportistaestadoperiodofechafin DATETIME NULL,
     tbtransportistaestadoperiodomotivo VARCHAR(250) NULL,
-    tbtransportistaestadoperiodofecharegistroensistema DATETIME NOT NULL
+    tbtransportistaestadoperiodofecharegistroensistema DATETIME NOT NULL,
+    PRIMARY KEY (tbtransportistaestadoperiodoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbtransportistahorario (
@@ -364,7 +395,8 @@ CREATE TABLE IF NOT EXISTS tbtransportistahorario (
     tbtransportistahorariohorafin TIME NOT NULL,
     tbtransportistahorariofechainicio DATETIME NOT NULL,
     tbtransportistahorariofechafin DATETIME NULL,
-    tbtransportistahorarioorigen VARCHAR(100) NOT NULL
+    tbtransportistahorarioorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbtransportistahorarioid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbtransportistaflete (
@@ -382,7 +414,8 @@ CREATE TABLE IF NOT EXISTS tbtransportistaflete (
     tbtransportistafletedistanciakm DECIMAL(10,2) NULL,
     tbtransportistafleteprecio DECIMAL(12,2) NULL,
     tbpagometodoid INT NOT NULL,
-    tbtransportistafleteorigen VARCHAR(100) NOT NULL
+    tbtransportistafleteorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbtransportistafleteid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbtransportistaresena (
@@ -393,7 +426,8 @@ CREATE TABLE IF NOT EXISTS tbtransportistaresena (
     tbtransportistaresenafecha DATETIME NOT NULL,
     tbtransportistaresenacalificacion INT NOT NULL,
     tbtransportistaresenacomentario VARCHAR(500) NULL,
-    tbtransportistaresenaorigen VARCHAR(100) NOT NULL
+    tbtransportistaresenaorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbtransportistaresenaid)
 ) ENGINE=InnoDB;
 
 -- Límite de consultas de disponibilidad del registro (P2-1). Una fila por
@@ -402,7 +436,8 @@ CREATE TABLE IF NOT EXISTS tbtransportistaresena (
 CREATE TABLE IF NOT EXISTS tbregistroconsulta (
     tbregistroconsultaid INT NOT NULL,
     tbregistroconsultaclave CHAR(64) NOT NULL,
-    tbregistroconsultafecha DATETIME NOT NULL
+    tbregistroconsultafecha DATETIME NOT NULL,
+    PRIMARY KEY (tbregistroconsultaid)
 ) ENGINE=InnoDB;
 
 -- Oferta de flete (P1-2): el transportista publica su servicio con su vehículo,
@@ -419,7 +454,8 @@ CREATE TABLE IF NOT EXISTS tbtransportistaoferta (
     tbtransportistaofertaprecio DECIMAL(12,2) NULL,
     tbtransportistaofertadescripcion VARCHAR(500) NULL,
     tbtransportistaofertaestado VARCHAR(20) NOT NULL,
-    tbtransportistaofertafecha DATETIME NOT NULL
+    tbtransportistaofertafecha DATETIME NOT NULL,
+    PRIMARY KEY (tbtransportistaofertaid)
 ) ENGINE=InnoDB;
 
 -- Solicitud de compra (P1-3, DEC-COMPRA-001): el comprador pide un animal, con
@@ -440,7 +476,8 @@ CREATE TABLE IF NOT EXISTS tbcomprasolicitud (
     tbcomprasolicitudfecha DATETIME NOT NULL,
     tbcomprasolicitudrespuestafecha DATETIME NULL,
     tbcomprasolicitudrespuestamotivo VARCHAR(250) NULL,
-    tbcomprasolicitudfleterespuestafecha DATETIME NULL
+    tbcomprasolicitudfleterespuestafecha DATETIME NULL,
+    PRIMARY KEY (tbcomprasolicitudid)
 ) ENGINE=InnoDB;
 
 -- Catálogos del animal (P2-2, DEC-ANIMAL-001). Sin llaves: tipo y raza apuntan a su especie por
@@ -448,7 +485,8 @@ CREATE TABLE IF NOT EXISTS tbcomprasolicitud (
 CREATE TABLE IF NOT EXISTS tbespecie (
     tbespecieid INT NOT NULL,
     tbespecienombre VARCHAR(80) NOT NULL,
-    tbespecieactivo TINYINT(1) NOT NULL
+    tbespecieactivo TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbespecieid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimaltipo (
@@ -456,21 +494,24 @@ CREATE TABLE IF NOT EXISTS tbanimaltipo (
     tbespecieid INT NOT NULL,
     tbanimaltiponombre VARCHAR(80) NOT NULL,
     tbanimaltiposexo VARCHAR(1) NULL,
-    tbanimaltipoactivo TINYINT(1) NOT NULL
+    tbanimaltipoactivo TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbanimaltipoid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbraza (
     tbrazaid INT NOT NULL,
     tbespecieid INT NOT NULL,
     tbrazanombre VARCHAR(100) NOT NULL,
-    tbrazaactivo TINYINT(1) NOT NULL
+    tbrazaactivo TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbrazaid)
 ) ENGINE=InnoDB;
 
 -- Animales de una publicación de lote (DEC-ANIMAL-001). Una publicación de un solo animal no tiene filas aquí.
 CREATE TABLE IF NOT EXISTS tbanimalpublicacionanimal (
     tbanimalpublicacionanimalid INT NOT NULL,
     tbanimalpublicacionid INT NOT NULL,
-    tbanimalid INT NOT NULL
+    tbanimalid INT NOT NULL,
+    PRIMARY KEY (tbanimalpublicacionanimalid)
 ) ENGINE=InnoDB;
 
 -- Historial de vacunación del animal (P2-3). tbvacuna es el catálogo (con activo, para el panel de administración).
@@ -478,7 +519,8 @@ CREATE TABLE IF NOT EXISTS tbanimalpublicacionanimal (
 CREATE TABLE IF NOT EXISTS tbvacuna (
     tbvacunaid INT NOT NULL,
     tbvacunanombre VARCHAR(100) NOT NULL,
-    tbvacunaactivo TINYINT(1) NOT NULL
+    tbvacunaactivo TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbvacunaid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalvacunacion (
@@ -491,7 +533,8 @@ CREATE TABLE IF NOT EXISTS tbanimalvacunacion (
     tbanimalvacunacionaplicadapor VARCHAR(150) NULL,
     tbanimalvacunacionproximadosis DATE NULL,
     tbanimalvacunacionobservaciones VARCHAR(500) NULL,
-    tbanimalvacunacionfecharegistro DATETIME NOT NULL
+    tbanimalvacunacionfecharegistro DATETIME NOT NULL,
+    PRIMARY KEY (tbanimalvacunacionid)
 ) ENGINE=InnoDB;
 
 -- Subastas en tiempo real (DEC-SUBASTA-001). Un vendedor subasta un animal de su inventario por un tiempo fijo;
@@ -511,7 +554,8 @@ CREATE TABLE IF NOT EXISTS tbsubasta (
     tbsubastafechafin DATETIME NOT NULL,
     tbsubastaestado VARCHAR(20) NOT NULL,
     tbsubastapujaganadoraid INT NULL,
-    tbsubastafechacierre DATETIME NULL
+    tbsubastafechacierre DATETIME NULL,
+    PRIMARY KEY (tbsubastaid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbsubastapuja (
@@ -519,7 +563,8 @@ CREATE TABLE IF NOT EXISTS tbsubastapuja (
     tbsubastaid INT NOT NULL,
     tbpersonaid INT NOT NULL,
     tbsubastapujamonto DECIMAL(12,2) NOT NULL,
-    tbsubastapujafecha DATETIME NOT NULL
+    tbsubastapujafecha DATETIME NOT NULL,
+    PRIMARY KEY (tbsubastapujaid)
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbsubastacomentario (
@@ -527,7 +572,8 @@ CREATE TABLE IF NOT EXISTS tbsubastacomentario (
     tbsubastaid INT NOT NULL,
     tbpersonaid INT NOT NULL,
     tbsubastacomentariotexto VARCHAR(500) NOT NULL,
-    tbsubastacomentariofecha DATETIME NOT NULL
+    tbsubastacomentariofecha DATETIME NOT NULL,
+    PRIMARY KEY (tbsubastacomentarioid)
 ) ENGINE=InnoDB;
 
 -- Avisos para una persona (la campana del encabezado): subasta ganada, terminada o superada.
@@ -539,7 +585,8 @@ CREATE TABLE IF NOT EXISTS tbnotificacion (
     tbnotificacionmensaje VARCHAR(500) NOT NULL,
     tbnotificacionenlace VARCHAR(250) NULL,
     tbnotificacionfecha DATETIME NOT NULL,
-    tbnotificacionleida TINYINT(1) NOT NULL
+    tbnotificacionleida TINYINT(1) NOT NULL,
+    PRIMARY KEY (tbnotificacionid)
 ) ENGINE=InnoDB;
 
 -- fin del script de instalación completa

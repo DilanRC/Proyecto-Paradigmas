@@ -70,9 +70,9 @@ exige:
 
 - 47 tablas exactas, incluida `tbpersona`, históricos de teléfono, clasificación histórica del
   Productor, animal, publicación, compra, venta, funnel, carrito y transporte;
-- cero restricciones totales;
-- cero PRIMARY KEY, FOREIGN KEY y CHECK;
-- cero índices;
+- una PRIMARY KEY por tabla (47) y ninguna otra restricción;
+- cero FOREIGN KEY y CHECK;
+- cero índices fuera de la llave primaria;
 - cero columnas `AUTO_INCREMENT`;
 - cero valores `DEFAULT`, columnas generadas, triggers, rutinas y eventos;
 - `utf8mb4/utf8mb4_unicode_ci` en base y tablas;

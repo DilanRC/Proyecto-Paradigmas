@@ -507,6 +507,42 @@ function eliminarEstadoProductor(PDO $connection): void
 }
 
 /**
+ * Declara la llave primaria `<tabla>id` en las tablas que todavía no la tienen
+ * (Calidad: una por tabla, sin llaves foráneas). Una base nueva ya la trae de
+ * schema.sql. Si una tabla tiene identificadores repetidos o nulos no se toca:
+ * se devuelve su nombre para avisar, porque abortar aquí dejaría el despliegue
+ * caído y repararla exige revisar los datos a mano.
+ *
+ * @return list<string> tablas que quedaron sin llave primaria
+ */
+function ensurePrimaryKeys(PDO $connection): array
+{
+    $conLlave = $connection->query(
+        "SELECT c.relname FROM pg_constraint k
+         INNER JOIN pg_class c ON c.oid = k.conrelid
+         INNER JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND k.contype = 'p'"
+    )->fetchAll(PDO::FETCH_COLUMN);
+    $pendientes = [];
+    foreach (array_keys(EXPECTED_COLUMNS) as $table) {
+        if (in_array($table, $conLlave, true)) {
+            continue;
+        }
+        $id = $table . 'id';
+        $invalidos = (int) $connection->query(
+            "SELECT (SELECT COUNT(*) FROM public.{$table} WHERE {$id} IS NULL)
+                  + (SELECT COUNT(*) FROM (SELECT 1 FROM public.{$table} GROUP BY {$id} HAVING COUNT(*) > 1) repetidos)"
+        )->fetchColumn();
+        if ($invalidos > 0) {
+            $pendientes[] = $table;
+            continue;
+        }
+        $connection->exec("ALTER TABLE public.{$table} ADD PRIMARY KEY ({$id})");
+    }
+    return $pendientes;
+}
+
+/**
  * Catálogos del animal (P2-2) y vacunas (P2-3). Solo se siembra una tabla VACÍA: lo que un administrador haya cambiado,
  * agregado o desactivado no se reinserta al redesplegar. Mismos datos que Database/SeedData/104catalogosanimal.sql.
  */
@@ -662,10 +698,15 @@ try {
     eliminarEstadoProductor($connection);
     seedInitialData($connection);
     seedCatalogs($connection);
+    $sinLlavePrimaria = ensurePrimaryKeys($connection);
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
     fwrite(STDOUT, "supabase_schema_status=ready tables=47 migration=v10\n");
+    if ($sinLlavePrimaria !== []) {
+        fwrite(STDERR, 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
+            . " causa=identificadores_repetidos_o_nulos\n");
+    }
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

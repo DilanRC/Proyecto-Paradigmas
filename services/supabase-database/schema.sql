@@ -13,18 +13,21 @@ CREATE TABLE IF NOT EXISTS public.tbpersona (
     tbpersonadocumentofecha TIMESTAMP WITHOUT TIME ZONE NULL,
     tbpersonadocumentomotivo VARCHAR(250) NULL,
     tbpersonadocumentonumeroleido VARCHAR(20) NULL,
-    tbpersonadocumentolectura VARCHAR(20) NULL
+    tbpersonadocumentolectura VARCHAR(20) NULL,
+    PRIMARY KEY (tbpersonaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbadministrador (
     tbadministradorid INTEGER NOT NULL,
     tbadministradorcorreoelectronico VARCHAR(150) NOT NULL,
-    tbadministradorestado SMALLINT NOT NULL
+    tbadministradorestado SMALLINT NOT NULL,
+    PRIMARY KEY (tbadministradorid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductor (
     tbproductorid INTEGER NOT NULL,
-    tbpersonaid INTEGER NOT NULL
+    tbpersonaid INTEGER NOT NULL,
+    PRIMARY KEY (tbproductorid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductordireccion (
@@ -32,7 +35,8 @@ CREATE TABLE IF NOT EXISTS public.tbproductordireccion (
     tbproductorid INTEGER NOT NULL,
     tbdireccionid INTEGER NOT NULL,
     tbproductordireccionfechainicio TIMESTAMP WITHOUT TIME ZONE NULL,
-    tbproductordireccionfechafin TIMESTAMP WITHOUT TIME ZONE NULL
+    tbproductordireccionfechafin TIMESTAMP WITHOUT TIME ZONE NULL,
+    PRIMARY KEY (tbproductordireccionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductorestadoperiodo (
@@ -41,7 +45,8 @@ CREATE TABLE IF NOT EXISTS public.tbproductorestadoperiodo (
     tbproductorestadoperiodoestado SMALLINT NOT NULL,
     tbproductorestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbproductorestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
-    tbproductorestadoperiodomotivo VARCHAR(250) NULL
+    tbproductorestadoperiodomotivo VARCHAR(250) NULL,
+    PRIMARY KEY (tbproductorestadoperiodoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductorubicacion (
@@ -51,7 +56,8 @@ CREATE TABLE IF NOT EXISTS public.tbproductorubicacion (
     tbproductorubicacionlongitud NUMERIC(10,7) NOT NULL,
     tbproductorubicacionprecision NUMERIC(10,2) NULL,
     tbproductorubicacionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbproductorubicacionorigen VARCHAR(40) NOT NULL
+    tbproductorubicacionorigen VARCHAR(40) NOT NULL,
+    PRIMARY KEY (tbproductorubicacionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductoractividad (
@@ -59,7 +65,8 @@ CREATE TABLE IF NOT EXISTS public.tbproductoractividad (
     tbproductorid INTEGER NOT NULL,
     tbproductoractividadtipo VARCHAR(60) NOT NULL,
     tbproductoractividadfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbproductoractividadorigen VARCHAR(100) NOT NULL
+    tbproductoractividadorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbproductoractividadid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbdireccion (
@@ -70,33 +77,38 @@ CREATE TABLE IF NOT EXISTS public.tbdireccion (
     tbdireccionpueblo VARCHAR(150) NULL,
     tbdireccionsenas VARCHAR(500) NULL,
     tbdireccionlatitud NUMERIC(10,7) NULL,
-    tbdireccionlongitud NUMERIC(10,7) NULL
+    tbdireccionlongitud NUMERIC(10,7) NULL,
+    PRIMARY KEY (tbdireccionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbfinca (
     tbfincaid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
     tbfincanombre VARCHAR(150) NOT NULL,
-    tbfincaestado SMALLINT NOT NULL
+    tbfincaestado SMALLINT NOT NULL,
+    PRIMARY KEY (tbfincaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbfincadireccion (
     tbfincadireccionid INTEGER NOT NULL,
     tbfincaid INTEGER NOT NULL,
-    tbdireccionid INTEGER NOT NULL
+    tbdireccionid INTEGER NOT NULL,
+    PRIMARY KEY (tbfincadireccionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbpagometodo (
     tbpagometodoid INTEGER NOT NULL,
     tbpagometodonombre VARCHAR(100) NOT NULL,
     tbpagometododescripcion VARCHAR(250) NOT NULL,
-    tbpagometodoactivo SMALLINT NOT NULL
+    tbpagometodoactivo SMALLINT NOT NULL,
+    PRIMARY KEY (tbpagometodoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportista (
     tbtransportistaid INTEGER NOT NULL,
     tbpersonaid INTEGER NOT NULL,
-    tbtransportistaestado SMALLINT NOT NULL
+    tbtransportistaestado SMALLINT NOT NULL,
+    PRIMARY KEY (tbtransportistaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbvehiculo (
@@ -105,13 +117,15 @@ CREATE TABLE IF NOT EXISTS public.tbvehiculo (
     tbvehiculovin VARCHAR(50) NOT NULL,
     tbvehiculomodelo VARCHAR(100) NOT NULL,
     tbvehiculoestado SMALLINT NOT NULL,
-    tbvehiculofotourl VARCHAR(500) NULL
+    tbvehiculofotourl VARCHAR(500) NULL,
+    PRIMARY KEY (tbvehiculoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistavehiculo (
     tbtransportistavehiculoid INTEGER NOT NULL,
     tbtransportistaid INTEGER NOT NULL,
-    tbvehiculoid INTEGER NOT NULL
+    tbvehiculoid INTEGER NOT NULL,
+    PRIMARY KEY (tbtransportistavehiculoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbbitacora (
@@ -125,27 +139,31 @@ CREATE TABLE IF NOT EXISTS public.tbbitacora (
     tbbitacoraactortipo VARCHAR(30) NOT NULL,
     tbbitacorausuarioid BIGINT NULL,
     tbbitacoraorigen VARCHAR(100) NOT NULL,
-    tbbitacorasolicitudid VARCHAR(100) NOT NULL
+    tbbitacorasolicitudid VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbbitacoraid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcomprador (
     tbcompradorid INTEGER NOT NULL,
     tbpersonaid INTEGER NOT NULL,
-    tbcompradorestado SMALLINT NOT NULL
+    tbcompradorestado SMALLINT NOT NULL,
+    PRIMARY KEY (tbcompradorid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductorpersonatelefonohistorico (
     tbproductorpersonatelefonohistoricoid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
     tbproductorpersonatelefonohistoriconuevo VARCHAR(20) NOT NULL,
-    tbproductorpersonatelefonohistoricofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbproductorpersonatelefonohistoricofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbproductorpersonatelefonohistoricoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcompradorpersonatelefonohistorico (
     tbcompradorpersonatelefonohistoricoid INTEGER NOT NULL,
     tbcompradorid INTEGER NOT NULL,
     tbcompradorpersonatelefonohistoriconuevo VARCHAR(20) NOT NULL,
-    tbcompradorpersonatelefonohistoricofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbcompradorpersonatelefonohistoricofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbcompradorpersonatelefonohistoricoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbproductorclasificacionperiodo (
@@ -154,7 +172,8 @@ CREATE TABLE IF NOT EXISTS public.tbproductorclasificacionperiodo (
     tbproductorclasificacionperiodotipo VARCHAR(30) NOT NULL,
     tbproductorclasificacionperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbproductorclasificacionperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
-    tbproductorclasificacionperiodomotivo VARCHAR(250) NULL
+    tbproductorclasificacionperiodomotivo VARCHAR(250) NULL,
+    PRIMARY KEY (tbproductorclasificacionperiodoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimal (
@@ -172,7 +191,8 @@ CREATE TABLE IF NOT EXISTS public.tbanimal (
     tbanimalfechanacimientoestimada SMALLINT NULL,
     tbanimalpartos INTEGER NULL,
     tbanimalestado VARCHAR(20) NULL,
-    tbproductorid INTEGER NULL
+    tbproductorid INTEGER NULL,
+    PRIMARY KEY (tbanimalid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalproduccionsalud (
@@ -188,7 +208,8 @@ CREATE TABLE IF NOT EXISTS public.tbanimalproduccionsalud (
     tbanimalproduccionsaludpartos INTEGER NULL,
     tbanimalproduccionsaludlitrosleche NUMERIC(10,2) NULL,
     tbanimalproduccionsaludproduccion JSONB NULL,
-    tbanimalproduccionsaludsalud JSONB NULL
+    tbanimalproduccionsaludsalud JSONB NULL,
+    PRIMARY KEY (tbanimalproduccionsaludid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacion (
@@ -201,7 +222,8 @@ CREATE TABLE IF NOT EXISTS public.tbanimalpublicacion (
     tbanimalpublicaciontitulo VARCHAR(150) NULL,
     tbanimalpublicaciondescripcion VARCHAR(500) NULL,
     tbanimalpublicacionimagenurl VARCHAR(500) NULL,
-    tbanimalpublicacionorigen VARCHAR(100) NOT NULL
+    tbanimalpublicacionorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbanimalpublicacionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcompra (
@@ -215,7 +237,8 @@ CREATE TABLE IF NOT EXISTS public.tbcompra (
     tbcompralugar VARCHAR(250) NULL,
     tbcompraprecio NUMERIC(12,2) NOT NULL,
     tbpagometodoid INTEGER NULL,
-    tbcompraorigen VARCHAR(100) NOT NULL
+    tbcompraorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbcompraid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbventa (
@@ -237,7 +260,8 @@ CREATE TABLE IF NOT EXISTS public.tbventa (
     tbventaedadmeses INTEGER NULL,
     tbventapeso NUMERIC(10,2) NULL,
     tbventarazasnapshot VARCHAR(100) NULL,
-    tbventaorigen VARCHAR(100) NOT NULL
+    tbventaorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbventaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalinteraccion (
@@ -247,7 +271,8 @@ CREATE TABLE IF NOT EXISTS public.tbanimalinteraccion (
     tbanimalinteracciontipo VARCHAR(30) NOT NULL,
     tbanimalinteraccionaccion VARCHAR(30) NOT NULL,
     tbanimalinteraccionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbanimalinteraccionorigen VARCHAR(100) NULL
+    tbanimalinteraccionorigen VARCHAR(100) NULL,
+    PRIMARY KEY (tbanimalinteraccionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacioninteraccion (
@@ -257,13 +282,15 @@ CREATE TABLE IF NOT EXISTS public.tbanimalpublicacioninteraccion (
     tbanimalpublicacioninteracciontipo VARCHAR(30) NOT NULL,
     tbanimalpublicacioninteraccionaccion VARCHAR(30) NOT NULL,
     tbanimalpublicacioninteraccionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbanimalpublicacioninteraccionorigen VARCHAR(100) NOT NULL
+    tbanimalpublicacioninteraccionorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbanimalpublicacioninteraccionid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcarrito (
     tbcarritoid INTEGER NOT NULL,
     tbproductorid INTEGER NOT NULL,
-    tbcarritofechacreacion TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbcarritofechacreacion TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbcarritoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcarritoanimal (
@@ -272,7 +299,8 @@ CREATE TABLE IF NOT EXISTS public.tbcarritoanimal (
     tbanimalid INTEGER NOT NULL,
     tbcarritoanimalaccion VARCHAR(30) NOT NULL,
     tbcarritoanimalfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbcarritoanimalorigen VARCHAR(100) NULL
+    tbcarritoanimalorigen VARCHAR(100) NULL,
+    PRIMARY KEY (tbcarritoanimalid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistaestadoperiodo (
@@ -282,7 +310,8 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaestadoperiodo (
     tbtransportistaestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NULL,
     tbtransportistaestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
     tbtransportistaestadoperiodomotivo VARCHAR(250) NULL,
-    tbtransportistaestadoperiodofecharegistroensistema TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbtransportistaestadoperiodofecharegistroensistema TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbtransportistaestadoperiodoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistaflete (
@@ -300,7 +329,8 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaflete (
     tbtransportistafletedistanciakm NUMERIC(10,2) NULL,
     tbtransportistafleteprecio NUMERIC(12,2) NULL,
     tbpagometodoid INTEGER NOT NULL,
-    tbtransportistafleteorigen VARCHAR(100) NOT NULL
+    tbtransportistafleteorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbtransportistafleteid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistaresena (
@@ -311,13 +341,15 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaresena (
     tbtransportistaresenafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbtransportistaresenacalificacion INTEGER NOT NULL,
     tbtransportistaresenacomentario VARCHAR(500) NULL,
-    tbtransportistaresenaorigen VARCHAR(100) NOT NULL
+    tbtransportistaresenaorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbtransportistaresenaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbregistroconsulta (
     tbregistroconsultaid INTEGER NOT NULL,
     tbregistroconsultaclave CHAR(64) NOT NULL,
-    tbregistroconsultafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbregistroconsultafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbregistroconsultaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistaoferta (
@@ -330,7 +362,8 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaoferta (
     tbtransportistaofertaprecio NUMERIC(12,2) NULL,
     tbtransportistaofertadescripcion VARCHAR(500) NULL,
     tbtransportistaofertaestado VARCHAR(20) NOT NULL,
-    tbtransportistaofertafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbtransportistaofertafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbtransportistaofertaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcomprasolicitud (
@@ -346,7 +379,8 @@ CREATE TABLE IF NOT EXISTS public.tbcomprasolicitud (
     tbcomprasolicitudfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbcomprasolicitudrespuestafecha TIMESTAMP WITHOUT TIME ZONE NULL,
     tbcomprasolicitudrespuestamotivo VARCHAR(250) NULL,
-    tbcomprasolicitudfleterespuestafecha TIMESTAMP WITHOUT TIME ZONE NULL
+    tbcomprasolicitudfleterespuestafecha TIMESTAMP WITHOUT TIME ZONE NULL,
+    PRIMARY KEY (tbcomprasolicitudid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionestadoperiodo (
@@ -356,7 +390,8 @@ CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionestadoperiodo (
     tbanimalpublicacionestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbanimalpublicacionestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
     tbanimalpublicacionestadoperiodomotivo VARCHAR(250) NULL,
-    tbanimalpublicacionestadoperiodoorigen VARCHAR(100) NOT NULL
+    tbanimalpublicacionestadoperiodoorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbanimalpublicacionestadoperiodoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbcarritoestadoperiodo (
@@ -366,7 +401,8 @@ CREATE TABLE IF NOT EXISTS public.tbcarritoestadoperiodo (
     tbcarritoestadoperiodofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbcarritoestadoperiodofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
     tbcarritoestadoperiodomotivo VARCHAR(250) NULL,
-    tbcarritoestadoperiodoorigen VARCHAR(100) NOT NULL
+    tbcarritoestadoperiodoorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbcarritoestadoperiodoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbtransportistahorario (
@@ -377,13 +413,15 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistahorario (
     tbtransportistahorariohorafin TIME WITHOUT TIME ZONE NOT NULL,
     tbtransportistahorariofechainicio TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbtransportistahorariofechafin TIMESTAMP WITHOUT TIME ZONE NULL,
-    tbtransportistahorarioorigen VARCHAR(100) NOT NULL
+    tbtransportistahorarioorigen VARCHAR(100) NOT NULL,
+    PRIMARY KEY (tbtransportistahorarioid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbespecie (
     tbespecieid INTEGER NOT NULL,
     tbespecienombre VARCHAR(80) NOT NULL,
-    tbespecieactivo SMALLINT NOT NULL
+    tbespecieactivo SMALLINT NOT NULL,
+    PRIMARY KEY (tbespecieid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimaltipo (
@@ -391,26 +429,30 @@ CREATE TABLE IF NOT EXISTS public.tbanimaltipo (
     tbespecieid INTEGER NOT NULL,
     tbanimaltiponombre VARCHAR(80) NOT NULL,
     tbanimaltiposexo VARCHAR(1) NULL,
-    tbanimaltipoactivo SMALLINT NOT NULL
+    tbanimaltipoactivo SMALLINT NOT NULL,
+    PRIMARY KEY (tbanimaltipoid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbraza (
     tbrazaid INTEGER NOT NULL,
     tbespecieid INTEGER NOT NULL,
     tbrazanombre VARCHAR(100) NOT NULL,
-    tbrazaactivo SMALLINT NOT NULL
+    tbrazaactivo SMALLINT NOT NULL,
+    PRIMARY KEY (tbrazaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalpublicacionanimal (
     tbanimalpublicacionanimalid INTEGER NOT NULL,
     tbanimalpublicacionid INTEGER NOT NULL,
-    tbanimalid INTEGER NOT NULL
+    tbanimalid INTEGER NOT NULL,
+    PRIMARY KEY (tbanimalpublicacionanimalid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbvacuna (
     tbvacunaid INTEGER NOT NULL,
     tbvacunanombre VARCHAR(100) NOT NULL,
-    tbvacunaactivo SMALLINT NOT NULL
+    tbvacunaactivo SMALLINT NOT NULL,
+    PRIMARY KEY (tbvacunaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbanimalvacunacion (
@@ -423,7 +465,8 @@ CREATE TABLE IF NOT EXISTS public.tbanimalvacunacion (
     tbanimalvacunacionaplicadapor VARCHAR(150) NULL,
     tbanimalvacunacionproximadosis DATE NULL,
     tbanimalvacunacionobservaciones VARCHAR(500) NULL,
-    tbanimalvacunacionfecharegistro TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbanimalvacunacionfecharegistro TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbanimalvacunacionid)
 );
 
 -- Subastas en tiempo real (DEC-SUBASTA-001). Un vendedor subasta un animal de su inventario por un tiempo fijo;
@@ -443,7 +486,8 @@ CREATE TABLE IF NOT EXISTS public.tbsubasta (
     tbsubastafechafin TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     tbsubastaestado VARCHAR(20) NOT NULL,
     tbsubastapujaganadoraid INTEGER NULL,
-    tbsubastafechacierre TIMESTAMP WITHOUT TIME ZONE NULL
+    tbsubastafechacierre TIMESTAMP WITHOUT TIME ZONE NULL,
+    PRIMARY KEY (tbsubastaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbsubastapuja (
@@ -451,7 +495,8 @@ CREATE TABLE IF NOT EXISTS public.tbsubastapuja (
     tbsubastaid INTEGER NOT NULL,
     tbpersonaid INTEGER NOT NULL,
     tbsubastapujamonto NUMERIC(12,2) NOT NULL,
-    tbsubastapujafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbsubastapujafecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbsubastapujaid)
 );
 
 CREATE TABLE IF NOT EXISTS public.tbsubastacomentario (
@@ -459,7 +504,8 @@ CREATE TABLE IF NOT EXISTS public.tbsubastacomentario (
     tbsubastaid INTEGER NOT NULL,
     tbpersonaid INTEGER NOT NULL,
     tbsubastacomentariotexto VARCHAR(500) NOT NULL,
-    tbsubastacomentariofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL
+    tbsubastacomentariofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    PRIMARY KEY (tbsubastacomentarioid)
 );
 
 -- Avisos para una persona (la campana del encabezado): subasta ganada, terminada o superada.
@@ -471,7 +517,8 @@ CREATE TABLE IF NOT EXISTS public.tbnotificacion (
     tbnotificacionmensaje VARCHAR(500) NOT NULL,
     tbnotificacionenlace VARCHAR(250) NULL,
     tbnotificacionfecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-    tbnotificacionleida SMALLINT NOT NULL
+    tbnotificacionleida SMALLINT NOT NULL,
+    PRIMARY KEY (tbnotificacionid)
 );
 
 

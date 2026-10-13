@@ -31,7 +31,7 @@ $check(str_contains($migration, 'PREPARE preflight FROM @preflight_sql'), 'Falta
 $check(strpos($migration, 'ALTER TABLE tbproductor ADD COLUMN tbpersonaid')
     > strpos($migration, 'MIGRACION_ABORTADA_DATOS_PERSONALES_INCOMPATIBLES'), 'El ALTER ocurre antes de validar datos personales.');
 $check(str_contains($seed, 'INSERT INTO tbpersona'), 'El seed debe poblar tbpersona.');
-foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CREATE INDEX', ' UNIQUE ', ' DEFAULT ', 'CREATE TRIGGER'] as $forbidden) {
+foreach (['FOREIGN KEY', 'CREATE INDEX', ' UNIQUE ', ' DEFAULT ', 'CREATE TRIGGER'] as $forbidden) {
     $check(!str_contains(strtoupper($schema), $forbidden), "El esquema contiene {$forbidden}.");
 }
 echo "OK persona capacidades MySQL: conflicto pre-DDL, cero rutinas y columnas intactas.\n";

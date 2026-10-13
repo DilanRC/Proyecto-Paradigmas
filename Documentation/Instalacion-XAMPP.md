@@ -15,10 +15,10 @@ compatibilidad con cualquier versión de Linux o XAMPP.
 | Extensiones | `pdo_mysql`, `mbstring`, `openssl`, `json` y `fileinfo`; `allow_url_fopen=On` para solicitudes HTTPS de autenticación. |
 | Tiempo | `Configuration/Configuration.php` fija UTC para fechas del negocio. La configuración CLI no demuestra la configuración de Apache. |
 | Apache | 2.4, `mod_rewrite`, `AllowOverride All` para `Public/`; `mod_headers` para los encabezados de protección. |
-| MariaDB | 10.4.32 de XAMPP: esquema de 47 tablas, cero restricciones e índices; batería completa de 76 pruebas PHP aprobada, incluida la regresión de observaciones. |
-| MySQL | 5.7.44: importación desde cero y tres pruebas de integración de publicaciones/inventario aprobadas. MySQL 8.0 sigue siendo la referencia de Compose; las tres pruebas de 5.7 no equivalen a certificar toda la aplicación. |
-| Frontend | 433 pruebas automatizadas aprobadas en esta preparación; el informe de entrega registra la ejecución final. |
-| phpMyAdmin | 5.2.1: importación desde su interfaz sobre un servidor vacío; 74 consultas de esquema y semillas 101/102/104 con 6/6/8 consultas. Diagnóstico posterior: 47 tablas y cero restricciones, índices, triggers o rutinas. |
+| MariaDB | 10.4.32 de XAMPP: esquema de 47 tablas con su llave primaria y ninguna otra restricción ni índice; batería completa de 77 pruebas PHP aprobada, incluida la regresión de observaciones. Migración 025 aplicada sobre una base con datos. |
+| MySQL | 5.7.44: importación desde cero, migración 025 (también el aborto con identificadores repetidos) y tres pruebas de integración de publicaciones/inventario aprobadas. MySQL 8.0 sigue siendo la referencia de Compose; las tres pruebas de 5.7 no equivalen a certificar toda la aplicación. |
+| Frontend | 436 pruebas automatizadas aprobadas (Node); son pruebas de fuentes y contratos, no sustituyen la revisión en navegador. |
+| phpMyAdmin | 5.2.1: importación desde su interfaz sobre un servidor vacío; 74 consultas de esquema y semillas 101/102/104 con 6/6/8 consultas. Diagnóstico posterior: 47 tablas, 47 llaves primarias y cero restricciones, índices, triggers o rutinas adicionales. |
 
 Los Dockerfiles usan PHP 8.3 como entorno de despliegue. Ese valor no es el
 mínimo de lenguaje de la aplicación. PHP anterior a 8.0 queda fuera del alcance.
@@ -35,8 +35,8 @@ está en otra carpeta:
 ```
 
 El diagnóstico es CLI, solo lectura y está fuera de `Public/`. Informa versiones,
-extensiones, OpenSSL, UTC, conectividad PDO, tablas ausentes y restricciones,
-índices, triggers y rutinas. Devuelve 1 si un requisito comprobado falla. Puede
+extensiones, OpenSSL, UTC, conectividad PDO, tablas ausentes, llaves primarias, otras
+restricciones, índices adicionales, triggers y rutinas. Devuelve 1 si un requisito comprobado falla. Puede
 mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas ni
 el texto privado de las excepciones. La versión de **PHP Apache es desconocida**
 para este comando: compruebe por separado qué módulo PHP carga el servidor.
@@ -105,8 +105,9 @@ un error de permisos. Revise el log local de Apache si una ruta devuelve 403.
    Después de importar el esquema, seleccione `bdmercadoganadero` en el panel
    izquierdo y use su pestaña **Importar** para cada semilla. Esto evita mensajes
    auxiliares de phpMyAdmin sobre una base no seleccionada, aunque el SQL use
-   `USE`. El esquema canónico crea 47 tablas con atributos y tipos, deliberadamente
-   sin PK, FK, UNIQUE, CHECK, AUTO_INCREMENT, índices, triggers ni rutinas.
+   `USE`. El esquema canónico crea 47 tablas con atributos y tipos, cada una con
+   su llave primaria (`<tabla>id`), y deliberadamente sin FK, UNIQUE, CHECK, AUTO_INCREMENT,
+   índices adicionales, triggers ni rutinas.
    Los cuatro campos que guardan JSON usan `LONGTEXT`; PHP valida y codifica su
    contenido. El alias `JSON` de MariaDB puede crear CHECK implícitos y por eso
    no se usa en el esquema vigente. No importe respaldos antiguos como esquema.
@@ -136,10 +137,17 @@ Exporte un respaldo completo en phpMyAdmin antes de modificar una base existente
 migraciones ya están aplicadas y ejecute solo las pendientes, en su orden; no
 importe nuevamente las semillas demo sobre datos reales.
 
+La migración `Database/Migrations/025llavesprimarias.sql` declara la llave primaria
+`<tabla>id` en las 47 tablas de una base creada antes de esa regla. No cambia datos.
+Primero cuenta los identificadores repetidos y, si encuentra alguno, se detiene con
+`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS` antes del primer cambio; corrija esas
+filas y vuelva a ejecutarla (se puede repetir). Fue comprobada en MariaDB 10.4.32 y
+MySQL 5.7.44. Aplíquela después de la 024.
+
 La migración `Database/Migrations/024jsontextportable.sql` convierte los cuatro
 campos JSON de bitácora y observaciones en `LONGTEXT`. Su ejecución fue comprobada
 en MariaDB 10.4.32: preserva el contenido y retira los CHECK implícitos del alias
-JSON. El diagnóstico debe informar cero restricciones después. Si quedan CHECK
+JSON. El diagnóstico debe informar cero restricciones fuera de las llaves primarias después. Si quedan CHECK
 creados manualmente u otras diferencias, deténgase y revise la definición y el
 respaldo antes de corregirlas; esta migración no reconstruye cualquier DB antigua.
 
