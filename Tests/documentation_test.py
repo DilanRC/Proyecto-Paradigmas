@@ -12,6 +12,13 @@ subprocess.run(["python3", "Tools/generate-documentation-pdfs.py", "--check"], c
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
 assert "POST no acepta `direccionPrincipal`" in readme
 assert "La dirección se completa en un PUT posterior" in readme
+xampp = (ROOT / "Documentation/Instalacion-XAMPP.md").read_text(encoding="utf-8")
+assert "/opt/lampp/Proyecto-Paradigmas/Public" in xampp
+assert "Mantenga la raíz del" in xampp and "fuera de `htdocs`" in xampp
+assert "debe ser HTTP 404" in xampp
+assert "ni la exponga como subcarpeta" in readme
+assert "PHP 8.3" in xampp and "PHP 8.0 no puede" in xampp
+assert "no vuelve la aplicación autónoma ni" in xampp
 
 required = {
     "DER.pdf": ["tbproductor", "tbproductordireccion", "tbfinca", "tbbitacora", "tbcomprador", "cero claves", "restricciones, índices", "AUTO_INCREMENT"],

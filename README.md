@@ -173,9 +173,13 @@ local `NO_AUTENTICADO`.
 
 ## Despliegue
 
-Para ejecutar sin Docker en XAMPP, configure Apache con `Public/` como raíz
-del sitio o abra la aplicación bajo `/Proyecto-Paradigmas/Public/`. La guía
-completa está en [`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md).
+Para ejecutar sin Docker en XAMPP, mantenga el repositorio fuera de `htdocs` y
+configure un VirtualHost cuyo `DocumentRoot` sea `Public/`; no publique la raíz
+del repositorio ni la exponga como subcarpeta. En Linux, use el requisito base
+PHP 8.3 con `pdo_mysql` y `mbstring`; las versiones posteriores no se
+certifican aquí. Revise la guía antes de importar la base. Esta documenta el
+caso de XAMPP antiguo y las dependencias externas de autenticación:
+[`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md).
 
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma

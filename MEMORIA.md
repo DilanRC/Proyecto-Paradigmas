@@ -669,6 +669,13 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-12 · fix/xampp-linux-local · Compatibilidad y guía reproducible para XAMPP Linux
+- `Documentation/Instalacion-XAMPP.md` ahora documenta las rutas y configuración Apache de Linux, mantiene el repositorio fuera de `htdocs` y publica solo `Public/` con VirtualHost, importa desde cero el esquema canónico y semillas, crea un usuario PDO local y verifica que `.env` responda 404.
+- `README.md` enlaza la guía, elimina la alternativa insegura de servir la raíz como subcarpeta y aclara el requisito PHP 8.3. El gate `Tests/documentation_test.py` exige estas restricciones de despliegue y compatibilidad.
+- Evidencia local: XAMPP 8.0.30 trae PHP 8.0.30 y MariaDB 10.4.32; PHP 8.0 falla al analizar `Application/Auth/ActorContext.php` y no implementa `array_is_list()`. Los contenedores del repo fijan PHP 8.3 y MySQL 8.0.
+- La ejecución desechable Docker sobre PHP 8.3/MySQL 8.0 levantó portada, API y phpMyAdmin; el esquema contiene 47 tablas. La guía prueba que `/.env` no se sirve (HTTP 404). Batería frontend: 429/430; queda un test de shell con versión `auth-gate-2` obsoleta. Dos pruebas PHP de registro fallaron en corrida completa con 200 vs 201, pero pasaron al repetirse aisladas; investigar el orden si se necesita suite completamente verde.
+- Cuidado: el acceso de cuenta depende de Supabase Auth, y Storage, Realtime, mapas, geocodificación y recursos de terceros también requieren red. No está verificado el arranque completo en Linux antiguo ni en MariaDB 10.4; no prometer que toda instalación XAMPP funciona.
+
 ### 2026-10-12 · jefersonbustamante · Validaciones juntas en los formularios, teclas numéricas y login más claro
 - **Todos los campos a la vez:** nuevo `Public/js/shared/validacion-nativa.js` (`nativa-1`): `erroresNativos(form)` devuelve cada campo inválido
   (required, min, max, step, type) con su motivo en español, y `mensajeCampo` dice qué corregir ("Escribe solo números.", "No puede ser negativo.",
