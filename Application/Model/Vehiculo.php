@@ -8,7 +8,7 @@ use PDO;
 
 final class Vehiculo
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function listar(string $busqueda, string $estado, int $pagina, int $tamano): array
     {

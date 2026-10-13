@@ -51,8 +51,8 @@ final class SubastasController
     private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
         ?TiempoReal $tiempoReal = null,
     ) {
@@ -140,7 +140,7 @@ final class SubastasController
         if ($desconocidos !== []) {
             throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
         }
-        $texto = AnimalPublicacionController::texto(...);
+        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
         $datos = AnimalPublicacionController::validarTodos([
             'animalId' => fn () => $this->enteroCampo($cuerpo['animalId'] ?? null, 'animalId', 1, 2147483647),
             'fincaNombre' => fn () => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),

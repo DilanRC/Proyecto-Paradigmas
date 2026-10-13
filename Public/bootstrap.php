@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/Configuration/Compatibility.php';
+
 /** URL base de Public para VirtualHost y subcarpetas de XAMPP. */
 function tc_public_base_path(): string
 {

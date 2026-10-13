@@ -31,15 +31,15 @@ final class AnimalPublicacionController
     private const LOCKS_CREAR = ['tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
         'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacionanimal'];
 
-    private readonly AnimalComercial $animales;
-    private readonly AnimalCatalogo $catalogo;
-    private readonly PublicacionCercaniaService $cercania;
-    private readonly ?ActorContext $actor;
-    private readonly Productor $productor;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private AnimalComercial $animales;
+    private AnimalCatalogo $catalogo;
+    private PublicacionCercaniaService $cercania;
+    private ?ActorContext $actor;
+    private Productor $productor;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null,
+    public function __construct(private PDO $conexion, ?string $solicitudId = null,
         ?ActorContext $actor = null)
     {
         $this->animales = new AnimalComercial($conexion);
@@ -356,8 +356,8 @@ final class AnimalPublicacionController
 
     private function validarPublicacion(array $cuerpo): array
     {
-        $texto = self::texto(...);
-        $numero = self::numero(...);
+        $texto = \Closure::fromCallable([self::class, 'texto']);
+        $numero = \Closure::fromCallable([self::class, 'numero']);
         $v = self::validarTodos([
             'animalIdentificacion' => fn () => $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100),
             'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),

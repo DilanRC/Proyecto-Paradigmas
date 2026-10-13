@@ -17,7 +17,7 @@ final class SupabaseActorResolver
 
     public function __construct(?callable $transport = null)
     {
-        $this->transport = $transport ?? $this->defaultTransport(...);
+        $this->transport = $transport ?? \Closure::fromCallable([$this, 'defaultTransport']);
     }
 
     /** Endpoints normales: un JWT válido sin Persona sigue siendo conflicto. */

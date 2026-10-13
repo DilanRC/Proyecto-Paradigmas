@@ -11,7 +11,7 @@ final class Direccion
     private const LOCK_ALTA = 'tindercows_direccion_alta';
     private int $profundidadBloqueoAlta = 0;
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {

@@ -62,7 +62,7 @@ function isWeakPassword(value) {
 export function normalizeCapabilities(values = []) {
     return [...new Set(values)]
         .map((value) => String(value).toUpperCase())
-        .filter((value) => Object.hasOwn(BUSINESS_CAPABILITIES, value));
+        .filter((value) => Object.prototype.hasOwnProperty.call(BUSINESS_CAPABILITIES, value));
 }
 
 export function requiredRegistrationSteps(capabilities = []) {

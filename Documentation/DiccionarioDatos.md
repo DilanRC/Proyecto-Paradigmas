@@ -200,8 +200,8 @@ primer animal y esta tabla lista **los N animales, incluido el primero**.
 | `tbbitacoraregistroidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación lógica auditada. | Aplicación | - |
 | `tbbitacoraaccion` | `VARCHAR(30) NOT NULL` | No | Acción. | Aplicación | - |
 | `tbbitacorafecha` | `DATETIME NOT NULL` | No | Fecha del evento, enviada por PHP. | Aplicación | - |
-| `tbbitacoradatosanteriores` | `JSON NULL` | Sí | Estado anterior. | Aplicación | - |
-| `tbbitacoradatosnuevos` | `JSON NULL` | Sí | Estado nuevo. | Aplicación | - |
+| `tbbitacoradatosanteriores` | `LONGTEXT NULL` | Sí | Estado anterior. | Aplicación | - |
+| `tbbitacoradatosnuevos` | `LONGTEXT NULL` | Sí | Estado nuevo. | Aplicación | - |
 | `tbbitacoraactortipo` | `VARCHAR(30) NOT NULL` | No | Tipo de actor. | Aplicación | - |
 | `tbbitacorausuarioid` | `BIGINT UNSIGNED NULL` | Sí | Usuario, nulo antes de autenticación. | Aplicación | - |
 | `tbbitacoraorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico. | Aplicación | - |
@@ -339,8 +339,8 @@ en qué contexto; nada se sobrescribe.
 | `tbanimalproduccionsaludestadoreproductivo` | `VARCHAR(80) NULL` | Sí | Estado reproductivo observado. | Usuario | - |
 | `tbanimalproduccionsaludpartos` | `INT NULL` | Sí | Partos observados/declarados. | Usuario | - |
 | `tbanimalproduccionsaludlitrosleche` | `DECIMAL(10,2) NULL` | Sí | Litros de leche observados/declarados. | Usuario | - |
-| `tbanimalproduccionsaludproduccion` | `JSON NULL` | Sí | Otros datos aprobados de producción. | Aplicación | - |
-| `tbanimalproduccionsaludsalud` | `JSON NULL` | Sí | Otros datos aprobados de salud. | Aplicación | - |
+| `tbanimalproduccionsaludproduccion` | `LONGTEXT NULL` | Sí | Otros datos aprobados de producción. | Aplicación | - |
+| `tbanimalproduccionsaludsalud` | `LONGTEXT NULL` | Sí | Otros datos aprobados de salud. | Aplicación | - |
 
 ## tbanimalpublicacion
 

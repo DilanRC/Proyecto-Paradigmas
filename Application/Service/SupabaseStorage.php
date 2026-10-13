@@ -20,7 +20,7 @@ final class SupabaseStorage
 
     public function __construct(?callable $transporte = null)
     {
-        $this->transporte = $transporte ?? self::transportePorDefecto(...);
+        $this->transporte = $transporte ?? \Closure::fromCallable([self::class, 'transportePorDefecto']);
     }
 
     /** URL firmada del archivo, válida por SEGUNDOS_ENLACE segundos. */

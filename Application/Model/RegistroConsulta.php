@@ -16,7 +16,7 @@ final class RegistroConsulta
     public const LIMITE = 20;
     public const VENTANA_SEGUNDOS = 60;
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     /** Registra la consulta si cabe en la ventana; false = se pasó del límite. */
     public function permitir(string $ip): bool

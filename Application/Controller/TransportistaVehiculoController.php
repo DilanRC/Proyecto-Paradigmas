@@ -12,13 +12,19 @@ use Application\Model\Vehiculo;
 use PDO;
 use Throwable;
 
-final class TransportistaVehiculoHttpException extends \RuntimeException
+require_once dirname(__DIR__) . '/ReadOnlyProperties.php';
+
+final class TransportistaVehiculoHttpException extends \RuntimeException implements \JsonSerializable
 {
+    use \Application\ReadOnlyProperties;
+
+    private const READ_ONLY_PROPERTIES = ['estadoHttp', 'datos', 'errores'];
+
     public function __construct(
         string $message,
-        public readonly int $estadoHttp,
-        public readonly ?array $datos = null,
-        public readonly array $errores = [],
+        private int $estadoHttp,
+        private ?array $datos = null,
+        private array $errores = [],
     ) {
         parent::__construct($message);
     }
@@ -32,7 +38,7 @@ final class TransportistaVehiculoController
     private Bitacora $bitacora;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->enlace = new TransportistaVehiculo($conexion);
         $this->transportista = new Transportista($conexion, $this->enlace);

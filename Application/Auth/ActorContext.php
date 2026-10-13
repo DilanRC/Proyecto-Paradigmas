@@ -4,14 +4,20 @@ declare(strict_types=1);
 
 namespace Application\Auth;
 
-final readonly class ActorContext
+require_once dirname(__DIR__) . '/ReadOnlyProperties.php';
+
+final class ActorContext implements \JsonSerializable
 {
+    use \Application\ReadOnlyProperties;
+
+    private const READ_ONLY_PROPERTIES = ['tipo', 'personaId', 'proveedorSujeto', 'correoElectronico', 'rolTecnico'];
+
     private function __construct(
-        public string $tipo,
-        public ?int $personaId,
-        public ?string $proveedorSujeto,
-        public ?string $correoElectronico,
-        public ?string $rolTecnico,
+        private string $tipo,
+        private ?int $personaId,
+        private ?string $proveedorSujeto,
+        private ?string $correoElectronico,
+        private ?string $rolTecnico,
     ) {}
 
     public static function noAutenticado(): self

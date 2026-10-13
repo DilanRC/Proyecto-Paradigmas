@@ -73,8 +73,8 @@ CREATE TABLE IF NOT EXISTS tbbitacora (
     tbbitacoraregistroidentificacionnumero VARCHAR(250) NOT NULL,
     tbbitacoraaccion VARCHAR(30) NOT NULL,
     tbbitacorafecha DATETIME NOT NULL,
-    tbbitacoradatosanteriores JSON NULL,
-    tbbitacoradatosnuevos JSON NULL,
+    tbbitacoradatosanteriores LONGTEXT NULL,
+    tbbitacoradatosnuevos LONGTEXT NULL,
     tbbitacoraactortipo VARCHAR(30) NOT NULL,
     tbbitacorausuarioid BIGINT UNSIGNED NULL,
     tbbitacoraorigen VARCHAR(100) NOT NULL,
@@ -238,8 +238,8 @@ CREATE TABLE IF NOT EXISTS tbanimalproduccionsalud (
     tbanimalproduccionsaludestadoreproductivo VARCHAR(80) NULL,
     tbanimalproduccionsaludpartos INT NULL,
     tbanimalproduccionsaludlitrosleche DECIMAL(10,2) NULL,
-    tbanimalproduccionsaludproduccion JSON NULL,
-    tbanimalproduccionsaludsalud JSON NULL
+    tbanimalproduccionsaludproduccion LONGTEXT NULL,
+    tbanimalproduccionsaludsalud LONGTEXT NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbanimalpublicacion (

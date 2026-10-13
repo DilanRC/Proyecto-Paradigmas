@@ -19,7 +19,13 @@ test('el admin comparte la paleta de los logos con el sitio publico', () => {
 });
 
 test('el shell existente se mejora desde un bootstrap compartido, no con cinco implementaciones', () => {
-    assert.ok(apiJs.startsWith("import './auth-gate.js?v=auth-gate-2';\nimport './admin-ui.js';"));
+    const gate = apiJs.match(/^import '(\.\/auth-gate\.js\?v=[^']+)';/m)?.[1];
+    assert.ok(gate, 'api inicializa el gate compartido con version');
+    assert.match(apiJs, /^import '\.\/admin-ui\.js\?v=[^']+';/m);
+    for (const source of [adminJs, read('../../Public/js/login.js'), read('../../Public/js/public-ui.js')]) {
+        const imported = source.match(/from '(?:\.\/shared\/|\.\/)(auth-gate\.js\?v=[^']+)'/)?.[1];
+        assert.equal(imported, gate.slice(2), 'cada consumidor comparte la misma URL completa de auth-gate');
+    }
     assert.ok(adminJs.includes("const ADMIN_CSS = 'css/admin-v3.css?v=admin-9'"));
     assert.ok(adminJs.includes('enhanceSidebarAccount();'));
     assert.ok(adminJs.includes('enhancePageHeader();'));

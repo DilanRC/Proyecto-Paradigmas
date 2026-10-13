@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-11';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-12';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-13';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-14';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 const MODULES = {
@@ -76,7 +76,7 @@ const MODULES = {
 
 function routeName(pathname = globalThis.location?.pathname ?? '') {
     const parts = String(pathname).split('/').filter(Boolean);
-    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts.at(-1) || '';
+    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts[parts.length - 1] || '';
 }
 
 function injectStylesheet(href, marker) {

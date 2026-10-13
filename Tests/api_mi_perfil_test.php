@@ -67,8 +67,15 @@ try {
     if (!getenv('SUPABASE_SECRET_KEY')) putenv('SUPABASE_SECRET_KEY=sb_secret_prueba');
     $llamadas = [];
     $respuestaAuth = ['status' => 200, 'body' => '{}'];
-    $transporte = function (string $url, string $clave, string $cuerpo) use (&$llamadas, &$respuestaAuth): array {
+    $correoRemoto = $fila['tbpersonacorreoelectronico'];
+    $transporte = function (string $url, string $clave, string $cuerpo, string $metodo = 'PUT') use (&$llamadas, &$respuestaAuth, &$correoRemoto): array {
+        $uuidRemoto = '11111111-2222-4333-8444-555555555555';
+        if ($metodo === 'GET') return ['status' => 200, 'body' => json_encode(['id' => $uuidRemoto, 'email' => $correoRemoto, 'email_confirmed_at' => '2026-01-01T00:00:00Z'])];
         $llamadas[] = ['url' => $url, 'cuerpo' => json_decode($cuerpo, true)];
+        if ($respuestaAuth['status'] === 200) {
+            $correoRemoto = json_decode($cuerpo, true)['email'];
+            return ['status' => 200, 'body' => json_encode(['id' => $uuidRemoto, 'email' => $correoRemoto, 'email_confirmed_at' => '2026-01-01T00:00:00Z'])];
+        }
         return $respuestaAuth;
     };
     $uuid = '11111111-2222-4333-8444-555555555555';

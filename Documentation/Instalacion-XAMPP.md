@@ -1,71 +1,63 @@
 # Ejecutar TinderCows con XAMPP en Linux
 
-Esta guía instala el proyecto completo bajo Apache/PHP y MariaDB de XAMPP, y
-usa phpMyAdmin para revisar la base. El proyecto requiere PHP 8.3: esa es la
-versión que fijan `Dockerfile` y `Dockerfile.vercel`. Instalar XAMPP no garantiza
-compatibilidad por sí solo; hay que comprobar la versión que trae su PHP.
+La aplicación requiere **PHP 8.0 o posterior**, Apache 2.4 y MySQL/MariaDB.
+La revisión ejecutó el paquete XAMPP 8.0.30 en Linux con PHP 8.0.30, Apache
+2.4.58, MariaDB 10.4.32 y phpMyAdmin 5.2.1. El sistema usado fue CachyOS;
+**la versión de Ubuntu y de XAMPP del profesor Brenes es desconocida**.
+Compruebe esa computadora antes de la entrega: estas pruebas no prometen
+compatibilidad con cualquier versión de Linux o XAMPP.
 
-## Compatibilidad comprobada
+## Requisitos y evidencia
 
-| Componente | Requisito del proyecto | Evidencia / límite |
-|---|---|---|
-| PHP | 8.3, con `pdo_mysql` y `mbstring` | Las imágenes del proyecto usan `php:8.3-apache`. La aplicación usa clases `readonly` y `array_is_list`, ambas incompatibles con PHP 8.0. |
-| Apache | `mod_rewrite`, `mod_headers` recomendado y `AllowOverride All` para `Public/` | Las rutas de página y API se resuelven en `Public/.htaccess`. |
-| Base de datos | MySQL 8.0 es la referencia del proyecto | Compose usa `mysql:8.0`. Aunque XAMPP incluya MariaDB, no se debe inferir compatibilidad de toda la aplicación sin ejecutar sus pruebas sobre esa versión. |
-| phpMyAdmin | Se usa como interfaz local para importar y revisar datos | No reemplaza al servidor MariaDB/MySQL ni a las credenciales PDO de la aplicación. |
+| Componente | Requisito / resultado comprobado |
+|---|---|
+| PHP | Mínimo PHP 8.0: tipos unión, `mixed` y propiedades promovidas. La aplicación sustituye las clases `readonly` y carga el polyfill de `array_is_list()` en `Configuration/Compatibility.php`. |
+| Extensiones | `pdo_mysql`, `mbstring`, `openssl`, `json` y `fileinfo`; `allow_url_fopen=On` para solicitudes HTTPS de autenticación. |
+| Tiempo | `Configuration/Configuration.php` fija UTC para fechas del negocio. La configuración CLI no demuestra la configuración de Apache. |
+| Apache | 2.4, `mod_rewrite`, `AllowOverride All` para `Public/`; `mod_headers` para los encabezados de protección. |
+| MariaDB | 10.4.32 de XAMPP: esquema de 47 tablas, cero restricciones e índices; batería completa de 76 pruebas PHP aprobada, incluida la regresión de observaciones. |
+| MySQL | 5.7.44: importación desde cero y tres pruebas de integración de publicaciones/inventario aprobadas. MySQL 8.0 sigue siendo la referencia de Compose; las tres pruebas de 5.7 no equivalen a certificar toda la aplicación. |
+| Frontend | 433 pruebas automatizadas aprobadas en esta preparación; el informe de entrega registra la ejecución final. |
+| phpMyAdmin | 5.2.1: importación desde su interfaz sobre un servidor vacío; 74 consultas de esquema y semillas 101/102/104 con 6/6/8 consultas. Diagnóstico posterior: 47 tablas y cero restricciones, índices, triggers o rutinas. |
 
-La instalación XAMPP Linux observada durante esta preparación es XAMPP 8.0.30,
-con PHP 8.0.30 y MariaDB 10.4.32. **Ese PHP no ejecuta esta rama**: por
-ejemplo, PHP 8.0 no puede analizar `Application/Auth/ActorContext.php`, y no
-define `array_is_list()` usado por `Configuration/Configuration.php` y los
-validadores. PHP añadió esa función en 8.1 ([manual de PHP](https://www.php.net/manual/en/function.array-is-list.php)). No intente resolverlo cambiando solo la configuración de Apache.
+Los Dockerfiles usan PHP 8.3 como entorno de despliegue. Ese valor no es el
+mínimo de lenguaje de la aplicación. PHP anterior a 8.0 queda fuera del alcance.
+Las versiones de XAMPP y las dependencias del sistema del profesor siguen
+pendientes de comprobación en su equipo.
 
-Antes de copiar el proyecto, compruebe el PHP que realmente trae XAMPP:
+Compruebe el ejecutable PHP de su instalación; sustituya `/opt/lampp` si XAMPP
+está en otra carpeta:
 
 ```bash
 /opt/lampp/bin/php -v
 /opt/lampp/bin/php -m
-/opt/lampp/bin/php -r 'echo PHP_VERSION, " ", PHP_VERSION_ID, PHP_EOL;'
+/opt/lampp/bin/php Tools/diagnostico-local.php
 ```
 
-Use una distribución XAMPP para Linux con PHP 8.3, la versión base declarada
-por el proyecto, y compruebe que Apache cargue esa versión y que estén
-disponibles `pdo_mysql` y `mbstring`. Las versiones posteriores no se han
-certificado en esta revisión. Si el XAMPP disponible solo trae PHP 8.0, 8.1 o
-8.2, esta rama no queda cubierta por el requisito del proyecto. La
-[página pública de descargas de Apache Friends](https://www.apachefriends.org/download.html?lang=en)
-consultada durante esta revisión solo enumera para Linux hasta
-PHP 8.2.12; por tanto, no se puede recomendar allí una descarga Linux con PHP
-8.3 como solución ya verificada. En ese caso, coordine con el profesor una
-versión que cumpla PHP 8.3 antes de la revisión. La antigüedad de Ubuntu también
-puede impedir ejecutar un instalador XAMPP reciente por dependencias del
-sistema; esta guía no promete compatibilidad con todas las versiones de Linux.
+El diagnóstico es CLI, solo lectura y está fuera de `Public/`. Informa versiones,
+extensiones, OpenSSL, UTC, conectividad PDO, tablas ausentes y restricciones,
+índices, triggers y rutinas. Devuelve 1 si un requisito comprobado falla. Puede
+mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas ni
+el texto privado de las excepciones. La versión de **PHP Apache es desconocida**
+para este comando: compruebe por separado qué módulo PHP carga el servidor.
 
-## Instalar el proyecto
+## Instalar y publicar solo Public
 
-1. Inicie Apache y MariaDB desde el panel de XAMPP o con el comando oficial de
-   su instalación. En Linux, XAMPP suele instalarse en `/opt/lampp` ([FAQ de
-   Apache Friends](https://www.apachefriends.org/faq_linux.html)); iniciar o
-   detener esos servicios puede requerir permisos de administrador.
-2. Copie o clone el repositorio completo fuera del directorio público, por
-   ejemplo:
-
-   ```text
-   /opt/lampp/Proyecto-Paradigmas
-   ```
-
-   No copie únicamente `Public/`: sus vistas, controladores, configuración,
-   SQL y recursos viven en el resto del repositorio. Mantenga la raíz del
-   repositorio fuera de `htdocs`: si queda dentro, Apache podría servir `.env`,
-   SQL y documentación con la configuración predeterminada.
-3. En `/opt/lampp/etc/httpd.conf`, confirme que `mod_rewrite` esté cargado y
-   que esté activa la inclusión de
-   `conf/extra/httpd-vhosts.conf`. En ese archivo, publique solo `Public/`:
+1. Copie el repositorio completo en una carpeta fuera de `htdocs`, por ejemplo
+   `/opt/lampp/Proyecto-Paradigmas`. Mantenga la raíz del repositorio fuera de
+   `htdocs`: incluye configuración privada, SQL, pruebas y documentación.
+   El proyecto completo debe estar en la entrega; copiar solo `Public/` elimina
+   clases y vistas necesarias.
+2. Configure Apache manualmente. En `httpd.conf` confirme que se cargan
+   `mod_rewrite`, el módulo PHP correcto y la inclusión de `httpd-vhosts.conf`.
+   Configure este VirtualHost en el archivo correspondiente a su instalación:
 
    ```apache
+   TraceEnable Off
    <VirtualHost *:80>
        ServerName proyecto-paradigmas.local
        DocumentRoot "/opt/lampp/Proyecto-Paradigmas/Public"
+       ErrorDocument 405 /api/metodo-no-permitido.php
        <Directory "/opt/lampp/Proyecto-Paradigmas/Public">
            AllowOverride All
            Require all granted
@@ -73,21 +65,34 @@ sistema; esta guía no promete compatibilidad con todas las versiones de Linux.
    </VirtualHost>
    ```
 
-   Añada `127.0.0.1 proyecto-paradigmas.local` a `/etc/hosts`, reinicie Apache
-   y abra:
+   `TraceEnable Off` desactiva TRACE en Apache. `ErrorDocument 405` utiliza la
+   respuesta JSON del proyecto cuando Apache rechaza el método antes de llegar
+   al endpoint PHP; esa configuración pertenece al servidor y no puede hacerse
+   desde `.htaccess` para TRACE. Los errores de aplicación mantienen su contrato
+   JSON sin recargar la página.
+3. Añada `127.0.0.1 proyecto-paradigmas.local` a `/etc/hosts`, valide la
+   configuración de Apache y reinicie sus servicios desde el panel de XAMPP o
+   con el procedimiento de su instalación. Dilan debe ejecutar personalmente
+   los cambios que requieran privilegios de administrador; el instalador del
+   proyecto no ejecuta `sudo` automáticamente.
+4. Abra <http://proyecto-paradigmas.local/>. No publique la raíz del repositorio
+   ni la exponga como subcarpeta. Si usa otro puerto, inclúyalo en el VirtualHost
+   y en todas las URL de las comprobaciones.
 
-   <http://proyecto-paradigmas.local/>
+Apache necesita permiso de lectura sobre los archivos y permiso de recorrido
+sobre las carpetas del repositorio. Mantenga la propiedad del proyecto en su
+usuario, no use `chmod 777` ni conceda escritura global. Dé lectura a `.env`
+solo al usuario o grupo de PHP que la necesite. Los archivos de usuario se
+almacenan en Supabase Storage; no haga escribible toda la raíz para resolver
+un error de permisos. Revise el log local de Apache si una ruta devuelve 403.
 
-   La aplicación calcula esa base para rutas, JavaScript, CSS e imágenes. No
-   use `/opt/lampp/htdocs/Proyecto-Paradigmas` como carpeta del repositorio ni
-   apunte `DocumentRoot` a la raíz del repositorio.
+## Base nueva mediante phpMyAdmin
 
-## Crear la base desde cero
-
-1. Abra phpMyAdmin en <http://localhost/phpmyadmin> y confirme que el servidor
-   corresponde al MariaDB incluido en XAMPP.
-2. Importe en este orden, desde la página del servidor de phpMyAdmin (la
-   primera secuencia crea y selecciona `bdmercadoganadero`):
+1. Inicie MariaDB/MySQL y abra <http://localhost/phpmyadmin>. Confirme el servidor,
+   puerto y versión que aparecen en phpMyAdmin: el servidor de sistema y el de
+   XAMPP pueden coexistir en puertos distintos.
+2. Importe los archivos en este orden desde la página del servidor. El primero
+   crea y selecciona `bdmercadoganadero`:
 
    ```text
    Database/SqlScripts/000instalacioncompleta.sql
@@ -97,18 +102,18 @@ sistema; esta guía no promete compatibilidad con todas las versiones de Linux.
    Database/SeedData/104catalogosanimal.sql
    ```
 
-   `000instalacioncompleta.sql` es el esquema canónico del proyecto. Crea las
-   47 tablas vigentes deliberadamente sin PK, FK, UNIQUE, CHECK,
-   AUTO_INCREMENT, triggers ni rutinas. No importe los respaldos antiguos de
-   `Database/Backups/` como esquema vigente. `000instalacioncompleta.sql` crea
-   tablas ausentes, pero no actualiza las columnas de una base ya existente;
-   esa base requiere sus migraciones `Database/Migrations/` en orden.
-3. En phpMyAdmin cree un usuario exclusivo para la aplicación con acceso desde
-   `127.0.0.1` y permisos sobre `bdmercadoganadero` solamente. No use la cuenta
-   `root` de MariaDB en la aplicación. Guarde una contraseña local nueva; no
-   reutilice credenciales de producción ni publique `.env`.
-4. En la raíz del repositorio, copie `.env.example` a `.env` y deje estos
-   valores de base de datos acordes con el usuario creado:
+   Después de importar el esquema, seleccione `bdmercadoganadero` en el panel
+   izquierdo y use su pestaña **Importar** para cada semilla. Esto evita mensajes
+   auxiliares de phpMyAdmin sobre una base no seleccionada, aunque el SQL use
+   `USE`. El esquema canónico crea 47 tablas con atributos y tipos, deliberadamente
+   sin PK, FK, UNIQUE, CHECK, AUTO_INCREMENT, índices, triggers ni rutinas.
+   Los cuatro campos que guardan JSON usan `LONGTEXT`; PHP valida y codifica su
+   contenido. El alias `JSON` de MariaDB puede crear CHECK implícitos y por eso
+   no se usa en el esquema vigente. No importe respaldos antiguos como esquema.
+3. Cree en phpMyAdmin una cuenta local exclusiva para la aplicación, con acceso
+   desde el host de conexión y permisos sobre `bdmercadoganadero` solamente.
+   Elija una contraseña local nueva; no reutilice credenciales de producción.
+4. Copie `.env.example` a `.env` en la raíz privada del repositorio y configure:
 
    ```dotenv
    DB_HOST=127.0.0.1
@@ -118,49 +123,89 @@ sistema; esta guía no promete compatibilidad con todas las versiones de Linux.
    DB_PASS=<contraseña local creada en phpMyAdmin>
    ```
 
-   No agregue variables `POSTGRES_URL` ni `POSTGRES_URL_NON_POOLING` para esta
-   instalación MySQL. `Configuration/Configuration.php` carga `.env` en
-   solicitudes PHP; `Database.php` toma esas variables para PDO. Los valores
-   incluidos en `.env.example` son para desarrollo desechable, no son una
-   contraseña segura para una instalación compartida.
+   `.env` no debe entrar en Git ni en un ZIP compartido con credenciales reales.
+   Incluya `.env.example` y esta guía dentro del proyecto de entrega. No configure
+   `POSTGRES_URL` ni `POSTGRES_URL_NON_POOLING` para la instalación MySQL: esas
+   variables seleccionan otro motor. Las variables del servidor tienen prioridad
+   sobre `.env`, por lo que debe revisar configuraciones antiguas de Apache.
 
-## Comprobar el arranque
+## Base existente: respaldo y migraciones
 
-Después de guardar `.env`, compruebe que Apache sirve la portada y que la API
-contesta JSON:
+Exporte un respaldo completo en phpMyAdmin antes de modificar una base existente.
+`CREATE TABLE IF NOT EXISTS` no actualiza columnas antiguas. Compruebe qué
+migraciones ya están aplicadas y ejecute solo las pendientes, en su orden; no
+importe nuevamente las semillas demo sobre datos reales.
+
+La migración `Database/Migrations/024jsontextportable.sql` convierte los cuatro
+campos JSON de bitácora y observaciones en `LONGTEXT`. Su ejecución fue comprobada
+en MariaDB 10.4.32: preserva el contenido y retira los CHECK implícitos del alias
+JSON. El diagnóstico debe informar cero restricciones después. Si quedan CHECK
+creados manualmente u otras diferencias, deténgase y revise la definición y el
+respaldo antes de corregirlas; esta migración no reconstruye cualquier DB antigua.
+
+## Instalador CLI alternativo
+
+`bash instalar-local.sh` instala esquema y semillas básicas en el destino
+configurado. Usa siempre TCP con `DB_HOST` y `DB_PORT`, tanto para root como para
+la cuenta de aplicación. Configura `DB_ROOT_PASS` localmente si root exige
+contraseña; no la ponga en comandos compartidos ni en documentación.
+
+Puede definir `MYSQL_CLIENT` con la ruta al cliente, o `XAMPP_ROOT` con la carpeta
+de XAMPP. Por defecto busca el cliente bajo `/opt/lampp` y luego en PATH.
+`DB_ACCOUNT_HOST` define el host de la cuenta SQL creada y su valor por defecto
+es `localhost`; para un servidor remoto debe corresponder al origen permitido
+para el cliente. El entorno tiene prioridad sobre `.env`. El nombre de DB debe
+ser `bdmercadoganadero`, ya que esquema y semillas lo utilizan explícitamente.
+
+El instalador valida identificadores y puerto. No cambia la contraseña de una
+cuenta preexistente: aborta si esa cuenta no acepta `DB_PASS` antes de borrar o
+conceder permisos. `--reinstalar` borra la base seleccionada y requiere un respaldo
+si desea conservarla. Un fallo de importación puede dejar datos parciales: revise
+el error y el estado antes de reintentar. El script no reemplaza la migración de
+una base existente.
+
+## Arranque, JSON y errores
+
+Después de configurar la base, ejecute el diagnóstico y compruebe HTTP:
 
 ```bash
+/opt/lampp/bin/php Tools/diagnostico-local.php
 curl -fsS -o /dev/null -w 'Portada: HTTP %{http_code}\n' http://proyecto-paradigmas.local/
-curl -fsS -o /dev/null -w 'Configuración de autenticación: HTTP %{http_code}\n' http://proyecto-paradigmas.local/api/v1/auth/config
+curl -fsS -o /dev/null -w 'Auth: HTTP %{http_code}\n' http://proyecto-paradigmas.local/api/v1/auth/config
 curl -s -o /dev/null -w 'Archivo .env (debe ser HTTP 404): HTTP %{http_code}\n' http://proyecto-paradigmas.local/.env
+curl -i -X TRACE http://proyecto-paradigmas.local/api/v1/publicaciones
 ```
 
-En phpMyAdmin, seleccione `bdmercadoganadero` y compruebe que las tablas y las
-semillas estén presentes. Los cambios de datos del CRUD se envían a endpoints
-JSON mediante `fetch()`; no se debe navegar directamente a un archivo PHP de
-API para probar un CRUD.
+La última solicitud debe responder 405 y `Content-Type: application/json`.
+Revise la portada y las rutas limpias en navegador, no solo el HTTP 200. Las API
+CRUD se consumen con `fetch()`/AJAX y JSON, sin recargar toda la página. PHP vuelve
+a validar los datos y mantiene negocio, solicitudes e interfaz separados.
 
-Para pruebas automatizadas completas, use el flujo Docker del `README.md` con
-una base local desechable. No ejecute pruebas sobre datos reales: parte de la
-batería altera filas y estructuras para comprobar fallos. Las pruebas Docker
-comprueban MySQL 8.0 y PHP 8.3; no certifican por sí solas el paquete MariaDB,
-Apache, phpMyAdmin o el sistema operativo de una instalación XAMPP concreta.
+Para ejecutar pruebas que escriben datos, use exclusivamente una base local
+desechable. Consulte `Tests/README.md`; no ejecute esa batería sobre producción
+ni sobre la DB de una revisión con datos que necesite conservar. La regresión
+`Tests/latest_observation_portability_test.php` comprueba observación reciente por
+fecha/id, misma fila y totales sin multiplicación en MySQL 5.7 y MariaDB 10.4.
 
-## Servicios externos y modo sin Internet
+## Instalación sin descargas y servicios externos
 
-XAMPP solo aloja Apache, PHP y MariaDB. Vercel es un destino de despliegue, no
-un requisito para ejecutar la copia local. **XAMPP no vuelve la aplicación autónoma ni
-offline.** Esta rama usa Supabase Auth para registro, inicio de sesión y
-validación de sesión; también usa Storage y Realtime para funciones de archivos
-y avisos. Mapas, geocodificación, tipografías y bibliotecas JavaScript se cargan
-de proveedores externos. Sin red, o si esos proveedores no están disponibles,
-esas funciones fallan o quedan degradadas aunque la portada PHP y la conexión
-local a MySQL respondan.
+El código PHP, SQL, vistas, JavaScript y recursos incluidos se ejecutan desde el
+repositorio completo: **no requieren Node ni Composer para XAMPP**. Puede copiar
+el paquete en una memoria USB e importar el SQL sin Internet, si XAMPP ya está
+instalado con las extensiones necesarias. Node pertenece al servicio opcional de
+Compose; XAMPP valida las sesiones directamente mediante Supabase Auth.
 
-La tabla `tbadministrador` solo declara qué correo tiene autorización
-administrativa en el proyecto; no crea la cuenta ni la contraseña de Supabase.
-Para probar el acceso administrativo se requiere una cuenta real autorizada en
-Supabase y conectividad al servicio. `SUPABASE_SECRET_KEY` es opcional para
-partes básicas del sitio, pero se necesita para operaciones privilegiadas de
-Storage y administración de usuarios; nunca se envía al navegador ni se debe
-copiar desde producción a una computadora de revisión.
+Eso no permite operación completa sin Internet. Auth, Storage, Realtime y mapas
+externos requieren red: Supabase Auth participa en registro, confirmación, login
+y validación de sesión; Storage en archivos; Realtime en avisos. Mapas, teselas,
+geocodificación, algunas tipografías y bibliotecas también dependen de proveedores.
+Los iconos Font Awesome se incluyen localmente; eso resuelve solo esos iconos.
+Vercel es el destino de despliegue y no es necesario para el servidor XAMPP.
+
+Use un proyecto Supabase de pruebas con URL y clave pública configuradas en `.env`
+para revisar registro/login. La clave pública llega al navegador; una clave
+secreta debe quedar solo en configuración del servidor y nunca copiarse desde
+producción a una PC de revisión. `tbadministrador` autoriza un correo, pero no
+crea la cuenta ni la contraseña de Supabase. El acceso administrativo necesita
+una cuenta autorizada y conectividad. Si falla la red, las funciones externas
+quedan degradadas; la portada local no demuestra que Auth o Storage funcionen.

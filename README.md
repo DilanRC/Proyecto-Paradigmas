@@ -1,6 +1,6 @@
 # TinderCows — CRUD de Productores
 
-Aplicación académica PHP 8.3, MVC, MySQL 8, AJAX y JSON. La corrección del
+Aplicación académica PHP 8.0 o posterior, MVC, MySQL/MariaDB, AJAX y JSON. La corrección del
 Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
@@ -176,9 +176,11 @@ local `NO_AUTENTICADO`.
 Para ejecutar sin Docker en XAMPP, mantenga el repositorio fuera de `htdocs` y
 configure un VirtualHost cuyo `DocumentRoot` sea `Public/`; no publique la raíz
 del repositorio ni la exponga como subcarpeta. En Linux, use el requisito base
-PHP 8.3 con `pdo_mysql` y `mbstring`; las versiones posteriores no se
-certifican aquí. Revise la guía antes de importar la base. Esta documenta el
-caso de XAMPP antiguo y las dependencias externas de autenticación:
+PHP 8.0 o posterior con `pdo_mysql`, `mbstring` y OpenSSL. Se comprobó XAMPP
+8.0.30 con MariaDB 10.4.32; la versión del Ubuntu y XAMPP del profesor sigue
+desconocida. El repositorio completo no requiere Node ni Composer para XAMPP,
+pero Auth, Storage, Realtime y mapas externos necesitan Internet. Revise la
+guía antes de importar o migrar la base:
 [`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md).
 
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve

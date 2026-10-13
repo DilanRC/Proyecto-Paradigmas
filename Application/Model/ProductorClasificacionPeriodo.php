@@ -22,7 +22,7 @@ final class ProductorClasificacionPeriodo
     private int $profundidadBloqueo = 0;
     private string $lockActual = '';
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueo(int $productorId, string $tipo, callable $operacion): mixed
     {

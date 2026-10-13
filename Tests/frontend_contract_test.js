@@ -28,7 +28,7 @@ has('Public/js/shared/form-draft.js', "IDENTITY_FIELDS = ['identificacionNumeroO
     'crear/editar deben separarse por la identidad estable del recurso');
 hasNot('Public/js/shared/form-draft.js', 'localStorage',
     'un borrador temporal no debe sobrevivir como almacenamiento permanente');
-has('Public/js/shared/form.js', "from './form-draft.js';",
+has('Public/js/shared/form.js', /from '\.\/form-draft\.js\?v=[a-z0-9-]+';/,
     'todos los formularios ligados deben activar la capa compartida de borradores');
 has('Public/js/shared/form.js', 'enableFormDraft(form);',
     'bindFormErrors debe activar el borrador de los CRUD');

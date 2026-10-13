@@ -261,8 +261,8 @@ erDiagram
         VARCHAR tbanimalproduccionsaludestadoreproductivo
         INT tbanimalproduccionsaludpartos
         DECIMAL tbanimalproduccionsaludlitrosleche
-        JSON tbanimalproduccionsaludproduccion
-        JSON tbanimalproduccionsaludsalud
+        LONGTEXT tbanimalproduccionsaludproduccion
+        LONGTEXT tbanimalproduccionsaludsalud
     }
 
     tbanimalpublicacion {
@@ -450,8 +450,8 @@ erDiagram
         VARCHAR tbbitacoraregistroidentificacionnumero
         VARCHAR tbbitacoraaccion
         DATETIME tbbitacorafecha
-        JSON tbbitacoradatosanteriores
-        JSON tbbitacoradatosnuevos
+        LONGTEXT tbbitacoradatosanteriores
+        LONGTEXT tbbitacoradatosnuevos
         VARCHAR tbbitacoraactortipo
         BIGINT tbbitacorausuarioid
         VARCHAR tbbitacoraorigen

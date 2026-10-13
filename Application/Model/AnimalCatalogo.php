@@ -23,7 +23,7 @@ final class AnimalCatalogo
     // ponytail: un lock para los cuatro catálogos; las altas son raras y solo las hace un administrador.
     private const LOCK_ALTA = 'tindercows_catalogo_alta';
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -46,7 +46,7 @@ final class AnimalCatalogo
         $sentencia = $this->conexion->prepare($this->seleccionAdmin($t) . " ORDER BY {$t['nombre']}");
         $sentencia->execute();
 
-        return array_map(self::mapearAdmin(...), $sentencia->fetchAll());
+        return array_map(\Closure::fromCallable([self::class, 'mapearAdmin']), $sentencia->fetchAll());
     }
 
     /** @return array{id:int,nombre:string,especieId:?int,sexo:?string,activo:bool}|null */

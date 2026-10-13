@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Configuration;
 
+require_once __DIR__ . '/Compatibility.php';
+
+date_default_timezone_set('UTC');
+
 const APPLICATION_NAME = 'TinderCows';
 
 // Apache/XAMPP no carga `.env` por sí mismo. Las variables definidas por el

@@ -31,13 +31,13 @@ final class MiPerfilController
     /** Documento de identidad (P2-5): archivo del bucket privado "documentos". */
     private const DOCUMENTO_EXTENSIONES = 'jpg|png|webp|pdf';
 
-    private readonly Persona $personas;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private Persona $personas;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
-    private readonly SupabaseAuthAdmin $authAdmin;
+    private SupabaseAuthAdmin $authAdmin;
 
-    public function __construct(private readonly PDO $conexion, private readonly ActorContext $actor,
+    public function __construct(private PDO $conexion, private ActorContext $actor,
         ?string $solicitudId = null, ?SupabaseAuthAdmin $authAdmin = null)
     {
         $this->authAdmin = $authAdmin ?? new SupabaseAuthAdmin();
@@ -139,6 +139,9 @@ final class MiPerfilController
         $nueva = $this->personas->ejecutarConBloqueoAlta(fn (): array => $this->personas->ejecutarConBloqueoTelefono(fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
             function () use ($personaId, $cambios, $numeroLeido): array {
                 $this->conexion->beginTransaction();
+                $authIntentado = false;
+                $commitIntentado = false;
+                $anterior = null;
                 try {
                     $anterior = $this->personas->buscarPorId($personaId);
                     if ($anterior === null) {
@@ -193,17 +196,36 @@ final class MiPerfilController
                         entidad: 'PERSONA',
                         origen: 'API_MI_PERFIL',
                     );
-                    // La cuenta de Supabase cambia al final: si falla, el ROLLBACK deja todo como estaba.
-                    // ponytail: si el COMMIT fallara después, la cuenta quedaría con el correo nuevo y la
-                    // Persona con el viejo; revertir la cuenta en ese caso si llega a pasar.
                     if ($correoCambiado) {
+                        $authIntentado = true;
                         $this->authAdmin->cambiarCorreo((string) $this->actor->proveedorSujeto, $cambios['correo']);
                     }
-                    $this->conexion->commit();
+                    $commitIntentado = true;
+                    if (!$this->conexion->commit()) {
+                        throw new \RuntimeException('No se confirmó la transacción del perfil.');
+                    }
                     return $nueva;
                 } catch (Throwable $error) {
-                    if ($this->conexion->inTransaction()) {
-                        $this->conexion->rollBack();
+                    $rollbackConfirmado = false;
+                    try {
+                        if ($this->conexion->inTransaction()) {
+                            $rollbackConfirmado = $this->conexion->rollBack();
+                        }
+                    } catch (Throwable) {
+                        // La desconexión impide conocer el resultado local.
+                    }
+                    if ($authIntentado && !($error instanceof HttpException && $error->estadoHttp === 409)) {
+                        if (!$rollbackConfirmado) {
+                            throw new HttpException('No se pudo confirmar el resultado del cambio de correo. La cuenta requiere comprobar la sincronización antes de reintentar.', 503);
+                        }
+                        $this->authAdmin->recuperarCorreo(
+                            (string) $this->actor->proveedorSujeto,
+                            $cambios['correo'],
+                            (string) $anterior['tbpersonacorreoelectronico'],
+                        );
+                        if ($commitIntentado) {
+                            throw new HttpException('No se guardó el perfil; el correo anterior fue restaurado. Puede reintentar.', 503);
+                        }
                     }
                     throw $error;
                 }

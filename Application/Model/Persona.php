@@ -17,7 +17,7 @@ final class Persona
 {
     private PersonaTelefonoHistorico $telefonoHistorico;
 
-    public function __construct(private readonly PDO $conexion)
+    public function __construct(private PDO $conexion)
     {
         $this->telefonoHistorico = new PersonaTelefonoHistorico($conexion);
     }

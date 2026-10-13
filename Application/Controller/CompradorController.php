@@ -32,7 +32,7 @@ final class CompradorController
     private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
+        private PDO $conexion,
         ?string $solicitudId = null,
         ?ActorContext $actor = null,
     ) {

@@ -27,8 +27,8 @@ use PDO;
 final class IdentidadController
 {
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
     ) {}
 
     public function procesar(): array

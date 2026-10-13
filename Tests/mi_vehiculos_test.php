@@ -58,6 +58,8 @@ function mi_vehiculos_cleanup(array $identificaciones, array $vehiculoIds): void
     $db->prepare("DELETE b FROM tbbitacora b WHERE b.tbbitacoraregistroidentificacionnumero IN ({$marks})")->execute($ids);
     $db->prepare("DELETE tv FROM tbtransportistavehiculo tv INNER JOIN tbtransportista t ON t.tbtransportistaid = tv.tbtransportistaid INNER JOIN tbpersona p ON p.tbpersonaid = t.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marks})")->execute($ids);
     $db->prepare("DELETE t FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid = t.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marks})")->execute($ids);
+    $db->prepare("DELETE h FROM tbcompradorpersonatelefonohistorico h INNER JOIN tbcomprador c ON c.tbcompradorid = h.tbcompradorid INNER JOIN tbpersona p ON p.tbpersonaid = c.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marks})")->execute($ids);
+    $db->prepare("DELETE c FROM tbcomprador c INNER JOIN tbpersona p ON p.tbpersonaid = c.tbpersonaid WHERE p.tbpersonaidentificacionnumero IN ({$marks})")->execute($ids);
     $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marks})")->execute($ids);
 }
 

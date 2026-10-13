@@ -23,11 +23,11 @@ final class AdminPublicacionController
     /** Una publicación vendida o retirada ya es final; solo ACTIVA y PAUSADA se moderan. */
     private const ESTADOS_ABIERTOS = ['ACTIVO', 'PAUSADO'];
 
-    private readonly AnimalComercial $animales;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private AnimalComercial $animales;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null,
+    public function __construct(private PDO $conexion, ?string $solicitudId = null,
         ?ActorContext $actor = null)
     {
         $this->animales = new AnimalComercial($conexion);

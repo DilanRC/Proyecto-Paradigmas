@@ -18,7 +18,7 @@ final class TiempoReal
 
     public function __construct(?callable $transporte = null)
     {
-        $this->transporte = $transporte ?? self::transportePorDefecto(...);
+        $this->transporte = $transporte ?? \Closure::fromCallable([self::class, 'transportePorDefecto']);
     }
 
     /** @param array<int,string> $topicos */

@@ -16,7 +16,7 @@ final class ProductorUbicacion
     private const LOCK_ALTA = 'tindercows_productor_ubicacion_alta';
     private int $profundidadBloqueoAlta = 0;
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     /**
      * Envuelve la operación bajo el lock global de alta de ubicaciones.

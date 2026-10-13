@@ -32,7 +32,7 @@ final class AnimalComercial
     /** @var array<string,int> */
     private array $profundidad = [];
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(string $tabla, callable $operacion): mixed
     {
@@ -131,11 +131,16 @@ final class AnimalComercial
                  WHERE p2.tbanimalid = a.tbanimalid AND p2.tbproductorvendedorid = :vendedorPub)
              LEFT JOIN (
                  SELECT s.tbanimalid, s.tbanimalproduccionsaludedadmeses AS edadmeses,
-                        s.tbanimalproduccionsaludpeso AS peso, s.tbanimalproduccionsaludproposito AS proposito,
-                        ROW_NUMBER() OVER (PARTITION BY s.tbanimalid
-                            ORDER BY s.tbanimalproduccionsaludfecha DESC, s.tbanimalproduccionsaludid DESC) AS fila
+                        s.tbanimalproduccionsaludpeso AS peso, s.tbanimalproduccionsaludproposito AS proposito
                  FROM tbanimalproduccionsalud s
-             ) obs ON obs.tbanimalid = a.tbanimalid AND obs.fila = 1
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM tbanimalproduccionsalud posterior
+                     WHERE posterior.tbanimalid = s.tbanimalid
+                       AND (posterior.tbanimalproduccionsaludfecha > s.tbanimalproduccionsaludfecha
+                            OR (posterior.tbanimalproduccionsaludfecha = s.tbanimalproduccionsaludfecha
+                                AND posterior.tbanimalproduccionsaludid > s.tbanimalproduccionsaludid))
+                 )
+             ) obs ON obs.tbanimalid = a.tbanimalid
              WHERE (a.tbproductorid = :dueno
                     OR EXISTS (SELECT 1 FROM tbanimalpublicacion p
                                WHERE p.tbanimalid = a.tbanimalid AND p.tbproductorvendedorid = :vendedor))
@@ -541,7 +546,7 @@ final class AnimalComercial
      *    columna mutable. Filtrar por el periodo abierto es la única lectura
      *    correcta del estado actual.
      * 2. Edad, peso y propósito son observaciones históricas: hay N filas por
-     *    animal. Se toma la más reciente por animal con ROW_NUMBER, y el
+     *    animal. Se toma la que no tiene otra observación posterior, y el
      *    desempate por id descendente evita que dos observaciones con la misma
      *    fecha devuelvan una fila distinta en cada ejecución.
      * 3. Los tres campos salen de la MISMA observación. Con subconsultas
@@ -647,14 +652,16 @@ final class AnimalComercial
                        s.tbanimalproduccionsaludedadmeses AS edadmeses,
                        s.tbanimalproduccionsaludpeso AS peso,
                        s.tbanimalproduccionsaludproposito AS proposito,
-                       s.tbanimalproduccionsaludestadoreproductivo AS estadoreproductivo,
-                       ROW_NUMBER() OVER (
-                           PARTITION BY s.tbanimalid
-                           ORDER BY s.tbanimalproduccionsaludfecha DESC,
-                                    s.tbanimalproduccionsaludid DESC
-                       ) AS fila
+                       s.tbanimalproduccionsaludestadoreproductivo AS estadoreproductivo
                 FROM tbanimalproduccionsalud s
-            ) obs ON obs.tbanimalid = a.tbanimalid AND obs.fila = 1
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM tbanimalproduccionsalud posterior
+                    WHERE posterior.tbanimalid = s.tbanimalid
+                      AND (posterior.tbanimalproduccionsaludfecha > s.tbanimalproduccionsaludfecha
+                           OR (posterior.tbanimalproduccionsaludfecha = s.tbanimalproduccionsaludfecha
+                               AND posterior.tbanimalproduccionsaludid > s.tbanimalproduccionsaludid))
+                )
+            ) obs ON obs.tbanimalid = a.tbanimalid
             {$where}
             SQL;
 

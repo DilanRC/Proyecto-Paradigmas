@@ -26,8 +26,8 @@ final class MiVehiculosController
     private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
     ) {
         $this->enlace = new TransportistaVehiculo($conexion);

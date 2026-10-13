@@ -653,7 +653,7 @@ Cualquier otro fallo es una regresión.
 
 **Pruebas PHP que fallan por el entorno o a veces** (no son regresiones):
 - `Tests/vercel_prune_registry_test.php`: falla también en commits anteriores (la poda termina con código 2 en este entorno Windows).
-- `Tests/registro_publico_test.php` y, rara vez, `Tests/solicitudes_compra_test.php` (el registro de la fixture): intermitentes (201 esperado, 200 recibido); pasan al repetir.
+- `Tests/registro_publico_test.php` y `Tests/solicitudes_compra_test.php` daban a veces 200 en vez de 201. **Causa encontrada (12/10):** `mi_vehiculos_test` dejaba filas de `tbcomprador` sin Persona y el siguiente id de Persona las heredaba. Ya limpia sus compradores; si vuelve a pasar, busca otra prueba que deje huérfanos.
 - `Tests/api_identidad_test.php` imprime "Todos los tests de api_identidad pasaron" en vez de "OK ...": es un éxito.
 - `Tests/api_productores_ubicacion_http_test.php` termina sin salida a propósito (tiene un `return;`).
 
@@ -669,12 +669,48 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
-### 2026-10-12 · fix/xampp-linux-local · Compatibilidad y guía reproducible para XAMPP Linux
-- `Documentation/Instalacion-XAMPP.md` ahora documenta las rutas y configuración Apache de Linux, mantiene el repositorio fuera de `htdocs` y publica solo `Public/` con VirtualHost, importa desde cero el esquema canónico y semillas, crea un usuario PDO local y verifica que `.env` responda 404.
-- `README.md` enlaza la guía, elimina la alternativa insegura de servir la raíz como subcarpeta y aclara el requisito PHP 8.3. El gate `Tests/documentation_test.py` exige estas restricciones de despliegue y compatibilidad.
-- Evidencia local: XAMPP 8.0.30 trae PHP 8.0.30 y MariaDB 10.4.32; PHP 8.0 falla al analizar `Application/Auth/ActorContext.php` y no implementa `array_is_list()`. Los contenedores del repo fijan PHP 8.3 y MySQL 8.0.
-- La ejecución desechable Docker sobre PHP 8.3/MySQL 8.0 levantó portada, API y phpMyAdmin; el esquema contiene 47 tablas. La guía prueba que `/.env` no se sirve (HTTP 404). Batería frontend: 429/430; queda un test de shell con versión `auth-gate-2` obsoleta. Dos pruebas PHP de registro fallaron en corrida completa con 200 vs 201, pero pasaron al repetirse aisladas; investigar el orden si se necesita suite completamente verde.
-- Cuidado: el acceso de cuenta depende de Supabase Auth, y Storage, Realtime, mapas, geocodificación y recursos de terceros también requieren red. No está verificado el arranque completo en Linux antiguo ni en MariaDB 10.4; no prometer que toda instalación XAMPP funciona.
+### 2026-10-12 · fix/xampp-linux-local · La app corre en XAMPP real (PHP 8.0, MariaDB 10.4, MySQL 5.7)
+- **Mínimo real: PHP 8.0.** Los Dockerfiles siguen en PHP 8.3 (despliegue), pero ya no es el mínimo. Se quitaron las clases y
+  propiedades `readonly` (8.1/8.2), `fn (): null`, las referencias `f(...)` y la expansión de arreglos con claves de texto.
+  `ActorContext` y `HttpException` siguen siendo inmutables con el trait `Application/ReadOnlyProperties.php`.
+  `Configuration/Compatibility.php` corta con un mensaje claro en PHP < 8.0 y define `array_is_list()` si falta.
+  **No uses sintaxis de PHP 8.1+**: `Tests/runtime_compatibility_test.php` y el lint con `/opt/lampp/bin/php -l` lo detectan.
+- **UTC fijo:** `Configuration/Configuration.php` llama `date_default_timezone_set('UTC')`. El `php.ini` de XAMPP trae
+  Europe/Berlin y mezclaba fechas del negocio.
+- **JSON pasa a `LONGTEXT`** en las 4 columnas (`tbbitacoradatosanteriores`, `tbbitacoradatosnuevos`,
+  `tbanimalproduccionsaludproduccion`, `tbanimalproduccionsaludsalud`): en MariaDB el alias `JSON` crea un
+  `CHECK(json_valid(...))` implícito. PHP sigue validando y codificando. Migración `024jsontextportable.sql` (solo MySQL/MariaDB;
+  Postgres no cambia). Las migraciones siguientes empiezan en `025`.
+- **SQL portable:** la última observación del animal ya no usa `ROW_NUMBER() OVER` (no existe en MySQL 5.7) sino
+  `NOT EXISTS` de una posterior por fecha e id (`AnimalComercial`, dos consultas; prueba `latest_observation_portability_test.php`).
+  `CompraSolicitud::buscar` usa `FOR UPDATE OF s` solo en Postgres; MySQL/MariaDB usan `FOR UPDATE`.
+- **Instalador:** `instalar-local.sh` usa siempre TCP con `DB_HOST`/`DB_PORT`, acepta `MYSQL_CLIENT` o `XAMPP_ROOT`, no ejecuta
+  `sudo` ni cambia la contraseña de una cuenta existente. `Tools/diagnostico-local.php` (CLI, solo lectura) informa versiones,
+  extensiones, UTC, conexión y estructura. XAMPP **no necesita Node ni Composer**.
+- **Cambio de correo (Mi perfil):** `SupabaseAuthAdmin::cambiarCorreo` ya no acepta cualquier HTTP 200: exige el mismo `id`, el
+  correo pedido y `email_confirmed_at`; ante un timeout consulta la cuenta. Si MySQL falla después de cambiar el correo en
+  Supabase, `MiPerfilController` restaura el correo remoto (`recuperarCorreo`) solo cuando el ROLLBACK quedó confirmado; con el
+  resultado local desconocido responde 503 y no compensa a ciegas. Prueba `perfil_correo_recuperacion_test.php`.
+- **Frontend portable:** sin `Array.at()` ni `Object.hasOwn()`; `shared/dialog.js` exporta `openDialog`/`closeDialog` con un modal
+  de reserva si el navegador no tiene `<dialog>` nativo; Font Awesome 7.3.1 va **local** en `Public/vendor/` (agregado con
+  `git add -f` porque `vendor/` está ignorado); los 13 paneles privados muestran un aviso con "Recargar" y "Volver a entrar" si la
+  guarda de sesión no responde en 3,5 s (`shared/panel-runtime.js`, parcial `Application/View/shared/panel-runtime.php`).
+  Se subieron los `?v=` de las 24 vistas y de los imports compartidos (`form-2`, `draft-2`, `pendiente-1`, `animales-8`).
+- **Pruebas sin estado compartido:** `mi_vehiculos_test` dejaba `tbcomprador` huérfanos y un id de Persona reutilizado los
+  heredaba (causa de los 200 en vez de 201 en `registro_publico_test`); `publicacion_interaccion_test` crea su propia
+  publicación y ya no necesita la semilla demo; `admin_shell_ux` compara la cadena en vez de fijar `auth-gate-2`.
+- **Comprobado (no en Docker):** XAMPP 8.0.30 en Linux (PHP 8.0.30 por `apache2handler`, Apache 2.4.58, MariaDB 10.4.32,
+  phpMyAdmin 5.2.1): 77/77 pruebas PHP, instalación desde cero por phpMyAdmin, 436/436 frontend. MySQL 5.7.44: importación y
+  tres pruebas de publicaciones e inventario. Lint y `runtime_compatibility_test` en PHP 8.1, 8.2 y 8.3. El binario de XAMPP
+  arranca en userspace de Ubuntu 18.04 y 20.04. **La versión del equipo del profesor sigue sin conocerse.**
+- Supabase de pruebas `ganado-cerca-xampp-tests` (no es producción): buckets `publicaciones` (público) y `documentos` (privado)
+  con las dos políticas INSERT por carpeta propia. Sus claves viven fuera del repositorio.
+- Cuidado: Auth, Storage, Realtime y mapas siguen necesitando Internet; la portada local no demuestra que funcionen.
+
+### 2026-10-12 · fix/xampp-linux-local · Guía reproducible para XAMPP Linux
+- `Documentation/Instalacion-XAMPP.md` mantiene el repositorio fuera de `htdocs` y publica solo `Public/` con VirtualHost, importa
+  desde cero el esquema canónico y las semillas, crea un usuario PDO local y verifica que `.env` responda 404. `README.md` enlaza
+  la guía y elimina la alternativa insegura de servir la raíz como subcarpeta. Gate: `Tests/documentation_test.py`.
 
 ### 2026-10-12 · jefersonbustamante · Validaciones juntas en los formularios, teclas numéricas y login más claro
 - **Todos los campos a la vez:** nuevo `Public/js/shared/validacion-nativa.js` (`nativa-1`): `erroresNativos(form)` devuelve cada campo inválido

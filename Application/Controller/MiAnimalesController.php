@@ -37,8 +37,8 @@ final class MiAnimalesController
     private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
     ) {
         $this->animales = new AnimalComercial($conexion);
@@ -92,8 +92,8 @@ final class MiAnimalesController
                 'especieId' => 'Completa al menos un dato del animal.',
             ]);
         }
-        $texto = AnimalPublicacionController::texto(...);
-        $numero = AnimalPublicacionController::numero(...);
+        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
+        $numero = \Closure::fromCallable([AnimalPublicacionController::class, 'numero']);
         $v = AnimalPublicacionController::validarTodos([
             'modelo' => function () use ($cuerpo): array {
                 $modelo = AnimalValidacionService::validar($this->catalogo, $cuerpo);
@@ -164,7 +164,7 @@ final class MiAnimalesController
         if ($animalId === false) $errores['animalId'] = 'Debe ser un entero positivo.';
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
 
-        $texto = AnimalPublicacionController::texto(...);
+        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
         $datos = AnimalPublicacionController::validarTodos([
             'fincaNombre' => fn () => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
             'titulo' => fn () => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
@@ -238,8 +238,8 @@ final class MiAnimalesController
             throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
         }
         $animalId = $this->animalId($cuerpo);
-        $texto = AnimalPublicacionController::texto(...);
-        $numero = AnimalPublicacionController::numero(...);
+        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
+        $numero = \Closure::fromCallable([AnimalPublicacionController::class, 'numero']);
         $v = AnimalPublicacionController::validarTodos([
             'modelo' => fn () => AnimalValidacionService::validar($this->catalogo, $cuerpo),
             'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),

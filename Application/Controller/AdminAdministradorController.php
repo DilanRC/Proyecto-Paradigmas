@@ -26,12 +26,12 @@ final class AdminAdministradorController
 {
     private const ORIGEN = 'API_ADMIN_ADMINISTRADORES';
 
-    private readonly Administrador $administradores;
-    private readonly Bitacora $bitacora;
-    private readonly ActorContext $actor;
-    private readonly string $solicitudId;
+    private Administrador $administradores;
+    private Bitacora $bitacora;
+    private ActorContext $actor;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null,
+    public function __construct(private PDO $conexion, ?string $solicitudId = null,
         ?ActorContext $actor = null)
     {
         $this->actor = $actor ?? ActorContext::noAutenticado();

@@ -19,9 +19,9 @@ final class CapacidadController
     private CapacidadService $capacidades;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly string $solicitudId,
-        private readonly ?ActorContext $actor = null,
+        private PDO $conexion,
+        private string $solicitudId,
+        private ?ActorContext $actor = null,
     ) {
         $this->capacidades = new CapacidadService($this->conexion, $solicitudId, $actor);
     }

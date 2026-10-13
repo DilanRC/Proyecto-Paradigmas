@@ -8,7 +8,7 @@ use PDO;
 
 final class ProductorFinca
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -67,10 +67,10 @@ final class ProductorFinca
                 throw new \RuntimeException('Existen fincas duplicadas para el productor.');
             }
             if ($coincidencias === 1) {
-                $reactivar->execute(['estado' => 1, ...$parametros]);
+                $reactivar->execute(array_merge(['estado' => 1], $parametros));
                 continue;
             }
-            $asociar->execute(['fincaId' => $this->siguienteId(), 'estado' => 1, ...$parametros]);
+            $asociar->execute(array_merge(['fincaId' => $this->siguienteId(), 'estado' => 1], $parametros));
         }
     }
 

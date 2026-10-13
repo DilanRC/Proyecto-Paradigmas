@@ -35,9 +35,12 @@ $indexes = $db->prepare("SELECT TABLE_NAME, INDEX_NAME FROM information_schema.S
 $indexes->execute();
 test_same([], $indexes->fetchAll(), 'El modelo no debe contener índices');
 
+$implicitNull = str_contains((string) $db->getAttribute(PDO::ATTR_SERVER_VERSION), 'MariaDB')
+    ? " AND NOT (IS_NULLABLE = 'YES' AND COLUMN_DEFAULT = 'NULL')"
+    : '';
 $automaticColumns = $db->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND (COLUMN_DEFAULT IS NOT NULL OR EXTRA <> '' OR GENERATION_EXPRESSION <> '')");
+      AND ((COLUMN_DEFAULT IS NOT NULL{$implicitNull}) OR EXTRA <> '' OR GENERATION_EXPRESSION <> '')");
 $automaticColumns->execute();
 test_same(0, (int) $automaticColumns->fetchColumn(),
     'Ninguna columna debe tener DEFAULT, AUTO_INCREMENT ni expresión generada');

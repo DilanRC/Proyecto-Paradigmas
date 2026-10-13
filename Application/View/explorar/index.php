@@ -15,7 +15,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <title>Explorar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-7">
+    <link rel="stylesheet" href="css/base.css?v=product-9">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <link rel="stylesheet" href="css/public-product.css?v=product-10">
@@ -23,9 +23,9 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
     <script type="module" src="js/explore.js?v=explore-13"></script>
-    <script type="module" src="js/explore-interactions.js?v=interactions-5"></script>
+    <script type="module" src="js/explore-interactions.js?v=interactions-6"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
     <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-1"></script>
 </head>

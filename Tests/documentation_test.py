@@ -17,8 +17,15 @@ assert "/opt/lampp/Proyecto-Paradigmas/Public" in xampp
 assert "Mantenga la raíz del" in xampp and "fuera de `htdocs`" in xampp
 assert "debe ser HTTP 404" in xampp
 assert "ni la exponga como subcarpeta" in readme
-assert "PHP 8.3" in xampp and "PHP 8.0 no puede" in xampp
-assert "no vuelve la aplicación autónoma ni" in xampp
+assert "PHP 8.0 o posterior" in xampp and "PHP 8.0 o posterior" in readme
+assert "la versión de Ubuntu y de XAMPP del profesor Brenes es desconocida" in xampp
+assert "PHP Apache es desconocida" in xampp
+assert "8.0.30" in xampp and "10.4.32" in xampp and "5.7.44" in xampp
+assert "024jsontextportable.sql" in xampp and "LONGTEXT" in xampp
+assert "no requieren Node ni Composer para XAMPP" in xampp
+assert "Auth, Storage, Realtime y mapas" in xampp
+assert "TraceEnable Off" in xampp and "ErrorDocument 405 /api/metodo-no-permitido.php" in xampp
+assert "PHP 8.0 no puede" not in xampp and "requiere PHP 8.3" not in xampp
 
 required = {
     "DER.pdf": ["tbproductor", "tbproductordireccion", "tbfinca", "tbbitacora", "tbcomprador", "cero claves", "restricciones, índices", "AUTO_INCREMENT"],

@@ -28,7 +28,7 @@ final class SubastaCierreService
     private Notificacion $notificaciones;
     private Bitacora $bitacora;
 
-    public function __construct(private readonly PDO $conexion, private readonly TiempoReal $tiempoReal)
+    public function __construct(private PDO $conexion, private TiempoReal $tiempoReal)
     {
         $this->subastas = new Subasta($conexion);
         $this->animales = new AnimalComercial($conexion);

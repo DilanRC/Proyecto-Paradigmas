@@ -10,8 +10,8 @@ final class Productor
 {
     private Persona $persona;
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ProductorFinca $fincas,
+        private PDO $conexion,
+        private ProductorFinca $fincas,
     ) {
         $this->persona = new Persona($conexion);
     }

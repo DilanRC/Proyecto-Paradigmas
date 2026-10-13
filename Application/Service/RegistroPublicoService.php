@@ -39,9 +39,9 @@ final class RegistroPublicoService
     private Transportista $transportista;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
-        private readonly string $solicitudId,
+        private PDO $conexion,
+        private ActorContext $actor,
+        private string $solicitudId,
     ) {
         $this->persona = new Persona($conexion);
         $this->fincas = new ProductorFinca($conexion);

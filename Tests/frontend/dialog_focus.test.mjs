@@ -140,3 +140,46 @@ test('un clic dentro del dialogo nunca lo cierra', () => {
     dialogs.handleBackdropClick({ target: dentro, currentTarget: modal });
     assert.equal(modal.open, true);
 });
+
+
+test('sin API dialog nativa abre modal, limita el foco y cierra con Escape', async () => {
+    const listeners = new Map();
+    document.addEventListener = (type, fn) => listeners.set(type, fn);
+    document.removeEventListener = (type) => listeners.delete(type);
+    document.body = { children: [], style: {} };
+    const trigger = new Elemento('abrir');
+    const first = new Elemento('primero');
+    const last = new Elemento('ultimo');
+    const attrs = new Map();
+    const modal = new Dialogo('sin-api');
+    modal.showModal = undefined;
+    modal.close = undefined;
+    modal.style = {};
+    modal.ownerDocument = document;
+    modal.setAttribute = (key, value) => { attrs.set(key, value); if (key === 'open') modal.open = true; };
+    modal.removeAttribute = (key) => { attrs.delete(key); if (key === 'open') modal.open = false; };
+    modal.getAttribute = (key) => attrs.has(key) ? attrs.get(key) : null;
+    modal.querySelectorAll = () => [first, last];
+    modal.querySelector = () => first;
+    modal.contains = (node) => [modal, first, last].includes(node);
+    modal.dispatchEvent = (event) => { if (event.type === 'close') modal.oyentes.forEach((fn) => fn({ currentTarget: modal })); return true; };
+    trigger.focus();
+    let busy = true;
+    const dialogs = createDialogController({ isBusy: () => busy });
+    modal.addEventListener('close', dialogs.restoreFocus);
+    dialogs.open(modal);
+    assert.equal(attrs.get('aria-modal'), 'true');
+    last.focus();
+    let prevented = false;
+    listeners.get('keydown')({ key: 'Tab', shiftKey: false, preventDefault() { prevented = true; } });
+    assert.equal(prevented, true);
+    assert.equal(document.activeElement, first);
+    listeners.get('keydown')({ key: 'Escape', preventDefault() {} });
+    assert.equal(modal.open, true, 'Escape conserva el dialogo mientras guarda');
+    busy = false;
+    listeners.get('keydown')({ key: 'Escape', preventDefault() {} });
+    await Promise.resolve();
+    assert.equal(modal.open, false);
+    assert.equal(document.activeElement, trigger);
+    assert.equal(listeners.has('keydown'), false);
+});

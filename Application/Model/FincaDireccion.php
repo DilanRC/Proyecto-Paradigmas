@@ -9,8 +9,8 @@ use PDO;
 final class FincaDireccion
 {
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly Direccion $direccion,
+        private PDO $conexion,
+        private Direccion $direccion,
     ) {}
 
     /**

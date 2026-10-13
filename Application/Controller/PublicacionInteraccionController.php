@@ -16,14 +16,14 @@ final class PublicacionInteraccionController
 {
     private const TIPOS = ['ME_INTERESA', 'PASAR', 'CONTACTAR'];
 
-    private readonly PublicacionInteraccion $interacciones;
-    private readonly AnimalComercial $animales;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private PublicacionInteraccion $interacciones;
+    private AnimalComercial $animales;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
     ) {
         $this->interacciones = new PublicacionInteraccion($conexion);
