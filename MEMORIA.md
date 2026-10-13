@@ -642,14 +642,9 @@ están incluidos ahí.
 
 ## 6. Estado de pruebas
 
-Pasan todas salvo **4 pruebas de frontend que ya fallaban antes de esta línea
-de trabajo** (no son regresiones):
-- `el shell existente se mejora desde un bootstrap compartido, no con cinco implementaciones`
-- `el rail compacto reduce ancho y centra iconos sin alterar el móvil`
-- `pueblo diferencia buscar de una sugerencia de ubicacion`
-- `los estados vacios heredan la identidad del modulo`
-
-Cualquier otro fallo es una regresión.
+**Frontend: pasan todas (436/436 el 12/10/2026, rama `fix/xampp-linux-local`).** Las 4 que fallaban desde antes ya
+no fallan. **PHP: 78/78 en XAMPP real** (PHP 8.0.30, MariaDB 10.4.32). Cualquier fallo es una regresión, salvo las
+excepciones de entorno de abajo.
 
 **Pruebas PHP que fallan por el entorno o a veces** (no son regresiones):
 - `Tests/vercel_prune_registry_test.php`: falla también en commits anteriores (la poda termina con código 2 en este entorno Windows).
@@ -682,6 +677,9 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
   aparecer `->prepare(`, `->query(` o `->exec(` en `Application/Controller/`.
 - Cuidado: un controlador que empieza a usar un modelo debe agregarlo a la lista `foreach ([...] as $modelo)` de su endpoint
   en `Public/api/` (lo exige `api_requires_test`); se agregó `Administrador` en `mi-perfil.php` y `subastas.php`.
+- Pendiente en producción: `ensurePrimaryKeys()` no fija `lock_timeout` (47 `ALTER` con bloqueo exclusivo, una sola vez) y una
+  tabla con ids repetidos queda sin llave hasta limpiarla. Si la bitácora de producción tiene los ids repetidos de Cuidados
+  #12, hay que corregirlos a mano para que tenga su llave.
 - Sigue pendiente (no se tocó a propósito antes de la revisión): `ProductorController` y `AnimalPublicacionController` tienen
   ~580 líneas; partirlos es un refactor mayor.
 - Comprobado contra XAMPP real y el Supabase de pruebas: registro, reintento, correo distinto, datos inválidos, otra cuenta
@@ -735,6 +733,11 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
   correo pedido y `email_confirmed_at`; ante un timeout consulta la cuenta. Si MySQL falla después de cambiar el correo en
   Supabase, `MiPerfilController` restaura el correo remoto (`recuperarCorreo`) solo cuando el ROLLBACK quedó confirmado; con el
   resultado local desconocido responde 503 y no compensa a ciegas. Prueba `perfil_correo_recuperacion_test.php`.
+  **No está cerrado del todo:** si el `COMMIT` de MySQL falla después de que Supabase ya cambió el correo, el resultado local
+  es desconocido, se responde 503 y **la cuenta puede quedar con el correo nuevo y la Persona con el viejo** (al entrar daría
+  409 "sin vínculo"). Es raro, pero no hay herramienta de reconciliación: se arregla a mano alineando los dos correos.
+  Además el cambio hace hasta 4 llamadas a Supabase dentro de la transacción y de los locks; con Supabase lento frena las
+  demás escrituras.
 - **Frontend portable:** sin `Array.at()` ni `Object.hasOwn()`; `shared/dialog.js` exporta `openDialog`/`closeDialog` con un modal
   de reserva si el navegador no tiene `<dialog>` nativo; Font Awesome 7.3.1 va **local** en `Public/vendor/` (agregado con
   `git add -f` porque `vendor/` está ignorado); los 13 paneles privados muestran un aviso con "Recargar" y "Volver a entrar" si la
@@ -744,7 +747,7 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
   heredaba (causa de los 200 en vez de 201 en `registro_publico_test`); `publicacion_interaccion_test` crea su propia
   publicación y ya no necesita la semilla demo; `admin_shell_ux` compara la cadena en vez de fijar `auth-gate-2`.
 - **Comprobado (no en Docker):** XAMPP 8.0.30 en Linux (PHP 8.0.30 por `apache2handler`, Apache 2.4.58, MariaDB 10.4.32,
-  phpMyAdmin 5.2.1): 77/77 pruebas PHP, instalación desde cero por phpMyAdmin, 436/436 frontend. MySQL 5.7.44: importación y
+  phpMyAdmin 5.2.1): 78/78 pruebas PHP (77 al momento de este cambio), instalación desde cero por phpMyAdmin, 436/436 frontend. MySQL 5.7.44: importación y
   tres pruebas de publicaciones e inventario. Lint y `runtime_compatibility_test` en PHP 8.1, 8.2 y 8.3. El binario de XAMPP
   arranca en userspace de Ubuntu 18.04 y 20.04. **La versión del equipo del profesor sigue sin conocerse.**
 - Supabase de pruebas `ganado-cerca-xampp-tests` (no es producción): buckets `publicaciones` (público) y `documentos` (privado)

@@ -195,7 +195,7 @@ final class RegistroPublicoService
         if (!$primeraAlta || $compradorExiste || in_array('COMPRADOR', $capacidades, true)) {
             return $capacidades;
         }
-        return ['COMPRADOR', ...$capacidades];
+        return ['COMPRADOR', ...array_values($capacidades)];
     }
 
     private function resolverPersona(array $datos): array

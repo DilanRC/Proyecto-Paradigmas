@@ -17,6 +17,8 @@ compatibilidad con cualquier versión de Linux o XAMPP.
 | Apache | 2.4, `mod_rewrite`, `AllowOverride All` para `Public/`; `mod_headers` para los encabezados de protección. |
 | MariaDB | 10.4.32 de XAMPP: esquema de 47 tablas con su llave primaria y ninguna otra restricción ni índice; batería completa de 78 pruebas PHP aprobada, incluida la regresión de observaciones. Migración 025 aplicada sobre una base con datos. |
 | MySQL | 5.7.44: importación desde cero, migración 025 (también el aborto con identificadores repetidos) y tres pruebas de integración de publicaciones/inventario aprobadas. MySQL 8.0 sigue siendo la referencia de Compose; las tres pruebas de 5.7 no equivalen a certificar toda la aplicación. |
+| Otros motores | MySQL 8.0.46 y MariaDB 11.8.8 (contenedores): instalación con 47 llaves primarias y 13 pruebas de modelo cada uno. No se ejecutó la batería completa ni la aplicación por HTTP sobre ellos. |
+| Otras versiones de PHP | 8.1, 8.2, 8.3 y 8.4 (contenedores): sintaxis de todos los archivos y `runtime_compatibility_test`. La aplicación completa solo se ejecutó con PHP 8.0.30 de XAMPP. |
 | Frontend | 436 pruebas automatizadas aprobadas (Node); son pruebas de fuentes y contratos, no sustituyen la revisión en navegador. |
 | phpMyAdmin | 5.2.1: importación desde su interfaz sobre un servidor vacío; 74 consultas de esquema y semillas 101/102/104 con 6/6/8 consultas. Diagnóstico posterior: 47 tablas, 47 llaves primarias y cero restricciones, índices, triggers o rutinas adicionales. |
 
@@ -72,8 +74,8 @@ para este comando: compruebe por separado qué módulo PHP carga el servidor.
    JSON sin recargar la página.
 3. Añada `127.0.0.1 proyecto-paradigmas.local` a `/etc/hosts`, valide la
    configuración de Apache y reinicie sus servicios desde el panel de XAMPP o
-   con el procedimiento de su instalación. Dilan debe ejecutar personalmente
-   los cambios que requieran privilegios de administrador; el instalador del
+   con el procedimiento de su instalación. Ejecute con privilegios
+   de administrador solo los pasos que lo requieran; el instalador del
    proyecto no ejecuta `sudo` automáticamente.
 4. Abra <http://proyecto-paradigmas.local/>. No publique la raíz del repositorio
    ni la exponga como subcarpeta. Si usa otro puerto, inclúyalo en el VirtualHost
@@ -137,19 +139,19 @@ Exporte un respaldo completo en phpMyAdmin antes de modificar una base existente
 migraciones ya están aplicadas y ejecute solo las pendientes, en su orden; no
 importe nuevamente las semillas demo sobre datos reales.
 
-La migración `Database/Migrations/025llavesprimarias.sql` declara la llave primaria
-`<tabla>id` en las 47 tablas de una base creada antes de esa regla. No cambia datos.
-Primero cuenta los identificadores repetidos y, si encuentra alguno, se detiene con
-`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS` antes del primer cambio; corrija esas
-filas y vuelva a ejecutarla (se puede repetir). Fue comprobada en MariaDB 10.4.32 y
-MySQL 5.7.44. Aplíquela después de la 024.
-
 La migración `Database/Migrations/024jsontextportable.sql` convierte los cuatro
 campos JSON de bitácora y observaciones en `LONGTEXT`. Su ejecución fue comprobada
 en MariaDB 10.4.32: preserva el contenido y retira los CHECK implícitos del alias
 JSON. El diagnóstico debe informar cero restricciones fuera de las llaves primarias después. Si quedan CHECK
 creados manualmente u otras diferencias, deténgase y revise la definición y el
 respaldo antes de corregirlas; esta migración no reconstruye cualquier DB antigua.
+
+La migración `Database/Migrations/025llavesprimarias.sql` declara la llave primaria
+`<tabla>id` en las 47 tablas de una base creada antes de esa regla. No cambia datos.
+Primero cuenta los identificadores repetidos y, si encuentra alguno, se detiene con
+`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS` antes del primer cambio; corrija esas
+filas y vuelva a ejecutarla (se puede repetir). Fue comprobada en MariaDB 10.4.32 y
+MySQL 5.7.44. Aplíquela después de la 024.
 
 ## Instalador CLI alternativo
 

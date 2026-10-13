@@ -56,7 +56,7 @@ test('la página, Explorar, el encabezado y Mis animales llevan a las subastas',
     }
     const explorar = read('Application/View/explorar/index.php');
     assert.match(explorar, /data-subastas-banda/);
-    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-1/);
+    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-2/);
     assert.match(explorar, /css\/subastas\.css\?v=subastas-1/);
     const ui = read('Public/js/public-ui.js');
     assert.match(ui, /PRIVATE_PAGES = Object\.freeze\(\[[^\]]*'subastas'/);

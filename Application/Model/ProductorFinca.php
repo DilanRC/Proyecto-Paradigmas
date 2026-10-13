@@ -42,7 +42,7 @@ final class ProductorFinca
              WHERE tbproductorid = ?
                AND tbfincanombre NOT IN ({$marcadores})"
         );
-        $desactivar->execute([0, $productorId, ...$nombres]);
+        $desactivar->execute([0, $productorId, ...array_values($nombres)]);
 
         $contar = $this->conexion->prepare(
             'SELECT COUNT(*) FROM tbfinca

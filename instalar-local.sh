@@ -115,6 +115,9 @@ fi
 # 4. Reinstalar (opcional)
 # ---------------------------------------------------------------
 if [[ $REINSTALAR -eq 1 ]]; then
+    # Sin el esquema a mano, borrar dejaria la base vacia y sin forma de recrearla.
+    [[ -f "$PROYECTO/Database/SqlScripts/000instalacioncompleta.sql" ]] \
+        || fallo "No existe Database/SqlScripts/000instalacioncompleta.sql; no borro la base."
     echo "[..] Borrando la base $DB_NAME..."
     root_sql -e "DROP DATABASE IF EXISTS \`$DB_NAME\`;" || fallo "No pude borrar la base."
 fi

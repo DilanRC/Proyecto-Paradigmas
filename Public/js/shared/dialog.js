@@ -1,3 +1,10 @@
+// Apertura, cierre y foco de los <dialog>.
+//
+// Con <dialog> nativo usa showModal() y close(), que ya traen trampa de foco,
+// Escape y aria-modal. Solo si el navegador no los tiene (versiones viejas)
+// entra el modal de reserva de este archivo. El foco de retorno se guarda en
+// una pila para que detalle -> editar devuelva el foco al lugar correcto.
+
 export const DIALOG_OPEN_EVENT = 'tindercows:dialog-open';
 
 function notifyOpened(dialog) {

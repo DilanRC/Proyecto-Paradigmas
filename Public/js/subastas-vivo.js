@@ -4,7 +4,7 @@
 import { request } from './shared/api.js';
 import { formatPrice } from './explore.js?v=foto-4';
 import { agrupar, alCambiarConexion, escuchar } from './shared/tiempo-real.js?v=tiempo-real-1';
-import { describirAnimal, tiempoRestante } from './subastas.js?v=subastas-1';
+import { describirAnimal, tiempoRestante } from './subastas.js?v=subastas-5';
 
 const MAXIMO = 8;
 let desfase = 0;

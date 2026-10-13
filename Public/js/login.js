@@ -1,4 +1,4 @@
-import { request } from './shared/api.js?v=api-2';
+import { request } from './shared/api.js?v=auth-gate-12';
 import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
 import { safeNext } from './shared/next.js?v=next-2';
