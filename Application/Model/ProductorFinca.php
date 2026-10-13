@@ -8,7 +8,7 @@ use PDO;
 
 final class ProductorFinca
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -42,7 +42,7 @@ final class ProductorFinca
              WHERE tbproductorid = ?
                AND tbfincanombre NOT IN ({$marcadores})"
         );
-        $desactivar->execute([0, $productorId, ...$nombres]);
+        $desactivar->execute([0, $productorId, ...array_values($nombres)]);
 
         $contar = $this->conexion->prepare(
             'SELECT COUNT(*) FROM tbfinca
@@ -67,10 +67,10 @@ final class ProductorFinca
                 throw new \RuntimeException('Existen fincas duplicadas para el productor.');
             }
             if ($coincidencias === 1) {
-                $reactivar->execute(['estado' => 1, ...$parametros]);
+                $reactivar->execute(array_merge(['estado' => 1], $parametros));
                 continue;
             }
-            $asociar->execute(['fincaId' => $this->siguienteId(), 'estado' => 1, ...$parametros]);
+            $asociar->execute(array_merge(['fincaId' => $this->siguienteId(), 'estado' => 1], $parametros));
         }
     }
 
@@ -250,5 +250,38 @@ final class ProductorFinca
         }
 
         return $filas === [] ? null : (int) $filas[0];
+    }
+
+    /** Fincas activas del productor con ese nombre; más de una indica un duplicado que el llamador debe rechazar. */
+    public function listarActivasPorNombre(int $productorId, string $nombre): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbfincaid, tbfincanombre FROM tbfinca
+             WHERE tbproductorid = :productorId AND tbfincanombre = :nombre AND tbfincaestado = 1'
+        );
+        $sentencia->execute(['productorId' => $productorId, 'nombre' => $nombre]);
+
+        return $sentencia->fetchAll();
+    }
+
+    /** De $nombres, los que ya usa una finca activa de otro productor (caso legítimo: solo se advierte). */
+    public function nombresUsadosPorOtroProductor(array $nombres, int $productorId): array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT 1 FROM tbfinca
+             WHERE tbfincanombre = :nombre
+               AND tbproductorid <> :productorId
+               AND tbfincaestado = 1
+             LIMIT 1'
+        );
+        $usados = [];
+        foreach (array_values(array_unique($nombres)) as $nombre) {
+            $sentencia->execute(['nombre' => $nombre, 'productorId' => $productorId]);
+            if ($sentencia->fetch() !== false) {
+                $usados[] = $nombre;
+            }
+        }
+
+        return $usados;
     }
 }

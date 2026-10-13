@@ -23,7 +23,7 @@ $publishableKey = trim((string) (getenv('SUPABASE_PUBLISHABLE_KEY') ?: ''));
 if ($url === '' || $publishableKey === '') {
     sendJsonResponse([
         'success' => false,
-        'message' => 'La autenticación no está configurada en este entorno.',
+        'message' => 'Las cuentas no están disponibles en esta instalación: falta configurar el servicio de autenticación (Supabase). La portada y la base de datos local sí funcionan.',
         'data' => null,
     ], 503);
 }

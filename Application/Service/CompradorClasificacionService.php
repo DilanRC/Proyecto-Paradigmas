@@ -38,7 +38,7 @@ final class CompradorClasificacionService
     private Comprador $comprador;
     private Persona $persona;
 
-    public function __construct(private readonly PDO $conexion)
+    public function __construct(private PDO $conexion)
     {
         $this->comprador = new Comprador($conexion);
         $this->persona = new Persona($conexion);

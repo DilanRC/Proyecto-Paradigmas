@@ -7,7 +7,7 @@
 // sobre el formulario principal.
 
 import { describeValidity, mapFieldErrors, mostrarErroresSinLugar, pickFirstInvalid } from './field-errors.js?v=errores-1';
-import { clearFormDraftAfterSuccessfulClose, enableFormDraft } from './form-draft.js';
+import { clearFormDraftAfterSuccessfulClose, enableFormDraft } from './form-draft.js?v=draft-2';
 
 /** Estado de deshabilitado previo a un envio, por formulario. */
 const disabledBefore = new WeakMap();

@@ -25,8 +25,8 @@ completo antes de hacer cualquier cosa. `CLAUDE.md` solo redirige aquí.
 ## 3. Proyecto en una línea
 
 Ganado Cerca (TinderCows): marketplace de ganado (comprar, vender, fletes).
-PHP 8.3 MVC sin framework + MySQL 8 en local (Postgres de Supabase en
-producción) + JavaScript en módulos ES sin bundler + Supabase Auth.
+PHP 8.0 o posterior (Docker usa 8.3) MVC sin framework + MySQL/MariaDB en local (Compose usa
+MySQL 8; también corre en XAMPP; Postgres de Supabase en producción) + JavaScript en módulos ES sin bundler + Supabase Auth.
 
 ## 4. Cómo levantar y probar
 
@@ -51,9 +51,8 @@ docker compose exec -T app php Tests/<archivo>_test.php
 docker compose exec -T app php services/supabase-database/tests/schema_test.php
 ```
 
-Hay 4 pruebas de frontend que fallaban antes de esta línea de trabajo y no
-son regresiones (ver `MEMORIA.md` → "Estado de pruebas"). Cualquier otro fallo
-sí lo es: no hagas commit con pruebas nuevas en rojo.
+Todas las pruebas de frontend pasan (436/436 el 12/10/2026). Las excepciones conocidas de PHP están en
+`MEMORIA.md` → "Estado de pruebas". Cualquier otro fallo es una regresión: no hagas commit con pruebas en rojo.
 
 ## 5. Reglas de trabajo
 
@@ -68,8 +67,9 @@ sí lo es: no hagas commit con pruebas nuevas en rojo.
 - Responde y documenta en español.
 
 **Base de datos (backend)**
-- El esquema no usa PK, FK, UNIQUE, DEFAULT, AUTO_INCREMENT, triggers ni
-  rutinas: las reglas viven en PHP. Nombres en minúscula `tb<tabla><campo>`.
+- **Cada tabla tiene su llave primaria** `PRIMARY KEY (<tabla>id)` (lo exige Calidad; una tabla nueva
+  debe traerla). Fuera de eso el esquema no usa FK, UNIQUE, CHECK, DEFAULT, AUTO_INCREMENT, índices,
+  triggers ni rutinas: las reglas viven en PHP y PHP sigue generando los identificadores. Nombres en minúscula `tb<tabla><campo>`.
 - Una columna nueva se agrega en **cuatro** lugares, o producción se rompe:
   1. `Database/SqlScripts/000instalacioncompleta.sql`
   2. `Database/Migrations/0NN<nombre>.sql` (bases MySQL existentes)

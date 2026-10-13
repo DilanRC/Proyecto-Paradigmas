@@ -22,12 +22,16 @@ SET @canonical_exists := (
     WHERE TABLE_SCHEMA = DATABASE()
       AND TABLE_NAME = 'tbcompradorpersonatelefonohistorico'
 );
-SET @legacy_oversized := IF(@legacy_exists = 1,
-    (SELECT COUNT(*)
+-- Con PREPARE: el motor resuelve la tabla heredada aunque el IF no tome esa rama,
+-- y una instalación ya normalizada (sin esa tabla) fallaba aquí con el error 1146.
+SET @oversized_sql := IF(@legacy_exists = 1,
+    'SELECT COUNT(*) INTO @legacy_oversized
      FROM tbcompradortelefonohistorico
-     WHERE CHAR_LENGTH(tbcompradorpersonatelefonohistoriconuevo) > 20),
-    0
-);
+     WHERE CHAR_LENGTH(tbcompradorpersonatelefonohistoriconuevo) > 20',
+    'SELECT 0 INTO @legacy_oversized');
+PREPARE count_oversized FROM @oversized_sql;
+EXECUTE count_oversized;
+DEALLOCATE PREPARE count_oversized;
 
 -- PREPARE permite que una condición inválida falle sin crear procedimientos,
 -- triggers ni otros objetos persistentes en la base.

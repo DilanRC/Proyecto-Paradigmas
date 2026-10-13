@@ -1,3 +1,4 @@
+import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Subastas (DEC-SUBASTA-001): lista (activas, historial, mis subastas, donde pujé), detalle en vivo con pujas y
 // comentarios, el trato del ganador (contactos, finca y fletes) y el diálogo para abrir una subasta.
 // Tiempo real: Supabase Realtime avisa "cambió" (shared/tiempo-real.js) y esta página vuelve a pedir el estado a la
@@ -468,7 +469,7 @@ function iniciarCrear(animalPreseleccionado) {
     const errores = (mapa = {}) => {
         form.querySelectorAll('[data-subasta-error]').forEach((nodo) => { nodo.textContent = mapa[nodo.dataset.subastaError] ?? ''; });
     };
-    const cerrar = () => { if (dialog.open) dialog.close(); $('#subasta-abrir').focus(); };
+    const cerrar = () => { closeDialog(dialog); $('#subasta-abrir').focus(); };
     dialog.querySelectorAll('[data-subasta-cerrar]').forEach((boton) => boton.addEventListener('click', cerrar));
 
     const abrir = async (animalId = null) => {
@@ -476,7 +477,7 @@ function iniciarCrear(animalPreseleccionado) {
         errores();
         campoFoto.reiniciar(null);
         mostrarEstado(estado, 'Cargando tus animales…', 'info');
-        dialog.showModal();
+        openDialog(dialog);
         try {
             // Animales y fincas se cargan por separado: si falla una lista, la otra igual se muestra.
             const [animales, fincas] = await Promise.allSettled([request('api/v1/mi-animales'), request('api/v1/mi-fincas')]);

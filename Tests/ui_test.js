@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const assert = require('node:assert');
+const vm = require('node:vm');
 
 // El panel se reparte entre su archivo de entrada y los modulos compartidos que
 // importa; el control se busca sobre el grafo completo y no solo sobre la entrada.
@@ -18,7 +19,7 @@ assert(js.includes('fetch('), 'La UI debe usar fetch.');
 // navegación no es una fuga del CRUD; se excluye solo de la cláusula de
 // no-navegación, que sigue aplicando a productores.js y a los demás módulos.
 const sinPuerta = `${fs.readFileSync('Public/js/productores.js', 'utf8')}\n${
-    sharedModules.filter((file) => file !== 'auth-gate.js').map(leer).join('\n')
+    sharedModules.filter((file) => file !== 'auth-gate.js' && file !== 'panel-runtime.js').map(leer).join('\n')
 }`;
 // Lo que se prohibe es navegar o recargar, no leer la URL: la ficha de un
 // comprador enlaza a la misma persona en otro panel con ?q=<identificacion>, y
@@ -31,6 +32,32 @@ const navega = [
 for (const patron of navega) {
     assert(!patron.test(sinPuerta), `El CRUD no debe recargar ni navegar la página: ${patron}`);
 }
+// La recuperación del arranque permite recargar únicamente mediante un clic explícito.
+const runtime = leer('panel-runtime.js');
+assert.equal((runtime.match(/location\.reload\s*\(/g) || []).length, 1,
+    'el aviso tiene un único punto de recarga manual');
+let recargas = 0;
+let recuperar;
+const callbacks = [];
+const aviso = { setAttribute() {}, removeAttribute() {} };
+const boton = { addEventListener(tipo, fn) { assert.equal(tipo, 'click'); recuperar = fn; } };
+vm.runInNewContext(runtime, {
+    document: {
+        readyState: 'complete', documentElement: { getAttribute() { return null; } },
+        querySelector(selector) { return selector === '[data-panel-runtime]' ? aviso : boton; },
+    },
+    window: {
+        location: { reload() { recargas += 1; } },
+        setTimeout(fn) { callbacks.push(fn); }, setInterval(fn) { callbacks.push(fn); return 1; },
+        clearInterval() {},
+    },
+});
+assert.equal(recargas, 0, 'el arranque no recarga automáticamente');
+callbacks.forEach((fn) => fn());
+assert.equal(recargas, 0, 'esperar y comprobar recuperación no recarga automáticamente');
+assert.equal(typeof recuperar, 'function', 'el botón ofrece recuperación por acción del usuario');
+recuperar();
+assert.equal(recargas, 1, 'solo el clic de recuperación recarga');
 assert(js.includes('textContent'), 'Datos externos deben insertarse con textContent.');
 // La carrera de listados se evita cancelando la peticion anterior y descartando
 // las respuestas con secuencia vieja. La comprobacion es sobre esa propiedad, no

@@ -9,7 +9,7 @@
     <title>Subastas | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-7">
+    <link rel="stylesheet" href="css/base.css?v=product-9">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <link rel="stylesheet" href="css/public-product.css?v=product-10">
@@ -18,8 +18,8 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
-    <script type="module" src="js/subastas.js?v=subastas-4"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
+    <script type="module" src="js/subastas.js?v=subastas-5"></script>
 </head>
 <body class="public-home activity-page subastas-page">
     <div class="public-shell" id="inicio">

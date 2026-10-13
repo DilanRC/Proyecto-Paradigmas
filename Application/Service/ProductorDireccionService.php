@@ -15,9 +15,9 @@ use Application\Model\ProductorDireccion;
 final class ProductorDireccionService
 {
     public function __construct(
-        private readonly ProductorDireccion $direccion,
-        private readonly Bitacora $bitacora,
-        private readonly string $solicitudId,
+        private ProductorDireccion $direccion,
+        private Bitacora $bitacora,
+        private string $solicitudId,
     ) {}
 
     /**

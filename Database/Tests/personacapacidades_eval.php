@@ -4,7 +4,7 @@ $root = dirname(__DIR__);
 $schema = file_get_contents($root . '/SqlScripts/000instalacioncompleta.sql') ?: '';
 $migration = file_get_contents($root . '/Migrations/003personacapacidades.sql') ?: '';
 $checks = [
-  'quince_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 15,
+  'cuarenta_y_ocho_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 48,
   'identidad_unica' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbpersona'),
   'perfiles_minimos' => !preg_match('/tb(productor|comprador|transportista)identificacionnumero/', $schema),
   'aborta_duplicados' => str_contains($migration, 'MIGRACION_ABORTADA_CAPACIDAD_DUPLICADA'),

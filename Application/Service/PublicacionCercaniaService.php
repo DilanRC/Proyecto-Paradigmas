@@ -13,7 +13,7 @@ use PDO;
  */
 final class PublicacionCercaniaService
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     /**
      * @param array<int,array<string,mixed>> $publicaciones

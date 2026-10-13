@@ -11,7 +11,7 @@ final class Notificacion
 {
     private const LOCK = 'tindercows_notificacion_alta';
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {

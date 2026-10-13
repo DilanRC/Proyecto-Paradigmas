@@ -7,7 +7,7 @@ $schema = file_get_contents("{$root}/schema.sql");
 $migration = file_get_contents("{$root}/migrate.php");
 $entrypoint = file_get_contents(dirname(__DIR__, 3) . '/docker/apache/container-entrypoint.sh');
 $checks = [
-    'cuarenta_y_siete_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 47,
+    'cuarenta_y_ocho_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 48,
     'politica_administrativa' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbadministrador')
         && str_contains($migration, "'tbadministrador' => ["),
     'persona_compartida' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbpersona')
@@ -48,14 +48,17 @@ $checks = [
         && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbtransportistaflete')
         && str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbtransportistaresena'),
     'sin_tbvendedor' => !str_contains($schema, 'tbvendedor'),
-    'sin_automatismos' => !preg_match('/PRIMARY KEY|FOREIGN KEY|DEFAULT |CREATE INDEX|UNIQUE/', $schema),
-    'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 47,
-    'migracion_serializada' => str_contains($migration, 'pg_advisory_xact_lock'),
+    'sin_automatismos' => !preg_match('/FOREIGN KEY|DEFAULT |CREATE INDEX|UNIQUE/', $schema),
+    'llave_primaria_por_tabla' => substr_count($schema, 'PRIMARY KEY (') === 48
+        && str_contains($migration, 'ensurePrimaryKeys($connection)'),
+    'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 48,
+    'migracion_serializada' => str_contains($migration, "SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))")
+        && str_contains($migration, "SET LOCAL lock_timeout = '30s'"),
     'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),
     'diagnostico_columnas' => str_contains($migration, 'esperado=[%s] actual=[%s]'),
     'orden_columnas_neutro' => substr_count($migration, 'sort($columns)') === 2,
     'recarga_postgrest' => str_contains($migration, "NOTIFY pgrst, 'reload schema'"),
-    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=47 migration=v10'),
+    'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=48 migration=v10'),
     'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
     'arranque_vercel' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
 ];

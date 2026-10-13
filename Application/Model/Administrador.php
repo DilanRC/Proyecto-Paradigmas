@@ -13,7 +13,7 @@ use PDO;
  */
 final class Administrador
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -101,5 +101,17 @@ final class Administrador
             'correoElectronico' => $fila['tbadministradorcorreoelectronico'],
             'estado' => (int) $fila['tbadministradorestado'] === 1 ? 'ACTIVO' : 'INACTIVO',
         ];
+    }
+
+    /** El correo está en la lista de administradores; con $soloActivo, solo si sigue activo. */
+    public function existeCorreo(string $correo, bool $soloActivo = false): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT 1 FROM tbadministrador WHERE LOWER(tbadministradorcorreoelectronico) = LOWER(:correo)'
+            . ($soloActivo ? ' AND tbadministradorestado = 1' : '') . ' LIMIT 1'
+        );
+        $sentencia->execute(['correo' => $correo]);
+
+        return $sentencia->fetchColumn() !== false;
     }
 }

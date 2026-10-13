@@ -17,7 +17,7 @@ final class Persona
 {
     private PersonaTelefonoHistorico $telefonoHistorico;
 
-    public function __construct(private readonly PDO $conexion)
+    public function __construct(private PDO $conexion)
     {
         $this->telefonoHistorico = new PersonaTelefonoHistorico($conexion);
     }
@@ -351,5 +351,42 @@ final class Persona
             && $aliasCoincide
             && $persona['tbpersonatelefono'] === $datos['telefono']
             && $persona['tbpersonacorreoelectronico'] === $datos['correoElectronico'];
+    }
+
+    /** Datos de identidad que la sesión puede ver de sí misma (sin documento ni foto). */
+    public function buscarIdentidad(int $personaId): ?array
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT tbpersonaid, tbpersonaidentificacionnumero, tbpersonaidentificaciontipo,
+                    tbpersonanombre, tbpersonaalias, tbpersonatelefono, tbpersonacorreoelectronico,
+                    tbpersonaestado
+             FROM tbpersona
+             WHERE tbpersonaid = :personaId
+             LIMIT 1'
+        );
+        $sentencia->execute(['personaId' => $personaId]);
+        $fila = $sentencia->fetch();
+
+        return $fila === false ? null : $fila;
+    }
+
+    /**
+     * Identificador de cada capacidad de la Persona, o null si no la tiene.
+     *
+     * @return array{productor:?int, comprador:?int, transportista:?int}
+     */
+    public function capacidadIds(int $personaId): array
+    {
+        $ids = [];
+        foreach (['productor', 'comprador', 'transportista'] as $capacidad) {
+            $sentencia = $this->conexion->prepare(
+                "SELECT tb{$capacidad}id FROM tb{$capacidad} WHERE tbpersonaid = :personaId LIMIT 1"
+            );
+            $sentencia->execute(['personaId' => $personaId]);
+            $id = $sentencia->fetchColumn();
+            $ids[$capacidad] = $id === false ? null : (int) $id;
+        }
+
+        return $ids;
     }
 }

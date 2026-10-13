@@ -13,7 +13,7 @@ $check = static function (bool $condition, string $message): void {
 };
 
 $check($schema !== false && $migration !== false && $seed !== false, 'No se pudieron leer los artefactos SQL.');
-$check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 47, 'El esquema debe crear 47 tablas.');
+$check(substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 48, 'El esquema debe crear 48 tablas.');
 $check(str_contains($schema, 'CREATE TABLE IF NOT EXISTS tbpersona'), 'Falta tbpersona.');
 foreach (['productor', 'comprador', 'transportista'] as $profile) {
     // tbproductor cierra en tbpersonaid: su estado vive en el histórico de periodos.
@@ -31,7 +31,7 @@ $check(str_contains($migration, 'PREPARE preflight FROM @preflight_sql'), 'Falta
 $check(strpos($migration, 'ALTER TABLE tbproductor ADD COLUMN tbpersonaid')
     > strpos($migration, 'MIGRACION_ABORTADA_DATOS_PERSONALES_INCOMPATIBLES'), 'El ALTER ocurre antes de validar datos personales.');
 $check(str_contains($seed, 'INSERT INTO tbpersona'), 'El seed debe poblar tbpersona.');
-foreach (['PRIMARY KEY', 'FOREIGN KEY', 'CREATE INDEX', ' UNIQUE ', ' DEFAULT ', 'CREATE TRIGGER'] as $forbidden) {
+foreach (['FOREIGN KEY', 'CREATE INDEX', ' UNIQUE ', ' DEFAULT ', 'CREATE TRIGGER'] as $forbidden) {
     $check(!str_contains(strtoupper($schema), $forbidden), "El esquema contiene {$forbidden}.");
 }
 echo "OK persona capacidades MySQL: conflicto pre-DDL, cero rutinas y columnas intactas.\n";

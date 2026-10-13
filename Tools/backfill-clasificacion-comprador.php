@@ -140,7 +140,7 @@ function backfill_revalidar(PDO $conexion, array $fila): array
 
 function backfill_snapshot(array $auditoria, string $directorio): string
 {
-    if (!is_dir($directorio) && !mkdir($directorio, 0o755, true) && !is_dir($directorio)) {
+    if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) {
         throw new RuntimeException("No fue posible crear {$directorio}");
     }
     $ruta = $directorio . '/snapshot-' . gmdate('Ymd-His') . '.csv';
@@ -225,7 +225,7 @@ function backfill_aplicar(PDO $conexion, array $auditoria, ?callable $progreso =
 
 function backfill_registrar(string $directorio, string $linea): void
 {
-    if (!is_dir($directorio) && !mkdir($directorio, 0o755, true) && !is_dir($directorio)) {
+    if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) {
         return;
     }
     $marca = gmdate('Y-m-d H:i:s');

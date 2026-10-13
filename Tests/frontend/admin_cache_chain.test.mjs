@@ -54,3 +54,23 @@ test('cada vista admin carga su módulo con versión', () => {
         assert.match(read(`Application/View/${modulo}/index.php`), new RegExp(`js/${modulo}\\.js\\?v=[a-z0-9-]+"`), `${modulo} sin ?v=`);
     }
 });
+
+
+test('formularios y modales reutilizan una URL completa para cada módulo compartido', () => {
+    const modules = ['form', 'form-draft', 'dialog', 'registro-pendiente'];
+    const sources = ['shared/form', 'shared/form-draft', 'shared/solicitud-compra', 'login', 'registro', 'fletes', 'mi-actividad', 'mis-animales', 'subastas', ...MODULOS_ADMIN];
+    for (const module of modules) {
+        const urls = new Set();
+        for (const source of sources) {
+            const imports = read(`Public/js/${source}.js`).matchAll(/from '([^']+)'/g);
+            for (const [, imported] of imports) {
+                const file = imported.split('/').pop();
+                if (file?.split('?')[0] !== `${module}.js`) continue;
+                assert.match(file, /\.js\?v=[a-z0-9-]+$/, `${source} debe versionar ${module}`);
+                urls.add(file);
+            }
+        }
+        assert.equal(urls.size, 1, `${module} se instancia desde una única URL versionada`);
+    }
+    assert.match(read('Public/js/mi-actividad.js'), /mis-animales\.js\?v=animales-8/);
+});

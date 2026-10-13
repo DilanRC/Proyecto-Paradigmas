@@ -31,10 +31,9 @@ try {
         'telefono' => '+506 8888-2222', 'correoElectronico' => 'duplicados.tests@example.test'];
 
     $compradorCtrl = test_comprador_controller();
-    $comprador = $compradorCtrl->procesar('POST', [], [
-        ...$nombreCompartido,
+    $comprador = $compradorCtrl->procesar('POST', [], array_merge($nombreCompartido, [
         'identificacion' => ['tipoCodigo' => 'PASAPORTE', 'numero' => $idComprador],
-    ]);
+    ]));
     test_same(201, $comprador['status'], 'El comprador de referencia se inscribe');
 
     // Misma identificación, datos personales diferentes → 409 claro (imposible).

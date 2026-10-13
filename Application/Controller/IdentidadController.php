@@ -6,7 +6,10 @@ namespace Application\Controller;
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Model\Persona;
 use PDO;
+
+require_once dirname(__DIR__) . '/Model/Persona.php';
 
 /**
  * Devuelve la identidad del actor autenticado para que el frontend
@@ -27,8 +30,8 @@ use PDO;
 final class IdentidadController
 {
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
     ) {}
 
     public function procesar(): array
@@ -46,7 +49,8 @@ final class IdentidadController
             ]);
         }
 
-        $persona = $this->buscarPersonaPorId($this->actor->personaId);
+        $personas = new Persona($this->conexion);
+        $persona = $personas->buscarIdentidad($this->actor->personaId);
         if ($persona === null) {
             return $this->respuesta(true, 'La sesión no corresponde a una persona registrada.', [
                 'esProductor' => false,
@@ -60,78 +64,18 @@ final class IdentidadController
             ]);
         }
 
-        $productor = $this->buscarProductorPorPersonaId((int) $persona['tbpersonaid']);
-        $comprador = $this->buscarCompradorPorPersonaId((int) $persona['tbpersonaid']);
-        $transportista = $this->buscarTransportistaPorPersonaId((int) $persona['tbpersonaid']);
+        $ids = $personas->capacidadIds((int) $persona['tbpersonaid']);
 
         return $this->respuesta(true, 'Identidad consultada correctamente.', [
-            'esProductor' => $productor !== null,
-            'esComprador' => $comprador !== null,
-            'esTransportista' => $transportista !== null,
-            'productorId' => $productor === null ? null : (int) $productor['tbproductorid'],
-            'compradorId' => $comprador === null ? null : (int) $comprador['tbcompradorid'],
-            'transportistaId' => $transportista === null ? null : (int) $transportista['tbtransportistaid'],
+            'esProductor' => $ids['productor'] !== null,
+            'esComprador' => $ids['comprador'] !== null,
+            'esTransportista' => $ids['transportista'] !== null,
+            'productorId' => $ids['productor'],
+            'compradorId' => $ids['comprador'],
+            'transportistaId' => $ids['transportista'],
             'identificacionNumero' => $persona['tbpersonaidentificacionnumero'],
             'persona' => $persona,
         ]);
-    }
-
-    private function buscarPersonaPorId(int $personaId): ?array
-    {
-        $sentencia = $this->conexion->prepare(
-            "SELECT tbpersonaid, tbpersonaidentificacionnumero, tbpersonaidentificaciontipo,
-                    tbpersonanombre, tbpersonaalias, tbpersonatelefono, tbpersonacorreoelectronico,
-                    tbpersonaestado
-             FROM tbpersona
-             WHERE tbpersonaid = :personaId
-             LIMIT 1"
-        );
-        $sentencia->execute(['personaId' => $personaId]);
-        $fila = $sentencia->fetch();
-
-        return $fila === false ? null : $fila;
-    }
-
-    private function buscarProductorPorPersonaId(int $personaId): ?array
-    {
-        $sentencia = $this->conexion->prepare(
-            "SELECT p.tbproductorid
-             FROM tbproductor p
-             WHERE p.tbpersonaid = :personaId
-             LIMIT 1"
-        );
-        $sentencia->execute(['personaId' => $personaId]);
-        $fila = $sentencia->fetch();
-
-        return $fila === false ? null : $fila;
-    }
-
-    private function buscarCompradorPorPersonaId(int $personaId): ?array
-    {
-        $sentencia = $this->conexion->prepare(
-            "SELECT c.tbcompradorid
-             FROM tbcomprador c
-             WHERE c.tbpersonaid = :personaId
-             LIMIT 1"
-        );
-        $sentencia->execute(['personaId' => $personaId]);
-        $fila = $sentencia->fetch();
-
-        return $fila === false ? null : $fila;
-    }
-
-    private function buscarTransportistaPorPersonaId(int $personaId): ?array
-    {
-        $sentencia = $this->conexion->prepare(
-            "SELECT t.tbtransportistaid
-             FROM tbtransportista t
-             WHERE t.tbpersonaid = :personaId
-             LIMIT 1"
-        );
-        $sentencia->execute(['personaId' => $personaId]);
-        $fila = $sentencia->fetch();
-
-        return $fila === false ? null : $fila;
     }
 
     private function respuesta(bool $exito, string $mensaje, ?array $datos, int $estado = 200): array

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use Application\Controller\ProductorController;
+use Application\Controller\ProductorDireccionController;
 use Application\Auth\AdminAuthorization;
 use Application\Auth\SupabaseActorResolver;
 use Configuration\Database;
@@ -22,7 +22,7 @@ foreach (['NamedLock', 'Persona', 'ProductorFinca', 'Direccion', 'FincaDireccion
 foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionService', 'AuthGuard'] as $servicio) {
     require_once $raiz . "/Application/Service/{$servicio}.php";
 }
-require_once $raiz . '/Application/Controller/ProductorController.php';
+require_once $raiz . '/Application/Controller/ProductorDireccionController.php';
 
 $metodo = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $permitidos = ['GET', 'POST', 'PUT','DELETE'];
@@ -52,12 +52,12 @@ try {
     $actor = SupabaseActorResolver::fromGlobalsPermitiendoPersonaNoVinculada($conexion);
     Application\Service\AuthGuard::requerirAutenticado($actor);
     AdminAuthorization::require($actor, $conexion);
-    $controlador = new ProductorController(
+    $controlador = new ProductorDireccionController(
         $conexion,
         is_string($_SERVER['HTTP_X_REQUEST_ID'] ?? null) ? $_SERVER['HTTP_X_REQUEST_ID'] : null,
         $actor,
     );
-    $respuesta = $controlador->procesarDireccion($metodo, $_GET, $cuerpo);
+    $respuesta = $controlador->procesar($metodo, $_GET, $cuerpo);
     sendJsonResponse($respuesta['body'], $respuesta['status']);
 } catch (UnexpectedValueException $excepcion) {
     sendJsonResponse(['success' => false, 'message' => $excepcion->getMessage(), 'data' => null], 400);

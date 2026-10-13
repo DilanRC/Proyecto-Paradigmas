@@ -1,0 +1,5 @@
+# Carpeta interna: nunca se sirve por HTTP, tampoco sus index.php.
+Require all denied
+<Files "*">
+    Require all denied
+</Files>

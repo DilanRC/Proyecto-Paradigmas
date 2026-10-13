@@ -24,7 +24,7 @@ final class FincaController
     private ValidacionService $validacion;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->fincas = new ProductorFinca($conexion);
         $this->productor = new Productor($conexion, $this->fincas);
@@ -286,7 +286,7 @@ final class FincaController
         $direccion = $this->validacion->validarDireccionEnCampo($base, 'direccionFinca', $errores);
         $punto = $this->validarPuntoFinca($valor, $errores);
 
-        return [...$direccion, ...$punto];
+        return array_merge($direccion, $punto);
     }
 
     private function validarPuntoFinca(array $direccion, array &$errores): array

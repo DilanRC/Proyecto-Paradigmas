@@ -57,9 +57,9 @@ final class CapacidadService
     private ValidacionService $validacion;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly string $solicitudId,
-        private readonly ?ActorContext $actor = null,
+        private PDO $conexion,
+        private string $solicitudId,
+        private ?ActorContext $actor = null,
     ) {
         $this->bitacora = new Bitacora($conexion, $actor);
         $this->validacion = new ValidacionService();

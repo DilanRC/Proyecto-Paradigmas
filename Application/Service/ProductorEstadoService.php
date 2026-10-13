@@ -21,10 +21,10 @@ use Application\Model\ProductorEstadoPeriodo;
 final class ProductorEstadoService
 {
     public function __construct(
-        private readonly ProductorEstadoPeriodo $estadoPeriodos,
-        private readonly Productor $productor,
-        private readonly Bitacora $bitacora,
-        private readonly string $solicitudId,
+        private ProductorEstadoPeriodo $estadoPeriodos,
+        private Productor $productor,
+        private Bitacora $bitacora,
+        private string $solicitudId,
     ) {}
 
     /**

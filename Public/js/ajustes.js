@@ -3,7 +3,7 @@
 // endpoints que antes vivían en Mi actividad; aquí solo cambió el lugar.
 
 import { request } from './shared/api.js';
-import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
+import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession, refreshAuthSession } from './shared/supabase-auth.js?v=session-3';
 import { TIPOS_NUMERICOS, aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { TITULO_TELEFONO, aplicarRestriccionTelefono, telefonoValido } from './shared/telefono.js?v=mascaras-1';

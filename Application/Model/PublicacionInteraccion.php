@@ -12,7 +12,7 @@ final class PublicacionInteraccion
     private const TIPOS = ['ME_INTERESA', 'PASAR', 'CONTACTAR'];
     private const ACCIONES = ['REGISTRAR', 'RETIRAR'];
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {

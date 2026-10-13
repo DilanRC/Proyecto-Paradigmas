@@ -15,7 +15,7 @@ use PDO;
  */
 final class AdminBitacoraController
 {
-    private readonly Bitacora $bitacora;
+    private Bitacora $bitacora;
 
     public function __construct(PDO $conexion)
     {

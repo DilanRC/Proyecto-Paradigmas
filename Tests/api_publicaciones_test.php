@@ -390,7 +390,7 @@ try {
     test_same(409, $publicador->procesar('PATCH', [], ['publicacionId' => $moderarId, 'titulo' => 'x'])['status'], 'El vendedor tampoco edita una retirada');
 
     // Imagen de la publicación: solo URLs https; nada ejecutable llega a un <img>.
-    $imagen = [\Application\Controller\AnimalPublicacionController::class, 'imagenUrl'];
+    $imagen = [\Application\Service\CampoValidacion::class, 'imagenUrl'];
     test_same(null, $imagen(null), 'Sin imagen la publicación sigue siendo válida');
     test_same(null, $imagen('  '), 'Una imagen vacía equivale a no tener imagen');
     test_same('https://upload.wikimedia.org/a.jpg', $imagen(' https://upload.wikimedia.org/a.jpg '),

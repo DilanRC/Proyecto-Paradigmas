@@ -78,7 +78,7 @@ $columnasStatement->execute(['tableName' => 'tbpagometodo']);
 $columnas = $columnasStatement->fetchAll();
 
 $columnasEsperadas = [
-    ['COLUMN_NAME' => 'tbpagometodoid', 'DATA_TYPE' => 'int', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => ''],
+    ['COLUMN_NAME' => 'tbpagometodoid', 'DATA_TYPE' => 'int', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => 'PRI'],
     ['COLUMN_NAME' => 'tbpagometodonombre', 'DATA_TYPE' => 'varchar', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => ''],
     ['COLUMN_NAME' => 'tbpagometododescripcion', 'DATA_TYPE' => 'varchar', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => ''],
     ['COLUMN_NAME' => 'tbpagometodoactivo', 'DATA_TYPE' => 'tinyint', 'IS_NULLABLE' => 'NO', 'COLUMN_KEY' => ''],

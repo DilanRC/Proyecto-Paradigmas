@@ -21,8 +21,8 @@ final class RegistroPublicoController
     private RegistroPublicoService $registro;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
     ) {
         $this->persona = new Persona($conexion);

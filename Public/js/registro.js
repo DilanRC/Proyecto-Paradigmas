@@ -5,7 +5,7 @@ import {
     validateCapabilities,
     validateFincas,
     validatePersonaDraft,
-} from './shared/business-rules.js?v=mascaras-1';
+} from './shared/business-rules.js?v=business-2';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
@@ -13,8 +13,8 @@ import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { request } from './shared/api.js';
 import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
 import { syncPublicProfile } from './shared/public-profile.js';
-import { safeNext } from './shared/next.js';
-import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js';
+import { safeNext } from './shared/next.js?v=next-2';
+import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js?v=pendiente-1';
 import { aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './shared/telefono.js?v=mascaras-1';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';

@@ -16,7 +16,7 @@ final class CompraSolicitud
     public const ESTADOS = ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'];
     private const LOCK_ALTA = 'tindercows_compra_solicitud_alta';
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -54,11 +54,12 @@ final class CompraSolicitud
         return $solicitudId;
     }
 
-    /** Fila cruda con todo lo necesario para decidir y mostrar. Con $bloquear toma solo la fila de la solicitud (FOR UPDATE OF s). */
+    /** PostgreSQL admite OF; MySQL/MariaDB bloquean la consulta con FOR UPDATE. */
     public function buscar(int $solicitudId, bool $bloquear = false): ?array
     {
+        $bloqueo = $this->conexion->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql' ? ' FOR UPDATE OF s' : ' FOR UPDATE';
         $sentencia = $this->conexion->prepare(
-            $this->seleccion() . ' WHERE s.tbcomprasolicitudid = :id' . ($bloquear ? ' FOR UPDATE OF s' : '')
+            $this->seleccion() . ' WHERE s.tbcomprasolicitudid = :id' . ($bloquear ? $bloqueo : '')
         );
         $sentencia->execute(['id' => $solicitudId]);
         $fila = $sentencia->fetch();

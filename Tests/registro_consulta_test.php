@@ -33,8 +33,20 @@ try {
     test_same(0, count(array_keys($filas, $claves[2], true)), 'Las consultas fuera de la ventana se borran');
     test_assert(!in_array($ipA, $filas, true), 'Se guarda el hash, nunca la IP');
 
-    test_same('203.0.113.7', RegistroConsulta::ipCliente(['HTTP_X_REAL_IP' => '203.0.113.7', 'REMOTE_ADDR' => '10.0.0.1']), 'Detrás del proxy se usa X-Real-IP');
-    test_same('10.0.0.1', RegistroConsulta::ipCliente(['REMOTE_ADDR' => '10.0.0.1']), 'Sin proxy se usa REMOTE_ADDR');
+    $vercelAnterior = getenv('VERCEL');
+    $postgresAnterior = getenv('POSTGRES_URL');
+    putenv('VERCEL');
+    putenv('POSTGRES_URL=postgres://u:p@db.example.test:5432/postgres');
+    test_same('203.0.113.7', RegistroConsulta::ipCliente(['HTTP_X_REAL_IP' => '203.0.113.7', 'REMOTE_ADDR' => '10.0.0.1']),
+        'El contenedor de producción (POSTGRES_URL) también está detrás del proxy');
+    putenv($postgresAnterior === false ? 'POSTGRES_URL' : 'POSTGRES_URL=' . $postgresAnterior);
+    test_same('10.0.0.1', RegistroConsulta::ipCliente(['HTTP_X_REAL_IP' => '203.0.113.7', 'REMOTE_ADDR' => '10.0.0.1']),
+        'Fuera de Vercel un X-Real-IP enviado por el cliente no cambia la IP contada');
+    putenv('VERCEL=1');
+    test_same('203.0.113.7', RegistroConsulta::ipCliente(['HTTP_X_REAL_IP' => '203.0.113.7', 'REMOTE_ADDR' => '10.0.0.1']),
+        'Detrás del proxy de Vercel se usa X-Real-IP');
+    test_same('10.0.0.1', RegistroConsulta::ipCliente(['REMOTE_ADDR' => '10.0.0.1']), 'Sin cabecera se usa REMOTE_ADDR');
+    putenv($vercelAnterior === false ? 'VERCEL' : 'VERCEL=' . $vercelAnterior);
 } finally {
     test_db()->prepare('DELETE FROM tbregistroconsulta WHERE tbregistroconsultaclave IN (?, ?, ?)')->execute($claves);
 }

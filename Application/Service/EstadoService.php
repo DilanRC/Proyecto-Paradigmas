@@ -24,8 +24,8 @@ use RuntimeException;
 final class EstadoService
 {
     public function __construct(
-        private readonly Bitacora $bitacora,
-        private readonly string $solicitudId,
+        private Bitacora $bitacora,
+        private string $solicitudId,
     ) {}
 
     /**

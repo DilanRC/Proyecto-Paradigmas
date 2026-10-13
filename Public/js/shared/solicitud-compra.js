@@ -1,3 +1,4 @@
+import { openDialog, closeDialog } from './dialog.js?v=dialog-2';
 // Diálogo "Solicitar compra": el comprador pide el animal, con flete opcional, y el vendedor
 // decide (api/v1/solicitudes-compra). Los fletes son los que cubren la finca del animal
 // (api/v1/fletes?publicacionId=): el servidor resuelve el punto de la finca, el navegador no lo conoce.
@@ -95,7 +96,7 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
     document.body.append(dialogo);
 
     const cerrarDialogo = () => {
-        if (dialogo.open) dialogo.close();
+        closeDialog(dialogo);
         dialogo.remove();
     };
     const mostrar = (texto, tipo = 'info') => {
@@ -171,7 +172,7 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
         }
     });
 
-    dialogo.showModal();
+    openDialog(dialogo);
     cargarMetodosPago();
     if (conFlete) cargarFletes();
     (conFlete ? form.querySelector('input[name="modo"]:checked') : form.querySelector('input[name="modo"]'))?.focus();

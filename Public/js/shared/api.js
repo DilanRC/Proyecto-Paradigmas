@@ -1,5 +1,5 @@
-import './auth-gate.js?v=auth-gate-11';
-import './admin-ui.js?v=admin-13';
+import './auth-gate.js?v=auth-gate-12';
+import './admin-ui.js?v=admin-14';
 import { getAccessToken, readAuthSession } from './supabase-auth.js';
 
 // Token Bearer vigente en esta pestaña (Supabase/proveedor de identidad).

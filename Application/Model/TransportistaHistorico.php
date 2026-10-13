@@ -22,7 +22,7 @@ final class TransportistaHistorico
     private int $profundidadFlete = 0;
     private int $profundidadResena = 0;
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoEstado(int $transportistaId, callable $operacion): mixed
     {

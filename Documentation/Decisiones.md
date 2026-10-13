@@ -69,6 +69,9 @@ modificar sus dumps, `MANIFEST.md` ni `SHA256SUMS.txt`.
 
 ## DEC-C04-002 - Cero restricciones de integridad
 
+> **Sustituida en parte por DEC-CALIDAD-PK-001 (12/10/2026):** cada tabla tiene ahora su llave primaria. Lo demás
+> sigue vigente.
+
 El esquema no define claves, restricciones, índices, valores `DEFAULT`,
 `AUTO_INCREMENT`, triggers, rutinas ni eventos. Las
 asociaciones y validaciones son una política de aplicación. SQL directo puede
@@ -1124,8 +1127,9 @@ La regla vive en PHP (`Application/Model/RegistroConsulta.php`), igual que el
 resto: bajo `NamedLock` borra las filas fuera de la ventana de 60 segundos,
 cuenta las de esa IP y, a partir de 20, responde 429 con `Retry-After`. La
 tabla no tiene PK, índices ni defaults, y siempre es pequeña porque se limpia
-en cada consulta. La IP sale de `X-Real-IP`, que escribe el proxy de Vercel, o
-de `REMOTE_ADDR` cuando no hay proxy.
+en cada consulta. La IP sale de `X-Real-IP` solo en producción (variable `VERCEL`
+o `POSTGRES_URL` sin `DB_DRIVER=mysql`), donde la escribe el proxy; en cualquier otro servidor esa cabecera la puede
+enviar el cliente, se ignora y cuenta `REMOTE_ADDR`.
 
 Se descartó la regla de rate limit del firewall de Vercel porque no funciona en
 local y depende del plan del proyecto.
@@ -1270,3 +1274,61 @@ ya hay un trato cerrado. Las pujas y los comentarios se muestran con el alias o 
 
 **Descartado por ahora.** Extender el cierre si alguien puja en los últimos segundos (anti-sniping), subastar lotes,
 moderar (cancelar) desde el panel y canales privados de Realtime con políticas (necesitan configuración en Supabase).
+
+## DEC-CALIDAD-PK-001 - Una llave primaria por tabla
+
+**Qué pidió Calidad.** "Cada tabla debe tener su llave primaria. No trabajamos con claves foráneas y restricciones de
+negocio en la BD." La regla anterior (DEC-C04-002) se había leído como "cero claves" y el esquema no declaraba ninguna.
+
+**Qué se decidió.** Las 47 tablas declaran `PRIMARY KEY (<tabla>id)` sobre el identificador que ya tenían (`INT NOT NULL`,
+o `BIGINT UNSIGNED NOT NULL` en la bitácora). No se agregó ninguna columna ni se cambió un tipo. Siguen prohibidas las
+llaves foráneas, `UNIQUE`, `CHECK`, `DEFAULT`, `AUTO_INCREMENT`, los índices adicionales, los triggers y las rutinas: el
+único índice de cada tabla es el que crea su llave.
+
+**Qué no cambia.** PHP sigue calculando cada identificador con `MAX(id)+1` bajo `NamedLock` y validando relaciones,
+unicidad lógica (cédula, correo, arete) y dominios. La llave primaria solo agrega una red: si dos peticiones llegaran a
+calcular el mismo identificador, el motor rechaza la segunda en vez de guardar dos filas iguales.
+
+**Bases existentes.** MySQL/MariaDB: `Database/Migrations/025llavesprimarias.sql`. Antes del primer `ALTER` cuenta los
+identificadores repetidos de las 47 tablas y, si hay alguno, se detiene sin cambiar nada; se puede repetir. PostgreSQL:
+`ensurePrimaryKeys()` en `services/supabase-database/migrate.php` agrega la llave a cada tabla que no la tiene y deja sin
+tocar (con un aviso) la que tenga identificadores repetidos o nulos, para no tumbar el despliegue.
+
+**Comprobado.** Instalación limpia y migración de una base con datos en MariaDB 10.4.32 y MySQL 5.7.44; base nueva, base
+con el esquema anterior y base con un identificador repetido en PostgreSQL 16. Gates: `Tests/schema_test.php` (una llave
+`<tabla>id` por tabla y ningún otro índice ni restricción), `Tests/naming_gate.php`, `Tests/naming_eval.php` y las pruebas
+de `services/supabase-database`.
+
+## DEC-CORREO-001 - Cambio de correo consistente entre Supabase y la base
+
+**Problema.** El correo de una persona está en dos lugares: la cuenta de Supabase Auth y `tbpersona`. La sesión se
+vincula con la Persona por ese correo. No existe una transacción que cubra los dos sistemas: si Supabase aplicaba el
+cambio y después fallaba el `COMMIT`, la restauración o el proceso, la cuenta quedaba con el correo nuevo y `tbpersona`
+con el anterior. La persona ya no podía entrar y no había forma de repararlo desde la aplicación.
+
+**Qué se decidió.** Tabla `tbpersonacorreocambio` (48 tablas): antes de llamar a Supabase se guarda el cambio como `PENDIENTE`,
+fuera de la transacción del perfil, con el `sub` de la cuenta, el correo anterior y el nuevo. Después:
+
+- todo sale bien: el cambio pasa a `APLICADO` en la misma transacción que actualiza `tbpersona`;
+- Supabase rechaza el correo o el fallo ocurre antes de llamarlo: `CANCELADO`;
+- falla el `COMMIT` y la restauración en Supabase se comprueba: `CANCELADO`, los dos conservan el correo anterior;
+- no se puede saber qué pasó (sin respuesta de Supabase, `COMMIT` ambiguo, proceso caído): queda `PENDIENTE`.
+
+**Fuente de verdad: Supabase.** La sesión nace de su cuenta. Cuando una sesión verificada trae un correo sin Persona,
+`SupabaseActorResolver` llama a `CorreoCambioService::conciliar`: si esa misma cuenta (`sub`) tiene un cambio `PENDIENTE`
+hacia ese correo, `tbpersona` avanza al correo nuevo, se anota en la bitácora (origen `CONCILIACION_CORREO`) y el cambio
+queda `APLICADO`. Se puede repetir sin efecto. Nunca se devuelve la cuenta al correo anterior a ciegas. Al pedir otro
+cambio con uno `PENDIENTE`, se consulta el correo actual de la cuenta: si es el nuevo se termina el anterior y se pide
+volver a entrar (409); si no, se cancela.
+
+**Qué no hace.** No concilia si la Persona cambió por otra vía o si el correo nuevo ya es de otra Persona: queda
+`PENDIENTE` para revisión manual. Otra cuenta de Supabase con el mismo correo no hereda el cambio. No crea una segunda
+Persona ni cambia el vínculo por correo (riesgo aceptado por el equipo el 06/10).
+
+**Por qué una tabla y no la bitácora.** La bitácora registra quién hizo qué y se escribe dentro de la transacción que
+puede deshacerse. La recuperación necesita un hecho propio que sobreviva al `ROLLBACK` y se consulte por cuenta; usar la
+bitácora como estado operativo mezclaría bitácora con histórico.
+
+**Comprobado.** `Tests/perfil_correo_conciliacion_test.php` provoca cada punto de fallo (rechazo, fallo de `COMMIT` con y
+sin restauración, `COMMIT` ambiguo, proceso caído antes y después de Supabase, otra cuenta, correo de otra Persona).
+Sin la conciliación en el resolvedor la prueba falla con 409.

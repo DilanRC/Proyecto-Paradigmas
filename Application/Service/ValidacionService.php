@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Application\Service;
 
-final class ValidacionException extends \RuntimeException
+require_once dirname(__DIR__) . '/ReadOnlyProperties.php';
+
+final class ValidacionException extends \RuntimeException implements \JsonSerializable
 {
-    public function __construct(string $message, public readonly array $errores = [])
+    use \Application\ReadOnlyProperties;
+
+    private const READ_ONLY_PROPERTIES = ['errores'];
+
+    public function __construct(string $message, private array $errores = [])
     {
         parent::__construct($message);
     }
@@ -236,7 +242,7 @@ final class ValidacionService
         $direccion = $this->validarDireccionEnCampo($base, $campo, $errores);
         $punto = $this->validarPuntoDireccion($valor, $campo, $errores);
 
-        return [...$direccion, ...$punto];
+        return array_merge($direccion, $punto);
     }
 
     public function validarIdentificacion(mixed $valor, array &$errores): array

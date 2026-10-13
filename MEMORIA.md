@@ -52,6 +52,27 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 
 ## 3. Decisiones vigentes
 
+### Entrega local para XAMPP
+- El paquete ZIP se extrae como `<htdocs>/GanadoCerca` y publica `Public/` mediante el `.htaccess` de la raíz; Apache debe aplicar las reglas de ambas carpetas (`AllowOverride All`). No se requiere editar `httpd.conf` ni crear un VirtualHost.
+- **Sin asistente de instalación (decisión de Dilan, 13/10; reemplaza todo lo anterior sobre `Public/instalacion`).** La pantalla, su ruta y su sesión se eliminaron. La base se prepara sola: `Configuration/LocalDatabaseBootstrap.php` elige la conexión y `Application/Service/LocalDatabaseInstaller.php` compara con el SQL canónico y crea o completa. No se guarda estado ni credenciales. **No vuelvas a agregar un formulario de conexión ni una redirección de instalación.**
+- **Una sola conexión para todo:** `Configuration\Database::getConnection()` delega en `LocalDatabaseBootstrap::connection()` cuando `applies()` (no Vercel, sin `POSTGRES_URL*` salvo `DB_DRIVER=mysql`, `DB_HOST` loopback o vacío y `DB_NAME` = `bdmercadoganadero` o vacío). Páginas, API y preparación usan exactamente la misma conexión. Docker (`DB_HOST=db`), `Tools/db-aislada.sh` (otro `DB_NAME`) y producción no pasan por aquí.
+- **Conexiones candidatas, en orden** (`candidates()`): si el servidor fija `DB_*` (Apache `SetEnv`, terminal), solo esa. Si no: (1) `mysql.json` que guardó el asistente de una versión anterior en la misma carpeta (solo lectura, `LocalDatabaseCredentials::load()`; ahí quedaron los datos de esa instalación), (2) el `.env` por TCP, (3) la misma cuenta por el socket local (`pdo_mysql.default_socket`, `mysqli.default_socket`, `/opt/lampp/var/mysql/mysql.sock`; nunca en Windows). Gana la primera que abre la base. **No se prueban otras cuentas, contraseñas ni puertos.**
+- **Qué hace con lo que encuentra** (`LocalDatabaseInstaller::inspect` / `prepare`): base ausente → la crea (`000instalacioncompleta.sql` + semillas `101`, `102`, `104`; nunca la `103` de demostración). Base completa → se usa sin tocar. Base completa con una tabla inicial vacía → carga solo esa semilla (las 101/102 hacen `UPDATE`, por eso **solo corren con su tabla vacía**). Base vacía o a medias **sin nada ajeno y con 0 personas** (`completable`) → agrega las tablas que faltan. Cualquier otra diferencia (columna ausente o de otro tipo, llave primaria distinta, columna de más obligatoria, tablas faltantes con personas) → **no se modifica**: aviso 503 y detalle en el log. Tablas ajenas y columnas de más opcionales se toleran.
+- **Quién puede crear o completar:** solo una visita web loopback sin cabeceras de proxy (`requestIsLocal`). En CLI nunca se instala y se relanza el `PDOException` original (pruebas y herramientas no cambian). Un candado `GET_LOCK` de 30 s serializa las peticiones simultáneas; al obtenerlo se vuelve a inspeccionar.
+- **Fallos:** `Application\LocalDatabaseUnavailable` extiende `Application\HttpException` (503) con motivo `sin_conexion`, `credenciales`, `sin_permiso`, `sin_preparar`, `incompatible` o `instalacion`. Las API ya capturan `HttpException` y responden JSON 503 con el mensaje; las páginas (`Public/bootstrap.php` → `tc_preparar_base_local`) muestran un aviso HTML 503 sin redirigir. El detalle (servidor, usuario, errno de MySQL, diferencias; nunca la contraseña) va a `error_log` con el prefijo `[GanadoCerca] base local:`.
+- **Costo:** cada página hace la inspección completa (4 consultas a `information_schema`, 7 conteos y 3 escrituras `WHERE 1 = 0` que comprueban privilegios): ~10 ms en MariaDB 10.4. Las API solo abren la conexión. Si algún día pesa, cachear el veredicto, no las credenciales.
+- **Ya no existe la cuenta `ganadocerca_app`** para instalaciones nuevas (la aplicación usa la conexión del `.env`; no se crean ni alteran cuentas de MySQL). Una instalación anterior que la tenga guardada en `mysql.json` la sigue usando.
+- **Conexión heredada inalcanzable:** si `mysql.json` apunta a un servidor que hoy no responde, **no se crea una base nueva en otro servidor** (repartiría los registros entre dos); se usa la del `.env` solo si ya tiene la base, y si no, aviso `sin_conexion`.
+- **`.env` por petición:** `loadEnvironmentFile` usa además `apache_setenv` cuando existe. Con Apache con hilos (XAMPP en Windows), `putenv` es del proceso y PHP lo deshace al terminar cada petición: otra petición simultánea podía quedarse sin `SUPABASE_URL` y responder 503 al validar la sesión. Comprobado solo en Linux (prefork); en Windows es una corrección sin verificar.
+- **Tiempos:** `prepare()` sube el límite de ejecución a 120 s y espera el candado 20 s. El aviso de `Public/bootstrap.php` atrapa cualquier `Throwable` (nunca un fatal con rutas). La validación de sesión contra Supabase espera 6 s (antes 3).
+- **Límites declarados:** MySQL con contraseña desconocida o en otro puerto sin socket → aviso, no hay arranque. Base con otro nombre → no se busca; se crea `bdmercadoganadero` aparte y la otra no se toca. Base de una versión anterior con datos → bloqueada, no se migra sola. Windows: mismo código, **sin probar**.
+- **Registro que no persistía en Calidad:** no se pudo reproducir con root sin contraseña y base importada a mano (201 con Persona, Comprador y bitácora). Las causas que el diseño anterior permitía y este elimina: conexión del asistente distinta de la que mira phpMyAdmin (ahora se registra en el log cuál se usa), base sin semillas o a medias que el arranque daba por buena con solo contar 48 tablas, asistente inservible en Windows y sin `posix`. Si vuelve a pasar, mirar `[GanadoCerca]` en el log de PHP: `SupabaseActorResolver` también anota ahí cuando no logra consultar Supabase para validar la sesión (sin Internet o sin certificados raíz → 503 "No fue posible validar la sesión").
+- **`.env` dentro del ZIP (decisión de Dilan, 13/10):** `Tools/empaquetar-entrega.sh` agrega `GanadoCerca/.env` al empaquetar (nunca se versiona): `DB_DRIVER=mysql`, MySQL de XAMPP (`127.0.0.1:3306`, `root`, sin contraseña) y `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY` tomados de `.env.example` del commit (el proyecto real `mkxugbjvvlcyxosjjzit`; son públicos por diseño). **Nunca lleva `POSTGRES_URL`** (el script aborta). **`SUPABASE_SECRET_KEY` solo entra con `ENTREGA_ENV_PRIVADO=<.env local>`** (decisión expresa de Dilan del 13/10 para el ZIP de Calidad; se lee del archivo sin versionar y no se imprime). La usan: ver documento en `/admin/documentos` (`SupabaseStorage`), cambiar correo en Ajustes (`SupabaseAuthAdmin`) y los avisos instantáneos de subastas (`TiempoReal`). Esa clave administra el proyecto de Supabase de producción: el ZIP es privado (no va al repo ni al PR) y **hay que rotarla en el panel de Supabase cuando termine la evaluación** (y actualizar Vercel).
+- **`DB_DRIVER=mysql`** hace que `Configuration/Database.php` y el asistente ignoren `POSTGRES_URL*` heredadas. Producción no la define y sigue en PostgreSQL.
+- **Raíz del paquete:** el `.htaccess` raíz niega todo y concede solo la carpeta en sí (`<If "-d %{REQUEST_FILENAME}">`) y `index.php`. Como `<Files>` también coincide en subcarpetas, **cada carpeta de primer nivel distinta de `Public/` necesita su `.htaccess`** con `<Files "*"> Require all denied`; `Tests/entrega_xampp_test.php` falla si falta. No vuelvas a una excepción por `REQUEST_URI`: suponía un solo nivel de carpeta y, con el proyecto como raíz del servidor, entregaba `.env` y todos los archivos de la raíz.
+- **ZIP:** `bash Tools/empaquetar-entrega.sh [salida]` lo arma con `git archive` del commit (falla con cambios sin confirmar), le agrega el `.env` de la entrega y deja fuera `AGENTS.md`, `CLAUDE.md`, `MEMORIA.md`, `.agents`, `.codebase-memory`, `.mcp.json` y `Database/Backups`.
+- **`AllowOverride None` no está soportado:** la app falla cerrada con 503, pero Apache puede servir archivos privados estáticos porque ignora las reglas, **incluido el `.env` del ZIP, con la clave secreta de Supabase si se empaquetó con ella**. Hay que comprobar la configuración real del equipo de revisión antes de declarar el ZIP listo.
+
 ### Navegación y sesión
 - **Sin sesión**, el header muestra solo logo, tema, Entrar y Crear cuenta
   (sin Inicio, Buscar, Explorar, Publicar ni Fletes). Lo hace `public-ui.js`
@@ -102,8 +123,8 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   (`RegistroPublicoService::resolverPersona` y `Persona::obtenerOCrear`); esto ya existía.
 - **Límite por IP (DEC-REG-001):** el endpoint de disponibilidad permite 20 consultas por IP cada 60 s
   (`RegistroConsulta::LIMITE` y `VENTANA_SEGUNDOS`); la siguiente responde **429** con `Retry-After: 60`. Tabla
-  `tbregistroconsulta` (hash SHA-256 de la IP, nunca la IP; se limpia sola). La IP sale de `X-Real-IP` (proxy de
-  Vercel) o de `REMOTE_ADDR`. El esquema ahora tiene **35 tablas**. **Comprobado en Vercel (05/10, preview de
+  `tbregistroconsulta` (hash SHA-256 de la IP, nunca la IP; se limpia sola). La IP sale de `X-Real-IP` **solo en
+  producción** (variable `VERCEL` o `POSTGRES_URL` sin `DB_DRIVER=mysql`; ahí la escribe el proxy) y de `REMOTE_ADDR` en cualquier otro servidor. El esquema ahora tiene **35 tablas**. **Comprobado en Vercel (05/10, preview de
   `backend`):** con `X-Real-IP`/`X-Forwarded-For` inventadas todas las consultas cuentan como la IP real (no se puede
   saltar el límite), y una segunda IP (celular con datos) seguía consultando mientras la primera tenía 429: el límite
   es por IP, no global.
@@ -139,7 +160,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Columna `tbanimalpublicacionimagenurl VARCHAR(500) NULL` (migración
   `012imagenpublicacion.sql`). La API devuelve `imagenUrl` en cada publicación
   y la acepta al crear (`POST api/v1/publicaciones`).
-- `AnimalPublicacionController::imagenUrl()` solo acepta `https://` absoluto,
+- `CampoValidacion::imagenUrl()` (`Application/Service/`) solo acepta `https://` absoluto,
   sin usuario/contraseña, hasta 500 caracteres; rechaza `http`, `javascript:`
   y `data:` con 422. En JS, `safeImageUrl()` hace lo mismo antes de un `<img>`.
 - **Fotos del dispositivo:** el navegador las sube directo a **Supabase
@@ -163,7 +184,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   Las cuentas anteriores quedan en NULL y muestran el avatar con iniciales.
 - `PATCH api/v1/mi-perfil` `{ nombre?, identificacion?, correoElectronico?, alias?, telefono?, fotoUrl? }` (sesión): solo
   cambian las claves enviadas; `alias: ""` o `fotoUrl: null` las dejan en NULL. Otras claves → 422. La foto exige
-  `https://` (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`) y el teléfono usa `ValidacionService`. Un teléfono
+  `https://` (`CampoValidacion::imagenUrl($v, 'fotoUrl')`) y el teléfono usa `ValidacionService`. Un teléfono
   nuevo deja histórico (`Persona::actualizarPerfil`); la bitácora (`PERSONA`, `API_MI_PERFIL`) **no guarda el teléfono**,
   solo `telefonoCambiado`.
 - `api/v1/actividad` devuelve `persona.fotoUrl`; de ahí sale el perfil en caché del navegador y el avatar del encabezado
@@ -178,15 +199,17 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   - `correoElectronico`: se normaliza en minúscula. El de otra Persona o el de un **administrador** → 409 (tomar el correo
     de un admin daría acceso al panel). Como la sesión se vincula con la Persona **por el correo**, el servidor cambia
     también el correo de la cuenta de Supabase (`Application/Service/SupabaseAuthAdmin.php`, `PUT /auth/v1/admin/users/{sub}`
-    con `email_confirm: true` y `SUPABASE_SECRET_KEY`) dentro de la transacción: si Supabase lo rechaza (correo ya usado → 409,
-    otro error → 502), no se guarda nada del PATCH. Después, `ajustes.js` renueva la sesión (`refreshAuthSession`) para que el
+    con `email_confirm: true` y `SUPABASE_SECRET_KEY`): si Supabase lo rechaza (correo ya usado → 409), no se guarda nada del
+    PATCH. Los dos sistemas no comparten transacción: antes de llamar a Supabase el cambio se guarda `PENDIENTE` en
+    `tbpersonacorreocambio` y, si la operación se interrumpe, `CorreoCambioService` lo termina o lo descarta (DEC-CORREO-001,
+    ver "Cambio de correo consistente"). Después, `ajustes.js` renueva la sesión (`refreshAuthSession`) para que el
     token traiga el correo nuevo. Un admin que cambie su correo deja de ser admin (`tbadministrador` va por correo).
 
 ### Foto del vehículo
 - Columna `tbvehiculofotourl VARCHAR(500) NULL` (migración `014vehiculofoto.sql`, en los 4 lugares + diccionario/DER/PDF).
   Una sola foto por vehículo; los vehículos anteriores quedan en NULL.
 - `api/v1/mi-vehiculos` acepta `fotoUrl` en `POST` y `PUT` y lo devuelve en `vehiculo` y `vehiculos[]`. Misma validación que la
-  foto de perfil (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
+  foto de perfil (`CampoValidacion::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
 - Mi panel → Mis vehículos: el diálogo sube la foto (campo compartido `shared/foto-campo.js`, mismo bucket `publicaciones`) y la fila muestra la miniatura. El navegador **solo envía `fotoUrl` si la foto cambió**; así un PUT sin cambio de foto no la borra.
 - En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
   admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
@@ -497,10 +520,25 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   `tbcompra`/`tbventa` al cerrar) → notificación → bitácora → transacción (Cuidados #12).
 - **Admin:** cadena de caché subida a **`auth-gate-11`, `admin-13`, `login.js?v=front-15`** y la versión del script de las 13 vistas admin.
 
+### Cambio de correo consistente (DEC-CORREO-001)
+- Tabla `tbpersonacorreocambio` (esquema de **48 tablas**, migración `026personacorreocambio.sql`; **las siguientes empiezan en
+  `027`**): persona, `sub` de la cuenta de Supabase, correo anterior y nuevo, estado `PENDIENTE|APLICADO|CANCELADO` y fechas.
+- `MiPerfilController` la escribe `PENDIENTE` **antes** de llamar a Supabase y **fuera** de la transacción del perfil (tiene que
+  sobrevivir al ROLLBACK). Pasa a `APLICADO` dentro de la transacción que actualiza `tbpersona`; a `CANCELADO` si Supabase no
+  cambió o si la restauración se comprobó. Si no se sabe qué pasó, queda `PENDIENTE`.
+- **Fuente de verdad: Supabase.** `SupabaseActorResolver`, cuando el correo de la sesión no tiene Persona, llama a
+  `CorreoCambioService::conciliar($sub, $correo, $rol)`: si esa cuenta tiene un `PENDIENTE` hacia ese correo, `tbpersona` avanza,
+  se anota en la bitácora (origen `CONCILIACION_CORREO`) y queda `APLICADO`. Otra cuenta, otro correo, una Persona cambiada por
+  otra vía o un correo que ya es de otra Persona **no** concilian (queda `PENDIENTE`, revisión manual).
+- El resolvedor carga el servicio con `require_once` solo en ese caso (sesión sin Persona): las peticiones normales no pagan nada.
+- Orden de bloqueos: alta de Persona → (histórico de teléfono) → bitácora → transacción. El de `tbpersonacorreocambio`
+  (`tindercows_persona_correo_cambio`) solo lo toma `PersonaCorreoCambio::crear`, siempre el último y sin pedir otro dentro.
+- `test_cleanup_productores()` borra también las filas de `tbpersonacorreocambio` de la Persona de prueba.
+
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
 1. **Columna nueva = 4 lugares** (SQL canónico, migración MySQL, `schema.sql`
-   de Postgres y `migrate.php`). Producción corre `migrate.php` al arrancar el
+   de Postgres y `migrate.php`). Una **tabla** nueva lleva además su `PRIMARY KEY (<tabla>id)`. Producción corre `migrate.php` al arrancar el
    contenedor; si falta ahí, el SELECT falla en producción.
 2. **Versiones de caché `?v=`**: súbelas al cambiar CSS/JS. Si un módulo
    compartido gana un `export`, versiona su `import` donde se usa (ya pasa con
@@ -642,18 +680,14 @@ están incluidos ahí.
 
 ## 6. Estado de pruebas
 
-Pasan todas salvo **4 pruebas de frontend que ya fallaban antes de esta línea
-de trabajo** (no son regresiones):
-- `el shell existente se mejora desde un bootstrap compartido, no con cinco implementaciones`
-- `el rail compacto reduce ancho y centra iconos sin alterar el móvil`
-- `pueblo diferencia buscar de una sugerencia de ubicacion`
-- `los estados vacios heredan la identidad del modulo`
-
-Cualquier otro fallo es una regresión.
+**Frontend: pasan todas (436/436 el 12/10/2026, rama `fix/xampp-linux-local`).** Las 4 que fallaban desde antes ya
+no fallan. **PHP: 80/80 archivos `Tests/*_test.php` en XAMPP real** (PHP 8.0.30, MariaDB 10.4.32) y 92/92 contando los
+`*_eval.php`, `*_gate.php`, `Database/Tests/*.php` y `services/supabase-database`. Cualquier fallo es una regresión, salvo las
+excepciones de entorno de abajo.
 
 **Pruebas PHP que fallan por el entorno o a veces** (no son regresiones):
 - `Tests/vercel_prune_registry_test.php`: falla también en commits anteriores (la poda termina con código 2 en este entorno Windows).
-- `Tests/registro_publico_test.php` y, rara vez, `Tests/solicitudes_compra_test.php` (el registro de la fixture): intermitentes (201 esperado, 200 recibido); pasan al repetir.
+- `Tests/registro_publico_test.php` y `Tests/solicitudes_compra_test.php` daban a veces 200 en vez de 201. **Causa encontrada (12/10):** `mi_vehiculos_test` dejaba filas de `tbcomprador` sin Persona y el siguiente id de Persona las heredaba. Ya limpia sus compradores; si vuelve a pasar, busca otra prueba que deje huérfanos.
 - `Tests/api_identidad_test.php` imprime "Todos los tests de api_identidad pasaron" en vez de "OK ...": es un éxito.
 - `Tests/api_productores_ubicacion_http_test.php` termina sin salida a propósito (tiene un `return;`).
 
@@ -668,6 +702,203 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-13 · fix/xampp-linux-local · Revisión previa a la fusión del PR #47
+- **Conciliación de correo:** `CorreoCambioService::aplicar` lee el cambio `PENDIENTE` antes de tomar el bloqueo de Persona. Si mientras esperaba
+  el PATCH de perfil lo cancelaba (Supabase vuelve al correo anterior), escribía igual el correo nuevo en `tbpersona` y la cuenta quedaba sin
+  Persona. Ahora `PersonaCorreoCambio::cerrar` devuelve si de verdad cerró un `PENDIENTE` y la conciliación revierte cuando no.
+  Prueba nueva `Tests/perfil_correo_cancelado_test.php` (falla sin el arreglo).
+- `public-auth.css`: se quitaron las reglas `.setup-*` del asistente de instalación eliminado (ninguna vista las usaba).
+- Ensayado antes de fusionar, en bases aisladas: `migrate.php` sobre Postgres 17 con el esquema de `dev` (47 tablas sin llaves → 48 con 48 llaves,
+  mismas filas, repetible, dos instancias a la vez); `024` → `025` → `026` en MySQL 8.0 y MariaDB 10.4; paquete en
+  `htdocs/G5/Avance3/todo el codigo/` con Apache y MariaDB 10.4.
+- Cuidado: quien tenga una base MySQL local anterior debe aplicar `024`, `025` y `026`; sin ellas el modo XAMPP responde 503 ("otra
+  estructura") y en Docker toda sesión sin Persona responde 503.
+- Sin corregir (revisión, menores): sin `SUPABASE_SECRET_KEY` un cambio de correo queda `PENDIENTE` con un mensaje genérico; un `PENDIENTE` que
+  no se puede conciliar no tiene pantalla de administración; `mapa.js` cambió sin subir `map-core-5` (la copia vieja sigue funcionando en la raíz).
+
+### 2026-10-13 · fix/xampp-linux-local · Sin asistente: la base local se prepara sola
+- Se eliminó `Public/instalacion.php`, su ruta en `Public/.htaccess`, la redirección de `Public/bootstrap.php` y el enlace del pie de la portada. Detalle y reglas en "Entrega local para XAMPP".
+- Nuevo `Configuration/LocalDatabaseBootstrap.php` (`LocalDatabaseBootstrap`) y `Application/LocalDatabaseUnavailable.php`; `LocalDatabaseInstaller` reescrito (`inspect(PDO)`, `prepare`, `writable`, `summary`; sin credenciales guardadas, sin cuenta limitada, sin estados); `LocalDatabaseCredentials` quedó en solo lectura de la conexión heredada; `Database.php` delega en el arranque local; `SupabaseActorResolver` registra por qué no pudo validar la sesión; `Tools/diagnostico-local.php` cambia `asistente_web` por `preparacion_automatica`.
+- Pruebas: `Tests/local_database_bootstrap_test.php` (sin base de datos) y `Tests/local_database_bootstrap_mysql_test.php` (**elimina y recrea la base**: solo con `TC_PRUEBA_INSTALADOR_DESTRUCTIVA=1` contra un MySQL desechable) reemplazan a las dos `local_database_installer_*`; ajustadas `entrega_xampp_test`, `installer_portability_test.py` y `local_diagnostic_test.py`.
+- Comprobado con Apache 2.4.58, PHP 8.0.30 y MariaDB 10.4.32 de `/opt/lampp` (sin root, proyecto en `htdocs/G5/Avance3/todo el codigo/`): base existente con datos (mismos `CHECKSUM TABLE` antes y después), base nueva con 12 visitas simultáneas, base vacía, preparación cortada, base incompatible intacta, tabla y columna opcional de más, MySQL apagado, MySQL sin red (socket), contraseña desconocida, otro puerto, usuario sin permisos, visita no local, conexión heredada del asistente y reinicio de Apache y MySQL.
+- Thermos (corrección/seguridad con Opus, mantenibilidad con Sonnet): sin bloqueantes ni altos de corrección. Aplicado: aviso ante cualquier `Throwable`, límite de tiempo, no repartir datos con una conexión heredada caída, `.env` por petición, excepción en `Application/`, motivo del fallo por códigos enteros con prueba, y la guía ya no dice que nunca hay `ALTER` (el esquema hace `ALTER DATABASE` del juego de caracteres). Sin hacer: que el instalador reciba el PDO en vez de pedir `open()`/`log()` al arranque, y mover `validHost`/`mysqlForced` fuera de `LocalDatabaseCredentials`.
+- **ZIP:** `outputs/GanadoCerca.zip` generado del commit `07227dd` con `ENTREGA_ENV_PRIVADO` (trae `SUPABASE_SECRET_KEY`: entrega privada, rotarla después): 604 archivos, SHA-256 `e48a8e47201c6dbe7fd530ccf3f818de4de208afbe0a6688726a462c7a5611a8`. Este commit posterior solo cambia `MEMORIA.md`, que no entra en el ZIP.
+- **Probado sobre ese ZIP** (XAMPP de fábrica, MariaDB vacía, `htdocs/G5/Avance3/todo el codigo/`): la primera visita creó la base en 0,1 s (48 tablas, 48 llaves, 0 personas, 0 publicaciones); `.env`, `Configuration/`, `Database/` y `Tools/` responden 403 y `Public/instalacion` 404. En Chromium, con Supabase real: se forzó un fallo local después de crear la cuenta (tabla `tbcomprador` apartada → 500, 0 filas por el rollback, la sesión quedó en el navegador) y al pulsar **Registrar** otra vez se guardaron Persona, Comprador y bitácora con la misma cuenta; Mi panel, Ajustes, Me interesa, Publicar y Fletes abrieron sin recursos fallidos; tras reiniciar Apache y MySQL se inició sesión de nuevo; 6 visitas más no cambiaron ningún `CHECKSUM TABLE`.
+- Queda en Supabase Auth de producción la cuenta sintética `cortesdila2023+zipauto1791914226@gmail.com` (borrarla en el panel si estorba).
+- `Tests/auth_actor_test.php` falla si se corre **dentro de la carpeta extraída del ZIP**: el `.env` de la entrega trae la `SUPABASE_URL` real y la prueba espera el verificador falso. En el repositorio pasa.
+- Cuidado: las pruebas HTTP (`*_http_test`, `api_identidad_test`, `api_productores_test`) siguen necesitando un VirtualHost sobre `Public/` con `TraceEnable Off` y `ErrorDocument 405 /api/metodo-no-permitido.php`; en una subcarpeta de `htdocs` TRACE responde el 405 HTML de Apache y fallan. No es una regresión.
+
+### 2026-10-13 · fix/xampp-linux-local · ZIP con `.env` funcional, sin demostración y asistente recuperable
+- Decisiones nuevas de Dilan que **revierten** dos de la entrada anterior: el ZIP **sí** trae `.env` y el asistente **no** ofrece publicaciones de demostración (se eliminó `Application/Service/PublicacionesDemo.php`; `Tools/seed-publicaciones-demo.php` volvió a ser la herramienta de desarrollo autónoma). Detalle en "Entrega local para XAMPP".
+- `Configuration.php` (`environmentFileValues`), `LocalDatabaseCredentials` (`hasNonEmptyConnectionEnvironment` ignora lo que vino del archivo, `mysqlForced`, `discard`), `Database.php` (selector `DB_DRIVER`), `LocalDatabaseInstaller` (`run`/`resume`, `limitedAccount`, `columnDifferences`, `environmentDefaults`, `APP_USER`), `Tools/schema-manifest.php` (`columns`, `schema_manifest_column_signature`), `Public/instalacion.php` (acción `resume`, diferencias de columnas, sin demo), `Public/bootstrap.php` (una instalación a medias también lleva al asistente).
+- **Límite por IP:** `RegistroConsulta::ipCliente` solo cree en `X-Real-IP` en producción: variable `VERCEL` o, por si el contenedor no la recibe, `POSTGRES_URL` sin `DB_DRIVER=mysql`. **Comprobar en un preview de Vercel** antes de llevar esto a `dev` que el límite sigue siendo por persona y no global. En XAMPP o Docker cuenta `REMOTE_ADDR` (antes un cliente podía saltarse el límite cambiando la cabecera). `Decisiones.md` (DEC-REG-001) y su PDF actualizados.
+- Guía y README: el ZIP se extrae **directamente en `htdocs`** (ya trae `GanadoCerca/`; antes las instrucciones llevaban a `htdocs/GanadoCerca/GanadoCerca/`).
+- Pruebas: nueva `Tests/local_database_installer_recovery_test.php` (**elimina y recrea la base**: solo corre con `TC_PRUEBA_INSTALADOR_DESTRUCTIVA=1`, contra un MySQL desechable y sin personas); ampliadas `local_database_installer_test`, `registro_consulta_test` y `entrega_xampp_test`. Con PHP 8.0.30 y MariaDB 10.4.32 de XAMPP: 84/84 `Tests/*_test.php` (las de HTTP contra un VirtualHost con `TraceEnable Off`), 436/436 frontend, documentación y espejo PostgreSQL.
+- **Comprobado en navegador (Chromium) con Supabase real y MySQL local:** asistente → Crear cuenta (cuenta sintética `cortesdila2023+zipdev…@gmail.com`) → `POST api/v1/registro` 201 → fila en `tbpersona`, `tbcomprador` y `tbbitacora` → Explorar, Mi panel, Ajustes, Me interesa, Publicar, Fletes y Subastas con sesión → Cerrar sesión (borra `tindercows:login` y `tindercows:profile`) → una ruta privada vuelve a Entrar → Entrar de nuevo. Todas las API respondieron JSON.
+- Revisiones Thermos (corrección/seguridad con Opus, mantenibilidad con Sonnet): sin bloqueantes ni altos. Se aplicó: señal de producción para `X-Real-IP`, reanudación atada a host/puerto, restaurar la conexión si falla `CREATE DATABASE`, reemplazo de una conexión guardada rota, contradicciones de esta memoria y de la guía. Queda sin hacer (opcional): partir `LocalDatabaseInstaller::run()` y unificar `discard`/`clearFailedAttempt`.
+- Si `local_database_installer_test` se corta a medias puede dejar un `mysql.json` de prueba en la carpeta temporal, y ahora ese archivo gana sobre los `DB_*` de un `.env` en las ejecuciones sin Docker: bórralo (`/tmp/ganado-cerca-*/mysql.json`).
+- Cuidados: las cuentas sintéticas de la prueba quedan en Supabase Auth de producción (borrarlas en el panel si estorban). `api/v1/admin/status` responde 403 a quien no es administrador y el navegador lo anota en la consola en cada página: es el contrato vigente, no un fallo. Una prueba con `pkill -f`/`pgrep -f` cuyo patrón aparece en la propia línea de comando mata o cuelga la shell.
+
+### 2026-10-13 · fix/xampp-linux-local · Verificación independiente del ZIP y correcciones
+- Segunda sesión sobre el commit `be0a600`: se extrajo el ZIP en XAMPP limpios (binarios de `/opt/lampp` sin root, configuración de fábrica `httpd.conf.bak`) y se recorrió con Chromium y Firefox. Lo que se corrigió:
+  - **La portada no llevaba al asistente:** sin base se veía una portada vacía y la API respondía 500. Ahora redirige (ver "Entrega local para XAMPP").
+  - **Sin contenido que revisar:** 6 publicaciones ficticias opcionales desde el asistente.
+  - **`.htaccess` raíz:** la excepción por `REQUEST_URI` fallaba a más de un nivel de carpeta (403 en la raíz del proyecto) y exponía los archivos de la raíz si el proyecto era la raíz del servidor.
+  - **Mapa:** `shared/mapa.js` pedía `/assets/geo/costa-rica-limits.geojson` (404 en subcarpeta, visto en Registro); ahora es relativa al módulo.
+  - **Arranque de producción:** `migrate.php` salía con 2 ante un esquema degradado y el entrypoint (`set -e`) no levantaba Apache; además usaba `pg_try_advisory_xact_lock`, que hacía fallar la segunda instancia que arrancara a la vez. Ahora el entrypoint avisa y continúa con 2, y la migración espera el lock con `lock_timeout = '30s'`.
+  - **`.env.example` restaurado:** vaciarlo rompía `cp .env.example .env && docker compose up` y `deployment_test`. Sus valores son los de desarrollo local y la clave *publishable* (pública por diseño); Apache lo niega. (Desde la entrada de arriba, el empaquetador toma de ahí la URL y la clave publicable para el `.env` del ZIP.)
+  - **Semillas del instalador CLI:** `instalar-local.sh` decidía las tres semillas mirando solo `tbpagometodo`; ahora cada una se decide por su tabla. `instalar-local.ps1` conserva la lógica anterior (sin PowerShell para probarlo).
+  - **Riesgo aceptado en producción:** con el esquema degradado la app arranca y solo queda la línea `AVISO: migrate.php dejó el esquema degradado` (más `supabase_primary_key_pendiente tablas=...`) en los logs de Vercel; esas tablas siguen sin llave hasta limpiar los ids repetidos. Revisar ese log después de desplegar.
+  - (Retirado en la entrada de arriba: el asistente ya no ofrece demostración.)
+  - Mensaje claro cuando el usuario de MySQL no puede crear la base (errores 1044/1142/1227) y mensaje de Entrar sin Supabase.
+- Comprobado por HTTP y en navegador: instalación desde cero (root sin contraseña, puerto 3306), MySQL en otro puerto con contraseña, contraseña incorrecta, usuario sin permisos (no crea nada), base existente incompleta (no se toca: mismos conteos antes y después), 10 recargas, reinicio de Apache y MySQL, dos nombres de carpeta y dos profundidades, sin `mod_rewrite` (503, archivos negados), `AllowOverride None` (503; estáticos expuestos, sin credenciales), Host ajeno y `X-Forwarded-For` (404), POST sin CSRF (403).
+- Pruebas: 81/81 PHP con el PHP 8.0.30 y MariaDB 10.4.32 de XAMPP (66 directas y 15 por HTTP contra un VirtualHost sobre `Public/`), 436/436 frontend, nueva `Tests/entrega_xampp_test.php`.
+- **Sigue abierto:** no hay ruta de reserva sin `mod_rewrite` (la reanudación y el `.env` con Supabase se resolvieron en la entrada de arriba); un administrador sigue identificándose por correo confirmado (con "Confirm email" desactivado en Supabase, quien registre primero ese correo lo reclama).
+
+### 2026-10-13 · fix/xampp-linux-local · Asistente local y paquete ZIP para XAMPP
+- `.htaccess` protege la raíz del proyecto y los directorios internos; el acceso público queda en `Public/`. `Configuration/Compatibility.php` detecta si Apache aplica las reglas antes de servir la app. `.env.example` dejó de distribuir contraseñas de demostración y valores de Supabase (**revertido el mismo día**: rompía Docker; ver la entrada de arriba).
+- El nuevo asistente (`Public/instalacion.php`, `Application/Service/LocalDatabaseInstaller.php`) valida loopback/Host/sin proxy, consulta MySQL sin escribir, pide confirmación para crear una base ausente, importa el esquema canónico y semillas `101`, `102`, `104`, comprueba 48 tablas y 48 llaves primarias y excluye la semilla demo `103`. `LocalDatabaseCredentials` guarda credenciales y sesiones fuera de `htdocs` con permisos POSIX privados; el asistente web está limitado a Linux con `posix` y falla cerrado en Windows porque esta revisión no puede verificar DACL.
+- `instalar-local.sh` y `instalar-local.ps1` dejaron de traer la contraseña CLI de demostración: ambos exigen `DB_PASS` local; PowerShell valida los identificadores y envía el SQL por stdin para no exponer la clave en argumentos del proceso. La guía conserva ese flujo como alternativa avanzada.
+- Si hay cualquier valor no vacío de `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` o `DB_PASS`, `Configuration/Database.php` y el asistente dan prioridad a esa configuración sobre `mysql.json`. Las asignaciones vacías no desplazan la conexión guardada ni ocultan el formulario (**cambió en la entrada de arriba:** los valores que solo vienen del archivo `.env` ya no mandan sobre el asistente; solo los del servidor).
+- Administradores requieren correo confirmado obtenido del objeto User actual de Supabase Auth: el sidecar valida el JWT, consulta `/auth/v1/user`, verifica que coincidan id/correo y falla con 503 si la consulta o identidad no son confiables. `ActorContext` queda cerrado por defecto y conserva la confirmación al reconstruirse. `services/supabase-database/migrate.php` comprueba columnas exactas de PK, intenta un advisory lock transaccional y reporta como degradado el esquema que aún no tenga sus llaves.
+- ZIP final: `outputs/GanadoCerca.zip`, 599 archivos, SHA-256 `4bb83ad284fabbc74e5c3ed0052bd54814aa38e8b47b312f1258c505c77f0692`. La extracción fresca de este hash se sirvió con Apache 2.4.58/PHP 8.0.30 y MariaDB 10.4.32 vacía: GET y comprobación no escribieron; tras consentimiento, el asistente instaló 48 tablas, 48 llaves, método de pago, política activa, catálogos 6/26/42/10 y cero registros demo. Portada, asistente, publicaciones, identidad y phpMyAdmin respondieron 200; Auth/config respondió 503 porque el ZIP no incluye credenciales públicas de Supabase. Nueve rutas privadas devolvieron 403; Host ajeno y POST con `X-Forwarded-For` devolvieron 404. No se tocó la base de producción.
+- Pruebas sobre el ZIP exacto `4bb83ad2…`: `local_database_installer_test.php`, `admin_authorization_test.php`, `auth_actor_test.php`, `xampp_paths_test.php`, `installer_portability_test.py`, `local_diagnostic_test.py`, `documentation_test.py`, lint PHP 8.0 de 285 archivos, `httpd -t`, `unzip -t` y escaneo de rutas/secretos. En la pasada amplia anterior también pasaron `perfil_correo_conciliacion_test.php`, sidecar (11/11; eval 100/100), espejo PostgreSQL (`schema_test.php` + `schema_eval.php`, 100/100) y suite frontend (436/436). PowerShell no está instalado en el host Linux; el script Windows tiene solo cobertura estática.
+- Revisiones Thermo finales: seguridad encontró la prioridad errónea de `mysql.json` frente a variables `DB_*` parciales; se corrigió y probó que los campos no vacíos prevalecen, mientras los vacíos del ejemplo permiten el asistente. No encontró otros defectos. Calidad confirmó la coherencia de esa regla y que los 48 archivos del paquete coinciden con el worktree; sus observaciones sobre el comentario de `.htaccess`, el diagnóstico, variable sin uso y hash de memoria quedaron corregidas.
+- **Veredicto: DONE_WITH_CONCERNS.** Apache con `AllowOverride None` puede servir archivos privados estáticos aunque PHP falle con 503; la alternativa segura requiere `AllowOverride All` o `DocumentRoot` en `Public/` con sus reglas activas. El XAMPP del profesor sigue sin comprobarse y Auth requiere configurar Supabase; por eso no marcar `ZIP_READY_FOR_CALIDAD`. No se modificó producción ni el PR #47.
+
+### 2026-10-12 · fix/xampp-linux-local · Cierre para Calidad: correo consistente, controladores divididos y migraciones repetibles
+- **Cambio de correo (DEC-CORREO-001):** tabla `tbpersonacorreocambio` en los 4 lugares (48 tablas), modelo `PersonaCorreoCambio`,
+  `CorreoCambioService` y conciliación en `SupabaseActorResolver` (ver "Cambio de correo consistente"). `SupabaseAuthAdmin` ganó
+  `correoConfirmado()`. Pruebas: nueva `Tests/perfil_correo_conciliacion_test.php` (10 puntos de fallo; sin la conciliación falla con
+  409). Comprobado además contra Apache de XAMPP y el Supabase de pruebas con la cuenta sintética: 16/16 pasos, incluida una
+  interrupción real (Supabase con el correo nuevo y `tbpersona` con el anterior) que la primera petición concilió.
+- **Controladores (observación de Calidad):** `ProductorController` pasó de 582 a 396 líneas: la dirección principal
+  (`api/v1/productores/direccion`) tiene su controlador, `ProductorDireccionController` (`procesar()`; ya no existen
+  `procesarDireccion()` ni `crearDireccion()` en `ProductorController`). `AnimalPublicacionController` pasó de 587 a 492: los
+  validadores de campo (`texto`, `numero`, `validarTodos`, `imagenUrl`) viven en `Application/Service/CampoValidacion.php`.
+  **Ningún controlador carga ya a otro controlador.** Sin cambios en rutas ni en respuestas JSON.
+- **Migraciones:** la `009` fallaba (error 1146) en toda base ya normalizada: MySQL resuelve la tabla de una subconsulta aunque
+  el `IF` no tome esa rama; ahora usa `PREPARE`. `tbadministrador` nunca tuvo migración: la `025` la crea si falta. Y la `025`
+  **no era todo-o-nada en phpMyAdmin**: su importación sigue después del error de la comprobación y dejó 11 llaves declaradas con
+  un identificador repetido; ahora cada `ALTER` exige `@repetidos = 0`. Prueba nueva `Tests/migraciones_cadena_test.php`.
+- **Respaldos antiguos:** `Avance03` (15 tablas, sin llaves) restaurado en MySQL 8.0 y migrado de la `006` a la `026`: 48 tablas,
+  48 llaves, mismas filas y misma estructura que una instalación limpia. Procedimiento en `Documentation/Respaldos.md`.
+- **phpMyAdmin:** la 025 y la 026 importadas por su formulario sobre MariaDB 10.4.32 (base anterior con datos, repetición y caso
+  con un identificador repetido). **PostgreSQL 16:** `migrate.php` sobre una base con el esquema de `origin/dev` (47 tablas, 0
+  llaves) dos veces → 48 tablas, 48 llaves, RLS en las 48; con un id repetido deja esa tabla sin llave, avisa y no tumba el
+  arranque; conciliación de correo probada también ahí.
+- `Database/Tests/personacapacidades_eval.php` fijaba 15 tablas desde hace meses (fallaba sin que nadie lo corriera): ahora 48.
+- Cuidados: una tabla nueva también va en `test_cleanup_productores()` si cuelga de la Persona. Si agregas un `ALTER` a una
+  migración con comprobación previa, condiciona el `ALTER` mismo: phpMyAdmin no se detiene en el primer error.
+- **Seguridad:** la clave secreta del Supabase de **pruebas** (`ganado-cerca-xampp-tests`, no producción) quedó escrita en un
+  registro local de sesión de Codex y en archivos temporales; nunca entró a Git. Se redactó del registro. **Dilan decidió no
+  rotarla**; si ese proyecto se sigue usando, rotarla en Settings → API Keys.
+- **Navegador con sesión (cuenta sintética, Supabase de pruebas):** Chromium 152 y Firefox 153 automatizados, a 1366 px y 390 px:
+  Explorar, Ajustes, Mi panel, Publicar, Fletes, Subastas y Me interesa cargan con 200, sin errores de JavaScript, sin scroll
+  horizontal y con cada campo visible etiquetado (el buscador del encabezado usa una etiqueta `screen-reader-only`). El único
+  aviso de consola es el 403 esperado de `api/v1/admin/status` para una cuenta que no es administradora. **No se probó a mano**
+  el llenado de formularios, los diálogos ni el panel de administración en el navegador.
+- Revisión independiente (dos pasadas): un `PENDIENTE` de otra cuenta de Supabase o uno que no se puede completar ya no se
+  cancela ni se anuncia como completado (409 "pida a un administrador que lo revise"); la conciliación tampoco avanza hacia el
+  correo de un administrador. **Cuidado:** una base MySQL anterior sin la `026` responde 503 con el nombre de la migración a toda
+  sesión sin Persona (registro y administradores sin Persona): aplíquela antes de usar la app. Si falta `SUPABASE_SECRET_KEY`, un
+  intento de cambio de correo queda `PENDIENTE` y los siguientes responden 503 hasta configurarla.
+
+### 2026-10-12 · fix/xampp-linux-local · Sesión vencida en XAMPP y SQL fuera de los controladores
+- **Sesión vencida o cerrada = 401 también en XAMPP.** Sin el servicio Node, `SupabaseActorResolver` valida el JWT directo contra
+  `SUPABASE_URL/auth/v1/user`, y Supabase responde **403** a un token inválido, vencido o de una sesión cerrada. PHP lo reenviaba
+  y el navegador (que solo trata el 401 como sesión terminada) mostraba un error en vez de volver a Entrar. Ahora, en la
+  verificación directa, 401 y 403 salen como **401**. Con `SUPABASE_AUTH_VERIFY_URL` (servicio Node) el contrato no cambia.
+  Prueba en `Tests/auth_actor_test.php`. Se encontró probando el flujo real contra XAMPP, no en las pruebas con dobles.
+- **Ningún controlador prepara ni ejecuta SQL** (observación de Calidad sobre MVC). Las 9 consultas que quedaban en 6
+  controladores pasaron a sus modelos, sin cambiar respuestas: `Administrador::existeCorreo`,
+  `ProductorFinca::listarActivasPorNombre` y `::nombresUsadosPorOtroProductor`, `AnimalComercial::publicacionActiva`,
+  `Persona::buscarIdentidad` y `::capacidadIds`. Gate nuevo `Tests/controladores_sin_sql_test.php`: falla si vuelve a
+  aparecer `->prepare(`, `->query(` o `->exec(` en `Application/Controller/`.
+- Cuidado: un controlador que empieza a usar un modelo debe agregarlo a la lista `foreach ([...] as $modelo)` de su endpoint
+  en `Public/api/` (lo exige `api_requires_test`); se agregó `Administrador` en `mi-perfil.php` y `subastas.php`.
+- Pendiente en producción: `ensurePrimaryKeys()` no fija `lock_timeout` (47 `ALTER` con bloqueo exclusivo, una sola vez) y una
+  tabla con ids repetidos queda sin llave hasta limpiarla. Si la bitácora de producción tiene los ids repetidos de Cuidados
+  #12, hay que corregirlos a mano para que tenga su llave.
+- ~~`ProductorController` y `AnimalPublicacionController` de ~580 líneas~~: divididos el 12/10 (ver el registro "Cierre para
+  Calidad").
+- Comprobado contra XAMPP real y el Supabase de pruebas: registro, reintento, correo distinto, datos inválidos, otra cuenta
+  con la misma cédula, edición de perfil con histórico de teléfono, cierre de sesión y nuevo login, mirando las filas en MySQL
+  (24 casos). Storage con dos usuarios: 19 casos (carpeta ajena, sobrescritura, borrado, anónimo, documento privado).
+
+### 2026-10-12 · fix/xampp-linux-local · Una llave primaria por tabla (DEC-CALIDAD-PK-001)
+- **Regla corregida.** Calidad pide: "Cada tabla debe tener su llave primaria. No trabajamos con claves foráneas y
+  restricciones de negocio en la BD". El proyecto lo había leído como "cero claves". Ahora las **47 tablas** declaran
+  `PRIMARY KEY (<tabla>id)` sobre el identificador que ya tenían; no hay columnas nuevas. Siguen prohibidos FK, UNIQUE, CHECK,
+  DEFAULT, AUTO_INCREMENT, índices adicionales, triggers y rutinas, y **PHP sigue generando los ids** con `MAX+1` bajo `NamedLock`.
+- Lugares: `000instalacioncompleta.sql`, migración `025llavesprimarias.sql` (MySQL/MariaDB), `schema.sql` de Postgres y
+  `ensurePrimaryKeys()` en `migrate.php`. **Las migraciones siguientes empiezan en `026`.**
+- **Tabla nueva = trae su `PRIMARY KEY (<tabla>id)`** en el SQL canónico y en `schema.sql`; si no, fallan `schema_test`,
+  `naming_gate` y las pruebas de `services/supabase-database`.
+- La migración 025 cuenta primero los ids repetidos y se detiene antes del primer `ALTER` si hay alguno
+  (`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS`); se puede repetir. En Postgres, una tabla con ids repetidos o nulos se
+  deja sin llave y `migrate.php` escribe `supabase_primary_key_pendiente tablas=...` en la salida de error **sin tumbar el
+  despliegue**: revisar ese aviso en los logs de Vercel después del primer despliegue con este cambio.
+- Gates que cambiaron de "cero restricciones" a "solo la llave primaria": `Tests/schema_test.php`, `naming_gate.php`,
+  `naming_eval.php`, `pagometodo_test.php`, `Database/Tests/personacapacidades_gate.php`, `comprobacionestructura.sql`,
+  las pruebas y la evaluación de `services/supabase-database`, `Tools/diagnostico-local.php` (`llaves_primarias`) y
+  `Tools/test-restore.sh`. **Los respaldos anteriores (`Database/Backups/`) no tienen llaves:** `test-restore.sh` los rechaza
+  hasta que se genere un respaldo nuevo.
+- Documentación: `AGENTS.md`, README, `Decisiones.md` (DEC-CALIDAD-PK-001; DEC-C04-002 queda sustituida en parte),
+  `GuiaDefensa.md`, `Respaldos.md`, guía de XAMPP, DER (marca `PK`) y diccionario. De paso se agregaron al diccionario las
+  fichas de `tbadministrador`, los dos históricos de teléfono y `tbanimalpublicacioninteraccion`, y al DER
+  `tbadministrador` y `tbanimalpublicacioninteraccion`, que nunca estuvieron.
+- Comprobado: instalación limpia (instalador y SQL) y migración de una base con datos en MariaDB 10.4.32 y MySQL 5.7.44;
+  base nueva, esquema anterior e id repetido en PostgreSQL 16. **No se aplicó a producción.**
+
+### 2026-10-12 · fix/xampp-linux-local · La app corre en XAMPP real (PHP 8.0, MariaDB 10.4, MySQL 5.7)
+- **Mínimo real: PHP 8.0.** Los Dockerfiles siguen en PHP 8.3 (despliegue), pero ya no es el mínimo. Se quitaron las clases y
+  propiedades `readonly` (8.1/8.2), `fn (): null`, las referencias `f(...)` y la expansión de arreglos con claves de texto.
+  `ActorContext` y `HttpException` siguen siendo inmutables con el trait `Application/ReadOnlyProperties.php`.
+  `Configuration/Compatibility.php` corta con un mensaje claro en PHP < 8.0 y define `array_is_list()` si falta.
+  **No uses sintaxis de PHP 8.1+**: `Tests/runtime_compatibility_test.php` y el lint con `/opt/lampp/bin/php -l` lo detectan.
+- **UTC fijo:** `Configuration/Configuration.php` llama `date_default_timezone_set('UTC')`. El `php.ini` de XAMPP trae
+  Europe/Berlin y mezclaba fechas del negocio.
+- **JSON pasa a `LONGTEXT`** en las 4 columnas (`tbbitacoradatosanteriores`, `tbbitacoradatosnuevos`,
+  `tbanimalproduccionsaludproduccion`, `tbanimalproduccionsaludsalud`): en MariaDB el alias `JSON` crea un
+  `CHECK(json_valid(...))` implícito. PHP sigue validando y codificando. Migración `024jsontextportable.sql` (solo MySQL/MariaDB;
+  Postgres no cambia). Las migraciones siguientes empiezan en `025`.
+- **SQL portable:** la última observación del animal ya no usa `ROW_NUMBER() OVER` (no existe en MySQL 5.7) sino
+  `NOT EXISTS` de una posterior por fecha e id (`AnimalComercial`, dos consultas; prueba `latest_observation_portability_test.php`).
+  `CompraSolicitud::buscar` usa `FOR UPDATE OF s` solo en Postgres; MySQL/MariaDB usan `FOR UPDATE`.
+- **Instalador:** `instalar-local.sh` usa siempre TCP con `DB_HOST`/`DB_PORT`, acepta `MYSQL_CLIENT` o `XAMPP_ROOT`, no ejecuta
+  `sudo` ni cambia la contraseña de una cuenta existente. `Tools/diagnostico-local.php` (CLI, solo lectura) informa versiones,
+  extensiones, UTC, conexión y estructura. XAMPP **no necesita Node ni Composer**.
+- **Cambio de correo (Mi perfil):** `SupabaseAuthAdmin::cambiarCorreo` ya no acepta cualquier HTTP 200: exige el mismo `id`, el
+  correo pedido y `email_confirmed_at`; ante un timeout consulta la cuenta. Si MySQL falla después de cambiar el correo en
+  Supabase, `MiPerfilController` restaura el correo remoto (`recuperarCorreo`) solo cuando el ROLLBACK quedó confirmado; con el
+  resultado local desconocido responde 503 y no compensa a ciegas. Prueba `perfil_correo_recuperacion_test.php`.
+  **No está cerrado del todo:** si el `COMMIT` de MySQL falla después de que Supabase ya cambió el correo, el resultado local
+  es desconocido, se responde 503 y **la cuenta puede quedar con el correo nuevo y la Persona con el viejo** (al entrar daría
+  409 "sin vínculo"). Es raro, pero no hay herramienta de reconciliación: se arregla a mano alineando los dos correos.
+  Además el cambio hace hasta 4 llamadas a Supabase dentro de la transacción y de los locks; con Supabase lento frena las
+  demás escrituras.
+- **Frontend portable:** sin `Array.at()` ni `Object.hasOwn()`; `shared/dialog.js` exporta `openDialog`/`closeDialog` con un modal
+  de reserva si el navegador no tiene `<dialog>` nativo; Font Awesome 7.3.1 va **local** en `Public/vendor/` (agregado con
+  `git add -f` porque `vendor/` está ignorado); los 13 paneles privados muestran un aviso con "Recargar" y "Volver a entrar" si la
+  guarda de sesión no responde en 3,5 s (`shared/panel-runtime.js`, parcial `Application/View/shared/panel-runtime.php`).
+  Se subieron los `?v=` de las 24 vistas y de los imports compartidos (`form-2`, `draft-2`, `pendiente-1`, `animales-8`).
+- **Pruebas sin estado compartido:** `mi_vehiculos_test` dejaba `tbcomprador` huérfanos y un id de Persona reutilizado los
+  heredaba (causa de los 200 en vez de 201 en `registro_publico_test`); `publicacion_interaccion_test` crea su propia
+  publicación y ya no necesita la semilla demo; `admin_shell_ux` compara la cadena en vez de fijar `auth-gate-2`.
+- **Comprobado (no en Docker):** XAMPP 8.0.30 en Linux (PHP 8.0.30 por `apache2handler`, Apache 2.4.58, MariaDB 10.4.32,
+  phpMyAdmin 5.2.1): 78/78 pruebas PHP (77 al momento de este cambio), instalación desde cero por phpMyAdmin, 436/436 frontend. MySQL 5.7.44: importación y
+  tres pruebas de publicaciones e inventario. Lint y `runtime_compatibility_test` en PHP 8.1, 8.2 y 8.3. El binario de XAMPP
+  arranca en userspace de Ubuntu 18.04 y 20.04. **La versión del equipo del profesor sigue sin conocerse.**
+- Supabase de pruebas `ganado-cerca-xampp-tests` (no es producción): buckets `publicaciones` (público) y `documentos` (privado)
+  con las dos políticas INSERT por carpeta propia. Sus claves viven fuera del repositorio.
+- Cuidado: Auth, Storage, Realtime y mapas siguen necesitando Internet; la portada local no demuestra que funcionen.
+
+### 2026-10-12 · fix/xampp-linux-local · Guía reproducible para XAMPP Linux
+- `Documentation/Instalacion-XAMPP.md` mantiene el repositorio fuera de `htdocs` y publica solo `Public/` con VirtualHost, importa
+  desde cero el esquema canónico y las semillas, crea un usuario PDO local y verifica que `.env` responda 404. `README.md` enlaza
+  la guía y elimina la alternativa insegura de servir la raíz como subcarpeta. Gate: `Tests/documentation_test.py`.
 
 ### 2026-10-12 · jefersonbustamante · Validaciones juntas en los formularios, teclas numéricas y login más claro
 - **Todos los campos a la vez:** nuevo `Public/js/shared/validacion-nativa.js` (`nativa-1`): `erroresNativos(form)` devuelve cada campo inválido

@@ -8,9 +8,12 @@ require_once dirname(__DIR__) . '/Application/Controller/PublicacionInteraccionC
 
 use Application\Auth\ActorContext;
 use Application\Controller\PublicacionInteraccionController;
+use Application\Model\AnimalComercial;
 
 $identificaciones = [];
 $personaId = null;
+$animalId = null;
+$publicacionId = null;
 
 try {
     $db = test_db();
@@ -25,13 +28,30 @@ try {
     $fila = $buscar->fetch();
     test_assert(is_array($fila), 'La fixture debe dejar una Persona');
     $personaId = (int) $fila['tbpersonaid'];
-    // Cualquier publicación activa sirve (antes se fijaba la 1, que deja de existir si se vuelve a sembrar la base).
-    $activa = $db->prepare("SELECT ep.tbanimalpublicacionid FROM tbanimalpublicacionestadoperiodo ep
-        WHERE ep.tbanimalpublicacionestadoperiodofechafin IS NULL AND ep.tbanimalpublicacionestadoperiodoestado = 'ACTIVO'
-        ORDER BY ep.tbanimalpublicacionid LIMIT 1");
-    $activa->execute();
-    $publicacionId = (int) $activa->fetchColumn();
-    test_assert($publicacionId > 0, 'La prueba necesita una publicación activa (Tools/seed-publicaciones-demo.php)');
+    $buscarFinca = $db->prepare('SELECT tbfincaid FROM tbfinca WHERE tbproductorid = :id');
+    $buscarFinca->execute(['id' => $persona['productorId']]);
+    $fincaId = (int) $buscarFinca->fetchColumn();
+    test_assert($fincaId > 0, 'La fixture debe crear su propia finca');
+
+    $animales = new AnimalComercial($db);
+    $db->beginTransaction();
+    try {
+        $animalId = $animales->ejecutarConBloqueoAlta('tbanimal',
+            static fn (): int => $animales->crearAnimal(
+                'INT-' . test_token('animal'), 'HEMBRA', 'Brahman', 'PRUEBA'
+            ));
+        $publicacionId = $animales->ejecutarConBloqueoAlta('tbanimalpublicacion',
+            static fn (): int => $animales->publicarAnimal(
+                $animalId, (int) $persona['productorId'], $fincaId,
+                ['titulo' => 'Interacción ' . test_token('titulo'), 'origen' => 'PRUEBA', 'estado' => 'ACTIVO']
+            ));
+        $db->commit();
+    } catch (Throwable $error) {
+        if ($db->inTransaction()) $db->rollBack();
+        $animalId = null;
+        $publicacionId = null;
+        throw $error;
+    }
 
     $sinSesion = new PublicacionInteraccionController($db, ActorContext::noAutenticado());
     test_same(401, $sinSesion->procesar('POST', [
@@ -83,9 +103,22 @@ try {
 
     echo "OK publicacion_interaccion_test: actor Persona, persistencia, validación y bitácora.\n";
 } finally {
+    $db = test_db();
     if ($personaId !== null) {
-        $db = test_db();
+        $interacciones = $db->prepare('SELECT tbanimalpublicacioninteraccionid FROM tbanimalpublicacioninteraccion WHERE tbpersonaid = :personaId');
+        $interacciones->execute(['personaId' => $personaId]);
+        $borrarEvento = $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraentidad = 'PUBLICACION_INTERACCION' AND tbbitacoraregistroidentificacionnumero = :registro");
+        foreach ($interacciones->fetchAll(PDO::FETCH_COLUMN) as $id) {
+            $borrarEvento->execute(['registro' => 'PUBLICACION_INTERACCION:' . $id]);
+        }
         $db->prepare('DELETE FROM tbanimalpublicacioninteraccion WHERE tbpersonaid = :personaId')->execute(['personaId' => $personaId]);
+    }
+    if ($publicacionId !== null) {
+        $db->prepare('DELETE FROM tbanimalpublicacionestadoperiodo WHERE tbanimalpublicacionid = :id')->execute(['id' => $publicacionId]);
+        $db->prepare('DELETE FROM tbanimalpublicacion WHERE tbanimalpublicacionid = :id')->execute(['id' => $publicacionId]);
+    }
+    if ($animalId !== null) {
+        $db->prepare('DELETE FROM tbanimal WHERE tbanimalid = :id')->execute(['id' => $animalId]);
     }
     test_cleanup_productores($identificaciones);
 }

@@ -27,13 +27,13 @@ try {
     // GET /productores-direccion — consultarDireccion()
     // ============================================================
 
-    $sinParametro = test_controller()->procesarDireccion('GET', [], []);
+    $sinParametro = test_direccion_controller()->procesar('GET', [], []);
     test_same(422, $sinParametro['status'], 'GET sin identificacionNumero debe rechazarse');
 
-    $formatoInvalido = test_controller()->procesarDireccion('GET', ['identificacionNumero' => '   '], []);
+    $formatoInvalido = test_direccion_controller()->procesar('GET', ['identificacionNumero' => '   '], []);
     test_same(422, $formatoInvalido['status'], 'GET con identificación vacía/inválida debe rechazarse');
 
-    $noExiste = test_controller()->procesarDireccion('GET', ['identificacionNumero' => 'NOEXISTE999'], []);
+    $noExiste = test_direccion_controller()->procesar('GET', ['identificacionNumero' => 'NOEXISTE999'], []);
     test_same(404, $noExiste['status'], 'GET de productor inexistente debe responder 404');
     test_same(
         'Productor no encontrado.',
@@ -41,7 +41,7 @@ try {
         'El mensaje de "no encontrado" debe ser distinguible del de "sin dirección"'
     );
 
-    $consultaValida = test_controller()->procesarDireccion('GET', ['identificacionNumero' => $id], []);
+    $consultaValida = test_direccion_controller()->procesar('GET', ['identificacionNumero' => $id], []);
     test_same(200, $consultaValida['status'], 'GET de productor existente con dirección debe responder 200');
     test_same($id, $consultaValida['body']['data']['identificacionNumero'], 'GET debe devolver la identificación consultada');
     test_assert(is_array($consultaValida['body']['data']['direccionPrincipal']), 'GET debe devolver la dirección');
@@ -50,7 +50,7 @@ try {
     // estado en un flujo normal; lo forzamos para probar la rama de código).
     $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid = :id')->execute(['id' => $productorId]);
 
-    $sinDireccion = test_controller()->procesarDireccion('GET', ['identificacionNumero' => $id], []);
+    $sinDireccion = test_direccion_controller()->procesar('GET', ['identificacionNumero' => $id], []);
     test_same(404, $sinDireccion['status'], 'GET de productor sin dirección debe responder 404');
     test_same(
         'El productor no tiene una dirección registrada.',
@@ -69,22 +69,22 @@ try {
     // PUT /productores-direccion — actualizarDireccion()
     // ============================================================
 
-    $putSinDireccion = test_controller()->procesarDireccion('PUT', [], ['identificacionNumero' => $id]);
+    $putSinDireccion = test_direccion_controller()->procesar('PUT', [], ['identificacionNumero' => $id]);
     test_same(422, $putSinDireccion['status'], 'PUT sin direccionPrincipal debe rechazarse');
 
-    $putCampoDesconocido = test_controller()->procesarDireccion('PUT', [], [
+    $putCampoDesconocido = test_direccion_controller()->procesar('PUT', [], [
         'identificacionNumero' => $id,
         'direccionPrincipal' => test_direccion_payload(['campoInventado' => 'x']),
     ]);
     test_same(422, $putCampoDesconocido['status'], 'PUT con campo desconocido dentro de direccionPrincipal debe rechazarse');
 
-    $putNoExiste = test_controller()->procesarDireccion('PUT', [], [
+    $putNoExiste = test_direccion_controller()->procesar('PUT', [], [
         'identificacionNumero' => 'NOEXISTE999',
         'direccionPrincipal' => test_direccion_payload(),
     ]);
     test_same(404, $putNoExiste['status'], 'PUT de productor inexistente debe responder 404');
 
-    $putValido = test_controller()->procesarDireccion('PUT', [], [
+    $putValido = test_direccion_controller()->procesar('PUT', [], [
         'identificacionNumero' => $id,
         'direccionPrincipal' => test_direccion_payload(['provincia' => 'Limón']),
     ]);
@@ -93,7 +93,7 @@ try {
 
     // Productor inactivo (se desactiva/reactiva vía el endpoint de productor, no el de dirección).
     test_controller()->procesar('DELETE', [], ['identificacionNumero' => $id]);
-    $putInactivo = test_controller()->procesarDireccion('PUT', [], [
+    $putInactivo = test_direccion_controller()->procesar('PUT', [], [
         'identificacionNumero' => $id,
         'direccionPrincipal' => test_direccion_payload(),
     ]);
@@ -102,7 +102,7 @@ try {
 
     // Productor existente SIN fila de dirección.
     $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid = :id')->execute(['id' => $productorId]);
-    $putSinFila = test_controller()->procesarDireccion('PUT', [], [
+    $putSinFila = test_direccion_controller()->procesar('PUT', [], [
         'identificacionNumero' => $id,
         'direccionPrincipal' => test_direccion_payload(),
     ]);
@@ -123,7 +123,7 @@ try {
     // DELETE /productores-direccion — eliminarDireccion()
     // ============================================================
 
-    $delCampoDesconocido = test_controller()->procesarDireccion('DELETE', [], [
+    $delCampoDesconocido = test_direccion_controller()->procesar('DELETE', [], [
         'identificacionNumero' => $id,
         'direccionPrincipal' => test_direccion_payload(),
     ]);
@@ -134,7 +134,7 @@ try {
         'rechazarCamposDesconocidos debe reportar direccionPrincipal como campo no permitido en DELETE'
     );
 
-    $delSinIdentificacion = test_controller()->procesarDireccion('DELETE', [], ['identificacionNumero' => '']);
+    $delSinIdentificacion = test_direccion_controller()->procesar('DELETE', [], ['identificacionNumero' => '']);
     test_same(422, $delSinIdentificacion['status'], 'DELETE con identificación vacía debe rechazarse');
     test_same(
         'La identificación es obligatoria.',
@@ -142,10 +142,10 @@ try {
         'El error debe venir en errors.identificacionNumero, no en message'
     );
 
-    $delNoExiste = test_controller()->procesarDireccion('DELETE', [], ['identificacionNumero' => 'NOEXISTE999']);
+    $delNoExiste = test_direccion_controller()->procesar('DELETE', [], ['identificacionNumero' => 'NOEXISTE999']);
     test_same(404, $delNoExiste['status'], 'DELETE de productor inexistente debe responder 404');
 
-    $delValido = test_controller()->procesarDireccion('DELETE', [], ['identificacionNumero' => $id]);
+    $delValido = test_direccion_controller()->procesar('DELETE', [], ['identificacionNumero' => $id]);
     test_same(200, $delValido['status'], 'DELETE válido debe responder 200');
     test_same('', $delValido['body']['data']['direccionPrincipal']['provincia'], 'DELETE debe vaciar provincia');
     test_same('', $delValido['body']['data']['direccionPrincipal']['canton'], 'DELETE debe vaciar cantón');
@@ -162,13 +162,13 @@ try {
 
     // Productor inactivo.
     test_controller()->procesar('DELETE', [], ['identificacionNumero' => $id]); // desactiva el productor
-    $delInactivo = test_controller()->procesarDireccion('DELETE', [], ['identificacionNumero' => $id]);
+    $delInactivo = test_direccion_controller()->procesar('DELETE', [], ['identificacionNumero' => $id]);
     test_same(409, $delInactivo['status'], 'DELETE sobre productor inactivo debe responder 409');
     test_controller()->procesar('PATCH', [], ['identificacionNumero' => $id]); // reactivar
 
     // Productor existente SIN fila de dirección: "no hay nada que eliminar".
     $db->prepare('DELETE FROM tbproductordireccion WHERE tbproductorid = :id')->execute(['id' => $productorId]);
-    $delSinFila = test_controller()->procesarDireccion('DELETE', [], ['identificacionNumero' => $id]);
+    $delSinFila = test_direccion_controller()->procesar('DELETE', [], ['identificacionNumero' => $id]);
     test_same(404, $delSinFila['status'], 'DELETE sobre productor sin fila de dirección debe responder 404');
     test_same(
         'El productor no tiene una dirección registrada; no hay nada que eliminar.',
@@ -208,7 +208,7 @@ try {
 
     $lanzoExcepcion = false;
     try {
-        test_controller()->procesarDireccion('GET', ['identificacionNumero' => $id], []);
+        test_direccion_controller()->procesar('GET', ['identificacionNumero' => $id], []);
     } catch (RuntimeException $excepcion) {
         $lanzoExcepcion = true;
         test_same(

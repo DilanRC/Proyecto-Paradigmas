@@ -16,14 +16,14 @@ final class PublicacionInteraccionController
 {
     private const TIPOS = ['ME_INTERESA', 'PASAR', 'CONTACTAR'];
 
-    private readonly PublicacionInteraccion $interacciones;
-    private readonly AnimalComercial $animales;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private PublicacionInteraccion $interacciones;
+    private AnimalComercial $animales;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
     ) {
         $this->interacciones = new PublicacionInteraccion($conexion);
@@ -106,7 +106,7 @@ final class PublicacionInteraccionController
             ]);
         }
         // Quitar se permite aunque la publicación ya no esté activa, para limpiar la lista.
-        if ($accion === 'REGISTRAR' && !$this->publicacionActiva((int) $publicacionId)) {
+        if ($accion === 'REGISTRAR' && !$this->animales->publicacionActiva((int) $publicacionId)) {
             throw new HttpException('La publicación ya no está activa.', 409);
         }
 
@@ -159,20 +159,6 @@ final class PublicacionInteraccionController
         }
 
         return $this->respuesta(true, $accion === 'RETIRAR' ? 'Publicación quitada de tu lista.' : 'Interacción guardada correctamente.', $resultado, 201);
-    }
-
-    private function publicacionActiva(int $publicacionId): bool
-    {
-        $sentencia = $this->conexion->prepare(
-            'SELECT 1 FROM tbanimalpublicacionestadoperiodo
-             WHERE tbanimalpublicacionid = :publicacionId
-               AND tbanimalpublicacionestadoperiodofechafin IS NULL
-               AND tbanimalpublicacionestadoperiodoestado = :estado
-             LIMIT 1'
-        );
-        $sentencia->execute(['publicacionId' => $publicacionId, 'estado' => 'ACTIVO']);
-
-        return $sentencia->fetchColumn() !== false;
     }
 
     private function respuesta(bool $exito, string $mensaje, ?array $datos, int $status,

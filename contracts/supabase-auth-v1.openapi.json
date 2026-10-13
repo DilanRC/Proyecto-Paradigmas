@@ -17,10 +17,10 @@
       "get": {
         "security": [{ "bearerAuth": [] }],
         "responses": {
-          "200": { "description": "Verified Supabase user identity; confirmation state is optional" },
+          "200": { "description": "JWT identity matched to the current Supabase Auth user; email_confirmed_at is present and may be null" },
           "401": { "description": "Missing or invalid JWT" },
-          "403": { "description": "Valid token without the required provider authorization" },
-          "503": { "description": "Required environment is missing" }
+          "403": { "description": "JWT rejected by Supabase Auth" },
+          "503": { "description": "Supabase Auth user lookup failed or did not match the verified JWT identity" }
         }
       }
     }

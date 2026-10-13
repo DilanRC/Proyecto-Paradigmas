@@ -6,6 +6,9 @@ namespace Configuration;
 
 use PDO;
 
+require_once __DIR__ . '/Configuration.php';
+require_once __DIR__ . '/LocalDatabaseBootstrap.php';
+
 final class Database
 {
     private static ?PDO $connection = null;
@@ -20,7 +23,8 @@ final class Database
             return self::$connection;
         }
 
-        foreach (['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL'] as $postgresVariable) {
+        $postgresVariables = LocalDatabaseCredentials::mysqlForced() ? [] : ['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL'];
+        foreach ($postgresVariables as $postgresVariable) {
             $postgresUrl = getenv($postgresVariable);
             if (is_string($postgresUrl) && $postgresUrl !== '' && $postgresUrl !== '[SENSITIVE]') {
                 try {
@@ -34,12 +38,16 @@ final class Database
             }
         }
 
-        $host = self::environmentVariable('DB_HOST', '127.0.0.1');
-        $port = self::environmentVariable('DB_PORT', '3306');
-        $databaseName = self::environmentVariable('DB_NAME', 'bdmercadoganadero');
+        // XAMPP: la base de esta computadora se localiza, se reutiliza o se crea sin intervención.
+        // Docker (DB_HOST=db) y cualquier MySQL remoto siguen con la conexión declarada, sin cambios.
+        if (LocalDatabaseBootstrap::applies()) {
+            return self::$connection = LocalDatabaseBootstrap::connection();
+        }
+
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', self::environmentVariable('DB_HOST', '127.0.0.1'),
+            self::environmentVariable('DB_PORT', '3306'), self::environmentVariable('DB_NAME', 'bdmercadoganadero'));
         $username = self::environmentVariable('DB_USER', 'root');
         $password = self::environmentVariable('DB_PASS', '');
-        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $databaseName);
 
         self::$connection = new PDO($dsn, $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -79,6 +87,6 @@ final class Database
     {
         $value = getenv($name);
 
-        return $value === false ? $default : $value;
+        return $value === false || $value === '' ? $default : $value;
     }
 }

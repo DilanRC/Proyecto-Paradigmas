@@ -4,19 +4,26 @@ declare(strict_types=1);
 
 namespace Application\Auth;
 
-final readonly class ActorContext
+require_once dirname(__DIR__) . '/ReadOnlyProperties.php';
+
+final class ActorContext implements \JsonSerializable
 {
+    use \Application\ReadOnlyProperties;
+
+    private const READ_ONLY_PROPERTIES = ['tipo', 'personaId', 'proveedorSujeto', 'correoElectronico', 'rolTecnico', 'correoConfirmado'];
+
     private function __construct(
-        public string $tipo,
-        public ?int $personaId,
-        public ?string $proveedorSujeto,
-        public ?string $correoElectronico,
-        public ?string $rolTecnico,
+        private string $tipo,
+        private ?int $personaId,
+        private ?string $proveedorSujeto,
+        private ?string $correoElectronico,
+        private ?string $rolTecnico,
+        private bool $correoConfirmado,
     ) {}
 
     public static function noAutenticado(): self
     {
-        return new self('NO_AUTENTICADO', null, null, null, null);
+        return new self('NO_AUTENTICADO', null, null, null, null, false);
     }
 
     /**
@@ -28,6 +35,7 @@ final readonly class ActorContext
         string $proveedorSujeto,
         ?string $correoElectronico,
         ?string $rolTecnico,
+        bool $correoConfirmado = false,
     ): self {
         return new self(
             $personaId === null ? 'USUARIO_VERIFICADO' : 'PERSONA_AUTENTICADA',
@@ -35,6 +43,7 @@ final readonly class ActorContext
             $proveedorSujeto,
             $correoElectronico === null ? null : mb_strtolower(trim($correoElectronico), 'UTF-8'),
             $rolTecnico,
+            $correoConfirmado,
         );
     }
 
@@ -43,8 +52,9 @@ final readonly class ActorContext
         string $proveedorSujeto,
         ?string $correoElectronico,
         ?string $rolTecnico,
+        bool $correoConfirmado = false,
     ): self {
-        return self::usuarioVerificado($personaId, $proveedorSujeto, $correoElectronico, $rolTecnico);
+        return self::usuarioVerificado($personaId, $proveedorSujeto, $correoElectronico, $rolTecnico, $correoConfirmado);
     }
 
     public function estaAutenticado(): bool

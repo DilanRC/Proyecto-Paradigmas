@@ -17,7 +17,7 @@ final class SupabaseActorResolver
 
     public function __construct(?callable $transport = null)
     {
-        $this->transport = $transport ?? $this->defaultTransport(...);
+        $this->transport = $transport ?? \Closure::fromCallable([$this, 'defaultTransport']);
     }
 
     /** Endpoints normales: un JWT válido sin Persona sigue siendo conflicto. */
@@ -76,7 +76,11 @@ final class SupabaseActorResolver
             $payload = $this->normalizarUsuarioSupabase($payload);
         }
         if ($status === 401 || $status === 403) {
-            throw new HttpException($payload['error']['message'] ?? 'Sesión inválida.', $status);
+            // Supabase Auth responde 403 a un JWT inválido, vencido o de una sesión cerrada.
+            // Para la app eso es "sin sesión" (401), no "sin permiso": el navegador solo
+            // vuelve a Entrar con 401.
+            throw new HttpException($payload['error']['message'] ?? 'Sesión inválida.',
+                $respuestaUsuarioSupabase ? 401 : $status);
         }
         if ($status !== 200 || ($payload['success'] ?? false) !== true) {
             throw new HttpException('No fue posible validar la sesión.', 503);
@@ -87,6 +91,8 @@ final class SupabaseActorResolver
             && ($data['email_confirmed_at'] === null || $data['email_confirmed_at'] === false)) {
             throw new HttpException('Debe confirmar su correo antes de usar la cuenta.', 401);
         }
+        $correoConfirmado = is_string($data['email_confirmed_at'] ?? null)
+            && trim($data['email_confirmed_at']) !== '';
         $subject = is_string($data['id'] ?? null) ? trim($data['id']) : '';
         $email = is_string($data['email'] ?? null)
             ? mb_strtolower(trim($data['email']), 'UTF-8')
@@ -97,11 +103,19 @@ final class SupabaseActorResolver
         }
 
         $personaId = $this->personaIdPorCorreo($conexion, $email);
+        if ($personaId === null) {
+            // Un cambio de correo interrumpido deja la cuenta con el correo nuevo y tbpersona con el anterior.
+            require_once dirname(__DIR__) . '/Service/CorreoCambioService.php';
+            // Una petición paralela pudo conciliar entre las dos lecturas: se vuelve a mirar el vínculo.
+            $personaId = (new \Application\Service\CorreoCambioService($conexion))
+                ->conciliar($subject, $email, $role, $correoConfirmado)
+                ?? $this->personaIdPorCorreo($conexion, $email);
+        }
         if ($exigirPersona && $personaId === null) {
             throw new HttpException('La sesión verificada no tiene vínculo con una persona.', 409);
         }
 
-        return ActorContext::usuarioVerificado($personaId, $subject, $email, $role);
+        return ActorContext::usuarioVerificado($personaId, $subject, $email, $role, $correoConfirmado);
     }
 
     /**
@@ -187,11 +201,15 @@ final class SupabaseActorResolver
                 'method' => 'GET',
                 'header' => $headers,
                 'ignore_errors' => true,
-                'timeout' => 3,
+                'timeout' => 6,
             ],
         ]);
         $body = @file_get_contents($url, false, $context);
         if ($body === false) {
+            // Sin esto, un XAMPP sin salida a Internet o sin certificados raíz solo muestra "No fue posible validar la sesión".
+            error_log('[GanadoCerca] no se pudo consultar ' . parse_url($url, PHP_URL_HOST) . ' para validar la sesión: '
+                . (error_get_last()['message'] ?? 'sin detalle'));
+
             return ['status' => 0, 'body' => ''];
         }
 

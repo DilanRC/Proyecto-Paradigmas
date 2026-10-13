@@ -26,12 +26,12 @@ final class AdminFletesController
     private const ESTADOS_SOLICITUD = ['TODOS', ...CompraSolicitud::ESTADOS];
     private const ESTADOS_MODERABLES = ['RETIRADA', 'ACTIVA'];
 
-    private readonly TransportistaOferta $ofertas;
-    private readonly CompraSolicitud $solicitudes;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private TransportistaOferta $ofertas;
+    private CompraSolicitud $solicitudes;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->ofertas = new TransportistaOferta($conexion, new Direccion($conexion));
         $this->solicitudes = new CompraSolicitud($conexion);
