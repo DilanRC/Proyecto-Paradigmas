@@ -3,6 +3,7 @@ import { request } from './shared/api.js';
 import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
 import { safeImageUrl } from './explore.js?v=foto-4';
 import { digitosArete, errorArete, formatearArete } from './shared/arete.js';
+import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 
 const DRAFT_KEY = 'tindercows:publish-draft';
 // La foto elegida no viaja en el borrador: un File no se puede guardar.
@@ -180,11 +181,13 @@ function limpiarErrorServidor(control) {
     if (espacio) espacio.textContent = '';
 }
 
+/** Marca TODOS los campos con problemas a la vez (no una burbuja por intento) y enfoca el primero. */
 function validate(form) {
-    if (form.checkValidity()) return true;
-    const invalid = form.querySelector(':invalid');
-    invalid?.focus();
-    form.reportValidity();
+    const errores = erroresNativos(form);
+    if (Object.keys(errores).length === 0) return true;
+    const resumen = marcarErroresServidor(form, errores);
+    setStatus('error', 'Revisa estos datos antes de publicar:', resumen);
+    form.querySelector('[aria-invalid="true"]')?.focus();
     return false;
 }
 

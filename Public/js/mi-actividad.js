@@ -8,8 +8,9 @@ import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
-import { montarMisAnimales } from './mis-animales.js?v=animales-6';
+import { montarMisAnimales } from './mis-animales.js?v=animales-7';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 
 const ACTIVITY_API = 'api/v1/actividad';
@@ -443,7 +444,8 @@ async function savePublication(event) {
     const status = document.querySelector('#publication-form-status');
     const save = document.querySelector('#publication-save');
     const titulo = form.elements.titulo.value.trim();
-    if (!titulo) { setPublicationErrors({ titulo: 'Este dato es obligatorio.' }); mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
+    const invalidos = { ...erroresNativos(form), ...(!titulo && { titulo: 'Este campo es obligatorio.' }) };
+    if (Object.keys(invalidos).length) { setPublicationErrors(invalidos); mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
     setPublicationErrors({});
     save.disabled = true;
     form.setAttribute('aria-busy', 'true');
@@ -686,7 +688,7 @@ async function saveVehicle(event) {
     const status = document.querySelector('#vehicle-form-status');
     const save = document.querySelector('#vehicle-save');
     const datos = Object.fromEntries(new FormData(form).entries());
-    const errors = Object.fromEntries(['placa', 'vin', 'modelo'].filter((field) => !String(datos[field] ?? '').trim()).map((field) => [field, 'Este dato es obligatorio.']));
+    const errors = { ...erroresNativos(form), ...Object.fromEntries(['placa', 'vin', 'modelo'].filter((field) => !String(datos[field] ?? '').trim()).map((field) => [field, 'Este campo es obligatorio.'])) };
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) { mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
     save.disabled = true;

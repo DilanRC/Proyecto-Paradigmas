@@ -6,6 +6,7 @@ import { UBICACION_USUARIO_EVENT, capturarUbicacionAutomatica, leerUbicacionUsua
 import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=foto-3';
 import { montarEditorDireccion } from './shared/editor-direccion.js?v=oferta-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 import { provinciaDePunto, validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
 
@@ -201,6 +202,14 @@ async function guardarOferta(event) {
     const estado = $('#oferta-form-status');
     const guardar = $('#oferta-save');
     const numero = (valor) => (String(valor).trim() === '' ? null : Number(valor));
+    // Vehículo, radio y capacidad obligatorios, números sin letras ni decimales: todos los fallos juntos.
+    const nativos = erroresNativos(form);
+    if (Object.keys(nativos).length) {
+        mostrarErrores(nativos);
+        mostrarEstado(estado, 'Revisa los datos señalados.', 'error');
+        form.querySelector('[aria-invalid="true"]')?.focus();
+        return;
+    }
     const cuerpo = {
         vehiculoId: numero(form.elements.vehiculoId.value),
         radioKm: numero(form.elements.radioKm.value),
