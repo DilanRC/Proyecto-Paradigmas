@@ -25,7 +25,7 @@ $expectInvalid = static function (array $input) use ($assert): void {
 
 $environmentNames = [
     'VERCEL', 'POSTGRES_URL', 'POSTGRES_URL_NON_POOLING',
-    'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS',
+    'DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS', 'DB_DRIVER',
 ];
 $previousEnvironment = [];
 foreach ($environmentNames as $name) {
@@ -97,6 +97,38 @@ try {
         && $environmentCredentials['user'] === 'environment-user'
         && $environmentCredentials['password'] === 'environment-password',
         'Cualquier campo DB_* no vacío debe dar prioridad al entorno sobre la conexión guardada.');
+    // Lo que solo viene del archivo .env es un punto de partida: no desplaza la conexión guardada.
+    $envFile = tempnam(sys_get_temp_dir(), 'tcenv');
+    file_put_contents($envFile, "DB_HOST=127.0.0.1\nDB_PORT=3306\nDB_USER=root\nDB_PASS=\nDB_DRIVER=mysql\n");
+    foreach (['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASS', 'DB_DRIVER'] as $name) {
+        putenv($name);
+    }
+    \Configuration\loadEnvironmentFile($envFile);
+    unlink($envFile);
+    $assert(getenv('DB_USER') === 'root' && !LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment()
+        && LocalDatabaseInstaller::defaultCredentials()['user'] === 'test-only'
+        && LocalDatabaseInstaller::environmentDefaults()['user'] === 'root',
+        'Los DB_* del archivo .env son valores por defecto que el asistente puede reemplazar.');
+    putenv('DB_USER=servidor');
+    $assert(LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment(),
+        'Un DB_* que el servidor cambia respecto del archivo sí manda.');
+    putenv('POSTGRES_URL=postgres://u:p@db.example.test:5432/postgres');
+    $assert(LocalDatabaseCredentials::mysqlForced() && LocalDatabaseInstaller::environmentIsSupported(),
+        'DB_DRIVER=mysql mantiene MySQL local aunque el servidor herede POSTGRES_URL.');
+    putenv('DB_DRIVER');
+    $assert(!LocalDatabaseInstaller::environmentIsSupported(),
+        'Sin el selector, POSTGRES_URL sigue desactivando el asistente (producción).');
+    putenv('POSTGRES_URL');
+    foreach (['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASS'] as $name) {
+        putenv($name);
+    }
+
+    $columns = \schema_manifest()['columns'];
+    $assert(count($columns) === 48 && $columns['tbpersona']['tbpersonaid'] === 'int not null'
+        && \schema_manifest_column_signature('bigint(20) unsigned', false) === $columns['tbbitacora']['tbbitacoraid']
+        && \schema_manifest_column_signature('int(11)', true) === \schema_manifest_column_signature('INT', true),
+        'El manifiesto describe las columnas y compara tipos sin el ancho de los enteros.');
+
     $assert((fileperms($directory . DIRECTORY_SEPARATOR . 'mysql.json') & 0777) === 0600,
         'El archivo temporal de conexión debe tener permisos 0600.');
     LocalDatabaseCredentials::clearFailedAttempt();

@@ -69,9 +69,20 @@ $entrada = (string) file_get_contents($raiz . '/docker/apache/container-entrypoi
 test_assert(str_contains($entrada, '|| estado=$?') && str_contains($entrada, '"$estado" -eq 2'),
     'El arranque debe distinguir el esquema degradado de un fallo de migración');
 
-// El ZIP sale del commit y deja fuera memoria de agentes y respaldos.
+// El ZIP sale del commit, deja fuera memoria de agentes y respaldos, y trae su .env sin credenciales privilegiadas.
 $empaque = (string) file_get_contents($raiz . '/Tools/empaquetar-entrega.sh');
 test_assert(str_contains($empaque, 'git -C "$RAIZ" archive') && str_contains($empaque, 'status --porcelain')
     && str_contains($empaque, 'Database/Backups'), 'El empaquetado parte del commit y excluye lo interno');
+test_assert(str_contains($empaque, 'GanadoCerca/.env') && str_contains($empaque, 'DB_DRIVER=mysql')
+    && str_contains($empaque, "'^POSTGRES[A-Z_]*=.'") && str_contains($empaque, 'ENTREGA_ENV_PRIVADO')
+    && str_contains($empaque, 'una clave secreta que no se pidió'),
+    'El ZIP lleva el .env de la entrega: MySQL local y Supabase público, nunca PostgreSQL; la clave secreta solo si se pide');
+test_assert(!in_array('.env', $rastreados, true) && preg_match('/^\.env$/m', (string) file_get_contents($raiz . '/.gitignore')) === 1,
+    '.env nunca se versiona');
+
+// El asistente no ofrece datos de demostración: Calidad registra los suyos.
+$asistente = (string) file_get_contents($raiz . '/Public/instalacion.php');
+test_assert(!str_contains($asistente, 'PublicacionesDemo') && !str_contains($asistente, 'value="demo"') && !is_file($raiz . '/Application/Service/PublicacionesDemo.php'),
+    'El asistente no carga personas ni publicaciones ficticias');
 
 echo "OK entrega_xampp_test: carpetas internas negadas, rutas relativas y reglas de arranque y empaquetado presentes.\n";

@@ -9,8 +9,22 @@ function schema_manifest_path(?string $source = null): string
 
 function schema_manifest_from_sql(string $sql, string $source = 'Database/SqlScripts/000instalacioncompleta.sql'): array
 {
-    preg_match_all('/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+`?([a-z][a-z0-9_]*)`?\s*\(/i', $sql, $tableMatches);
-    $tablesOrdered = $tableMatches[1];
+    preg_match_all('/CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+`?([a-z][a-z0-9_]*)`?\s*\(/i', $sql, $tableMatches, PREG_OFFSET_CAPTURE);
+    $tablesOrdered = array_column($tableMatches[1], 0);
+    // Columnas declaradas por tabla (nombre => tipo normalizado + nulabilidad), para comparar una base existente.
+    $columns = [];
+    foreach ($tableMatches[0] as $index => [, $offset]) {
+        $end = $tableMatches[0][$index + 1][1] ?? strlen($sql);
+        preg_match_all(
+            '/^\s+(tb[a-z0-9_]+)\s+([A-Z]+(?:\(\d+(?:,\s*\d+)?\))?(?:\s+UNSIGNED)?)\s+(NOT NULL|NULL)\s*,?\s*$/m',
+            substr($sql, $offset, $end - $offset),
+            $columnMatches,
+            PREG_SET_ORDER
+        );
+        foreach ($columnMatches as [, $column, $type, $nullability]) {
+            $columns[$tablesOrdered[$index]][$column] = schema_manifest_column_signature($type, $nullability === 'NULL');
+        }
+    }
     $uniqueTables = array_values(array_unique($tablesOrdered));
     if ($uniqueTables !== $tablesOrdered) {
         throw new RuntimeException('El SQL contiene CREATE TABLE duplicados.');
@@ -30,7 +44,19 @@ function schema_manifest_from_sql(string $sql, string $source = 'Database/SqlScr
         'table_count' => count($tablesOrdered),
         'tables_ordered' => $tablesOrdered,
         'tables_sorted' => $tablesSorted,
+        'columns' => $columns,
     ];
+}
+
+/**
+ * Tipo comparable entre el SQL canónico y information_schema. MariaDB y MySQL 5.7 informan el ancho
+ * de los enteros (`int(11)`) y MySQL 8 no: el ancho no cambia lo que se guarda y se descarta.
+ */
+function schema_manifest_column_signature(string $type, bool $nullable): string
+{
+    $type = preg_replace('/\b((?:tiny|small|medium|big)?int)\(\d+\)/', '$1', strtolower(trim($type)));
+
+    return preg_replace('/\s+/', ' ', str_replace(', ', ',', (string) $type)) . ($nullable ? ' null' : ' not null');
 }
 
 function schema_manifest(?string $source = null): array

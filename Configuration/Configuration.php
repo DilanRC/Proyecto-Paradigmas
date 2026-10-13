@@ -14,6 +14,22 @@ const APPLICATION_NAME = 'TinderCows';
 // servidor conservan prioridad; el archivo solo completa las que falten.
 loadEnvironmentFile(dirname(__DIR__) . '/.env');
 
+/**
+ * Variables que completó el archivo `.env` (nombre => valor). Son valores por defecto de la
+ * instalación: la conexión que guarda el asistente local las reemplaza; las del servidor, no.
+ *
+ * @return array<string, string>
+ */
+function environmentFileValues(?string $name = null, string $value = ''): array
+{
+    static $values = [];
+    if ($name !== null) {
+        $values[$name] = $value;
+    }
+
+    return $values;
+}
+
 function loadEnvironmentFile(string $path): void
 {
     if (!is_readable($path)) {
@@ -48,6 +64,7 @@ function loadEnvironmentFile(string $path): void
         }
         if (getenv($name) === false) {
             putenv("{$name}={$value}");
+            environmentFileValues($name, $value);
         }
     }
 }

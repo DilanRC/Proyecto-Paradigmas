@@ -29,10 +29,12 @@ pendientes de comprobación en su equipo.
 
 ## Entrega ZIP para revisión
 
-No hace falta terminal, VirtualHost, `.env`, editar Apache ni importar SQL.
+No hace falta terminal, VirtualHost, crear ni editar `.env`, tocar Apache ni
+importar SQL. Hace falta Internet: las cuentas se crean en Supabase Auth.
 
-1. Extraiga `GanadoCerca.zip` dentro de `htdocs`. Queda la carpeta
-   `htdocs/GanadoCerca` (puede cambiarle el nombre o ponerla más adentro).
+1. Extraiga `GanadoCerca.zip` **directamente en `htdocs`**. El ZIP ya trae la
+   carpeta `GanadoCerca/`: no cree antes una carpeta con ese nombre. Debe quedar
+   `htdocs/GanadoCerca/Public/`, no `htdocs/GanadoCerca/GanadoCerca/Public/`.
 2. Inicie Apache y MySQL desde el panel de XAMPP.
 3. Abra <http://localhost/GanadoCerca/Public/> (o <http://localhost/GanadoCerca/>,
    que redirige ahí). Si XAMPP usa otro puerto, agréguelo a la dirección.
@@ -42,54 +44,99 @@ No hace falta terminal, VirtualHost, `.env`, editar Apache ni importar SQL.
      o contraseña. Este paso no escribe nada.
    - Marque la confirmación y pulse **Instalar esquema y catálogos**. Crea
      `bdmercadoganadero` con sus 48 tablas, el método de pago, la política de
-     administrador y los catálogos. La casilla de las 6 publicaciones ficticias
-     viene marcada; desmárquela si quiere la base sin datos de ejemplo.
-5. Use **Ver la portada** para navegar. En <http://localhost/phpmyadmin/> está
-   `bdmercadoganadero`: 48 tablas, cada una con su llave primaria `<tabla>id`.
+     administrador y los catálogos de animales y vacunas.
+5. Pulse **Ver la portada** y luego **Crear cuenta** para registrar su propio
+   usuario. Al terminar entra a Explorar con la sesión iniciada.
+6. En <http://localhost/phpmyadmin/> abra `bdmercadoganadero`: 48 tablas, cada
+   una con su llave primaria `<tabla>id`. Su registro aparece en `tbpersona`,
+   `tbcomprador` y `tbbitacora`.
 
-Qué se puede usar sin iniciar sesión: la portada con las publicaciones, Entrar,
-Crear cuenta, Cómo usar, Sobre nosotros, Privacidad y Términos. Explorar,
-Fletes, Subastas, Publicar, Mi panel y el panel de administración piden una
-cuenta; las cuentas viven en Supabase Auth y **el ZIP no trae un `.env`**
-(`.env.example` solo muestra los valores de desarrollo y Apache no lo lee), así que Entrar y Crear cuenta responden "Las cuentas no están
-disponibles en esta instalación". Para demostrar esa parte hay que definir
-`SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` de un proyecto de pruebas (y tener
-Internet).
+La instalación no trae personas, publicaciones ni cuentas de ejemplo: una base
+recién creada tiene cero filas en `tbpersona` y en `tbanimalpublicacion`, y las
+pantallas muestran sus estados vacíos hasta que usted registra datos.
 
-Lo que el asistente hace y no hace:
+### Qué trae el `.env` del ZIP
+
+`GanadoCerca/.env` viene listo y Apache no lo entrega por HTTP (responde 403):
+
+| Variable | Valor | Para qué |
+|---|---|---|
+| `DB_DRIVER` | `mysql` | Obliga a usar MySQL local aunque el servidor herede una `POSTGRES_URL`. |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | `127.0.0.1`, `3306`, `bdmercadoganadero`, `root`, vacío | Valores de fábrica de XAMPP. Son el punto de partida: lo que confirme en el asistente los reemplaza sin editar el archivo. |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Proyecto de Ganado Cerca | Valores públicos: el navegador los recibe de `api/v1/auth/config`. |
+
+| `SUPABASE_SECRET_KEY` | Solo en el ZIP privado de Calidad | Clave del servidor; nunca llega al navegador. |
+
+No trae URL de PostgreSQL. La clave secreta la usan tres operaciones del
+servidor: abrir el documento de identidad desde el panel de administración
+(`/admin/documentos`), cambiar el correo de una cuenta desde Ajustes y los
+avisos instantáneos de subastas. El resto, incluidos registro, inicio de
+sesión, publicaciones, fotos, fletes y solicitudes de compra, no la necesita.
+
+Esa clave administra el proyecto de Supabase (cuentas y archivos). Por eso el
+ZIP que la trae se entrega solo a Calidad, no se publica, y la clave se cambia
+en el panel de Supabase al terminar la evaluación. Un ZIP generado sin
+`ENTREGA_ENV_PRIVADO` no la incluye.
+
+Los datos del negocio se guardan en MySQL local. En Supabase solo queda la
+cuenta (correo y contraseña) y las fotos que se suban. El proyecto tiene
+"Confirm email" desactivado: la cuenta queda activa al registrarse y no llega
+ningún correo de confirmación.
+
+### Lo que el asistente hace y no hace
 
 - Solo responde a visitas desde la misma computadora (`localhost`); desde otra
   máquina o detrás de un proxy responde 404.
 - Abrir o recargar una página nunca escribe en MySQL. Crear la base exige el
   botón, la casilla de confirmación y que `bdmercadoganadero` **no exista**.
-- Una base que ya existe no se modifica ni se completa. Si está al día (48
-  tablas con su llave), la app la usa tal cual. Si es de una entrega anterior, el
-  asistente lista lo que falta y explica cómo respaldarla y renombrarla en
+- Al terminar crea la cuenta MySQL `ganadocerca_app`, con contraseña aleatoria y
+  permisos solo de lectura y escritura de datos sobre `bdmercadoganadero`. La
+  aplicación usa esa cuenta; `root` solo se usa para instalar. Si el usuario con
+  el que instala no puede crear cuentas, la aplicación conserva la conexión que
+  usted escribió.
+- La conexión se guarda fuera de `htdocs`, en la carpeta temporal de XAMPP
+  (`/opt/lampp/temp`, que sobrevive a un reinicio; si no existe, `/tmp`), con
+  permisos `0700`/`0600`.
+- **Instalación interrumpida:** si Apache o MySQL se detienen a medias, la página
+  lo indica y, tras comprobar la conexión, ofrece **Terminar la instalación**.
+  Repite el mismo SQL: crea las tablas que falten y deja los datos iniciales en
+  su valor original; no borra nada. Solo se ofrece contra el mismo servidor y
+  puerto donde empezó.
+- **Base eliminada:** si borra `bdmercadoganadero` en phpMyAdmin, el asistente
+  permite instalarla de nuevo.
+- **Conexión guardada que dejó de servir** (cambió la contraseña de MySQL o se
+  eliminó la cuenta `ganadocerca_app`): compruebe la conexión y pulse **Guardar
+  conexión local**; reemplaza la anterior sin tocar los datos.
+- Una base que ya existe y que este asistente no creó no se modifica ni se
+  completa. Solo se usa si tiene las 48 tablas, sus llaves primarias y las mismas
+  columnas (nombre, tipo y nulabilidad) que el esquema actual; si no, el
+  asistente lista las diferencias y explica cómo respaldarla y renombrarla en
   phpMyAdmin, o cómo migrarla (sección "Base existente").
-- Las publicaciones de demostración se cargan una sola vez, solo en una base
-  creada por el asistente, y quedan marcadas con el origen `DEMO_EXPLORAR`. Sus
-  fotos se enlazan desde Wikimedia Commons: sin Internet se ve la tarjeta sin foto.
-- La conexión confirmada se guarda fuera de `htdocs`, en la carpeta temporal de
-  XAMPP (`/opt/lampp/temp`, que sobrevive a un reinicio; si no existe, `/tmp`),
-  con permisos `0700`/`0600`. No se crea una cuenta de MySQL ni de Supabase.
-- Si Apache o `.env` definen `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` o
-  `DB_PASS`, esos valores mandan sobre la conexión guardada.
+- Las variables `DB_*` que defina **Apache** (no el `.env`) mandan sobre el
+  asistente.
 - El asistente necesita Linux y la extensión PHP `posix` para proteger ese
   archivo. En Windows use la instalación manual.
 
-Límites comprobados:
+### Condiciones de Apache
 
 - **Apache debe aplicar los `.htaccess` del paquete** (`AllowOverride All`, el
-  valor de fábrica de XAMPP) y tener `mod_rewrite` (también de fábrica). Sin
-  `mod_rewrite` la aplicación responde 503 con el motivo y los archivos internos
-  siguen negados. Con `AllowOverride None` la aplicación responde 503, pero Apache
-  entrega los archivos estáticos de la carpeta (SQL, documentos); el paquete no
-  trae credenciales, y ese modo no está soportado.
+  valor de fábrica de XAMPP para `htdocs`) y tener `mod_rewrite` (también de
+  fábrica). Sin `mod_rewrite` la aplicación responde 503 con el motivo y los
+  archivos internos siguen negados.
+- **`AllowOverride None` no está soportado.** Apache ignora las reglas del
+  paquete y entrega los archivos estáticos de la carpeta, **incluido `.env` con
+  la clave secreta de Supabase**.
+  La aplicación lo detecta y responde 503, pero no puede impedir esa descarga:
+  PHP no interviene cuando se pide un archivo estático. No use el ZIP en un
+  servidor configurado así.
 - Probado con XAMPP 8.0.30 para Linux (Apache 2.4.58, PHP 8.0.30, MariaDB
-  10.4.32), Chromium y Firefox. El XAMPP del equipo de revisión no se ha comprobado.
+  10.4.32) y Chromium. El XAMPP del equipo de revisión no se ha comprobado.
 
-El ZIP se genera con `bash Tools/empaquetar-entrega.sh` a partir del commit
-actual (no incluye `.env`, `.git`, respaldos ni memoria de agentes).
+El ZIP se genera con `ENTREGA_ENV_PRIVADO=<.env local> bash Tools/empaquetar-entrega.sh`
+a partir del commit actual y agrega el `.env` descrito arriba (sin esa variable,
+el `.env` sale sin la clave secreta). No incluye `.git`, respaldos ni
+memoria de agentes. Como trae configuración real, se entrega en privado: no se
+sube al repositorio ni se adjunta al PR.
 
 Compruebe el ejecutable PHP de su instalación; sustituya `/opt/lampp` si XAMPP
 está en otra carpeta:
@@ -106,7 +153,7 @@ restricciones, índices adicionales, triggers, rutinas y si este PHP reúne los
 requisitos del asistente web (Linux, `mysqli` y `posix`). Devuelve 1 si falla un
 requisito general de la aplicación o la conexión/esquema; que el asistente web no
 esté disponible no invalida una instalación manual que ya tenga su conexión PDO.
-Puede mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas
+En una instalación manual puede mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas
 ni el texto privado de las excepciones. La versión de **PHP Apache es desconocida**
 para este comando: compruebe por separado qué módulo PHP carga el servidor.
 
@@ -193,7 +240,8 @@ un error de permisos. Revise el log local de Apache si una ruta devuelve 403.
    DB_PASS=<contraseña local creada en phpMyAdmin>
    ```
 
-   `.env` no debe entrar en Git ni en un ZIP compartido con credenciales reales.
+   `.env` no debe entrar en Git ni en un ZIP público con credenciales reales (el
+   ZIP de entrega a Calidad es privado; ver "Qué trae el `.env` del ZIP").
    Incluya `.env.example` y esta guía dentro del proyecto de entrega. No configure
    `POSTGRES_URL` ni `POSTGRES_URL_NON_POOLING` para la instalación MySQL: esas
    variables seleccionan otro motor. Las variables del servidor tienen prioridad

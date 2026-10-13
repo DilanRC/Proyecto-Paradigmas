@@ -26,7 +26,7 @@ function tc_public_base_attribute(): string
 }
 
 /**
- * Primera visita en XAMPP: si la base local no existe o está incompleta, lleva al asistente, que
+ * Primera visita en XAMPP: si la base local no existe, está incompleta o su instalación quedó a medias, lleva al asistente, que
  * explica qué encontró, en vez de mostrar una portada vacía. Solo lee, y solo para visitas desde la misma computadora.
  */
 function tc_exigir_base_local(): void
@@ -45,7 +45,8 @@ function tc_exigir_base_local(): void
         $tablas = \Configuration\Database::getConnection()->query(
             'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()'
         )->fetchColumn();
-        if ((int) $tablas >= \Application\Service\LocalDatabaseInstaller::TABLE_COUNT) {
+        if ((int) $tablas >= \Application\Service\LocalDatabaseInstaller::TABLE_COUNT
+            && \Configuration\LocalDatabaseCredentials::state() !== 'installing') {
             return;
         }
     } catch (Throwable) {

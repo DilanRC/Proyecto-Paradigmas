@@ -23,7 +23,8 @@ final class Database
             return self::$connection;
         }
 
-        foreach (['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL'] as $postgresVariable) {
+        $postgresVariables = LocalDatabaseCredentials::mysqlForced() ? [] : ['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL'];
+        foreach ($postgresVariables as $postgresVariable) {
             $postgresUrl = getenv($postgresVariable);
             if (is_string($postgresUrl) && $postgresUrl !== '' && $postgresUrl !== '[SENSITIVE]') {
                 try {

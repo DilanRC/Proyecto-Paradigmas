@@ -57,14 +57,18 @@ final class RegistroConsulta
     }
 
     /**
-     * IP del cliente. En Vercel la conexión llega desde su proxy, que escribe
-     * X-Real-IP con la IP real (no la puede fijar el cliente).
-     * ponytail: fuera de Vercel un cliente podría enviar X-Real-IP falso; si
-     * se despliega en otro lugar, leer la cabecera solo detrás de un proxy confiable.
+     * IP del cliente. Solo en producción (Vercel) la conexión llega desde su proxy, que escribe
+     * X-Real-IP con la IP real y descarta la que mande el cliente. En cualquier otro servidor (XAMPP,
+     * Docker) la cabecera la escribe quien hace la petición: se ignora y cuenta la dirección de la conexión.
+     * Producción se reconoce por la variable VERCEL o, si el contenedor no la recibe, por su POSTGRES_URL.
      */
     public static function ipCliente(array $servidor): string
     {
-        $ip = trim((string) ($servidor['HTTP_X_REAL_IP'] ?? $servidor['REMOTE_ADDR'] ?? ''));
+        $trasProxyDeVercel = trim((string) getenv('VERCEL')) !== ''
+            || (trim((string) getenv('POSTGRES_URL')) !== '' && strtolower(trim((string) getenv('DB_DRIVER'))) !== 'mysql');
+        $ip = trim((string) ($trasProxyDeVercel && isset($servidor['HTTP_X_REAL_IP'])
+            ? $servidor['HTTP_X_REAL_IP']
+            : ($servidor['REMOTE_ADDR'] ?? '')));
         return $ip !== '' ? $ip : 'desconocida';
     }
 }

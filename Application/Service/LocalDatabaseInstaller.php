@@ -29,6 +29,8 @@ final class LocalDatabaseInstaller
 {
     private const DATABASE_NAME = 'bdmercadoganadero';
     public const TABLE_COUNT = 48;
+    /** Cuenta MySQL que usa la aplicación después de instalar: solo lee y escribe datos de esta base. */
+    public const APP_USER = 'ganadocerca_app';
     private const SEED_DEFINITIONS = [
         '101initialpagometodo.sql' => ['required' => true, 'label' => 'Método de pago inicial'],
         '102administrador.sql' => ['required' => true, 'label' => 'Política de acceso administrativo'],
@@ -69,7 +71,7 @@ final class LocalDatabaseInstaller
         if ($vercel !== false && trim($vercel) !== '') {
             return false;
         }
-        foreach (['POSTGRES_URL', 'POSTGRES_URL_NON_POOLING'] as $variable) {
+        foreach (LocalDatabaseCredentials::mysqlForced() ? [] : ['POSTGRES_URL', 'POSTGRES_URL_NON_POOLING'] as $variable) {
             $value = getenv($variable);
             if ($value !== false && trim($value) !== '') {
                 return false;
@@ -92,7 +94,6 @@ final class LocalDatabaseInstaller
 
     public static function defaultCredentials(): array
     {
-        $configuredHost = getenv('DB_HOST');
         if (!LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment()) {
             $stored = LocalDatabaseCredentials::load();
             if ($stored !== null) {
@@ -100,6 +101,13 @@ final class LocalDatabaseInstaller
             }
         }
 
+        return self::environmentDefaults();
+    }
+
+    /** Conexión de partida: variables del servidor o del `.env`; sin ellas, el root sin contraseña de XAMPP. */
+    public static function environmentDefaults(): array
+    {
+        $configuredHost = getenv('DB_HOST');
         $host = trim((string) ($configuredHost ?: '127.0.0.1'));
         $port = trim((string) (getenv('DB_PORT') ?: '3306'));
         $user = trim((string) (getenv('DB_USER') ?: 'root'));
@@ -165,7 +173,9 @@ final class LocalDatabaseInstaller
                 'expectedPrimaryKeyCount' => self::TABLE_COUNT,
                 'missingTables' => [],
                 'missingPrimaryKeys' => [],
+                'columnDifferences' => [],
                 'schemaComplete' => false,
+                'requiredSeedsComplete' => false,
                 'seeds' => self::emptySeedStatuses(),
                 'installationState' => LocalDatabaseCredentials::state(),
             ];
@@ -206,9 +216,17 @@ final class LocalDatabaseInstaller
                     $state['missingPrimaryKeys'][] = $table;
                 }
             }
+            $state['columnDifferences'] = self::columnDifferences($server, $manifest['columns'], $tableSet);
             $state['schemaComplete'] = $state['tableCount'] === self::TABLE_COUNT
-                && $state['missingTables'] === [] && $state['missingPrimaryKeys'] === [];
+                && $state['missingTables'] === [] && $state['missingPrimaryKeys'] === []
+                && $state['columnDifferences'] === [];
             $state['seeds'] = self::inspectSeeds($server, $tableSet);
+            $state['requiredSeedsComplete'] = true;
+            foreach (self::SEED_DEFINITIONS as $file => $definition) {
+                if ($definition['required'] && !$state['seeds'][$file]['complete']) {
+                    $state['requiredSeedsComplete'] = false;
+                }
+            }
 
             return $state;
         } catch (PDOException) {
@@ -226,13 +244,16 @@ final class LocalDatabaseInstaller
         $inspection = self::inspect($credentials);
         if (!$inspection['databaseExists'] || !$inspection['schemaComplete']) {
             throw new LocalDatabaseInstallerException(
-                'Solo se guarda la conexión cuando la base existente tiene las 48 tablas y sus 48 llaves primarias.',
+                'Solo se guarda la conexión cuando la base existente tiene las 48 tablas, sus 48 llaves primarias y las columnas del esquema actual.',
                 409,
             );
         }
-        if (LocalDatabaseCredentials::state() !== null) {
+        // Una conexión guardada que todavía sirve no se reemplaza. Si dejó de servir (cambió la contraseña
+        // o se eliminó la cuenta de la aplicación), esta conexión comprobada ocupa su lugar.
+        if (self::storedConnectionWorks()) {
             throw new LocalDatabaseInstallerException('Esta carpeta ya tiene una instalación local registrada.', 409);
         }
+        LocalDatabaseCredentials::discard();
 
         try {
             LocalDatabaseCredentials::store($credentials, 'existing');
@@ -246,7 +267,23 @@ final class LocalDatabaseInstaller
         return $inspection;
     }
 
+    /** Crea la base ausente con el esquema canónico y los datos iniciales. */
     public static function install(array $input): array
+    {
+        return self::run($input, false);
+    }
+
+    /**
+     * Termina una instalación que este asistente empezó y no pudo cerrar (Apache o MySQL se detuvieron
+     * a medias). Repite el mismo SQL: crea las tablas que falten y deja los datos iniciales en su valor
+     * canónico; no borra nada.
+     */
+    public static function resume(array $input): array
+    {
+        return self::run($input, true);
+    }
+
+    private static function run(array $input, bool $resume): array
     {
         $credentials = self::validateCredentials($input);
         self::assertMatchesEnvironment($credentials);
@@ -254,17 +291,19 @@ final class LocalDatabaseInstaller
             throw new LocalDatabaseInstallerException('La extensión mysqli de PHP no está disponible.', 500);
         }
         self::manifest();
-        $schema = self::readSqlFile('SqlScripts/000instalacioncompleta.sql');
-        $paymentSeed = self::readSqlFile('SeedData/101initialpagometodo.sql');
-        $adminSeed = self::readSqlFile('SeedData/102administrador.sql');
-        $catalogSeed = self::readSqlFile('SeedData/104catalogosanimal.sql');
-        if (preg_match('/^\s*(?:DROP|TRUNCATE)\b/im', $schema . "\n" . $paymentSeed . "\n" . $adminSeed . "\n" . $catalogSeed) === 1) {
+        $batches = [];
+        foreach (['SqlScripts/000instalacioncompleta.sql', 'SeedData/101initialpagometodo.sql',
+            'SeedData/102administrador.sql', 'SeedData/104catalogosanimal.sql'] as $file) {
+            $batches[] = self::readSqlFile($file);
+        }
+        if (preg_match('/^\s*(?:DROP|TRUNCATE)\b/im', implode("\n", $batches)) === 1) {
             throw new LocalDatabaseInstallerException('El SQL del paquete contiene una operación destructiva.', 500);
         }
         $server = self::connectServer($credentials);
         $lockName = 'ganadocerca_' . substr(hash('sha256', self::DATABASE_NAME), 0, 48);
         $lockHeld = false;
-        $attemptStarted = false;
+        $beforeDatabaseCreated = false;
+        $previous = null;
 
         try {
             $lock = $server->prepare('SELECT GET_LOCK(:lock_name, 0)');
@@ -276,67 +315,76 @@ final class LocalDatabaseInstaller
                 );
             }
             $lockHeld = true;
-            if (self::databaseExists($server)) {
-                throw new LocalDatabaseInstallerException(
-                    'La base ya existe. No se aplicó ningún cambio; vuelva a cargar la página para revisar su estado.',
-                    409,
+            $exists = self::databaseExists($server);
+            if ($resume) {
+                $started = LocalDatabaseCredentials::load();
+                if (!$exists || ($started['state'] ?? null) !== 'installing'
+                    || $started['host'] !== $credentials['host'] || $started['port'] !== $credentials['port']) {
+                    throw new LocalDatabaseInstallerException(
+                        'No hay una instalación interrumpida de este asistente que terminar. No se aplicó ningún cambio.',
+                        409,
+                    );
+                }
+            } else {
+                if ($exists) {
+                    throw new LocalDatabaseInstallerException(
+                        'La base ya existe. No se aplicó ningún cambio; vuelva a cargar la página para revisar su estado.',
+                        409,
+                    );
+                }
+                // La base no existe: un registro anterior de esta carpeta (un intento que se cortó o una base
+                // que se eliminó después) ya no describe nada y no debe impedir instalar de nuevo.
+                $previous = LocalDatabaseCredentials::load();
+                LocalDatabaseCredentials::discard();
+                try {
+                    LocalDatabaseCredentials::store($credentials, 'installing');
+                } catch (Throwable) {
+                    throw new LocalDatabaseInstallerException(
+                        'PHP no puede guardar la conexión local con permisos privados. La base no se modificó.',
+                        500,
+                    );
+                }
+                $beforeDatabaseCreated = true;
+
+                // CREATE DATABASE sin IF NOT EXISTS cierra la ventana entre la comprobación y el DDL:
+                // una base que aparezca mientras tanto no se adopta ni se modifica.
+                self::runSqlBatch(
+                    $credentials,
+                    'CREATE DATABASE bdmercadoganadero CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;',
                 );
-            }
-            if (LocalDatabaseCredentials::state() !== null) {
-                throw new LocalDatabaseInstallerException(
-                    'Esta carpeta ya inició una instalación. No se repetirá el SQL; revise el estado antes de continuar.',
-                    409,
-                );
+                $beforeDatabaseCreated = false;
             }
 
-            try {
-                LocalDatabaseCredentials::store($credentials, 'installing');
-            } catch (Throwable) {
-                throw new LocalDatabaseInstallerException(
-                    'PHP no puede guardar la conexión local con permisos privados. La base no se modificó.',
-                    500,
-                );
+            foreach ($batches as $batch) {
+                self::runSqlBatch($credentials, $batch);
             }
-            $attemptStarted = true;
-
-            // CREATE DATABASE sin IF NOT EXISTS cierra la ventana entre la comprobación y el DDL:
-            // una base que aparezca mientras tanto no se adopta ni se modifica.
-            self::runSqlBatch(
-                $credentials,
-                'CREATE DATABASE bdmercadoganadero CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;',
-            );
-            self::runSqlBatch($credentials, $schema);
-            self::runSqlBatch($credentials, $paymentSeed);
-            self::runSqlBatch($credentials, $adminSeed);
-            self::runSqlBatch($credentials, $catalogSeed);
 
             $inspection = self::inspect($credentials);
-            if (!$inspection['schemaComplete'] || !$inspection['seeds']['101initialpagometodo.sql']['complete']
-                || !$inspection['seeds']['102administrador.sql']['complete']
-                || !$inspection['seeds']['104catalogosanimal.sql']['complete']) {
+            if (!$inspection['schemaComplete'] || !$inspection['requiredSeedsComplete']) {
                 throw new LocalDatabaseInstallerException(
                     'MySQL terminó la importación, pero la comprobación final encontró elementos incompletos. '
-                    . 'No se repetirá automáticamente una importación parcial.',
+                    . 'Compruebe la conexión de nuevo para ver el detalle y terminar la instalación.',
                     500,
                 );
             }
-            LocalDatabaseCredentials::store($credentials, 'installed');
+            $application = self::limitedAccount($server, $credentials);
+            LocalDatabaseCredentials::store($application ?? $credentials, 'installed');
+            $inspection['applicationUser'] = ($application ?? $credentials)['user'];
 
             return $inspection;
         } catch (PDOException) {
-            self::clearAttemptIfNoDatabase($server, $attemptStarted);
+            self::forgetAttemptWithoutDatabase($beforeDatabaseCreated, $previous);
             throw new LocalDatabaseInstallerException(
                 'No se pudo crear o comprobar la base. El usuario de MySQL puede carecer de permiso CREATE DATABASE.',
                 403,
             );
         } catch (LocalDatabaseInstallerException $exception) {
-            self::clearAttemptIfNoDatabase($server, $attemptStarted);
+            self::forgetAttemptWithoutDatabase($beforeDatabaseCreated, $previous);
             throw $exception;
         } catch (Throwable) {
-            self::clearAttemptIfNoDatabase($server, $attemptStarted);
+            self::forgetAttemptWithoutDatabase($beforeDatabaseCreated, $previous);
             throw new LocalDatabaseInstallerException(
-                'Falló una parte de la instalación. MySQL puede conservar tablas creadas antes del error; '
-                . 'el instalador no hará rollback ni repetirá el SQL.',
+                'La instalación se interrumpió. Lo ya creado se conserva; compruebe la conexión de nuevo para terminarla.',
                 500,
             );
         } finally {
@@ -401,17 +449,104 @@ final class LocalDatabaseInstaller
         return (int) $query->fetchColumn() > 0;
     }
 
-    private static function clearAttemptIfNoDatabase(PDO $server, bool $attemptStarted): void
+    /**
+     * Si falló antes de que este asistente creara la base, el intento no dejó nada y se olvida para
+     * poder empezar de nuevo. Después de crearla, el estado `installing` queda y permite terminarla.
+     */
+    private static function forgetAttemptWithoutDatabase(bool $beforeDatabaseCreated, ?array $previous): void
     {
-        if (!$attemptStarted) {
+        if (!$beforeDatabaseCreated) {
             return;
         }
-        try {
-            if (!self::databaseExists($server)) {
-                LocalDatabaseCredentials::clearFailedAttempt();
+        LocalDatabaseCredentials::clearFailedAttempt();
+        // Si ni siquiera se pudo crear la base (por ejemplo, una cuenta sin permisos que no la ve),
+        // la conexión que la carpeta tenía guardada sigue siendo la válida.
+        if ($previous !== null && LocalDatabaseCredentials::state() === null) {
+            try {
+                LocalDatabaseCredentials::store($previous, $previous['state']);
+            } catch (Throwable) {
             }
-        } catch (Throwable) {
         }
+    }
+
+    /** ¿La conexión guardada por el asistente todavía llega a la base? */
+    public static function storedConnectionWorks(): bool
+    {
+        $stored = LocalDatabaseCredentials::load();
+        if ($stored === null) {
+            return false;
+        }
+        try {
+            self::connectServer($stored)->query('SELECT COUNT(*) FROM bdmercadoganadero.tbpagometodo')->fetchColumn();
+
+            return true;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Crea (o renueva) una cuenta que solo puede leer y escribir datos de esta base, para que la
+     * aplicación no siga usando la cuenta administrativa con la que se instaló. Si el usuario que
+     * instala no puede crear cuentas, o la nueva no logra conectarse, devuelve null y se conserva
+     * la conexión original.
+     */
+    private static function limitedAccount(PDO $server, array $credentials): ?array
+    {
+        if (self::credentialsManagedByEnvironment()) {
+            return null;
+        }
+        try {
+            $password = bin2hex(random_bytes(24));
+            foreach (['localhost', '127.0.0.1', '::1'] as $host) {
+                $account = "'" . self::APP_USER . "'@'{$host}'";
+                $server->exec("CREATE USER IF NOT EXISTS {$account} IDENTIFIED BY " . $server->quote($password));
+                $server->exec("ALTER USER {$account} IDENTIFIED BY " . $server->quote($password));
+                $server->exec("GRANT SELECT, INSERT, UPDATE, DELETE ON bdmercadoganadero.* TO {$account}");
+            }
+            $limited = ['user' => self::APP_USER, 'password' => $password] + $credentials;
+            self::connectServer($limited)->query('SELECT COUNT(*) FROM bdmercadoganadero.tbpagometodo')->fetchColumn();
+
+            return $limited;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /** Columnas que faltan, sobran o tienen otro tipo o nulabilidad respecto del SQL canónico. */
+    private static function columnDifferences(PDO $server, array $expected, array $tables): array
+    {
+        $query = $server->prepare(
+            'SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = :database'
+        );
+        $query->execute(['database' => self::DATABASE_NAME]);
+        $actual = [];
+        foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $actual[(string) $row['TABLE_NAME']][(string) $row['COLUMN_NAME']] = \schema_manifest_column_signature(
+                (string) $row['COLUMN_TYPE'],
+                strtoupper((string) $row['IS_NULLABLE']) === 'YES',
+            );
+        }
+        $differences = [];
+        foreach ($expected as $table => $columns) {
+            if (!isset($tables[$table])) {
+                continue;
+            }
+            foreach ($columns as $column => $signature) {
+                $found = $actual[$table][$column] ?? null;
+                if ($found === null) {
+                    $differences[] = "{$table}.{$column} falta";
+                } elseif ($found !== $signature) {
+                    $differences[] = "{$table}.{$column} es {$found} y se esperaba {$signature}";
+                }
+            }
+            foreach (array_keys(array_diff_key($actual[$table] ?? [], $columns)) as $extra) {
+                $differences[] = "{$table}.{$extra} no pertenece al esquema";
+            }
+        }
+
+        return $differences;
     }
 
     private static function manifest(): array

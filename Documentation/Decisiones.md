@@ -1127,8 +1127,9 @@ La regla vive en PHP (`Application/Model/RegistroConsulta.php`), igual que el
 resto: bajo `NamedLock` borra las filas fuera de la ventana de 60 segundos,
 cuenta las de esa IP y, a partir de 20, responde 429 con `Retry-After`. La
 tabla no tiene PK, índices ni defaults, y siempre es pequeña porque se limpia
-en cada consulta. La IP sale de `X-Real-IP`, que escribe el proxy de Vercel, o
-de `REMOTE_ADDR` cuando no hay proxy.
+en cada consulta. La IP sale de `X-Real-IP` solo en producción (variable `VERCEL`
+o `POSTGRES_URL` sin `DB_DRIVER=mysql`), donde la escribe el proxy; en cualquier otro servidor esa cabecera la puede
+enviar el cliente, se ignora y cuenta `REMOTE_ADDR`.
 
 Se descartó la regla de rate limit del firewall de Vercel porque no funciona en
 local y depende del plan del proyecto.

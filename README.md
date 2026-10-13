@@ -175,13 +175,15 @@ local `NO_AUTENTICADO`.
 
 ## Despliegue
 
-Para la revisión en XAMPP, extraiga `GanadoCerca.zip` en
-`<htdocs>/GanadoCerca`, inicie Apache y MySQL desde el panel y abra
+Para la revisión en XAMPP, extraiga `GanadoCerca.zip` directamente en `htdocs`
+(el ZIP ya trae la carpeta `GanadoCerca/`; no cree otra con el mismo nombre),
+inicie Apache y MySQL desde el panel y abra
 `http://localhost/GanadoCerca/Public/`. La primera visita lleva al asistente
 **Preparar la base local**, que comprueba la conexión y, con confirmación
-explícita, crea la base con las 48 tablas, sus llaves primarias, los catálogos
-requeridos y, si se deja marcado, 6 publicaciones ficticias de demostración. No
-necesita editar Apache ni importar SQL manualmente. Este modo requiere que
+explícita, crea la base con las 48 tablas, sus llaves primarias y los catálogos
+requeridos, sin personas ni publicaciones de ejemplo. El ZIP trae su `.env`
+(MySQL local de XAMPP y los valores públicos de Supabase Auth): no hay que
+editar Apache, crear archivos ni importar SQL. Este modo requiere que
 Apache aplique los `.htaccess` (`AllowOverride All`); con `AllowOverride None`
 los archivos privados no quedan protegidos por el paquete. Consulte
 [`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md) para

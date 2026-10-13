@@ -6,6 +6,8 @@ namespace Configuration;
 
 use RuntimeException;
 
+require_once __DIR__ . '/Configuration.php';
+
 final class LocalDatabaseCredentials
 {
     private const DATABASE_NAME = 'bdmercadoganadero';
@@ -69,11 +71,16 @@ final class LocalDatabaseCredentials
         return PHP_OS_FAMILY === 'Linux' && function_exists('posix_geteuid');
     }
 
+    /**
+     * ¿El servidor (Apache, Docker, la terminal) fija la conexión MySQL? Los valores que solo vienen
+     * del archivo `.env` no cuentan: son el punto de partida que el asistente puede reemplazar.
+     */
     public static function hasNonEmptyConnectionEnvironment(): bool
     {
+        $fromFile = environmentFileValues();
         foreach (['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASS'] as $name) {
             $value = getenv($name);
-            if ($value !== false && trim($value) !== '') {
+            if ($value !== false && trim($value) !== '' && ($fromFile[$name] ?? null) !== $value) {
                 return true;
             }
         }
@@ -81,15 +88,32 @@ final class LocalDatabaseCredentials
         return false;
     }
 
-    public static function clearFailedAttempt(): void
+    /**
+     * `DB_DRIVER=mysql` obliga a usar MySQL aunque el servidor herede una `POSTGRES_URL`.
+     * Producción no define la variable y sigue eligiendo PostgreSQL.
+     */
+    public static function mysqlForced(): bool
     {
-        $configuration = self::load();
-        if (($configuration['state'] ?? null) !== 'installing') {
+        return strtolower(trim((string) getenv('DB_DRIVER'))) === 'mysql';
+    }
+
+    /** Olvida la conexión guardada. Solo tiene sentido cuando la base ya no existe. */
+    public static function discard(): void
+    {
+        try {
+            $path = self::directoryPath() . DIRECTORY_SEPARATOR . 'mysql.json';
+        } catch (RuntimeException) {
             return;
         }
-        $path = self::directoryPath() . DIRECTORY_SEPARATOR . 'mysql.json';
         if (!is_link($path) && is_file($path)) {
             @unlink($path);
+        }
+    }
+
+    public static function clearFailedAttempt(): void
+    {
+        if (self::state() === 'installing') {
+            self::discard();
         }
     }
 
