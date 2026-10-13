@@ -73,19 +73,25 @@ final class PersonaCorreoCambio
         return $this->pendiente('tbpersonaid', $personaId);
     }
 
-    /** Solo cierra un cambio PENDIENTE: uno ya resuelto conserva su resultado y su fecha. */
-    public function cerrar(int $id, string $estado): void
+    /**
+     * Solo cierra un cambio PENDIENTE: uno ya resuelto conserva su resultado y su fecha.
+     * Devuelve false si ya no estaba PENDIENTE.
+     */
+    public function cerrar(int $id, string $estado): bool
     {
-        $this->conexion->prepare(
+        $sentencia = $this->conexion->prepare(
             'UPDATE tbpersonacorreocambio
              SET tbpersonacorreocambioestado = :estado, tbpersonacorreocambiofecharesolucion = :fecha
              WHERE tbpersonacorreocambioid = :id AND tbpersonacorreocambioestado = :pendiente'
-        )->execute([
+        );
+        $sentencia->execute([
             'estado' => $estado,
             'fecha' => gmdate('Y-m-d H:i:s'),
             'id' => $id,
             'pendiente' => self::PENDIENTE,
         ]);
+
+        return $sentencia->rowCount() === 1;
     }
 
     private function pendiente(string $columna, string|int $valor): ?array

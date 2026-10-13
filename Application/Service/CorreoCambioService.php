@@ -142,7 +142,12 @@ final class CorreoCambioService
                             entidad: 'PERSONA',
                             origen: 'CONCILIACION_CORREO',
                         );
-                        $this->cambios->cerrar($cambioId, PersonaCorreoCambio::APLICADO);
+                        if (!$this->cambios->cerrar($cambioId, PersonaCorreoCambio::APLICADO)) {
+                            // La copia leída antes del bloqueo quedó vieja: el cambio se canceló
+                            // mientras se esperaba y Supabase ya volvió al correo anterior.
+                            $this->conexion->rollBack();
+                            return null;
+                        }
                     }
                     $this->conexion->commit();
 

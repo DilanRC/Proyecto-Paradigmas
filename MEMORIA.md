@@ -703,6 +703,20 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-13 · fix/xampp-linux-local · Revisión previa a la fusión del PR #47
+- **Conciliación de correo:** `CorreoCambioService::aplicar` lee el cambio `PENDIENTE` antes de tomar el bloqueo de Persona. Si mientras esperaba
+  el PATCH de perfil lo cancelaba (Supabase vuelve al correo anterior), escribía igual el correo nuevo en `tbpersona` y la cuenta quedaba sin
+  Persona. Ahora `PersonaCorreoCambio::cerrar` devuelve si de verdad cerró un `PENDIENTE` y la conciliación revierte cuando no.
+  Prueba nueva `Tests/perfil_correo_cancelado_test.php` (falla sin el arreglo).
+- `public-auth.css`: se quitaron las reglas `.setup-*` del asistente de instalación eliminado (ninguna vista las usaba).
+- Ensayado antes de fusionar, en bases aisladas: `migrate.php` sobre Postgres 17 con el esquema de `dev` (47 tablas sin llaves → 48 con 48 llaves,
+  mismas filas, repetible, dos instancias a la vez); `024` → `025` → `026` en MySQL 8.0 y MariaDB 10.4; paquete en
+  `htdocs/G5/Avance3/todo el codigo/` con Apache y MariaDB 10.4.
+- Cuidado: quien tenga una base MySQL local anterior debe aplicar `024`, `025` y `026`; sin ellas el modo XAMPP responde 503 ("otra
+  estructura") y en Docker toda sesión sin Persona responde 503.
+- Sin corregir (revisión, menores): sin `SUPABASE_SECRET_KEY` un cambio de correo queda `PENDIENTE` con un mensaje genérico; un `PENDIENTE` que
+  no se puede conciliar no tiene pantalla de administración; `mapa.js` cambió sin subir `map-core-5` (la copia vieja sigue funcionando en la raíz).
+
 ### 2026-10-13 · fix/xampp-linux-local · Sin asistente: la base local se prepara sola
 - Se eliminó `Public/instalacion.php`, su ruta en `Public/.htaccess`, la redirección de `Public/bootstrap.php` y el enlace del pie de la portada. Detalle y reglas en "Entrega local para XAMPP".
 - Nuevo `Configuration/LocalDatabaseBootstrap.php` (`LocalDatabaseBootstrap`) y `Application/LocalDatabaseUnavailable.php`; `LocalDatabaseInstaller` reescrito (`inspect(PDO)`, `prepare`, `writable`, `summary`; sin credenciales guardadas, sin cuenta limitada, sin estados); `LocalDatabaseCredentials` quedó en solo lectura de la conexión heredada; `Database.php` delega en el arranque local; `SupabaseActorResolver` registra por qué no pudo validar la sesión; `Tools/diagnostico-local.php` cambia `asistente_web` por `preparacion_automatica`.
