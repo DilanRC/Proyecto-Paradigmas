@@ -9,6 +9,7 @@ import { formatPrice, safeImageUrl } from './explore.js?v=foto-4';
 import { createToast } from './shared/toast.js';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
+import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 import { agrupar, alCambiarConexion, escuchar } from './shared/tiempo-real.js?v=tiempo-real-1';
 
@@ -395,6 +396,8 @@ function iniciarDetalle(id) {
         const error = $('#subasta-pujar-error');
         const monto = Number(pujar.elements.monto.value);
         error.textContent = '';
+        const nativo = erroresNativos(pujar).monto;
+        if (nativo) { error.textContent = nativo; return; }
         if (!Number.isFinite(monto) || monto < (detalle.subasta?.minimoSiguiente ?? 0)) {
             error.textContent = `La puja mínima es ${formatPrice(detalle.subasta?.minimoSiguiente)}.`;
             return;
@@ -512,6 +515,15 @@ function iniciarCrear(animalPreseleccionado) {
     form.addEventListener('submit', async (evento) => {
         evento.preventDefault();
         errores();
+        form.querySelectorAll('[aria-invalid]').forEach((nodo) => nodo.removeAttribute('aria-invalid'));
+        const nativos = erroresNativos(form);
+        if (Object.keys(nativos).length) {
+            errores(nativos);
+            Object.keys(nativos).forEach((nombre) => form.elements.namedItem(nombre)?.setAttribute?.('aria-invalid', 'true'));
+            mostrarEstado(estado, 'Revisa los datos señalados.', 'error');
+            form.querySelector('[aria-invalid="true"]')?.focus();
+            return;
+        }
         const boton = form.querySelector('[type="submit"]');
         boton.disabled = true;
         mostrarEstado(estado, 'Abriendo la subasta…', 'info');

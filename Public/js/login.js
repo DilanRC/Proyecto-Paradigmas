@@ -166,7 +166,13 @@ function initialize() {
             setStatus(status, 'Acceso confirmado. Abriendo TinderCows…', 'success');
             window.location.assign(resolveNext(window.location.search));
         } catch (error) {
-            setStatus(status, error?.message || 'No fue posible iniciar sesión. Revise sus datos e intente nuevamente.', 'error');
+            if ((error?.status === 400 || error?.status === 401) && error?.code !== 'email_not_confirmed') {
+                // Un solo aviso para correo y contraseña: no revela cuál de los dos falló (no se pueden enumerar cuentas).
+                setStatus(status, 'El correo o la contraseña no coinciden. Revisa que estén bien escritos e inténtalo de nuevo.', 'error');
+                form.elements.namedItem('password')?.focus();
+                return;
+            }
+            setStatus(status, error?.message || 'No pudimos iniciar sesión. Revisa tu conexión e inténtalo de nuevo.', 'error');
         } finally {
             setBusy(form, submit, false);
         }

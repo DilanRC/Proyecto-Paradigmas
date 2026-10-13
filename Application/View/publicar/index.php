@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-16"></script>
-    <script type="module" src="js/publicar.js?v=publish-5"></script>
+    <script type="module" src="js/publicar.js?v=publish-6"></script>
 </head>
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">

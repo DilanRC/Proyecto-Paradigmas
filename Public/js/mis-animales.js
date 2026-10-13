@@ -6,6 +6,7 @@ import { formatDate } from './explore.js?v=foto-3';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
+import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 
 const API = 'api/v1/mi-animales';
 const VACUNAS_API = 'api/v1/mi-animales/vacunas';
@@ -204,7 +205,18 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         especieId.focus();
     };
 
+    /** Campos vacíos o con valores no válidos según el navegador: se marcan todos juntos, sin ir al servidor. */
+    const hayErroresNativos = (form, estado) => {
+        const nativos = erroresNativos(form);
+        if (Object.keys(nativos).length === 0) return false;
+        mostrarErrores(form, nativos);
+        mostrarEstado(estado, 'Revisa los campos marcados en rojo.', 'error');
+        form.querySelector('[aria-invalid="true"]')?.focus();
+        return true;
+    };
+
     const enviar = async (form, estado, accion) => {
+        if (hayErroresNativos(form, estado)) return;
         const boton = form.querySelector('[type="submit"]');
         boton.disabled = true;
         form.setAttribute('aria-busy', 'true');
@@ -222,6 +234,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
 
     formAnimal.addEventListener('submit', (event) => {
         event.preventDefault();
+        if (hayErroresNativos(formAnimal, $('#animal-form-status'))) return;
         const problema = errorArete(arete.value);
         if (problema) { mostrarErrores(formAnimal, { arete: problema }); return; }
         if (!editando && Object.keys(cuerpoDe(formAnimal)).length === 0) {

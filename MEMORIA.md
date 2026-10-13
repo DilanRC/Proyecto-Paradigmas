@@ -669,6 +669,25 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-12 · jefersonbustamante · Validaciones juntas en los formularios, teclas numéricas y login más claro
+- **Todos los campos a la vez:** nuevo `Public/js/shared/validacion-nativa.js` (`nativa-1`): `erroresNativos(form)` devuelve cada campo inválido
+  (required, min, max, step, type) con su motivo en español, y `mensajeCampo` dice qué corregir ("Escribe solo números.", "No puede ser negativo.",
+  "No puede ser mayor que 5000.", "La fecha no puede ser futura.", "Elige una opción."). Lo usan **Publicar** (antes `reportValidity()`, una burbuja
+  por intento), **Mis animales** (animal, publicar, vacuna y peso), **Mi panel** (editar publicación y vehículo), **Fletes** (oferta) y **Subastas**
+  (abrir y pujar). Antes esos diálogos esperaban al servidor (un viaje por error) y un número con letras llegaba como "" y se leía como "a convenir".
+- **Teclas:** el mismo módulo registra un `keydown` global (al importarlo) que impide escribir `e`, `+` y `-` en `<input type="number">` y el punto
+  o la coma cuando el `step` es entero (el peso, con `step="0.1"`, sí admite decimales). La cédula y el teléfono ya filtraban sus caracteres.
+- **Login:** un 400/401 de Supabase muestra "El correo o la contraseña no coinciden. Revisa que estén bien escritos e inténtalo de nuevo." y enfoca la
+  contraseña. **A propósito no dice cuál de los dos falló** (decir "el correo no existe" permitiría enumerar cuentas; mismo criterio de DEC-REG-001).
+- **Punto del mapa:** sin cambios; ya era opcional y debe caer en la provincia escrita (`validarPuntoConDireccion`) en oferta de flete, finca de Mi panel,
+  fincas del registro y admin de productores. Revisado que los cuatro lugares lo llaman.
+- Caché: `publicar.js` `publish-6`, `mi-actividad.js` `panel-18` (import `mis-animales.js?v=animales-7`), `fletes.js` `fletes-6`, `subastas.js`
+  `subastas-4`, `login.js` `front-16`. `field-errors.js` **no** cambió (sigue `errores-1`): el módulo nuevo lo envuelve en vez de modificarlo.
+- Pruebas: nueva `Tests/frontend/validacion_nativa.test.mjs`. Frontend 426 pasan y fallan solo las 4 conocidas; PHP 71 de 74 (las 3 son las conocidas:
+  `vercel_prune_registry_test` y las dos intermitentes, que pasan al repetir).
+- Cuidado: los formularios del **panel admin** siguen con `describeValidity` (mensajes genéricos de rango); si se quiere el mismo texto, importar
+  `mensajeCampo` en `shared/form.js` y subir `form.js` y sus importadores. **Sin probar en el navegador con una sesión real.**
+
 ### 2026-10-11 · jefersonbustamante · Punto del mapa opcional en los fletes y validado contra la provincia
 - Ver "Oferta de flete (P1-2)". Archivos: `MiOfertasController` (sin el punto obligatorio), `TransportistaOferta::listarCercanas` (latitud/longitud
   opcionales y `$provincia`), `FletesController`, `CompraSolicitud::ubicacionDeFinca`, nuevo `Public/js/shared/punto-direccion.js`, `fletes.js`
