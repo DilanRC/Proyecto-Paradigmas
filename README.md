@@ -178,9 +178,10 @@ local `NO_AUTENTICADO`.
 Para la revisión en XAMPP, extraiga `GanadoCerca.zip` directamente en `htdocs`
 (el ZIP ya trae la carpeta `GanadoCerca/`; no cree otra con el mismo nombre),
 inicie Apache y MySQL desde el panel y abra
-`http://localhost/GanadoCerca/Public/`. La primera visita lleva al asistente
-**Preparar la base local**, que comprueba la conexión y, con confirmación
-explícita, crea la base con las 48 tablas, sus llaves primarias y los catálogos
+`http://localhost/GanadoCerca/Public/`. Aparece la portada: no hay asistente de
+instalación. En la primera visita la aplicación localiza el MySQL de XAMPP, usa
+`bdmercadoganadero` si ya existe con la estructura de esta versión y, si no
+existe, la crea con las 48 tablas, sus llaves primarias y los catálogos
 requeridos, sin personas ni publicaciones de ejemplo. El ZIP trae su `.env`
 (MySQL local de XAMPP y los valores públicos de Supabase Auth): no hay que
 editar Apache, crear archivos ni importar SQL. Este modo requiere que

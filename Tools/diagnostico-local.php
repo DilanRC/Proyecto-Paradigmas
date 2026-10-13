@@ -16,7 +16,6 @@ $report = [
     'php_apache' => 'desconocido: CLI no demuestra la version ni extensiones de Apache',
     'php_minimo_8_0' => version_compare(PHP_VERSION, '8.0.0', '>='),
     'extensiones' => [],
-    'asistente_web' => [],
     'allow_url_fopen' => filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN),
     'openssl' => defined('OPENSSL_VERSION_TEXT') ? OPENSSL_VERSION_TEXT : 'no disponible',
     'zona_horaria_aplicacion' => date_default_timezone_get(),
@@ -26,13 +25,8 @@ $report = [
 foreach (['pdo', 'pdo_mysql', 'mysqli', 'posix', 'mbstring', 'openssl', 'json', 'fileinfo'] as $extension) {
     $report['extensiones'][$extension] = extension_loaded($extension);
 }
-$report['asistente_web'] = [
-    'plataforma_linux' => PHP_OS_FAMILY === 'Linux',
-    'mysqli_disponible' => $report['extensiones']['mysqli'],
-    'posix_disponible' => $report['extensiones']['posix'],
-    'disponible_en_este_php' => PHP_OS_FAMILY === 'Linux'
-        && $report['extensiones']['mysqli'] && $report['extensiones']['posix'],
-];
+// La base se prepara sola en la primera visita; crear una nueva necesita mysqli.
+$report['preparacion_automatica'] = ['mysqli_disponible' => $report['extensiones']['mysqli']];
 try {
     $db = \Configuration\Database::getConnection();
     $driver = $db->getAttribute(PDO::ATTR_DRIVER_NAME);

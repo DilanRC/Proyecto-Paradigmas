@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/Configuration/Compatibility.php';
 
-function tc_instalador_local_visible(): bool
-{
-    require_once dirname(__DIR__) . '/Application/Service/LocalDatabaseInstaller.php';
-
-    return \Application\Service\LocalDatabaseInstaller::requestIsLocal($_SERVER);
-}
-
 /**
  * URL base de Public: "/" con VirtualHost, "/GanadoCerca/Public/" dentro de htdocs.
  */
@@ -26,35 +19,56 @@ function tc_public_base_attribute(): string
 }
 
 /**
- * Primera visita en XAMPP: si la base local no existe, está incompleta o su instalación quedó a medias, lleva al asistente, que
- * explica qué encontró, en vez de mostrar una portada vacía. Solo lee, y solo para visitas desde la misma computadora.
+ * XAMPP: cada página comprueba la base local antes de dibujarse. Si falta, se crea; si está lista, sigue.
+ * Cuando no puede usarse (MySQL apagado, otra estructura, sin permisos) muestra un aviso breve en vez de
+ * una página que se queda cargando. No aplica en producción (PostgreSQL/Vercel) ni en Docker.
  */
-function tc_exigir_base_local(): void
+function tc_preparar_base_local(): void
 {
-    if (PHP_SAPI === 'cli' || basename((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === 'instalacion.php'
-        || !tc_instalador_local_visible()) {
+    if (PHP_SAPI === 'cli') {
         return;
     }
-    // Configuration.php carga .env: sin él, environmentIsSupported() no vería una base ajena configurada.
-    require_once dirname(__DIR__) . '/Configuration/Configuration.php';
-    if (!\Application\Service\LocalDatabaseInstaller::environmentIsSupported()) {
+    require_once dirname(__DIR__) . '/Configuration/Database.php';
+    if (!\Configuration\LocalDatabaseBootstrap::applies()) {
         return;
     }
     try {
-        require_once dirname(__DIR__) . '/Configuration/Database.php';
-        $tablas = \Configuration\Database::getConnection()->query(
-            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE()'
-        )->fetchColumn();
-        if ((int) $tablas >= \Application\Service\LocalDatabaseInstaller::TABLE_COUNT
-            && \Configuration\LocalDatabaseCredentials::state() !== 'installing') {
-            return;
+        \Configuration\LocalDatabaseBootstrap::verify(\Configuration\Database::getConnection());
+    } catch (\Throwable $problema) {
+        if (!$problema instanceof \Application\LocalDatabaseUnavailable) {
+            // Cualquier otro fallo (consulta rechazada, SQL del paquete dañado) también termina en el aviso,
+            // nunca en un error fatal con rutas o argumentos de conexión a la vista.
+            \Configuration\LocalDatabaseBootstrap::log('fallo inesperado: ' . get_class($problema) . ' ' . $problema->getMessage());
+            $problema = new \Application\LocalDatabaseUnavailable(\Application\LocalDatabaseUnavailable::INSTALACION);
         }
-    } catch (Throwable) {
-        // Sin conexión equivale a base ausente: el asistente explica el motivo.
+        http_response_code(503);
+        header('Content-Type: text/html; charset=utf-8');
+        header('Cache-Control: no-store');
+        $base = tc_public_base_attribute();
+        $mensaje = htmlspecialchars($problema->getMessage(), ENT_QUOTES, 'UTF-8');
+        // Con <base>, un href vacío llevaría a la portada: se repite la dirección pedida.
+        $actual = htmlspecialchars((string) ($_SERVER['REQUEST_URI'] ?? ''), ENT_QUOTES, 'UTF-8');
+        echo <<<HTML
+            <!doctype html>
+            <html lang="es">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>Ganado Cerca · Base de datos no disponible</title>
+                <base href="{$base}">
+                <link rel="stylesheet" href="css/base.css?v=product-9">
+            </head>
+            <body>
+                <main style="max-width: 36rem; margin: 12vh auto; padding: 0 16px;">
+                    <h1>Ganado Cerca no pudo abrir su base de datos</h1>
+                    <p>{$mensaje}</p>
+                    <p><a href="{$actual}">Volver a intentar</a></p>
+                </main>
+            </body>
+            </html>
+            HTML;
+        exit;
     }
-    header('Cache-Control: no-store');
-    header('Location: ' . tc_public_base_path() . 'instalacion', true, 302);
-    exit;
 }
 
-tc_exigir_base_local();
+tc_preparar_base_local();

@@ -59,10 +59,20 @@ foreach ($rastreados as $archivo) {
         "{$archivo} usa una ruta absoluta; debe ser relativa a la base o al módulo");
 }
 
-// Primera visita: la portada lleva al asistente y el asistente nunca redirige a sí mismo.
+// Primera visita: la base se prepara sola. No hay asistente ni redirección; un fallo se muestra como aviso 503.
 $arranque = (string) file_get_contents($raiz . '/Public/bootstrap.php');
-test_assert(str_contains($arranque, "=== 'instalacion.php'") && str_contains($arranque, 'tc_instalador_local_visible()'),
-    'La redirección al asistente es solo local y excluye al propio asistente');
+test_assert(str_contains($arranque, 'LocalDatabaseBootstrap::verify(') && str_contains($arranque, 'http_response_code(503)')
+    && !str_contains($arranque, 'Location:') && !str_contains($arranque, 'instalacion'),
+    'Las páginas comprueban la base local y nunca redirigen a una pantalla de instalación');
+test_assert(!is_file($raiz . '/Public/instalacion.php') && !in_array('Public/instalacion.php', $rastreados, true)
+    && !str_contains((string) file_get_contents($raiz . '/Public/.htaccess'), 'instalacion'),
+    'El asistente de instalación no existe: ni archivo ni ruta');
+foreach ($rastreados as $archivo) {
+    if (preg_match('#^(Application/View|Public/js)/#', $archivo) === 1 && is_file("{$raiz}/{$archivo}")) {
+        test_assert(preg_match('#href="instalacion"|[\'"`]instalacion[\'"`/?]#', (string) file_get_contents("{$raiz}/{$archivo}")) === 0,
+            "{$archivo} enlaza a la pantalla de instalación retirada");
+    }
+}
 
 // Un esquema degradado (exit 2) avisa pero no impide que producción arranque.
 $entrada = (string) file_get_contents($raiz . '/docker/apache/container-entrypoint.sh');
@@ -80,9 +90,12 @@ test_assert(str_contains($empaque, 'GanadoCerca/.env') && str_contains($empaque,
 test_assert(!in_array('.env', $rastreados, true) && preg_match('/^\.env$/m', (string) file_get_contents($raiz . '/.gitignore')) === 1,
     '.env nunca se versiona');
 
-// El asistente no ofrece datos de demostración: Calidad registra los suyos.
-$asistente = (string) file_get_contents($raiz . '/Public/instalacion.php');
-test_assert(!str_contains($asistente, 'PublicacionesDemo') && !str_contains($asistente, 'value="demo"') && !is_file($raiz . '/Application/Service/PublicacionesDemo.php'),
-    'El asistente no carga personas ni publicaciones ficticias');
+// La preparación automática no carga datos de demostración: Calidad registra los suyos.
+$instalador = (string) file_get_contents($raiz . '/Application/Service/LocalDatabaseInstaller.php');
+test_assert(!str_contains($instalador, '103exampleproductores') && !str_contains($instalador, 'PublicacionesDemo')
+    && !is_file($raiz . '/Application/Service/PublicacionesDemo.php'),
+    'La base nueva no trae personas ni publicaciones ficticias');
+test_assert(str_contains($empaque, 'No hace falta editar este archivo') && !str_contains($empaque, 'asistente'),
+    'El .env de la entrega no remite a ningún asistente');
 
 echo "OK entrega_xampp_test: carpetas internas negadas, rutas relativas y reglas de arranque y empaquetado presentes.\n";

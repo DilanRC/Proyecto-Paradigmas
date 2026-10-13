@@ -38,15 +38,13 @@ importar SQL. Hace falta Internet: las cuentas se crean en Supabase Auth.
 2. Inicie Apache y MySQL desde el panel de XAMPP.
 3. Abra <http://localhost/GanadoCerca/Public/> (o <http://localhost/GanadoCerca/>,
    que redirige ahí). Si XAMPP usa otro puerto, agréguelo a la dirección.
-4. La primera vez, la página lo lleva sola a **Preparar la base local**:
-   - **Comprobar conexión.** Los valores de XAMPP ya vienen escritos (`127.0.0.1`,
-     `3306`, `root`, sin contraseña). Cámbielos solo si su MySQL usa otro puerto
-     o contraseña. Este paso no escribe nada.
-   - Marque la confirmación y pulse **Instalar esquema y catálogos**. Crea
-     `bdmercadoganadero` con sus 48 tablas, el método de pago, la política de
-     administrador y los catálogos de animales y vacunas.
-5. Pulse **Ver la portada** y luego **Crear cuenta** para registrar su propio
-   usuario. Al terminar entra a Explorar con la sesión iniciada.
+4. Aparece la portada de Ganado Cerca. No hay asistente ni formulario de
+   configuración: en esa primera visita la aplicación localiza el MySQL de XAMPP
+   y, si `bdmercadoganadero` no existe, la crea con sus 48 tablas, el método de
+   pago, la política de administrador y los catálogos de animales y vacunas. Si
+   la base ya existe y tiene la estructura de esta versión, la usa tal como está.
+5. Pulse **Crear cuenta** para registrar su propio usuario. Al terminar entra a
+   Explorar con la sesión iniciada.
 6. En <http://localhost/phpmyadmin/> abra `bdmercadoganadero`: 48 tablas, cada
    una con su llave primaria `<tabla>id`. Su registro aparece en `tbpersona`,
    `tbcomprador` y `tbbitacora`.
@@ -62,7 +60,7 @@ pantallas muestran sus estados vacíos hasta que usted registra datos.
 | Variable | Valor | Para qué |
 |---|---|---|
 | `DB_DRIVER` | `mysql` | Obliga a usar MySQL local aunque el servidor herede una `POSTGRES_URL`. |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | `127.0.0.1`, `3306`, `bdmercadoganadero`, `root`, vacío | Valores de fábrica de XAMPP. Son el punto de partida: lo que confirme en el asistente los reemplaza sin editar el archivo. |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS` | `127.0.0.1`, `3306`, `bdmercadoganadero`, `root`, vacío | Valores de fábrica de XAMPP. Si el MySQL de su XAMPP no acepta conexiones por red, la aplicación usa la misma cuenta por el socket local. |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Proyecto de Ganado Cerca | Valores públicos: el navegador los recibe de `api/v1/auth/config`. |
 
 | `SUPABASE_SECRET_KEY` | Solo en el ZIP privado de Calidad | Clave del servidor; nunca llega al navegador. |
@@ -83,39 +81,47 @@ cuenta (correo y contraseña) y las fotos que se suban. El proyecto tiene
 "Confirm email" desactivado: la cuenta queda activa al registrarse y no llega
 ningún correo de confirmación.
 
-### Lo que el asistente hace y no hace
+### Cómo se prepara la base, sin asistente
 
-- Solo responde a visitas desde la misma computadora (`localhost`); desde otra
-  máquina o detrás de un proxy responde 404.
-- Abrir o recargar una página nunca escribe en MySQL. Crear la base exige el
-  botón, la casilla de confirmación y que `bdmercadoganadero` **no exista**.
-- Al terminar crea la cuenta MySQL `ganadocerca_app`, con contraseña aleatoria y
-  permisos solo de lectura y escritura de datos sobre `bdmercadoganadero`. La
-  aplicación usa esa cuenta; `root` solo se usa para instalar. Si el usuario con
-  el que instala no puede crear cuentas, la aplicación conserva la conexión que
-  usted escribió.
-- La conexión se guarda fuera de `htdocs`, en la carpeta temporal de XAMPP
-  (`/opt/lampp/temp`, que sobrevive a un reinicio; si no existe, `/tmp`), con
-  permisos `0700`/`0600`.
-- **Instalación interrumpida:** si Apache o MySQL se detienen a medias, la página
-  lo indica y, tras comprobar la conexión, ofrece **Terminar la instalación**.
-  Repite el mismo SQL: crea las tablas que falten y deja los datos iniciales en
-  su valor original; no borra nada. Solo se ofrece contra el mismo servidor y
-  puerto donde empezó.
-- **Base eliminada:** si borra `bdmercadoganadero` en phpMyAdmin, el asistente
-  permite instalarla de nuevo.
-- **Conexión guardada que dejó de servir** (cambió la contraseña de MySQL o se
-  eliminó la cuenta `ganadocerca_app`): compruebe la conexión y pulse **Guardar
-  conexión local**; reemplaza la anterior sin tocar los datos.
-- Una base que ya existe y que este asistente no creó no se modifica ni se
-  completa. Solo se usa si tiene las 48 tablas, sus llaves primarias y las mismas
-  columnas (nombre, tipo y nulabilidad) que el esquema actual; si no, el
-  asistente lista las diferencias y explica cómo respaldarla y renombrarla en
-  phpMyAdmin, o cómo migrarla (sección "Base existente").
-- Las variables `DB_*` que defina **Apache** (no el `.env`) mandan sobre el
-  asistente.
-- El asistente necesita Linux y la extensión PHP `posix` para proteger ese
-  archivo. En Windows use la instalación manual.
+La aplicación decide sola en cada visita; no guarda credenciales ni estado.
+
+| Lo que encuentra | Lo que hace |
+|---|---|
+| MySQL responde y `bdmercadoganadero` no existe | La crea con el esquema y los datos iniciales (semillas 101, 102 y 104). Sin personas ni publicaciones de ejemplo. |
+| La base existe con las 48 tablas, sus llaves primarias y sus columnas | La usa directamente. No instala otra, no vuelve a cargar datos iniciales en tablas que ya tienen filas y no toca ningún registro. Las tablas ajenas y las columnas opcionales de más se toleran. |
+| La base existe, completa, pero con una tabla inicial vacía (por ejemplo, se importó solo `000instalacioncompleta.sql`) | Carga solo los datos iniciales de las tablas vacías. |
+| La base existe vacía o a medias, sin nada ajeno al esquema y sin personas | Agrega las tablas que faltan (una preparación que se cortó se completa en la siguiente visita). |
+| La base existe con otra estructura (faltan columnas, otros tipos, tablas incompletas con personas registradas) | **No la modifica.** Muestra un aviso y deja el detalle en el registro de errores de PHP. Para usar esta versión, respalde y renombre esa base en phpMyAdmin o mígrela (sección "Base existente"). |
+| MySQL está apagado | Aviso: iniciar MySQL en el panel de XAMPP y recargar. |
+| MySQL pide otro usuario o contraseña | Aviso. **La aplicación no prueba contraseñas ni busca otros servidores:** hay que indicar la conexión en `.env` o con variables `DB_*` de Apache. |
+| El usuario de MySQL no puede crear la base o escribir en ella | Aviso; no se modifica nada. |
+
+- Solo una visita hecha desde la misma computadora (`localhost`, sin proxy)
+  puede crear o completar la base. Desde otra máquina la aplicación usa una base
+  lista, pero no la prepara.
+- La preparación nunca borra datos ni tablas ni altera tablas existentes (el
+  esquema solo fija el juego de caracteres de la base), y no crea ni cambia
+  cuentas de MySQL. Varias pestañas a la vez esperan a que termine la primera.
+- Los avisos son páginas breves con estado 503 (las API responden JSON 503 con
+  el mismo texto); nunca redirigen ni dejan una pantalla cargando. El detalle
+  técnico (servidor, usuario, código de error de MySQL, tablas o columnas
+  distintas; nunca contraseñas) queda en el registro de errores de PHP
+  (`/opt/lampp/logs/php_error_log` o el `error_log` de Apache), con el prefijo
+  `[GanadoCerca] base local:`.
+- Conexiones que se intentan, en orden: la que guardó el asistente de una
+  versión anterior de este paquete en la misma carpeta (solo se lee, en Linux
+  con la extensión PHP `posix`; ahí quedaron los datos de esa instalación), la
+  del `.env` por TCP y esa misma cuenta por el socket local de MySQL. Si Apache
+  define variables `DB_*`, solo se usa esa conexión.
+- Crear la base necesita la extensión `mysqli`; usar una existente, solo
+  `pdo_mysql`. En Windows no hay socket local ni conexión heredada; ese sistema
+  no se ha probado.
+- **Puerto distinto de 3306:** en Linux la aplicación llega por el socket local
+  de XAMPP. En Windows, o si tampoco hay socket, hay que indicar el puerto en
+  `.env`: no se exploran puertos.
+- Si después de crear la cuenta el registro no se guarda (MySQL se detuvo, sin
+  Internet para validar la sesión), el formulario muestra el motivo; al pulsar
+  **Registrar** otra vez se completa con la misma cuenta, sin crear otra.
 
 ### Condiciones de Apache
 
@@ -149,10 +155,9 @@ está en otra carpeta:
 
 El diagnóstico es CLI, solo lectura y está fuera de `Public/`. Informa versiones,
 extensiones, OpenSSL, UTC, conectividad PDO, tablas ausentes, llaves primarias, otras
-restricciones, índices adicionales, triggers, rutinas y si este PHP reúne los
-requisitos del asistente web (Linux, `mysqli` y `posix`). Devuelve 1 si falla un
-requisito general de la aplicación o la conexión/esquema; que el asistente web no
-esté disponible no invalida una instalación manual que ya tenga su conexión PDO.
+restricciones, índices adicionales, triggers, rutinas y si este PHP tiene `mysqli`
+(necesaria para crear una base nueva). Devuelve 1 si falla un requisito general de
+la aplicación o la conexión/esquema.
 En una instalación manual puede mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas
 ni el texto privado de las excepciones. La versión de **PHP Apache es desconocida**
 para este comando: compruebe por separado qué módulo PHP carga el servidor.

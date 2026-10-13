@@ -7,7 +7,7 @@ namespace Configuration;
 use PDO;
 
 require_once __DIR__ . '/Configuration.php';
-require_once __DIR__ . '/LocalDatabaseCredentials.php';
+require_once __DIR__ . '/LocalDatabaseBootstrap.php';
 
 final class Database
 {
@@ -38,14 +38,16 @@ final class Database
             }
         }
 
-        $local = LocalDatabaseCredentials::load();
-        $useLocal = $local !== null && !LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment();
-        $host = $useLocal ? $local['host'] : self::environmentVariable('DB_HOST', '127.0.0.1');
-        $port = $useLocal ? (string) $local['port'] : self::environmentVariable('DB_PORT', '3306');
-        $databaseName = $useLocal ? $local['database'] : self::environmentVariable('DB_NAME', 'bdmercadoganadero');
-        $username = $useLocal ? $local['user'] : self::environmentVariable('DB_USER', 'root');
-        $password = $useLocal ? $local['password'] : self::environmentVariable('DB_PASS', '');
-        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $databaseName);
+        // XAMPP: la base de esta computadora se localiza, se reutiliza o se crea sin intervención.
+        // Docker (DB_HOST=db) y cualquier MySQL remoto siguen con la conexión declarada, sin cambios.
+        if (LocalDatabaseBootstrap::applies()) {
+            return self::$connection = LocalDatabaseBootstrap::connection();
+        }
+
+        $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', self::environmentVariable('DB_HOST', '127.0.0.1'),
+            self::environmentVariable('DB_PORT', '3306'), self::environmentVariable('DB_NAME', 'bdmercadoganadero'));
+        $username = self::environmentVariable('DB_USER', 'root');
+        $password = self::environmentVariable('DB_PASS', '');
 
         self::$connection = new PDO($dsn, $username, $password, [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

@@ -16,7 +16,7 @@ loadEnvironmentFile(dirname(__DIR__) . '/.env');
 
 /**
  * Variables que completó el archivo `.env` (nombre => valor). Son valores por defecto de la
- * instalación: la conexión que guarda el asistente local las reemplaza; las del servidor, no.
+ * instalación: admiten las alternativas locales de `LocalDatabaseBootstrap`; las que fija el servidor, no.
  *
  * @return array<string, string>
  */
@@ -62,7 +62,15 @@ function loadEnvironmentFile(string $path): void
         if (strlen($value) >= 2 && (($value[0] === '"' && $value[-1] === '"') || ($value[0] === "'" && $value[-1] === "'"))) {
             $value = substr($value, 1, -1);
         }
-        if (getenv($name) === false) {
+        $current = getenv($name);
+        // Apache con hilos (XAMPP en Windows): putenv es de todo el proceso y PHP lo deshace al terminar cada
+        // petición, así que otra petición simultánea podía perder SUPABASE_URL a medio camino. apache_setenv
+        // deja el valor en la petición; un valor del proceso igual al del archivo es ese putenv de otro hilo.
+        $perRequest = function_exists('apache_setenv') && apache_getenv($name) === false;
+        if ($current === false || ($perRequest && $current === $value)) {
+            if ($perRequest) {
+                apache_setenv($name, $value);
+            }
             putenv("{$name}={$value}");
             environmentFileValues($name, $value);
         }

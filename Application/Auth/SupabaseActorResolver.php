@@ -201,11 +201,15 @@ final class SupabaseActorResolver
                 'method' => 'GET',
                 'header' => $headers,
                 'ignore_errors' => true,
-                'timeout' => 3,
+                'timeout' => 6,
             ],
         ]);
         $body = @file_get_contents($url, false, $context);
         if ($body === false) {
+            // Sin esto, un XAMPP sin salida a Internet o sin certificados raíz solo muestra "No fue posible validar la sesión".
+            error_log('[GanadoCerca] no se pudo consultar ' . parse_url($url, PHP_URL_HOST) . ' para validar la sesión: '
+                . (error_get_last()['message'] ?? 'sin detalle'));
+
             return ['status' => 0, 'body' => ''];
         }
 

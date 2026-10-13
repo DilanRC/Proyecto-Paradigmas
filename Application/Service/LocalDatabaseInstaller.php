@@ -4,536 +4,265 @@ declare(strict_types=1);
 
 namespace Application\Service;
 
-use Configuration\LocalDatabaseCredentials;
+use Application\LocalDatabaseUnavailable;
+use Configuration\LocalDatabaseBootstrap;
 use PDO;
 use PDOException;
-use RuntimeException;
-use Throwable;
 
-require_once dirname(__DIR__, 2) . '/Configuration/Configuration.php';
-require_once dirname(__DIR__, 2) . '/Configuration/LocalDatabaseCredentials.php';
+require_once dirname(__DIR__, 2) . '/Configuration/LocalDatabaseBootstrap.php';
 require_once dirname(__DIR__, 2) . '/Tools/schema-manifest.php';
 
-final class LocalDatabaseInstallerException extends RuntimeException
-{
-    public int $httpStatus;
-
-    public function __construct(string $message, int $httpStatus = 400)
-    {
-        $this->httpStatus = $httpStatus;
-        parent::__construct($message);
-    }
-}
-
+/**
+ * Compara la base local con el SQL canónico y crea o completa lo que falte. Solo agrega: nunca borra,
+ * no altera tablas existentes y no vuelve a escribir datos iniciales en una tabla que ya tiene filas.
+ * (El SQL canónico fija con `ALTER DATABASE` el juego de caracteres de la base; solo corre sobre una
+ * base nueva, vacía o a medias y sin personas.)
+ * Lo invoca `LocalDatabaseBootstrap`; aquí no se decide qué conexión usar ni quién puede instalar.
+ */
 final class LocalDatabaseInstaller
 {
-    private const DATABASE_NAME = 'bdmercadoganadero';
-    public const TABLE_COUNT = 48;
-    /** Cuenta MySQL que usa la aplicación después de instalar: solo lee y escribe datos de esta base. */
-    public const APP_USER = 'ganadocerca_app';
-    private const SEED_DEFINITIONS = [
-        '101initialpagometodo.sql' => ['required' => true, 'label' => 'Método de pago inicial'],
-        '102administrador.sql' => ['required' => true, 'label' => 'Política de acceso administrativo'],
-        '103exampleproductores.sql' => ['required' => false, 'label' => 'Personas y fincas de demostración'],
-        '104catalogosanimal.sql' => ['required' => true, 'label' => 'Catálogos de animales y vacunas'],
+    private const DATABASE_NAME = LocalDatabaseBootstrap::DATABASE_NAME;
+    private const TABLE_COUNT = 48;
+    private const SCHEMA_FILE = 'SqlScripts/000instalacioncompleta.sql';
+    /** Datos iniciales y las tablas que deben estar vacías para cargarlos. Sin personas ni publicaciones de demostración. */
+    private const SEEDS = [
+        'SeedData/101initialpagometodo.sql' => ['tbpagometodo'],
+        'SeedData/102administrador.sql' => ['tbadministrador'],
+        'SeedData/104catalogosanimal.sql' => ['tbespecie', 'tbanimaltipo', 'tbraza', 'tbvacuna'],
     ];
+    private const LOCK_SECONDS = 20;
 
     private function __construct()
     {
     }
 
-    public static function requestIsLocal(array $server): bool
+    /**
+     * Estado de la base frente al SQL canónico. Solo lee.
+     *
+     * - `schemaComplete`: están las 48 tablas con su llave primaria y sus columnas (se toleran tablas y
+     *   columnas opcionales de más, que no estorban a la aplicación).
+     * - `completable`: no está completa, pero solo le faltan tablas enteras, no tiene nada ajeno al esquema
+     *   ni personas registradas: es una base vacía o una preparación que se cortó.
+     * - `seedsPending`: algún dato inicial falta y su tabla está vacía.
+     */
+    public static function inspect(PDO $server): array
     {
-        if (!self::environmentIsSupported()) {
-            return false;
-        }
-        foreach (['HTTP_FORWARDED', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP'] as $proxyHeader) {
-            if (isset($server[$proxyHeader]) && trim((string) $server[$proxyHeader]) !== '') {
-                return false;
-            }
-        }
-
-        $remoteAddress = strtolower(trim((string) ($server['REMOTE_ADDR'] ?? '')));
-        $hostHeader = (string) ($server['HTTP_HOST'] ?? '');
-        $host = parse_url('http://' . $hostHeader, PHP_URL_HOST);
-        if (!is_string($host)) {
-            return false;
-        }
-        $host = strtolower(trim($host, '[]'));
-
-        return in_array($remoteAddress, ['127.0.0.1', '::1', '::ffff:127.0.0.1'], true)
-            && in_array($host, ['localhost', '127.0.0.1', '::1'], true);
-    }
-
-    public static function environmentIsSupported(): bool
-    {
-        $vercel = getenv('VERCEL');
-        if ($vercel !== false && trim($vercel) !== '') {
-            return false;
-        }
-        foreach (LocalDatabaseCredentials::mysqlForced() ? [] : ['POSTGRES_URL', 'POSTGRES_URL_NON_POOLING'] as $variable) {
-            $value = getenv($variable);
-            if ($value !== false && trim($value) !== '') {
-                return false;
-            }
-        }
-
-        $configuredHost = getenv('DB_HOST');
-        if ($configuredHost !== false && trim($configuredHost) !== ''
-            && !LocalDatabaseCredentials::validHost(trim($configuredHost))) {
-            return false;
-        }
-        $configuredDatabase = getenv('DB_NAME');
-        if ($configuredDatabase !== false && trim($configuredDatabase) !== ''
-            && trim($configuredDatabase) !== self::DATABASE_NAME) {
-            return false;
-        }
-
-        return true;
-    }
-
-    public static function defaultCredentials(): array
-    {
-        if (!LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment()) {
-            $stored = LocalDatabaseCredentials::load();
-            if ($stored !== null) {
-                return $stored;
-            }
-        }
-
-        return self::environmentDefaults();
-    }
-
-    /** Conexión de partida: variables del servidor o del `.env`; sin ellas, el root sin contraseña de XAMPP. */
-    public static function environmentDefaults(): array
-    {
-        $configuredHost = getenv('DB_HOST');
-        $host = trim((string) ($configuredHost ?: '127.0.0.1'));
-        $port = trim((string) (getenv('DB_PORT') ?: '3306'));
-        $user = trim((string) (getenv('DB_USER') ?: 'root'));
-        $password = getenv('DB_PASS');
-
-        return [
-            'database' => self::DATABASE_NAME,
-            'host' => LocalDatabaseCredentials::validHost($host) ? $host : '127.0.0.1',
-            'port' => ctype_digit($port) ? (int) $port : 3306,
-            'user' => $user === '' ? 'root' : $user,
-            'password' => $password === false ? '' : $password,
+        $manifest = self::manifest();
+        $state = [
+            'databaseExists' => self::databaseExists($server),
+            'tableCount' => 0,
+            'primaryKeyCount' => 0,
+            'missingTables' => $manifest['tables_ordered'],
+            'missingPrimaryKeys' => [],
+            'columnDifferences' => [],
+            'extraTables' => [],
+            'extraColumns' => [],
+            'personas' => 0,
+            'schemaComplete' => false,
+            'completable' => false,
+            'seedsPending' => false,
         ];
-    }
-
-    public static function credentialsManagedByEnvironment(): bool
-    {
-        return LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment();
-    }
-
-    public static function validateCredentials(array $input): array
-    {
-        $host = trim((string) ($input['host'] ?? ''));
-        $portValue = trim((string) ($input['port'] ?? ''));
-        $user = trim((string) ($input['user'] ?? ''));
-        $password = $input['password'] ?? '';
-        if (!LocalDatabaseCredentials::validHost($host)) {
-            throw new LocalDatabaseInstallerException('El host debe ser localhost, 127.0.0.1 o ::1.');
-        }
-        if (!ctype_digit($portValue) || (int) $portValue < 1 || (int) $portValue > 65535) {
-            throw new LocalDatabaseInstallerException('El puerto debe ser un número entre 1 y 65535.');
-        }
-        if ($user === '' || strlen($user) > 80 || str_contains($user, "\0")) {
-            throw new LocalDatabaseInstallerException('Escriba el usuario local de MySQL.');
-        }
-        if (!is_string($password) || strlen($password) > 4096 || str_contains($password, "\0")) {
-            throw new LocalDatabaseInstallerException('La contraseña no tiene un formato válido.');
-        }
-
-        return [
-            'database' => self::DATABASE_NAME,
-            'host' => $host,
-            'port' => (int) $portValue,
-            'user' => $user,
-            'password' => $password,
-        ];
-    }
-
-    public static function inspect(array $input): array
-    {
-        $credentials = self::validateCredentials($input);
-        $server = self::connectServer($credentials);
-        try {
-            $version = (string) $server->query('SELECT VERSION()')->fetchColumn();
-            $exists = self::databaseExists($server);
-            $state = [
-                'connected' => true,
-                'mysqlVersion' => $version,
-                'databaseExists' => $exists,
-                'database' => self::DATABASE_NAME,
-                'tableCount' => 0,
-                'expectedTableCount' => self::TABLE_COUNT,
-                'primaryKeyCount' => 0,
-                'expectedPrimaryKeyCount' => self::TABLE_COUNT,
-                'missingTables' => [],
-                'missingPrimaryKeys' => [],
-                'columnDifferences' => [],
-                'schemaComplete' => false,
-                'requiredSeedsComplete' => false,
-                'seeds' => self::emptySeedStatuses(),
-                'installationState' => LocalDatabaseCredentials::state(),
-            ];
-            if (!$exists) {
-                return $state;
-            }
-
-            $manifest = self::manifest();
-            $tablesQuery = $server->prepare(
-                'SELECT TABLE_NAME FROM information_schema.TABLES
-                 WHERE TABLE_SCHEMA = :database AND TABLE_TYPE = \'BASE TABLE\''
-            );
-            $tablesQuery->execute(['database' => self::DATABASE_NAME]);
-            $tables = array_map('strval', $tablesQuery->fetchAll(PDO::FETCH_COLUMN));
-            $state['tableCount'] = count($tables);
-            $tableSet = array_fill_keys($tables, true);
-            $state['missingTables'] = array_values(array_diff($manifest['tables_ordered'], $tables));
-
-            $primaryKeysQuery = $server->prepare(
-                'SELECT TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION
-                 FROM information_schema.KEY_COLUMN_USAGE
-                 WHERE CONSTRAINT_SCHEMA = :database AND CONSTRAINT_NAME = \'PRIMARY\'
-                 ORDER BY TABLE_NAME, ORDINAL_POSITION'
-            );
-            $primaryKeysQuery->execute(['database' => self::DATABASE_NAME]);
-            $primaryKeys = [];
-            foreach ($primaryKeysQuery->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $primaryKeys[(string) $row['TABLE_NAME']][] = (string) $row['COLUMN_NAME'];
-            }
-            foreach ($manifest['tables_ordered'] as $table) {
-                if (!isset($tableSet[$table])) {
-                    $state['missingPrimaryKeys'][] = $table;
-                    continue;
-                }
-                if (($primaryKeys[$table] ?? []) === [$table . 'id']) {
-                    $state['primaryKeyCount']++;
-                } else {
-                    $state['missingPrimaryKeys'][] = $table;
-                }
-            }
-            $state['columnDifferences'] = self::columnDifferences($server, $manifest['columns'], $tableSet);
-            $state['schemaComplete'] = $state['tableCount'] === self::TABLE_COUNT
-                && $state['missingTables'] === [] && $state['missingPrimaryKeys'] === []
-                && $state['columnDifferences'] === [];
-            $state['seeds'] = self::inspectSeeds($server, $tableSet);
-            $state['requiredSeedsComplete'] = true;
-            foreach (self::SEED_DEFINITIONS as $file => $definition) {
-                if ($definition['required'] && !$state['seeds'][$file]['complete']) {
-                    $state['requiredSeedsComplete'] = false;
-                }
-            }
-
+        if (!$state['databaseExists']) {
             return $state;
-        } catch (PDOException) {
-            throw new LocalDatabaseInstallerException(
-                'MySQL está disponible, pero este usuario no puede consultar la base seleccionada.',
-                403,
-            );
         }
+
+        $tables = self::column($server, 'SELECT TABLE_NAME FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = :database AND TABLE_TYPE = \'BASE TABLE\'');
+        $state['tableCount'] = count($tables);
+        $state['missingTables'] = array_values(array_diff($manifest['tables_ordered'], $tables));
+        $state['extraTables'] = array_values(array_diff($tables, $manifest['tables_ordered']));
+        $present = array_values(array_intersect($manifest['tables_ordered'], $tables));
+
+        $primaryKeys = [];
+        $query = $server->prepare('SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE
+            WHERE CONSTRAINT_SCHEMA = :database AND CONSTRAINT_NAME = \'PRIMARY\' ORDER BY TABLE_NAME, ORDINAL_POSITION');
+        $query->execute(['database' => self::DATABASE_NAME]);
+        foreach ($query->fetchAll(PDO::FETCH_NUM) as [$table, $column]) {
+            $primaryKeys[(string) $table][] = (string) $column;
+        }
+        foreach ($present as $table) {
+            if (($primaryKeys[$table] ?? []) === [$table . 'id']) {
+                $state['primaryKeyCount']++;
+            } else {
+                $state['missingPrimaryKeys'][] = $table;
+            }
+        }
+        [$state['columnDifferences'], $state['extraColumns']] = self::columnDifferences($server, $manifest['columns'], $present);
+
+        $state['schemaComplete'] = $state['missingTables'] === [] && $state['missingPrimaryKeys'] === []
+            && $state['columnDifferences'] === [];
+        if (in_array('tbpersona', $present, true)) {
+            $state['personas'] = (int) $server->query('SELECT COUNT(*) FROM ' . self::DATABASE_NAME . '.tbpersona')->fetchColumn();
+        }
+        $state['completable'] = !$state['schemaComplete'] && $state['missingPrimaryKeys'] === []
+            && $state['columnDifferences'] === [] && $state['extraTables'] === [] && $state['extraColumns'] === []
+            && $state['personas'] === 0;
+        $state['seedsPending'] = $state['schemaComplete'] && self::pendingSeeds($server) !== [];
+
+        return $state;
     }
 
-    public static function saveExistingConnection(array $input): array
+    /** Resumen de una línea para el registro de errores de PHP. */
+    public static function summary(array $report): string
     {
-        $credentials = self::validateCredentials($input);
-        self::assertMatchesEnvironment($credentials);
-        $inspection = self::inspect($credentials);
-        if (!$inspection['databaseExists'] || !$inspection['schemaComplete']) {
-            throw new LocalDatabaseInstallerException(
-                'Solo se guarda la conexión cuando la base existente tiene las 48 tablas, sus 48 llaves primarias y las columnas del esquema actual.',
-                409,
-            );
-        }
-        // Una conexión guardada que todavía sirve no se reemplaza. Si dejó de servir (cambió la contraseña
-        // o se eliminó la cuenta de la aplicación), esta conexión comprobada ocupa su lugar.
-        if (self::storedConnectionWorks()) {
-            throw new LocalDatabaseInstallerException('Esta carpeta ya tiene una instalación local registrada.', 409);
-        }
-        LocalDatabaseCredentials::discard();
-
-        try {
-            LocalDatabaseCredentials::store($credentials, 'existing');
-        } catch (Throwable) {
-            throw new LocalDatabaseInstallerException(
-                'PHP no pudo guardar la conexión en almacenamiento temporal privado. No se modificó la base de datos.',
-                500,
-            );
+        $parts = ["{$report['tableCount']} tablas", "{$report['primaryKeyCount']} llaves primarias", "{$report['personas']} personas"];
+        foreach (['missingTables' => 'faltan tablas', 'missingPrimaryKeys' => 'sin llave primaria esperada',
+            'columnDifferences' => 'columnas distintas', 'extraTables' => 'tablas ajenas'] as $key => $label) {
+            if ($report[$key] !== []) {
+                $parts[] = $label . ': ' . implode(', ', array_slice($report[$key], 0, 12))
+                    . (count($report[$key]) > 12 ? '… (' . count($report[$key]) . ')' : '');
+            }
         }
 
-        return $inspection;
-    }
-
-    /** Crea la base ausente con el esquema canónico y los datos iniciales. */
-    public static function install(array $input): array
-    {
-        return self::run($input, false);
+        return implode('; ', $parts);
     }
 
     /**
-     * Termina una instalación que este asistente empezó y no pudo cerrar (Apache o MySQL se detuvieron
-     * a medias). Repite el mismo SQL: crea las tablas que falten y deja los datos iniciales en su valor
-     * canónico; no borra nada.
+     * ¿Esta cuenta puede insertar, actualizar y borrar en la base? Las tres sentencias no afectan filas
+     * (`WHERE 1 = 0`): MySQL revisa el privilegio igual y rechaza la que no esté permitida.
      */
-    public static function resume(array $input): array
+    public static function writable(PDO $connection): bool
     {
-        return self::run($input, true);
+        $table = self::DATABASE_NAME . '.tbpagometodo';
+        try {
+            $connection->exec("INSERT INTO {$table} SELECT * FROM {$table} WHERE 1 = 0");
+            $connection->exec("UPDATE {$table} SET tbpagometodoactivo = tbpagometodoactivo WHERE 1 = 0");
+            $connection->exec("DELETE FROM {$table} WHERE 1 = 0");
+
+            return true;
+        } catch (PDOException) {
+            return false;
+        }
     }
 
-    private static function run(array $input, bool $resume): array
+    /**
+     * Deja la base lista: la crea si no existe, agrega las tablas que falten a una base vacía o a medias y
+     * carga los datos iniciales en las tablas vacías. Un candado de MySQL hace esperar a las peticiones
+     * simultáneas; al obtenerlo se vuelve a mirar, así que repetirla no cambia nada.
+     *
+     * @param array{host:string,port:int,user:string,password:string,socket:?string} $connection
+     */
+    public static function prepare(array $connection): array
     {
-        $credentials = self::validateCredentials($input);
-        self::assertMatchesEnvironment($credentials);
         if (!extension_loaded('mysqli')) {
-            throw new LocalDatabaseInstallerException('La extensión mysqli de PHP no está disponible.', 500);
+            LocalDatabaseBootstrap::log('falta la extensión mysqli de PHP');
+            throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
         }
-        self::manifest();
-        $batches = [];
-        foreach (['SqlScripts/000instalacioncompleta.sql', 'SeedData/101initialpagometodo.sql',
-            'SeedData/102administrador.sql', 'SeedData/104catalogosanimal.sql'] as $file) {
-            $batches[] = self::readSqlFile($file);
+        $schema = self::readSqlFile(self::SCHEMA_FILE);
+        $seeds = [];
+        foreach (array_keys(self::SEEDS) as $file) {
+            $seeds[$file] = self::readSqlFile($file);
         }
-        if (preg_match('/^\s*(?:DROP|TRUNCATE)\b/im', implode("\n", $batches)) === 1) {
-            throw new LocalDatabaseInstallerException('El SQL del paquete contiene una operación destructiva.', 500);
+        if (preg_match('/^\s*(?:DROP|TRUNCATE|DELETE|RENAME|ALTER\s+TABLE)\b/im', $schema . "\n" . implode("\n", $seeds)) === 1) {
+            LocalDatabaseBootstrap::log('el SQL del paquete contiene una operación destructiva; no se ejecutó');
+            throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
         }
-        $server = self::connectServer($credentials);
+
+        // Crear 48 tablas o esperar a la petición que las crea puede pasar del límite por defecto de PHP (30 s).
+        set_time_limit(120);
         $lockName = 'ganadocerca_' . substr(hash('sha256', self::DATABASE_NAME), 0, 48);
         $lockHeld = false;
-        $beforeDatabaseCreated = false;
-        $previous = null;
-
         try {
-            $lock = $server->prepare('SELECT GET_LOCK(:lock_name, 0)');
-            $lock->execute(['lock_name' => $lockName]);
+            $server = LocalDatabaseBootstrap::open($connection, false);
+            $lock = $server->prepare('SELECT GET_LOCK(:name, :seconds)');
+            $lock->execute(['name' => $lockName, 'seconds' => self::LOCK_SECONDS]);
             if ((int) $lock->fetchColumn() !== 1) {
-                throw new LocalDatabaseInstallerException(
-                    'Otra pestaña está comprobando o instalando la base. Espere y vuelva a cargar la página.',
-                    409,
-                );
+                LocalDatabaseBootstrap::log('otra petición sigue preparando la base');
+                throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
             }
             $lockHeld = true;
-            $exists = self::databaseExists($server);
-            if ($resume) {
-                $started = LocalDatabaseCredentials::load();
-                if (!$exists || ($started['state'] ?? null) !== 'installing'
-                    || $started['host'] !== $credentials['host'] || $started['port'] !== $credentials['port']) {
-                    throw new LocalDatabaseInstallerException(
-                        'No hay una instalación interrumpida de este asistente que terminar. No se aplicó ningún cambio.',
-                        409,
-                    );
-                }
-            } else {
-                if ($exists) {
-                    throw new LocalDatabaseInstallerException(
-                        'La base ya existe. No se aplicó ningún cambio; vuelva a cargar la página para revisar su estado.',
-                        409,
-                    );
-                }
-                // La base no existe: un registro anterior de esta carpeta (un intento que se cortó o una base
-                // que se eliminó después) ya no describe nada y no debe impedir instalar de nuevo.
-                $previous = LocalDatabaseCredentials::load();
-                LocalDatabaseCredentials::discard();
-                try {
-                    LocalDatabaseCredentials::store($credentials, 'installing');
-                } catch (Throwable) {
-                    throw new LocalDatabaseInstallerException(
-                        'PHP no puede guardar la conexión local con permisos privados. La base no se modificó.',
-                        500,
-                    );
-                }
-                $beforeDatabaseCreated = true;
 
-                // CREATE DATABASE sin IF NOT EXISTS cierra la ventana entre la comprobación y el DDL:
-                // una base que aparezca mientras tanto no se adopta ni se modifica.
-                self::runSqlBatch(
-                    $credentials,
-                    'CREATE DATABASE bdmercadoganadero CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;',
-                );
-                $beforeDatabaseCreated = false;
+            $report = self::inspect($server);
+            $new = !$report['databaseExists'];
+            if ($new) {
+                // Sin IF NOT EXISTS: una base que aparezca entre la comprobación y el DDL no se adopta a ciegas.
+                self::runSqlBatch($connection, 'CREATE DATABASE ' . self::DATABASE_NAME
+                    . ' CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;');
+            } elseif (!$report['schemaComplete'] && !$report['completable']) {
+                LocalDatabaseBootstrap::log('base existente incompatible, no se modificó: ' . self::summary($report));
+                throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INCOMPATIBLE);
+            }
+            if (!$report['schemaComplete']) {
+                self::runSqlBatch($connection, $schema);
+            }
+            foreach (self::pendingSeeds($server) as $file) {
+                self::runSqlBatch($connection, $seeds[$file]);
             }
 
-            foreach ($batches as $batch) {
-                self::runSqlBatch($credentials, $batch);
+            $report = self::inspect($server);
+            if (!$report['schemaComplete'] || ($new && self::pendingSeeds($server) !== [])) {
+                LocalDatabaseBootstrap::log('la preparación terminó incompleta: ' . self::summary($report));
+                throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
             }
 
-            $inspection = self::inspect($credentials);
-            if (!$inspection['schemaComplete'] || !$inspection['requiredSeedsComplete']) {
-                throw new LocalDatabaseInstallerException(
-                    'MySQL terminó la importación, pero la comprobación final encontró elementos incompletos. '
-                    . 'Compruebe la conexión de nuevo para ver el detalle y terminar la instalación.',
-                    500,
-                );
-            }
-            $application = self::limitedAccount($server, $credentials);
-            LocalDatabaseCredentials::store($application ?? $credentials, 'installed');
-            $inspection['applicationUser'] = ($application ?? $credentials)['user'];
-
-            return $inspection;
-        } catch (PDOException) {
-            self::forgetAttemptWithoutDatabase($beforeDatabaseCreated, $previous);
-            throw new LocalDatabaseInstallerException(
-                'No se pudo crear o comprobar la base. El usuario de MySQL puede carecer de permiso CREATE DATABASE.',
-                403,
-            );
-        } catch (LocalDatabaseInstallerException $exception) {
-            self::forgetAttemptWithoutDatabase($beforeDatabaseCreated, $previous);
-            throw $exception;
-        } catch (Throwable) {
-            self::forgetAttemptWithoutDatabase($beforeDatabaseCreated, $previous);
-            throw new LocalDatabaseInstallerException(
-                'La instalación se interrumpió. Lo ya creado se conserva; compruebe la conexión de nuevo para terminarla.',
-                500,
-            );
+            return $report;
+        } catch (PDOException $exception) {
+            LocalDatabaseBootstrap::log('MySQL rechazó la preparación: error ' . (int) ($exception->errorInfo[1] ?? $exception->getCode()));
+            throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
         } finally {
             if ($lockHeld) {
                 try {
-                    $release = $server->prepare('SELECT RELEASE_LOCK(:lock_name)');
-                    $release->execute(['lock_name' => $lockName]);
-                } catch (Throwable) {
+                    $server->prepare('SELECT RELEASE_LOCK(:name)')->execute(['name' => $lockName]);
+                } catch (PDOException) {
+                    // MySQL suelta el candado al cerrar la conexión.
                 }
             }
-            $server = null;
         }
     }
 
-    public static function seedDefinitions(): array
+    /** Datos iniciales que faltan por completo: alguna de sus tablas existe y está vacía. */
+    private static function pendingSeeds(PDO $server): array
     {
-        return self::SEED_DEFINITIONS;
-    }
+        $pending = [];
+        foreach (self::SEEDS as $file => $tables) {
+            foreach ($tables as $table) {
+                if ((int) $server->query('SELECT COUNT(*) FROM ' . self::DATABASE_NAME . ".{$table}")->fetchColumn() === 0) {
+                    $pending[] = $file;
+                    break;
+                }
+            }
+        }
 
-    private static function connectServer(array $credentials): PDO
-    {
-        try {
-            return new PDO(
-                sprintf('mysql:host=%s;port=%d;charset=utf8mb4', $credentials['host'], $credentials['port']),
-                $credentials['user'],
-                $credentials['password'],
-                [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                    PDO::ATTR_TIMEOUT => 5,
-                ],
-            );
-        } catch (PDOException) {
-            throw new LocalDatabaseInstallerException(
-                'No fue posible conectar a MySQL. Compruebe el servicio, el host, el puerto y las credenciales.',
-                503,
-            );
-        }
-    }
-
-    private static function assertMatchesEnvironment(array $credentials): void
-    {
-        if (!self::credentialsManagedByEnvironment()) {
-            return;
-        }
-        $expected = self::defaultCredentials();
-        if ($credentials['host'] !== $expected['host'] || $credentials['port'] !== $expected['port']
-            || $credentials['user'] !== $expected['user'] || $credentials['password'] !== $expected['password']) {
-            throw new LocalDatabaseInstallerException(
-                'Apache ya define la conexión MySQL. Use esos mismos valores o quite la configuración local antes de continuar.',
-                409,
-            );
-        }
+        return $pending;
     }
 
     private static function databaseExists(PDO $server): bool
     {
-        $query = $server->prepare('SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = :database');
+        return self::column($server, 'SELECT SCHEMA_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = :database') !== [];
+    }
+
+    /** @return list<string> */
+    private static function column(PDO $server, string $sql): array
+    {
+        $query = $server->prepare($sql);
         $query->execute(['database' => self::DATABASE_NAME]);
 
-        return (int) $query->fetchColumn() > 0;
+        return array_map('strval', $query->fetchAll(PDO::FETCH_COLUMN));
     }
 
     /**
-     * Si falló antes de que este asistente creara la base, el intento no dejó nada y se olvida para
-     * poder empezar de nuevo. Después de crearla, el estado `installing` queda y permite terminarla.
+     * Columnas de las tablas presentes que faltan o tienen otro tipo o nulabilidad (impiden usar la base) y,
+     * aparte, las que sobran. Una columna de más que acepta NULL o tiene valor por defecto no rompe ningún
+     * INSERT de la aplicación; una obligatoria sin valor sí, y cuenta como diferencia.
+     *
+     * @return array{0:list<string>,1:list<string>}
      */
-    private static function forgetAttemptWithoutDatabase(bool $beforeDatabaseCreated, ?array $previous): void
+    private static function columnDifferences(PDO $server, array $expected, array $present): array
     {
-        if (!$beforeDatabaseCreated) {
-            return;
-        }
-        LocalDatabaseCredentials::clearFailedAttempt();
-        // Si ni siquiera se pudo crear la base (por ejemplo, una cuenta sin permisos que no la ve),
-        // la conexión que la carpeta tenía guardada sigue siendo la válida.
-        if ($previous !== null && LocalDatabaseCredentials::state() === null) {
-            try {
-                LocalDatabaseCredentials::store($previous, $previous['state']);
-            } catch (Throwable) {
-            }
-        }
-    }
-
-    /** ¿La conexión guardada por el asistente todavía llega a la base? */
-    public static function storedConnectionWorks(): bool
-    {
-        $stored = LocalDatabaseCredentials::load();
-        if ($stored === null) {
-            return false;
-        }
-        try {
-            self::connectServer($stored)->query('SELECT COUNT(*) FROM bdmercadoganadero.tbpagometodo')->fetchColumn();
-
-            return true;
-        } catch (Throwable) {
-            return false;
-        }
-    }
-
-    /**
-     * Crea (o renueva) una cuenta que solo puede leer y escribir datos de esta base, para que la
-     * aplicación no siga usando la cuenta administrativa con la que se instaló. Si el usuario que
-     * instala no puede crear cuentas, o la nueva no logra conectarse, devuelve null y se conserva
-     * la conexión original.
-     */
-    private static function limitedAccount(PDO $server, array $credentials): ?array
-    {
-        if (self::credentialsManagedByEnvironment()) {
-            return null;
-        }
-        try {
-            $password = bin2hex(random_bytes(24));
-            foreach (['localhost', '127.0.0.1', '::1'] as $host) {
-                $account = "'" . self::APP_USER . "'@'{$host}'";
-                $server->exec("CREATE USER IF NOT EXISTS {$account} IDENTIFIED BY " . $server->quote($password));
-                $server->exec("ALTER USER {$account} IDENTIFIED BY " . $server->quote($password));
-                $server->exec("GRANT SELECT, INSERT, UPDATE, DELETE ON bdmercadoganadero.* TO {$account}");
-            }
-            $limited = ['user' => self::APP_USER, 'password' => $password] + $credentials;
-            self::connectServer($limited)->query('SELECT COUNT(*) FROM bdmercadoganadero.tbpagometodo')->fetchColumn();
-
-            return $limited;
-        } catch (Throwable) {
-            return null;
-        }
-    }
-
-    /** Columnas que faltan, sobran o tienen otro tipo o nulabilidad respecto del SQL canónico. */
-    private static function columnDifferences(PDO $server, array $expected, array $tables): array
-    {
-        $query = $server->prepare(
-            'SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA = :database'
-        );
+        $query = $server->prepare('SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT, EXTRA
+            FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = :database');
         $query->execute(['database' => self::DATABASE_NAME]);
         $actual = [];
-        foreach ($query->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $actual[(string) $row['TABLE_NAME']][(string) $row['COLUMN_NAME']] = \schema_manifest_column_signature(
-                (string) $row['COLUMN_TYPE'],
-                strtoupper((string) $row['IS_NULLABLE']) === 'YES',
-            );
+        $optional = [];
+        foreach ($query->fetchAll(PDO::FETCH_NUM) as [$table, $column, $type, $nullable, $default, $extra]) {
+            $isNullable = strtoupper((string) $nullable) === 'YES';
+            $actual[(string) $table][(string) $column] = \schema_manifest_column_signature((string) $type, $isNullable);
+            $optional[(string) $table][(string) $column] = $isNullable || $default !== null || (string) $extra !== '';
         }
         $differences = [];
-        foreach ($expected as $table => $columns) {
-            if (!isset($tables[$table])) {
-                continue;
-            }
-            foreach ($columns as $column => $signature) {
+        $extras = [];
+        foreach ($present as $table) {
+            foreach ($expected[$table] as $column => $signature) {
                 $found = $actual[$table][$column] ?? null;
                 if ($found === null) {
                     $differences[] = "{$table}.{$column} falta";
@@ -541,107 +270,26 @@ final class LocalDatabaseInstaller
                     $differences[] = "{$table}.{$column} es {$found} y se esperaba {$signature}";
                 }
             }
-            foreach (array_keys(array_diff_key($actual[$table] ?? [], $columns)) as $extra) {
-                $differences[] = "{$table}.{$extra} no pertenece al esquema";
+            foreach (array_keys(array_diff_key($actual[$table] ?? [], $expected[$table])) as $extra) {
+                $extras[] = "{$table}.{$extra}";
+                if (!$optional[$table][$extra]) {
+                    $differences[] = "{$table}.{$extra} no pertenece al esquema y exige un valor";
+                }
             }
         }
 
-        return $differences;
+        return [$differences, $extras];
     }
 
     private static function manifest(): array
     {
         $manifest = \schema_manifest();
-        if (($manifest['database'] ?? null) !== self::DATABASE_NAME
-            || ($manifest['table_count'] ?? null) !== self::TABLE_COUNT) {
-            throw new LocalDatabaseInstallerException(
-                'El SQL del paquete no coincide con la base y las 48 tablas esperadas.',
-                500,
-            );
+        if (($manifest['database'] ?? null) !== self::DATABASE_NAME || ($manifest['table_count'] ?? null) !== self::TABLE_COUNT) {
+            LocalDatabaseBootstrap::log('el SQL del paquete no describe la base y las 48 tablas esperadas');
+            throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
         }
 
         return $manifest;
-    }
-
-    private static function inspectSeeds(PDO $server, array $tables): array
-    {
-        $statuses = self::emptySeedStatuses();
-        if (isset($tables['tbpagometodo'])) {
-            $method = $server->query(
-                "SELECT COUNT(*) FROM bdmercadoganadero.tbpagometodo
-                 WHERE tbpagometodoid = 1 AND tbpagometodonombre = 'Efectivo'
-                   AND tbpagometododescripcion = 'Pago realizado en efectivo' AND tbpagometodoactivo = 1"
-            );
-            $statuses['101initialpagometodo.sql']['complete'] = (int) $method->fetchColumn() === 1;
-            $statuses['101initialpagometodo.sql']['partial'] = !$statuses['101initialpagometodo.sql']['complete']
-                && (int) $server->query('SELECT COUNT(*) FROM bdmercadoganadero.tbpagometodo')->fetchColumn() > 0;
-        }
-        if (isset($tables['tbadministrador'])) {
-            $count = (int) $server->query(
-                'SELECT COUNT(*) FROM bdmercadoganadero.tbadministrador WHERE tbadministradorestado = 1'
-            )->fetchColumn();
-            $statuses['102administrador.sql']['complete'] = $count > 0;
-            $statuses['102administrador.sql']['optionalMessage'] = $count > 0
-                ? 'Hay una política activa; el archivo no crea usuarios ni contraseñas.'
-                : 'Falta la política de acceso; no se modificó la base existente.';
-        }
-        if (isset($tables['tbpersona'])) {
-            $demo = $server->query(
-                "SELECT COUNT(DISTINCT tbpersonaidentificacionnumero)
-                 FROM bdmercadoganadero.tbpersona
-                 WHERE tbpersonaidentificacionnumero IN ('101110111', '3101111111')"
-            );
-            $demoCount = (int) $demo->fetchColumn();
-            $statuses['103exampleproductores.sql']['complete'] = $demoCount === 2;
-            $statuses['103exampleproductores.sql']['partial'] = $demoCount === 1;
-            $statuses['103exampleproductores.sql']['optionalMessage'] = $demoCount === 0
-                ? 'Los registros ficticios no se cargan en la instalación inicial.'
-                : 'Se detectaron registros de demostración existentes.';
-        }
-
-        $catalogs = [
-            'tbespecie' => 6,
-            'tbanimaltipo' => 26,
-            'tbraza' => 42,
-            'tbvacuna' => 10,
-        ];
-        $catalogsComplete = true;
-        $catalogsPartial = false;
-        foreach ($catalogs as $table => $expectedCount) {
-            if (!isset($tables[$table])) {
-                $catalogsComplete = false;
-                continue;
-            }
-            $id = $table . 'id';
-            $count = (int) $server->query(
-                "SELECT COUNT(DISTINCT {$id}) FROM bdmercadoganadero.{$table} WHERE {$id} BETWEEN 1 AND {$expectedCount}"
-            )->fetchColumn();
-            if ($count !== $expectedCount) {
-                $catalogsComplete = false;
-                $catalogsPartial = $catalogsPartial || $count > 0;
-            }
-        }
-        $statuses['104catalogosanimal.sql']['complete'] = $catalogsComplete;
-        $statuses['104catalogosanimal.sql']['partial'] = !$catalogsComplete && $catalogsPartial;
-        $statuses['104catalogosanimal.sql']['optionalMessage'] = '';
-
-        return $statuses;
-    }
-
-    private static function emptySeedStatuses(): array
-    {
-        $statuses = [];
-        foreach (self::SEED_DEFINITIONS as $file => $definition) {
-            $statuses[$file] = [
-                'label' => $definition['label'],
-                'required' => $definition['required'],
-                'complete' => false,
-                'partial' => false,
-                'optionalMessage' => $definition['required'] ? 'No se pudo verificar.' : 'No se cargó.',
-            ];
-        }
-
-        return $statuses;
     }
 
     private static function readSqlFile(string $relativePath): string
@@ -649,70 +297,54 @@ final class LocalDatabaseInstaller
         $path = dirname(__DIR__, 2) . '/Database/' . $relativePath;
         $contents = is_file($path) ? file_get_contents($path) : false;
         if (!is_string($contents) || trim($contents) === '') {
-            throw new LocalDatabaseInstallerException('Falta un archivo SQL requerido en el paquete: ' . basename($path), 500);
+            LocalDatabaseBootstrap::log('falta un archivo SQL del paquete: ' . $relativePath);
+            throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::INSTALACION);
         }
 
         return $contents;
     }
 
+    /**
+     * Ejecuta un archivo SQL completo con mysqli (PDO no ejecuta varias sentencias con preparación nativa).
+     * Cualquier sentencia rechazada detiene la preparación y queda en el log.
+     */
     private static function runSqlBatch(array $credentials, string $sql): void
     {
-        if (!extension_loaded('mysqli')) {
-            throw new LocalDatabaseInstallerException('La extensión mysqli de PHP no está disponible.', 500);
-        }
         mysqli_report(MYSQLI_REPORT_OFF);
         $connection = mysqli_init();
-        if (!$connection instanceof \mysqli) {
-            throw new LocalDatabaseInstallerException('PHP no pudo iniciar la conexión MySQL.', 500);
-        }
         $connection->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
-        if (!$connection->real_connect(
-            $credentials['host'],
+        if (!@$connection->real_connect(
+            $credentials['socket'] !== null ? 'localhost' : $credentials['host'],
             $credentials['user'],
             $credentials['password'],
             null,
             $credentials['port'],
+            $credentials['socket'],
         )) {
-            $connection->close();
-            throw new LocalDatabaseInstallerException('La conexión a MySQL se perdió durante la importación.', 503);
+            LocalDatabaseBootstrap::log('la conexión a MySQL se perdió durante la preparación');
+            throw new LocalDatabaseUnavailable(LocalDatabaseUnavailable::SIN_CONEXION);
         }
         $connection->set_charset('utf8mb4');
-        if (!$connection->multi_query($sql)) {
-            throw self::sqlRejected($connection);
-        }
-        do {
+        $more = $connection->multi_query($sql);
+        while ($more) {
             $result = $connection->store_result();
             if ($result instanceof \mysqli_result) {
                 $result->free();
             }
-            if ($connection->errno !== 0) {
-                throw self::sqlRejected($connection);
-            }
-            if (!$connection->more_results()) {
+            if ($connection->errno !== 0 || !$connection->more_results()) {
                 break;
             }
-            if (!$connection->next_result()) {
-                throw self::sqlRejected($connection);
-            }
-        } while (true);
+            $more = $connection->next_result();
+        }
+        $errno = $connection->errno;
         $connection->close();
-    }
-
-    /** 1044, 1142 y 1227 son rechazos por privilegios: no hubo importación parcial que explicar. */
-    private static function sqlRejected(\mysqli $connection): LocalDatabaseInstallerException
-    {
-        $withoutPrivilege = in_array($connection->errno, [1044, 1142, 1227], true);
-        $connection->close();
-
-        return $withoutPrivilege
-            ? new LocalDatabaseInstallerException(
-                'Ese usuario de MySQL no tiene permiso para crear la base o sus tablas. '
-                . 'Use una cuenta con permiso CREATE (en XAMPP, normalmente root).',
-                403,
-            )
-            : new LocalDatabaseInstallerException(
-                'MySQL rechazó una sentencia del archivo SQL. La instalación puede haber quedado parcial.',
-                500,
-            );
+        if ($errno !== 0) {
+            // 1044, 1142 y 1227 son rechazos por privilegios: no hubo cambios parciales que explicar.
+            $withoutPrivilege = in_array($errno, [1044, 1142, 1227], true);
+            LocalDatabaseBootstrap::log("MySQL rechazó una sentencia de la preparación: error {$errno}"
+                . ($withoutPrivilege ? '' : '; lo ya creado se conserva y se completa en la siguiente visita'));
+            throw new LocalDatabaseUnavailable($withoutPrivilege
+                ? LocalDatabaseUnavailable::SIN_PERMISO : LocalDatabaseUnavailable::INSTALACION);
+        }
     }
 }

@@ -57,7 +57,7 @@ trap 'rm -rf "$TEMPORAL"' EXIT
 mkdir "$TEMPORAL/GanadoCerca"
 cat > "$TEMPORAL/GanadoCerca/.env" <<ENV
 # Configuración de la entrega local para XAMPP. No hace falta editar este archivo.
-# Si su MySQL usa otro puerto o contraseña, escríbalos en el asistente (Public/instalacion).
+# La aplicación localiza el MySQL de XAMPP y prepara la base bdmercadoganadero en la primera visita.
 
 # Base de datos: MySQL/MariaDB de XAMPP en esta computadora.
 DB_DRIVER=mysql
