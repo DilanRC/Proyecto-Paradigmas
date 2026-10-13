@@ -1016,4 +1016,19 @@ final class AnimalComercial
 
         return $normalizado;
     }
+
+    /** La publicación tiene abierto un periodo de estado ACTIVO. */
+    public function publicacionActiva(int $publicacionId): bool
+    {
+        $sentencia = $this->conexion->prepare(
+            'SELECT 1 FROM tbanimalpublicacionestadoperiodo
+             WHERE tbanimalpublicacionid = :publicacionId
+               AND tbanimalpublicacionestadoperiodofechafin IS NULL
+               AND tbanimalpublicacionestadoperiodoestado = :estado
+             LIMIT 1'
+        );
+        $sentencia->execute(['publicacionId' => $publicacionId, 'estado' => 'ACTIVO']);
+
+        return $sentencia->fetchColumn() !== false;
+    }
 }

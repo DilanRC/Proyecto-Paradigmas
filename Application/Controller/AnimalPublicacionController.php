@@ -275,12 +275,7 @@ final class AnimalPublicacionController
 
     private function fincaActiva(int $productorId, string $nombre): ?array
     {
-        $sentencia = $this->conexion->prepare(
-            'SELECT tbfincaid, tbfincanombre FROM tbfinca
-             WHERE tbproductorid = :productorId AND tbfincanombre = :nombre AND tbfincaestado = 1'
-        );
-        $sentencia->execute(['productorId' => $productorId, 'nombre' => $nombre]);
-        $filas = $sentencia->fetchAll();
+        $filas = (new ProductorFinca($this->conexion))->listarActivasPorNombre($productorId, $nombre);
         if (count($filas) > 1) {
             throw new HttpException('La finca está duplicada para este Productor.', 409);
         }

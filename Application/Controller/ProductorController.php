@@ -381,21 +381,11 @@ final class ProductorController
     private function fincasAdvertencias(array $nombres, int $productorId): array
     {
         $advertencias = [];
-        $sentencia = $this->conexion->prepare(
-            'SELECT 1 FROM tbfinca
-             WHERE tbfincanombre = :nombre
-               AND tbproductorid <> :productorId
-               AND tbfincaestado = 1
-             LIMIT 1'
-        );
-        foreach (array_values(array_unique($nombres)) as $nombre) {
-            $sentencia->execute(['nombre' => $nombre, 'productorId' => $productorId]);
-            if ($sentencia->fetch() !== false) {
-                $advertencias[] = $this->validacion->advertencia(
-                    'fincas',
-                    "El nombre \"{$nombre}\" ya existe en otro productor; caso legítimo, no se bloquea.",
-                );
-            }
+        foreach ($this->fincas->nombresUsadosPorOtroProductor($nombres, $productorId) as $nombre) {
+            $advertencias[] = $this->validacion->advertencia(
+                'fincas',
+                "El nombre \"{$nombre}\" ya existe en otro productor; caso legítimo, no se bloquea.",
+            );
         }
 
         return $advertencias;

@@ -76,7 +76,11 @@ final class SupabaseActorResolver
             $payload = $this->normalizarUsuarioSupabase($payload);
         }
         if ($status === 401 || $status === 403) {
-            throw new HttpException($payload['error']['message'] ?? 'Sesión inválida.', $status);
+            // Supabase Auth responde 403 a un JWT inválido, vencido o de una sesión cerrada.
+            // Para la app eso es "sin sesión" (401), no "sin permiso": el navegador solo
+            // vuelve a Entrar con 401.
+            throw new HttpException($payload['error']['message'] ?? 'Sesión inválida.',
+                $respuestaUsuarioSupabase ? 401 : $status);
         }
         if ($status !== 200 || ($payload['success'] ?? false) !== true) {
             throw new HttpException('No fue posible validar la sesión.', 503);

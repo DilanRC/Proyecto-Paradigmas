@@ -6,11 +6,13 @@ namespace Application\Controller;
 
 require_once dirname(__DIR__) . '/Service/ValidacionService.php';
 require_once dirname(__DIR__) . '/Service/SupabaseAuthAdmin.php';
+require_once dirname(__DIR__) . '/Model/Administrador.php';
 // Solo se usa su validación estática imagenUrl(); no instancia sus modelos.
 require_once __DIR__ . '/AnimalPublicacionController.php';
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Model\Administrador;
 use Application\Model\Bitacora;
 use Application\Model\Persona;
 use Application\Service\SupabaseAuthAdmin;
@@ -277,11 +279,8 @@ final class MiPerfilController
             unset($cambios['correo']);
             return false;
         }
-        $administrador = $this->conexion->prepare(
-            'SELECT 1 FROM tbadministrador WHERE LOWER(tbadministradorcorreoelectronico) = LOWER(:correo) LIMIT 1'
-        );
-        $administrador->execute(['correo' => $cambios['correo']]);
-        if ($this->personas->existeCorreo($cambios['correo']) || $administrador->fetchColumn() !== false) {
+        if ($this->personas->existeCorreo($cambios['correo'])
+            || (new Administrador($this->conexion))->existeCorreo($cambios['correo'])) {
             throw new HttpException('Revise los campos indicados.', 409, null, [
                 'correoElectronico' => 'Ese correo ya tiene una cuenta.',
             ]);

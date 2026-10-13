@@ -669,6 +669,25 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-12 · fix/xampp-linux-local · Sesión vencida en XAMPP y SQL fuera de los controladores
+- **Sesión vencida o cerrada = 401 también en XAMPP.** Sin el servicio Node, `SupabaseActorResolver` valida el JWT directo contra
+  `SUPABASE_URL/auth/v1/user`, y Supabase responde **403** a un token inválido, vencido o de una sesión cerrada. PHP lo reenviaba
+  y el navegador (que solo trata el 401 como sesión terminada) mostraba un error en vez de volver a Entrar. Ahora, en la
+  verificación directa, 401 y 403 salen como **401**. Con `SUPABASE_AUTH_VERIFY_URL` (servicio Node) el contrato no cambia.
+  Prueba en `Tests/auth_actor_test.php`. Se encontró probando el flujo real contra XAMPP, no en las pruebas con dobles.
+- **Ningún controlador prepara ni ejecuta SQL** (observación de Calidad sobre MVC). Las 9 consultas que quedaban en 6
+  controladores pasaron a sus modelos, sin cambiar respuestas: `Administrador::existeCorreo`,
+  `ProductorFinca::listarActivasPorNombre` y `::nombresUsadosPorOtroProductor`, `AnimalComercial::publicacionActiva`,
+  `Persona::buscarIdentidad` y `::capacidadIds`. Gate nuevo `Tests/controladores_sin_sql_test.php`: falla si vuelve a
+  aparecer `->prepare(`, `->query(` o `->exec(` en `Application/Controller/`.
+- Cuidado: un controlador que empieza a usar un modelo debe agregarlo a la lista `foreach ([...] as $modelo)` de su endpoint
+  en `Public/api/` (lo exige `api_requires_test`); se agregó `Administrador` en `mi-perfil.php` y `subastas.php`.
+- Sigue pendiente (no se tocó a propósito antes de la revisión): `ProductorController` y `AnimalPublicacionController` tienen
+  ~580 líneas; partirlos es un refactor mayor.
+- Comprobado contra XAMPP real y el Supabase de pruebas: registro, reintento, correo distinto, datos inválidos, otra cuenta
+  con la misma cédula, edición de perfil con histórico de teléfono, cierre de sesión y nuevo login, mirando las filas en MySQL
+  (24 casos). Storage con dos usuarios: 19 casos (carpeta ajena, sobrescritura, borrado, anónimo, documento privado).
+
 ### 2026-10-12 · fix/xampp-linux-local · Una llave primaria por tabla (DEC-CALIDAD-PK-001)
 - **Regla corregida.** Calidad pide: "Cada tabla debe tener su llave primaria. No trabajamos con claves foráneas y
   restricciones de negocio en la BD". El proyecto lo había leído como "cero claves". Ahora las **47 tablas** declaran

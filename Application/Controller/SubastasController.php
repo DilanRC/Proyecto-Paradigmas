@@ -6,11 +6,13 @@ namespace Application\Controller;
 
 require_once dirname(__DIR__) . '/Service/TiempoReal.php';
 require_once dirname(__DIR__) . '/Service/SubastaCierreService.php';
+require_once dirname(__DIR__) . '/Model/Administrador.php';
 // Solo se usan sus validaciones estáticas (texto, numero, imagenUrl, validarTodos).
 require_once __DIR__ . '/AnimalPublicacionController.php';
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Model\Administrador;
 use Application\Model\AnimalComercial;
 use Application\Model\AnimalVacunacion;
 use Application\Model\Bitacora;
@@ -410,11 +412,7 @@ final class SubastasController
 
     private function esAdministrador(): bool
     {
-        $sentencia = $this->conexion->prepare(
-            'SELECT 1 FROM tbadministrador WHERE LOWER(tbadministradorcorreoelectronico) = LOWER(:correo) AND tbadministradorestado = 1 LIMIT 1'
-        );
-        $sentencia->execute(['correo' => (string) $this->actor->correoElectronico]);
-        return $sentencia->fetchColumn() !== false;
+        return (new Administrador($this->conexion))->existeCorreo((string) $this->actor->correoElectronico, true);
     }
 
     private function exigirNoAdministrador(): void

@@ -72,6 +72,28 @@ try {
         test_same(401, $error->estadoHttp, 'Token inválido debe preservar 401');
     }
 
+    // XAMPP valida directo contra Supabase Auth, que responde 403 a un JWT inválido, vencido
+    // o de una sesión cerrada. El navegador solo trata el 401 como sesión terminada.
+    $verifyAnterior = getenv('SUPABASE_AUTH_VERIFY_URL');
+    $urlAnterior = getenv('SUPABASE_URL');
+    putenv('SUPABASE_AUTH_VERIFY_URL');
+    putenv('SUPABASE_URL=https://directo.example.test');
+    try {
+        $directo = new SupabaseActorResolver(fn (): array => [
+            'status' => 403,
+            'body' => '{"code":403,"error_code":"session_not_found","msg":"Session from session_id claim in JWT does not exist"}',
+        ]);
+        try {
+            $directo->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer sesion-cerrada']);
+            throw new RuntimeException('Una sesión cerrada debe fallar.');
+        } catch (HttpException $error) {
+            test_same(401, $error->estadoHttp, 'La sesión cerrada o vencida validada contra Supabase responde 401');
+        }
+    } finally {
+        putenv($verifyAnterior === false ? 'SUPABASE_AUTH_VERIFY_URL' : "SUPABASE_AUTH_VERIFY_URL={$verifyAnterior}");
+        putenv($urlAnterior === false ? 'SUPABASE_URL' : "SUPABASE_URL={$urlAnterior}");
+    }
+
     $caido = new SupabaseActorResolver(fn (): array => throw new RuntimeException('down'));
     try {
         $caido->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer token']);
