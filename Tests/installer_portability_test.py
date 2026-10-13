@@ -8,6 +8,27 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+linux_installer = (ROOT / 'instalar-local.sh').read_text()
+windows_installer = (ROOT / 'instalar-local.ps1').read_text()
+credentials = (ROOT / 'Configuration/LocalDatabaseCredentials.php').read_text()
+web_installer = (ROOT / 'Public/instalacion.php').read_text()
+local_diagnostic = (ROOT / 'Tools/diagnostico-local.php').read_text()
+database_configuration = (ROOT / 'Configuration/Database.php').read_text()
+installer_service = (ROOT / 'Application/Service/LocalDatabaseInstaller.php').read_text()
+assert 'DB_PASS="$(configuracion DB_PASS \'\')"' in linux_installer
+assert '[string]::IsNullOrWhiteSpace($dbPass)' in windows_installer
+assert '$sqlUsuario | & $cli -u root --default-character-set=utf8mb4' in windows_installer
+assert '& $cli -u root -e $sqlUsuario' not in windows_installer
+assert "PHP_OS_FAMILY === 'Linux' && function_exists('posix_geteuid')" in credentials
+assert 'XAMPP en Linux' in web_installer and 'extensión POSIX' in web_installer
+assert "extension_loaded('mysqli')" in web_installer
+assert "'mysqli', 'posix'" in local_diagnostic
+assert "'disponible_en_este_php' => PHP_OS_FAMILY === 'Linux'" in local_diagnostic
+assert "&& $report['extensiones']['mysqli'] && $report['extensiones']['posix']" in local_diagnostic
+assert "$ok = $report['php_minimo_8_0'] && $report['extensiones']['pdo_mysql'] && $report['extensiones']['mbstring']" in local_diagnostic
+assert "$ok = $report['php_minimo_8_0']" in local_diagnostic and "&& $report['extensiones']['posix']" not in local_diagnostic.split('$ok = ', 1)[1]
+assert '!LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment()' in database_configuration
+assert 'return LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment();' in installer_service
 with tempfile.TemporaryDirectory(prefix='ganado-installer-test-') as temporary:
     fixture = Path(temporary)
     shutil.copy2(ROOT / 'instalar-local.sh', fixture)
@@ -46,6 +67,9 @@ else: print('1')
     sql = '\n'.join(c['sql'] for c in calls)
     assert "p''ass\\word" in sql and 'NO_BACKSLASH_ESCAPES' in sql
     assert secret not in result.stdout + result.stderr and all(secret not in ' '.join(c['args']) for c in calls)
+    result = run(DB_PASS='')
+    assert result.returncode != 0 and 'no hay una contrasena predeterminada' in result.stderr
+    assert log.read_text() == ''
     result = run(TEST_USER_EXISTS='1')
     assert result.returncode == 0
     assert 'CREATE USER' not in log.read_text() and 'ALTER USER' not in log.read_text()

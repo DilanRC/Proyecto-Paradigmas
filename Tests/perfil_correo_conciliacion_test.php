@@ -170,7 +170,7 @@ try {
 
     // 10. El correo pendiente ya es de otra Persona: no se adivina, queda PENDIENTE.
     $servicio->solicitar(ActorContext::usuarioVerificado($personaId, $uuid, $e, null), $e, $correoOtra, fn (): string => $remoto);
-    test_same(null, $servicio->conciliar($uuid, $correoOtra, null), 'No se concilia hacia el correo de otra Persona');
+    test_same(null, $servicio->conciliar($uuid, $correoOtra, null, true), 'No se concilia hacia el correo de otra Persona');
     test_same([$e, $correoOtra], [$local($personaId), $local($otraPersonaId)], 'Ninguna Persona toma el correo de otra');
 
     // 11. Con ese pendiente sin resolver no se acepta otro cambio ni se anuncia que se completó.

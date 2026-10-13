@@ -59,7 +59,11 @@ $check(str_contains($migration, 'ensurePrimaryKeys($connection)')
 foreach (['FOREIGN KEY', 'DEFAULT ', 'CREATE INDEX', 'UNIQUE'] as $forbidden) {
     $check(!str_contains($schema, $forbidden), "Constructo SQL prohibido: {$forbidden}");
 }
-$check(str_contains($migration, 'pg_advisory_xact_lock'), 'Falta serialización de migración');
+$check(str_contains($migration, 'pg_try_advisory_xact_lock')
+    && str_contains($migration, '$lockAcquired')
+    && str_contains($migration, 'THEN 1 ELSE 0 END')
+    && str_contains($migration, 'Otra migración de esquema sigue activa'),
+    'La migración debe adquirir el advisory lock y abortar si otro proceso ya lo tiene');
 $check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
 $check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
 $check(str_contains($migration, 'supabase_schema_status=ready tables=48 migration=v10'), 'Falta traza operativa');

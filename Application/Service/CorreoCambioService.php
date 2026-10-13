@@ -81,7 +81,7 @@ final class CorreoCambioService
      * PENDIENTE hacia ese mismo correo, Supabase lo aplicó y tbpersona no: se termina
      * aquí. Devuelve la Persona vinculada o null si no hay nada que conciliar.
      */
-    public function conciliar(string $sujeto, string $correoSesion, ?string $rol): ?int
+    public function conciliar(string $sujeto, string $correoSesion, ?string $rol, bool $correoConfirmado): ?int
     {
         try {
             $pendiente = $this->cambios->pendientePorSujeto($sujeto);
@@ -98,7 +98,13 @@ final class CorreoCambioService
 
         return $this->aplicar(
             $pendiente,
-            ActorContext::usuarioVerificado((int) $pendiente['tbpersonaid'], $sujeto, $correoSesion, $rol),
+            ActorContext::usuarioVerificado(
+                (int) $pendiente['tbpersonaid'],
+                $sujeto,
+                $correoSesion,
+                $rol,
+                $correoConfirmado,
+            ),
         );
     }
 

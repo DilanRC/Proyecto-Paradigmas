@@ -13,7 +13,7 @@ use Application\HttpException;
 
 $conexion = test_db();
 $correoAutorizado = 'admin-authorization-test@example.test';
-$actor = ActorContext::personaAutenticada(7, 'subject-7', 'Admin-Authorization-Test@Example.test', 'authenticated');
+    $actor = ActorContext::personaAutenticada(7, 'subject-7', 'Admin-Authorization-Test@Example.test', 'authenticated', true);
 
 try {
     $conexion->prepare('INSERT INTO tbadministrador (
@@ -23,13 +23,37 @@ try {
 
     try {
         AdminAuthorization::require(
-            ActorContext::personaAutenticada(8, 'subject-8', 'otro@example.test', 'authenticated'),
+            ActorContext::personaAutenticada(8, 'subject-8', 'otro@example.test', 'authenticated', true),
             $conexion,
         );
         throw new RuntimeException('Una cuenta fuera de la política almacenada debe ser rechazada.');
     } catch (HttpException $exception) {
         if ($exception->estadoHttp !== 403) {
             throw new RuntimeException('La cuenta fuera de la política debe responder 403.');
+        }
+    }
+
+    try {
+        AdminAuthorization::require(
+            ActorContext::personaAutenticada(9, 'subject-9', 'Admin-Authorization-Test@Example.test', 'authenticated', false),
+            $conexion,
+        );
+        throw new RuntimeException('El correo no confirmado no debe autorizar la cuenta admin coincidente.');
+    } catch (HttpException $exception) {
+        if ($exception->estadoHttp !== 403) {
+            throw new RuntimeException('El correo no confirmado debe responder 403.');
+        }
+    }
+
+    try {
+        AdminAuthorization::require(
+            ActorContext::personaAutenticada(10, 'subject-10', $correoAutorizado, 'authenticated'),
+            $conexion,
+        );
+        throw new RuntimeException('La fábrica de actor no debe asumir que el correo fue confirmado.');
+    } catch (HttpException $exception) {
+        if ($exception->estadoHttp !== 403) {
+            throw new RuntimeException('Sin confirmación explícita, el actor debe responder 403.');
         }
     }
 

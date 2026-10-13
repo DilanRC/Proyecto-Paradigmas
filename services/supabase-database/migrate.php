@@ -522,18 +522,30 @@ function eliminarEstadoProductor(PDO $connection): void
  */
 function ensurePrimaryKeys(PDO $connection): array
 {
-    $conLlave = $connection->query(
-        "SELECT c.relname FROM pg_constraint k
+    $primaryKeyColumns = $connection->query(
+        "SELECT c.relname AS table_name, a.attname AS column_name
+         FROM pg_constraint k
          INNER JOIN pg_class c ON c.oid = k.conrelid
          INNER JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'public' AND k.contype = 'p'"
-    )->fetchAll(PDO::FETCH_COLUMN);
+         CROSS JOIN LATERAL unnest(k.conkey) WITH ORDINALITY AS pk_column(attnum, ordinal)
+         INNER JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = pk_column.attnum
+         WHERE n.nspname = 'public' AND k.contype = 'p'
+         ORDER BY c.relname, pk_column.ordinal"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    $primaryKeys = [];
+    foreach ($primaryKeyColumns as $row) {
+        $primaryKeys[(string) $row['table_name']][] = (string) $row['column_name'];
+    }
     $pendientes = [];
     foreach (array_keys(EXPECTED_COLUMNS) as $table) {
-        if (in_array($table, $conLlave, true)) {
+        $id = $table . 'id';
+        if (isset($primaryKeys[$table])) {
+            if ($primaryKeys[$table] === [$id]) {
+                continue;
+            }
+            $pendientes[] = $table;
             continue;
         }
-        $id = $table . 'id';
         $invalidos = (int) $connection->query(
             "SELECT (SELECT COUNT(*) FROM public.{$table} WHERE {$id} IS NULL)
                   + (SELECT COUNT(*) FROM (SELECT 1 FROM public.{$table} GROUP BY {$id} HAVING COUNT(*) > 1) repetidos)"
@@ -694,7 +706,14 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))");
+    $connection->exec("SET LOCAL lock_timeout = '5s'");
+    $connection->exec("SET LOCAL statement_timeout = '60s'");
+    $lockAcquired = (int) $connection->query(
+        "SELECT CASE WHEN pg_try_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10')) THEN 1 ELSE 0 END"
+    )->fetchColumn() === 1;
+    if (!$lockAcquired) {
+        throw new RuntimeException('Otra migración de esquema sigue activa; vuelva a intentar después.');
+    }
     $connection->exec($schema);
     ensureCurrentColumns($connection);
     normalizePersonCapabilities($connection);
@@ -707,11 +726,14 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
     if ($sinLlavePrimaria !== []) {
+        fwrite(STDOUT, 'supabase_schema_status=degraded tables=48 migration=v10 primary_key_pending='
+            . count($sinLlavePrimaria) . "\n");
         fwrite(STDERR, 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
-            . " causa=identificadores_repetidos_o_nulos\n");
+            . " causa=llave_existente_incorrecta_o_identificadores_repetidos_o_nulos\n");
+        exit(2);
     }
+    fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

@@ -49,6 +49,23 @@ try {
     if ($actor->rolTecnico !== 'authenticated') {
         throw new RuntimeException('El rol del proveedor solo se conserva como dato técnico.');
     }
+    if ($actor->correoConfirmado !== false) {
+        throw new RuntimeException('La ausencia de confirmación explícita no debe habilitar privilegios administrativos.');
+    }
+
+    $confirmado = new SupabaseActorResolver(
+        fn (): array => [
+            'status' => 200,
+            'body' => json_encode(['success' => true, 'data' => [
+                'id' => 'supabase-user-1',
+                'email' => $email,
+                'role' => 'authenticated',
+                'email_confirmed_at' => '2026-01-01T00:00:00Z',
+            ]], JSON_THROW_ON_ERROR),
+        ],
+    );
+    $actorConfirmado = $confirmado->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer token-confirmado']);
+    test_same(true, $actorConfirmado->correoConfirmado, 'La confirmación autenticada debe conservarse en el actor');
 
     (new Bitacora($db, $actor))->registrar('CREAR', $registro, null, ['ok' => true], test_token('auth'));
     $bitacora = $db->prepare('SELECT tbbitacoraactortipo, tbbitacorausuarioid FROM tbbitacora

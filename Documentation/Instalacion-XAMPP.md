@@ -12,9 +12,9 @@ compatibilidad con cualquier versión de Linux o XAMPP.
 | Componente | Requisito / resultado comprobado |
 |---|---|
 | PHP | Mínimo PHP 8.0: tipos unión, `mixed` y propiedades promovidas. La aplicación sustituye las clases `readonly` y carga el polyfill de `array_is_list()` en `Configuration/Compatibility.php`. |
-| Extensiones | `pdo_mysql`, `mbstring`, `openssl`, `json` y `fileinfo`; `allow_url_fopen=On` para solicitudes HTTPS de autenticación. |
+| Extensiones | `pdo_mysql` para la conexión y lectura del esquema; `mysqli` para importar SQL; `mbstring`, `openssl`, `json` y `fileinfo`; `allow_url_fopen=On` para solicitudes HTTPS de autenticación. |
 | Tiempo | `Configuration/Configuration.php` fija UTC para fechas del negocio. La configuración CLI no demuestra la configuración de Apache. |
-| Apache | 2.4, `mod_rewrite`, `AllowOverride All` para `Public/`; `mod_headers` para los encabezados de protección. |
+| Apache | 2.4, `mod_rewrite`, `AllowOverride All` para la carpeta del paquete y `Public/`; `mod_headers` para los encabezados de protección. |
 | MariaDB | 10.4.32 de XAMPP: esquema de 48 tablas con su llave primaria y ninguna otra restricción ni índice; batería completa de 80 pruebas PHP aprobada, incluida la regresión de observaciones. Migración 025 aplicada sobre una base con datos. |
 | MySQL | 5.7.44: importación desde cero, migración 025 (también el aborto con identificadores repetidos) y tres pruebas de integración de publicaciones/inventario aprobadas. MySQL 8.0 sigue siendo la referencia de Compose; las tres pruebas de 5.7 no equivalen a certificar toda la aplicación. |
 | Otros motores | MySQL 8.0.46 y MariaDB 11.8.8 (contenedores): instalación con 47 llaves primarias y 13 pruebas de modelo cada uno. No se ejecutó la batería completa ni la aplicación por HTTP sobre ellos. |
@@ -27,6 +27,49 @@ mínimo de lenguaje de la aplicación. PHP anterior a 8.0 queda fuera del alcanc
 Las versiones de XAMPP y las dependencias del sistema del profesor siguen
 pendientes de comprobación en su equipo.
 
+## Entrega ZIP para revisión
+
+El paquete `GanadoCerca.zip` está pensado para extraerse como
+`<htdocs>/GanadoCerca`. En una instalación XAMPP cuyo directorio web sea el
+predeterminado, el flujo es:
+
+1. Extraiga el ZIP en `htdocs/GanadoCerca` y arranque Apache y MySQL desde el
+   panel de XAMPP. No necesita cambiar `httpd.conf`, configurar un VirtualHost,
+   abrir una terminal ni importar SQL manualmente.
+2. Abra <http://localhost/GanadoCerca/Public/>. En el pie de página aparece
+   **Preparar base MySQL local**; el asistente solo se muestra desde loopback.
+3. Escriba el host, puerto, usuario y contraseña local de MySQL. **Comprobar
+   conexión** solo consulta el servidor. Si `bdmercadoganadero` no existe, una
+   segunda pantalla pide confirmar antes de crear la base y cargar el esquema
+   canónico, el método de pago inicial, la política de acceso administrativo y
+   los catálogos de animales/vacunas. La semilla `103exampleproductores.sql`
+   con personas ficticias no se importa.
+4. Abra <http://localhost/phpmyadmin/> y compruebe `bdmercadoganadero`: debe
+   contener 48 tablas, cada una con su llave primaria `<tabla>id`.
+
+Si la base ya existe, el asistente la consulta sin completar ni modificarla.
+Solo permite guardar una conexión cuando confirma las 48 tablas y sus llaves.
+La contraseña permanece en la sesión PHP del servidor, guardada en una carpeta
+temporal privada por copia del proyecto; una conexión confirmada se guarda en
+un archivo temporal fuera de `htdocs` con permisos privados. No se crea una
+cuenta de MySQL, una cuenta de Supabase ni contraseñas de aplicación.
+Todo valor no vacío de `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` o `DB_PASS`
+configurado en Apache o `.env` tiene prioridad sobre esa conexión guardada; para
+usar el asistente, deje vacíos esos campos. Las asignaciones vacías de `.env.example`
+no bloquean el asistente.
+El asistente web protege ese almacenamiento con permisos POSIX y por eso solo
+se admite en XAMPP para Linux con la extensión PHP `posix`. En Windows, use la
+instalación manual documentada; el asistente web no guarda credenciales con ACL
+que no pueda verificar.
+
+El modo ZIP requiere que Apache aplique los archivos `.htaccess` del paquete
+(`AllowOverride All`). El paquete niega el acceso a los archivos privados en la
+raíz y concede acceso solo a `Public/`. Con `AllowOverride None`, PHP puede
+responder 503 para la aplicación, pero Apache aún podría entregar archivos
+estáticos privados; ese modo no está soportado para esta entrega. La prueba de
+compatibilidad se limita a XAMPP 8.0.30/Linux con Apache 2.4.58, MariaDB 10.4.32
+y `AllowOverride All`; compruebe el XAMPP de destino antes de la revisión.
+
 Compruebe el ejecutable PHP de su instalación; sustituya `/opt/lampp` si XAMPP
 está en otra carpeta:
 
@@ -38,12 +81,15 @@ está en otra carpeta:
 
 El diagnóstico es CLI, solo lectura y está fuera de `Public/`. Informa versiones,
 extensiones, OpenSSL, UTC, conectividad PDO, tablas ausentes, llaves primarias, otras
-restricciones, índices adicionales, triggers y rutinas. Devuelve 1 si un requisito comprobado falla. Puede
-mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas ni
-el texto privado de las excepciones. La versión de **PHP Apache es desconocida**
+restricciones, índices adicionales, triggers, rutinas y si este PHP reúne los
+requisitos del asistente web (Linux, `mysqli` y `posix`). Devuelve 1 si falla un
+requisito general de la aplicación o la conexión/esquema; que el asistente web no
+esté disponible no invalida una instalación manual que ya tenga su conexión PDO.
+Puede mostrar fallo de conexión hasta que configure `.env`; no muestra contraseñas
+ni el texto privado de las excepciones. La versión de **PHP Apache es desconocida**
 para este comando: compruebe por separado qué módulo PHP carga el servidor.
 
-## Instalar y publicar solo Public
+## Alternativa avanzada: publicar solo `Public/` como DocumentRoot
 
 1. Copie el repositorio completo en una carpeta fuera de `htdocs`, por ejemplo
    `/opt/lampp/Proyecto-Paradigmas`. Mantenga la raíz del repositorio fuera de
@@ -171,8 +217,10 @@ MySQL 8.0.
 
 `bash instalar-local.sh` instala esquema y semillas básicas en el destino
 configurado. Usa siempre TCP con `DB_HOST` y `DB_PORT`, tanto para root como para
-la cuenta de aplicación. Configura `DB_ROOT_PASS` localmente si root exige
-contraseña; no la ponga en comandos compartidos ni en documentación.
+la cuenta de aplicación. `DB_PASS` debe estar configurada localmente para la
+cuenta de aplicación; el script ya no distribuye una contraseña predeterminada.
+Configura `DB_ROOT_PASS` localmente si root exige contraseña; no la ponga en
+comandos compartidos ni en documentación.
 
 Puede definir `MYSQL_CLIENT` con la ruta al cliente, o `XAMPP_ROOT` con la carpeta
 de XAMPP. Por defecto busca el cliente bajo `/opt/lampp` y luego en PATH.

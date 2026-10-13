@@ -73,7 +73,7 @@ configuracion() {
 }
 DB_NAME="$(configuracion DB_NAME bdmercadoganadero)"
 DB_USER="$(configuracion DB_USER tinder_cows)"
-DB_PASS="$(configuracion DB_PASS tinder_vacas_dev)"
+DB_PASS="$(configuracion DB_PASS '')"
 DB_HOST="$(configuracion DB_HOST 127.0.0.1)"
 DB_PORT="$(configuracion DB_PORT 3306)"
 DB_ACCOUNT_HOST="$(configuracion DB_ACCOUNT_HOST localhost)"
@@ -86,6 +86,7 @@ CLI="$(configuracion MYSQL_CLIENT '')"
 [[ "$DB_PORT" =~ ^[0-9]{1,5}$ ]] && ((10#$DB_PORT > 0 && 10#$DB_PORT <= 65535)) || fallo "DB_PORT debe estar entre 1 y 65535."
 [[ -n "$DB_HOST" && "$DB_HOST" != -* && "$DB_HOST" != *$'\n'* ]] || fallo "DB_HOST no es valido."
 [[ "$DB_NAME" == bdmercadoganadero ]] || fallo "El esquema y las semillas usan bdmercadoganadero. Ajusta DB_NAME antes de instalar."
+[[ -n "$DB_PASS" ]] || fallo "Configura DB_PASS localmente antes de usar el instalador CLI; no hay una contrasena predeterminada."
 if [[ -z "$CLI" ]]; then
     for candidato in "$XAMPP_ROOT/bin/mysql" "$XAMPP_ROOT/bin/mariadb" mysql mariadb; do
         if command -v "$candidato" >/dev/null 2>&1; then CLI="$(command -v "$candidato")"; break; fi

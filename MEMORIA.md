@@ -52,6 +52,13 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 
 ## 3. Decisiones vigentes
 
+### Entrega local para XAMPP
+- El paquete ZIP se extrae como `<htdocs>/GanadoCerca` y publica `Public/` mediante el `.htaccess` de la raíz; Apache debe aplicar las reglas de ambas carpetas (`AllowOverride All`). No se requiere editar `httpd.conf` ni crear un VirtualHost.
+- El asistente de `Public/instalacion` solo acepta peticiones loopback y MySQL en localhost. Revisar una conexión no escribe datos; crear `bdmercadoganadero` exige que no exista y una confirmación CSRF separada. En una base existente solo se guarda la conexión cuando el esquema tiene las 48 tablas y su llave primaria esperada.
+- La instalación nueva importa `000instalacioncompleta.sql` y las semillas `101`, `102` y `104`; omite intencionalmente `103exampleproductores.sql`. No hace rollback ni reintenta DDL parcial.
+- Credenciales y sesiones viven en una carpeta temporal privada, separada por ruta de proyecto: directorio `0700`, archivo de conexión `0600`, fuera de `htdocs`.
+- **`AllowOverride None` no está soportado:** la app falla cerrada con 503, pero Apache puede servir archivos privados estáticos porque ignora las reglas. Hay que comprobar la configuración real del equipo de revisión antes de declarar el ZIP listo.
+
 ### Navegación y sesión
 - **Sin sesión**, el header muestra solo logo, tema, Entrar y Crear cuenta
   (sin Inicio, Buscar, Explorar, Publicar ni Fletes). Lo hace `public-ui.js`
@@ -681,6 +688,17 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-13 · fix/xampp-linux-local · Asistente local y paquete ZIP para XAMPP
+- `.htaccess` protege la raíz del proyecto y los directorios internos; el acceso público queda en `Public/`. `Configuration/Compatibility.php` detecta si Apache aplica las reglas antes de servir la app. `.env.example` ya no distribuye contraseñas de demostración ni valores de Supabase.
+- El nuevo asistente (`Public/instalacion.php`, `Application/Service/LocalDatabaseInstaller.php`) valida loopback/Host/sin proxy, consulta MySQL sin escribir, pide confirmación para crear una base ausente, importa el esquema canónico y semillas `101`, `102`, `104`, comprueba 48 tablas y 48 llaves primarias y excluye la semilla demo `103`. `LocalDatabaseCredentials` guarda credenciales y sesiones fuera de `htdocs` con permisos POSIX privados; el asistente web está limitado a Linux con `posix` y falla cerrado en Windows porque esta revisión no puede verificar DACL.
+- `instalar-local.sh` y `instalar-local.ps1` dejaron de traer la contraseña CLI de demostración: ambos exigen `DB_PASS` local; PowerShell valida los identificadores y envía el SQL por stdin para no exponer la clave en argumentos del proceso. La guía conserva ese flujo como alternativa avanzada.
+- Si hay cualquier valor no vacío de `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` o `DB_PASS`, `Configuration/Database.php` y el asistente dan prioridad a esa configuración sobre `mysql.json`. Las asignaciones vacías de `.env.example` no desplazan la conexión guardada ni ocultan el formulario.
+- Administradores requieren correo confirmado obtenido del objeto User actual de Supabase Auth: el sidecar valida el JWT, consulta `/auth/v1/user`, verifica que coincidan id/correo y falla con 503 si la consulta o identidad no son confiables. `ActorContext` queda cerrado por defecto y conserva la confirmación al reconstruirse. `services/supabase-database/migrate.php` comprueba columnas exactas de PK, intenta un advisory lock transaccional y reporta como degradado el esquema que aún no tenga sus llaves.
+- ZIP final: `outputs/GanadoCerca.zip`, 599 archivos, SHA-256 `4bb83ad284fabbc74e5c3ed0052bd54814aa38e8b47b312f1258c505c77f0692`. La extracción fresca de este hash se sirvió con Apache 2.4.58/PHP 8.0.30 y MariaDB 10.4.32 vacía: GET y comprobación no escribieron; tras consentimiento, el asistente instaló 48 tablas, 48 llaves, método de pago, política activa, catálogos 6/26/42/10 y cero registros demo. Portada, asistente, publicaciones, identidad y phpMyAdmin respondieron 200; Auth/config respondió 503 porque el ZIP no incluye credenciales públicas de Supabase. Nueve rutas privadas devolvieron 403; Host ajeno y POST con `X-Forwarded-For` devolvieron 404. No se tocó la base de producción.
+- Pruebas sobre el ZIP exacto `4bb83ad2…`: `local_database_installer_test.php`, `admin_authorization_test.php`, `auth_actor_test.php`, `xampp_paths_test.php`, `installer_portability_test.py`, `local_diagnostic_test.py`, `documentation_test.py`, lint PHP 8.0 de 285 archivos, `httpd -t`, `unzip -t` y escaneo de rutas/secretos. En la pasada amplia anterior también pasaron `perfil_correo_conciliacion_test.php`, sidecar (11/11; eval 100/100), espejo PostgreSQL (`schema_test.php` + `schema_eval.php`, 100/100) y suite frontend (436/436). PowerShell no está instalado en el host Linux; el script Windows tiene solo cobertura estática.
+- Revisiones Thermo finales: seguridad encontró la prioridad errónea de `mysql.json` frente a variables `DB_*` parciales; se corrigió y probó que los campos no vacíos prevalecen, mientras los vacíos del ejemplo permiten el asistente. No encontró otros defectos. Calidad confirmó la coherencia de esa regla y que los 48 archivos del paquete coinciden con el worktree; sus observaciones sobre el comentario de `.htaccess`, el diagnóstico, variable sin uso y hash de memoria quedaron corregidas.
+- **Veredicto: DONE_WITH_CONCERNS.** Apache con `AllowOverride None` puede servir archivos privados estáticos aunque PHP falle con 503; la alternativa segura requiere `AllowOverride All` o `DocumentRoot` en `Public/` con sus reglas activas. El XAMPP del profesor sigue sin comprobarse y Auth requiere configurar Supabase; por eso no marcar `ZIP_READY_FOR_CALIDAD`. No se modificó producción ni el PR #47.
 
 ### 2026-10-12 · fix/xampp-linux-local · Cierre para Calidad: correo consistente, controladores divididos y migraciones repetibles
 - **Cambio de correo (DEC-CORREO-001):** tabla `tbpersonacorreocambio` en los 4 lugares (48 tablas), modelo `PersonaCorreoCambio`,

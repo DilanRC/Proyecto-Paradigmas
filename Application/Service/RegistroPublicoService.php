@@ -108,6 +108,7 @@ final class RegistroPublicoService
                 (string) $this->actor->proveedorSujeto,
                 $this->actor->correoElectronico,
                 $this->actor->rolTecnico,
+                $this->actor->correoConfirmado,
             );
             $bitacora = new Bitacora($this->conexion, $actorVinculado);
 

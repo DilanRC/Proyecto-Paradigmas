@@ -10,7 +10,7 @@ final class ActorContext implements \JsonSerializable
 {
     use \Application\ReadOnlyProperties;
 
-    private const READ_ONLY_PROPERTIES = ['tipo', 'personaId', 'proveedorSujeto', 'correoElectronico', 'rolTecnico'];
+    private const READ_ONLY_PROPERTIES = ['tipo', 'personaId', 'proveedorSujeto', 'correoElectronico', 'rolTecnico', 'correoConfirmado'];
 
     private function __construct(
         private string $tipo,
@@ -18,11 +18,12 @@ final class ActorContext implements \JsonSerializable
         private ?string $proveedorSujeto,
         private ?string $correoElectronico,
         private ?string $rolTecnico,
+        private bool $correoConfirmado,
     ) {}
 
     public static function noAutenticado(): self
     {
-        return new self('NO_AUTENTICADO', null, null, null, null);
+        return new self('NO_AUTENTICADO', null, null, null, null, false);
     }
 
     /**
@@ -34,6 +35,7 @@ final class ActorContext implements \JsonSerializable
         string $proveedorSujeto,
         ?string $correoElectronico,
         ?string $rolTecnico,
+        bool $correoConfirmado = false,
     ): self {
         return new self(
             $personaId === null ? 'USUARIO_VERIFICADO' : 'PERSONA_AUTENTICADA',
@@ -41,6 +43,7 @@ final class ActorContext implements \JsonSerializable
             $proveedorSujeto,
             $correoElectronico === null ? null : mb_strtolower(trim($correoElectronico), 'UTF-8'),
             $rolTecnico,
+            $correoConfirmado,
         );
     }
 
@@ -49,8 +52,9 @@ final class ActorContext implements \JsonSerializable
         string $proveedorSujeto,
         ?string $correoElectronico,
         ?string $rolTecnico,
+        bool $correoConfirmado = false,
     ): self {
-        return self::usuarioVerificado($personaId, $proveedorSujeto, $correoElectronico, $rolTecnico);
+        return self::usuarioVerificado($personaId, $proveedorSujeto, $correoElectronico, $rolTecnico, $correoConfirmado);
     }
 
     public function estaAutenticado(): bool

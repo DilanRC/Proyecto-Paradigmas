@@ -91,6 +91,8 @@ final class SupabaseActorResolver
             && ($data['email_confirmed_at'] === null || $data['email_confirmed_at'] === false)) {
             throw new HttpException('Debe confirmar su correo antes de usar la cuenta.', 401);
         }
+        $correoConfirmado = is_string($data['email_confirmed_at'] ?? null)
+            && trim($data['email_confirmed_at']) !== '';
         $subject = is_string($data['id'] ?? null) ? trim($data['id']) : '';
         $email = is_string($data['email'] ?? null)
             ? mb_strtolower(trim($data['email']), 'UTF-8')
@@ -105,14 +107,15 @@ final class SupabaseActorResolver
             // Un cambio de correo interrumpido deja la cuenta con el correo nuevo y tbpersona con el anterior.
             require_once dirname(__DIR__) . '/Service/CorreoCambioService.php';
             // Una petición paralela pudo conciliar entre las dos lecturas: se vuelve a mirar el vínculo.
-            $personaId = (new \Application\Service\CorreoCambioService($conexion))->conciliar($subject, $email, $role)
+            $personaId = (new \Application\Service\CorreoCambioService($conexion))
+                ->conciliar($subject, $email, $role, $correoConfirmado)
                 ?? $this->personaIdPorCorreo($conexion, $email);
         }
         if ($exigirPersona && $personaId === null) {
             throw new HttpException('La sesión verificada no tiene vínculo con una persona.', 409);
         }
 
-        return ActorContext::usuarioVerificado($personaId, $subject, $email, $role);
+        return ActorContext::usuarioVerificado($personaId, $subject, $email, $role, $correoConfirmado);
     }
 
     /**

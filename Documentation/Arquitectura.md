@@ -1,7 +1,10 @@
 # Arquitectura — dónde está cada cosa
 
-MVC en PHP 8.3. `Public/` es la única carpeta expuesta por Apache; todo lo
-demás queda fuera del navegador (`docker/apache/000-default.conf`).
+MVC en PHP 8.3. En los despliegues normales, `Public/` es el único
+`DocumentRoot`. En el ZIP para XAMPP, la carpeta raíz puede estar dentro de
+`htdocs`: `.htaccess` niega su contenido y solo abre `Public/` y un redirector
+raíz. Ese modo requiere que Apache aplique los `.htaccess` de la raíz y de
+`Public/` (`AllowOverride All`).
 
 ```text
 Proyecto-Paradigmas/

@@ -16,7 +16,9 @@ xampp = (ROOT / "Documentation/Instalacion-XAMPP.md").read_text(encoding="utf-8"
 assert "/opt/lampp/Proyecto-Paradigmas/Public" in xampp
 assert "Mantenga la raíz del" in xampp and "fuera de `htdocs`" in xampp
 assert "debe ser HTTP 404" in xampp
-assert "ni la exponga como subcarpeta" in readme
+assert "`AllowOverride All`" in readme and "los archivos privados no quedan protegidos" in readme
+assert "`mysqli`" in xampp and "extensión PHP `posix`" in xampp
+assert "`mysqli`" in readme and "`posix`" in readme
 assert "PHP 8.0 o posterior" in xampp and "PHP 8.0 o posterior" in readme
 assert "la versión de Ubuntu y de XAMPP del profesor Brenes es desconocida" in xampp
 assert "PHP Apache es desconocida" in xampp

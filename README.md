@@ -175,10 +175,19 @@ local `NO_AUTENTICADO`.
 
 ## Despliegue
 
-Para ejecutar sin Docker en XAMPP, mantenga el repositorio fuera de `htdocs` y
-configure un VirtualHost cuyo `DocumentRoot` sea `Public/`; no publique la raíz
-del repositorio ni la exponga como subcarpeta. En Linux, use el requisito base
-PHP 8.0 o posterior con `pdo_mysql`, `mbstring` y OpenSSL. Se comprobó XAMPP
+Para la revisión en XAMPP, extraiga `GanadoCerca.zip` en
+`<htdocs>/GanadoCerca`, inicie Apache y MySQL desde el panel y abra
+`http://localhost/GanadoCerca/Public/`. El enlace **Preparar base MySQL local**
+permite comprobar la conexión y, con confirmación explícita, crear la base
+vacía con las 48 tablas, sus llaves primarias y los catálogos requeridos. No
+necesita editar Apache ni importar SQL manualmente. Este modo requiere que
+Apache aplique los `.htaccess` (`AllowOverride All`); con `AllowOverride None`
+los archivos privados no quedan protegidos por el paquete. Consulte
+[`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md) para
+el alcance comprobado y la alternativa avanzada con `Public/` como
+`DocumentRoot`.
+
+En Linux, use PHP 8.0 o posterior con `pdo_mysql`, `mysqli`, `posix`, `mbstring` y OpenSSL. Se comprobó XAMPP
 8.0.30 con MariaDB 10.4.32; la versión del Ubuntu y XAMPP del profesor sigue
 desconocida. El repositorio completo no requiere Node ni Composer para XAMPP,
 pero Auth, Storage, Realtime y mapas externos necesitan Internet. Revise la

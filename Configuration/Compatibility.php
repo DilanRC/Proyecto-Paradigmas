@@ -24,3 +24,26 @@ if (!function_exists('array_is_list')) {
         return true;
     }
 }
+
+if (PHP_SAPI !== 'cli') {
+    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
+    $publicRoot = realpath(__DIR__ . '/../Public');
+    $publicIsDocumentRoot = $documentRoot !== false && $documentRoot === $publicRoot;
+    $rootHtaccess = isset($_SERVER['TC_ROOT_HTACCESS']) || isset($_SERVER['REDIRECT_TC_ROOT_HTACCESS']);
+    $publicHtaccess = isset($_SERVER['TC_HTACCESS'])
+        || isset($_SERVER['REDIRECT_TC_HTACCESS'])
+        || isset($_SERVER['TC_REWRITE'])
+        || isset($_SERVER['REDIRECT_TC_REWRITE']);
+    $rewriteActive = isset($_SERVER['TC_REWRITE']) || isset($_SERVER['REDIRECT_TC_REWRITE']);
+
+    if (!$rewriteActive || !$publicHtaccess || (!$publicIsDocumentRoot && !$rootHtaccess)) {
+        http_response_code(503);
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo 'Instalación no compatible: Apache no está aplicando las reglas de acceso del paquete. '
+            . 'No publiques la carpeta del proyecto en este servidor. XAMPP debe tener mod_rewrite '
+            . 'y respetar .htaccess en htdocs, o DocumentRoot debe apuntar directamente a Public/ '
+            . 'con las reglas de Public/ habilitadas.';
+        exit;
+    }
+}

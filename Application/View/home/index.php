@@ -134,7 +134,7 @@
             </div>
             <div class="public-footer__links">
                 <div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="sobre-nosotros">Nosotros</a><a href="#como-funciona">Cómo funciona</a></div>
-                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div>
+                <div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a><?php if (tc_instalador_local_visible()): ?><a href="instalacion">Preparar base MySQL local</a><?php endif; ?></div>
                 <div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div>
             </div>
         </footer>

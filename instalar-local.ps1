@@ -51,8 +51,18 @@ if (Test-Path $envRuta) {
 
 $dbName   = if ($cfg["DB_NAME"]) { $cfg["DB_NAME"] } else { "bdmercadoganadero" }
 $dbUser   = if ($cfg["DB_USER"]) { $cfg["DB_USER"] } else { "tinder_cows" }
-$dbPass   = if ($cfg["DB_PASS"]) { $cfg["DB_PASS"] } else { "tinder_vacas_dev" }
+$dbPass   = if ($cfg["DB_PASS"]) { $cfg["DB_PASS"] } else { "" }
 $rootEnv  = $cfg["DB_ROOT_PASS"]
+
+if ($dbName -notmatch '^[A-Za-z0-9_]{1,64}$') {
+  Fallo "DB_NAME debe ser un identificador SQL simple de hasta 64 caracteres."
+}
+if ($dbUser -notmatch '^[A-Za-z0-9_]{1,32}$') {
+  Fallo "DB_USER debe contener solo letras, numeros o guion bajo (hasta 32)."
+}
+if ([string]::IsNullOrWhiteSpace($dbPass)) {
+  Fallo "Configura DB_PASS localmente antes de usar el instalador CLI; no hay una contrasena predeterminada."
+}
 
 if ($dbName -ne "bdmercadoganadero") {
   Write-Host "[AVISO] DB_NAME es '$dbName' pero 000instalacioncompleta.sql crea 'bdmercadoganadero'." -ForegroundColor Yellow
@@ -144,10 +154,12 @@ if ($Reinstalar) {
 # 5. Usuario del proyecto
 # ---------------------------------------------------------------
 Write-Host "[..] Creando usuario $dbUser..."
-$sqlUsuario = "CREATE USER IF NOT EXISTS '$dbUser'@'localhost' IDENTIFIED BY '$dbPass'; " +
-              "ALTER USER '$dbUser'@'localhost' IDENTIFIED BY '$dbPass'; " +
+$dbPassSql = $dbPass.Replace("'", "''")
+$sqlUsuario = "SET SESSION sql_mode='NO_BACKSLASH_ESCAPES'; " +
+              "CREATE USER IF NOT EXISTS '$dbUser'@'localhost' IDENTIFIED BY '$dbPassSql'; " +
+              "ALTER USER '$dbUser'@'localhost' IDENTIFIED BY '$dbPassSql'; " +
               "GRANT ALL PRIVILEGES ON ``$dbName``.* TO '$dbUser'@'localhost'; FLUSH PRIVILEGES;"
-& $cli -u root -e $sqlUsuario
+$sqlUsuario | & $cli -u root --default-character-set=utf8mb4
 if ($LASTEXITCODE -ne 0) { Fallo "No pude crear el usuario $dbUser." }
 Write-Host "[OK] Usuario listo."
 

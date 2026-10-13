@@ -4,27 +4,20 @@ declare(strict_types=1);
 
 require_once dirname(__DIR__) . '/Configuration/Compatibility.php';
 
-/** URL base de Public para VirtualHost y subcarpetas de XAMPP. */
+function tc_instalador_local_visible(): bool
+{
+    require_once dirname(__DIR__) . '/Application/Service/LocalDatabaseInstaller.php';
+
+    return \Application\Service\LocalDatabaseInstaller::requestIsLocal($_SERVER);
+}
+
+/**
+ * URL base de Public: "/" con VirtualHost, "/GanadoCerca/Public/" dentro de htdocs.
+ */
 function tc_public_base_path(): string
 {
-    $documentRoot = realpath((string) ($_SERVER['DOCUMENT_ROOT'] ?? ''));
-    $publicRoot = realpath(__DIR__);
-    if ($documentRoot === false || $publicRoot === false) {
-        return '/';
-    }
-
-    $documentRoot = rtrim(str_replace('\\', '/', $documentRoot), '/');
-    $publicRoot = str_replace('\\', '/', $publicRoot);
-    if ($publicRoot === $documentRoot) {
-        return '/';
-    }
-
-    $prefix = $documentRoot . '/';
-    if (!str_starts_with($publicRoot, $prefix)) {
-        return '/';
-    }
-
-    return '/' . trim(substr($publicRoot, strlen($documentRoot)), '/') . '/';
+    $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php'));
+    return rtrim(substr($script, 0, (int) strrpos($script, '/')), '/') . '/';
 }
 
 function tc_public_base_attribute(): string

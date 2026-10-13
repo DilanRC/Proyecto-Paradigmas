@@ -1,0 +1,17 @@
+# El paquete puede extraerse como carpeta directa de htdocs. Todo queda privado,
+# salvo Public/ (autorizada por su propio .htaccess) y el redirector de esta raíz.
+Require all denied
+Options -Indexes
+DirectoryIndex index.php
+
+# PHP comprueba este marcador para rechazar una instalación bajo htdocs cuando
+# Apache ignora .htaccess y, por tanto, no puede proteger los archivos privados.
+<IfModule mod_env.c>
+    SetEnv TC_ROOT_HTACCESS 1
+</IfModule>
+
+# En .htaccess, <Files> también coincide con el mismo nombre dentro de cualquier
+# subcarpeta. Limita la excepción a la URL del proyecto y su DirectoryIndex.
+<If "%{REQUEST_URI} =~ m#^/[^/]+(/index\.php)?/?$#">
+    Require all granted
+</If>

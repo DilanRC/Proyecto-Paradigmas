@@ -6,6 +6,9 @@ namespace Configuration;
 
 use PDO;
 
+require_once __DIR__ . '/Configuration.php';
+require_once __DIR__ . '/LocalDatabaseCredentials.php';
+
 final class Database
 {
     private static ?PDO $connection = null;
@@ -34,11 +37,13 @@ final class Database
             }
         }
 
-        $host = self::environmentVariable('DB_HOST', '127.0.0.1');
-        $port = self::environmentVariable('DB_PORT', '3306');
-        $databaseName = self::environmentVariable('DB_NAME', 'bdmercadoganadero');
-        $username = self::environmentVariable('DB_USER', 'root');
-        $password = self::environmentVariable('DB_PASS', '');
+        $local = LocalDatabaseCredentials::load();
+        $useLocal = $local !== null && !LocalDatabaseCredentials::hasNonEmptyConnectionEnvironment();
+        $host = $useLocal ? $local['host'] : self::environmentVariable('DB_HOST', '127.0.0.1');
+        $port = $useLocal ? (string) $local['port'] : self::environmentVariable('DB_PORT', '3306');
+        $databaseName = $useLocal ? $local['database'] : self::environmentVariable('DB_NAME', 'bdmercadoganadero');
+        $username = $useLocal ? $local['user'] : self::environmentVariable('DB_USER', 'root');
+        $password = $useLocal ? $local['password'] : self::environmentVariable('DB_PASS', '');
         $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', $host, $port, $databaseName);
 
         self::$connection = new PDO($dsn, $username, $password, [
@@ -79,6 +84,6 @@ final class Database
     {
         $value = getenv($name);
 
-        return $value === false ? $default : $value;
+        return $value === false || $value === '' ? $default : $value;
     }
 }
