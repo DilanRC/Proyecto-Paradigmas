@@ -52,10 +52,8 @@ $checks = [
     'llave_primaria_por_tabla' => substr_count($schema, 'PRIMARY KEY (') === 48
         && str_contains($migration, 'ensurePrimaryKeys($connection)'),
     'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 48,
-    'migracion_serializada' => str_contains($migration, 'pg_try_advisory_xact_lock')
-        && str_contains($migration, '$lockAcquired')
-        && str_contains($migration, 'THEN 1 ELSE 0 END')
-        && str_contains($migration, 'Otra migración de esquema sigue activa'),
+    'migracion_serializada' => str_contains($migration, "SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))")
+        && str_contains($migration, "SET LOCAL lock_timeout = '30s'"),
     'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),
     'diagnostico_columnas' => str_contains($migration, 'esperado=[%s] actual=[%s]'),
     'orden_columnas_neutro' => substr_count($migration, 'sort($columns)') === 2,

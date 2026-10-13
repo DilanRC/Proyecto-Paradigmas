@@ -177,9 +177,10 @@ local `NO_AUTENTICADO`.
 
 Para la revisión en XAMPP, extraiga `GanadoCerca.zip` en
 `<htdocs>/GanadoCerca`, inicie Apache y MySQL desde el panel y abra
-`http://localhost/GanadoCerca/Public/`. El enlace **Preparar base MySQL local**
-permite comprobar la conexión y, con confirmación explícita, crear la base
-vacía con las 48 tablas, sus llaves primarias y los catálogos requeridos. No
+`http://localhost/GanadoCerca/Public/`. La primera visita lleva al asistente
+**Preparar la base local**, que comprueba la conexión y, con confirmación
+explícita, crea la base con las 48 tablas, sus llaves primarias, los catálogos
+requeridos y, si se deja marcado, 6 publicaciones ficticias de demostración. No
 necesita editar Apache ni importar SQL manualmente. Este modo requiere que
 Apache aplique los `.htaccess` (`AllowOverride All`); con `AllowOverride None`
 los archivos privados no quedan protegidos por el paquete. Consulte

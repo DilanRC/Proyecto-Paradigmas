@@ -28,7 +28,7 @@ final class LocalDatabaseInstallerException extends RuntimeException
 final class LocalDatabaseInstaller
 {
     private const DATABASE_NAME = 'bdmercadoganadero';
-    private const TABLE_COUNT = 48;
+    public const TABLE_COUNT = 48;
     private const SEED_DEFINITIONS = [
         '101initialpagometodo.sql' => ['required' => true, 'label' => 'Método de pago inicial'],
         '102administrador.sql' => ['required' => true, 'label' => 'Política de acceso administrativo'],
@@ -543,11 +543,7 @@ final class LocalDatabaseInstaller
         }
         $connection->set_charset('utf8mb4');
         if (!$connection->multi_query($sql)) {
-            $connection->close();
-            throw new LocalDatabaseInstallerException(
-                'MySQL rechazó una sentencia del archivo SQL. La instalación puede haber quedado parcial.',
-                500,
-            );
+            throw self::sqlRejected($connection);
         }
         do {
             $result = $connection->store_result();
@@ -555,23 +551,33 @@ final class LocalDatabaseInstaller
                 $result->free();
             }
             if ($connection->errno !== 0) {
-                $connection->close();
-                throw new LocalDatabaseInstallerException(
-                    'MySQL rechazó una sentencia del archivo SQL. La instalación puede haber quedado parcial.',
-                    500,
-                );
+                throw self::sqlRejected($connection);
             }
             if (!$connection->more_results()) {
                 break;
             }
             if (!$connection->next_result()) {
-                $connection->close();
-                throw new LocalDatabaseInstallerException(
-                    'MySQL rechazó una sentencia del archivo SQL. La instalación puede haber quedado parcial.',
-                    500,
-                );
+                throw self::sqlRejected($connection);
             }
         } while (true);
         $connection->close();
+    }
+
+    /** 1044, 1142 y 1227 son rechazos por privilegios: no hubo importación parcial que explicar. */
+    private static function sqlRejected(\mysqli $connection): LocalDatabaseInstallerException
+    {
+        $withoutPrivilege = in_array($connection->errno, [1044, 1142, 1227], true);
+        $connection->close();
+
+        return $withoutPrivilege
+            ? new LocalDatabaseInstallerException(
+                'Ese usuario de MySQL no tiene permiso para crear la base o sus tablas. '
+                . 'Use una cuenta con permiso CREATE (en XAMPP, normalmente root).',
+                403,
+            )
+            : new LocalDatabaseInstallerException(
+                'MySQL rechazó una sentencia del archivo SQL. La instalación puede haber quedado parcial.',
+                500,
+            );
     }
 }

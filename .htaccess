@@ -10,8 +10,14 @@ DirectoryIndex index.php
     SetEnv TC_ROOT_HTACCESS 1
 </IfModule>
 
-# En .htaccess, <Files> también coincide con el mismo nombre dentro de cualquier
-# subcarpeta. Limita la excepción a la URL del proyecto y su DirectoryIndex.
-<If "%{REQUEST_URI} =~ m#^/[^/]+(/index\.php)?/?$#">
+# index.php es el redirector de esta raíz. <Files> también coincide con ese nombre en
+# subcarpetas: por eso cada carpeta interna trae su propio .htaccess que lo niega.
+<Files "index.php">
+    Require all granted
+</Files>
+
+# Solo la carpeta en sí (nunca sus archivos), para que DirectoryIndex llegue a index.php
+# a cualquier profundidad dentro de htdocs.
+<If "-d %{REQUEST_FILENAME}">
     Require all granted
 </If>

@@ -29,46 +29,67 @@ pendientes de comprobación en su equipo.
 
 ## Entrega ZIP para revisión
 
-El paquete `GanadoCerca.zip` está pensado para extraerse como
-`<htdocs>/GanadoCerca`. En una instalación XAMPP cuyo directorio web sea el
-predeterminado, el flujo es:
+No hace falta terminal, VirtualHost, `.env`, editar Apache ni importar SQL.
 
-1. Extraiga el ZIP en `htdocs/GanadoCerca` y arranque Apache y MySQL desde el
-   panel de XAMPP. No necesita cambiar `httpd.conf`, configurar un VirtualHost,
-   abrir una terminal ni importar SQL manualmente.
-2. Abra <http://localhost/GanadoCerca/Public/>. En el pie de página aparece
-   **Preparar base MySQL local**; el asistente solo se muestra desde loopback.
-3. Escriba el host, puerto, usuario y contraseña local de MySQL. **Comprobar
-   conexión** solo consulta el servidor. Si `bdmercadoganadero` no existe, una
-   segunda pantalla pide confirmar antes de crear la base y cargar el esquema
-   canónico, el método de pago inicial, la política de acceso administrativo y
-   los catálogos de animales/vacunas. La semilla `103exampleproductores.sql`
-   con personas ficticias no se importa.
-4. Abra <http://localhost/phpmyadmin/> y compruebe `bdmercadoganadero`: debe
-   contener 48 tablas, cada una con su llave primaria `<tabla>id`.
+1. Extraiga `GanadoCerca.zip` dentro de `htdocs`. Queda la carpeta
+   `htdocs/GanadoCerca` (puede cambiarle el nombre o ponerla más adentro).
+2. Inicie Apache y MySQL desde el panel de XAMPP.
+3. Abra <http://localhost/GanadoCerca/Public/> (o <http://localhost/GanadoCerca/>,
+   que redirige ahí). Si XAMPP usa otro puerto, agréguelo a la dirección.
+4. La primera vez, la página lo lleva sola a **Preparar la base local**:
+   - **Comprobar conexión.** Los valores de XAMPP ya vienen escritos (`127.0.0.1`,
+     `3306`, `root`, sin contraseña). Cámbielos solo si su MySQL usa otro puerto
+     o contraseña. Este paso no escribe nada.
+   - Marque la confirmación y pulse **Instalar esquema y catálogos**. Crea
+     `bdmercadoganadero` con sus 48 tablas, el método de pago, la política de
+     administrador y los catálogos. La casilla de las 6 publicaciones ficticias
+     viene marcada; desmárquela si quiere la base sin datos de ejemplo.
+5. Use **Ver la portada** para navegar. En <http://localhost/phpmyadmin/> está
+   `bdmercadoganadero`: 48 tablas, cada una con su llave primaria `<tabla>id`.
 
-Si la base ya existe, el asistente la consulta sin completar ni modificarla.
-Solo permite guardar una conexión cuando confirma las 48 tablas y sus llaves.
-La contraseña permanece en la sesión PHP del servidor, guardada en una carpeta
-temporal privada por copia del proyecto; una conexión confirmada se guarda en
-un archivo temporal fuera de `htdocs` con permisos privados. No se crea una
-cuenta de MySQL, una cuenta de Supabase ni contraseñas de aplicación.
-Todo valor no vacío de `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` o `DB_PASS`
-configurado en Apache o `.env` tiene prioridad sobre esa conexión guardada; para
-usar el asistente, deje vacíos esos campos. Las asignaciones vacías de `.env.example`
-no bloquean el asistente.
-El asistente web protege ese almacenamiento con permisos POSIX y por eso solo
-se admite en XAMPP para Linux con la extensión PHP `posix`. En Windows, use la
-instalación manual documentada; el asistente web no guarda credenciales con ACL
-que no pueda verificar.
+Qué se puede usar sin iniciar sesión: la portada con las publicaciones, Entrar,
+Crear cuenta, Cómo usar, Sobre nosotros, Privacidad y Términos. Explorar,
+Fletes, Subastas, Publicar, Mi panel y el panel de administración piden una
+cuenta; las cuentas viven en Supabase Auth y **el ZIP no trae un `.env`**
+(`.env.example` solo muestra los valores de desarrollo y Apache no lo lee), así que Entrar y Crear cuenta responden "Las cuentas no están
+disponibles en esta instalación". Para demostrar esa parte hay que definir
+`SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` de un proyecto de pruebas (y tener
+Internet).
 
-El modo ZIP requiere que Apache aplique los archivos `.htaccess` del paquete
-(`AllowOverride All`). El paquete niega el acceso a los archivos privados en la
-raíz y concede acceso solo a `Public/`. Con `AllowOverride None`, PHP puede
-responder 503 para la aplicación, pero Apache aún podría entregar archivos
-estáticos privados; ese modo no está soportado para esta entrega. La prueba de
-compatibilidad se limita a XAMPP 8.0.30/Linux con Apache 2.4.58, MariaDB 10.4.32
-y `AllowOverride All`; compruebe el XAMPP de destino antes de la revisión.
+Lo que el asistente hace y no hace:
+
+- Solo responde a visitas desde la misma computadora (`localhost`); desde otra
+  máquina o detrás de un proxy responde 404.
+- Abrir o recargar una página nunca escribe en MySQL. Crear la base exige el
+  botón, la casilla de confirmación y que `bdmercadoganadero` **no exista**.
+- Una base que ya existe no se modifica ni se completa. Si está al día (48
+  tablas con su llave), la app la usa tal cual. Si es de una entrega anterior, el
+  asistente lista lo que falta y explica cómo respaldarla y renombrarla en
+  phpMyAdmin, o cómo migrarla (sección "Base existente").
+- Las publicaciones de demostración se cargan una sola vez, solo en una base
+  creada por el asistente, y quedan marcadas con el origen `DEMO_EXPLORAR`. Sus
+  fotos se enlazan desde Wikimedia Commons: sin Internet se ve la tarjeta sin foto.
+- La conexión confirmada se guarda fuera de `htdocs`, en la carpeta temporal de
+  XAMPP (`/opt/lampp/temp`, que sobrevive a un reinicio; si no existe, `/tmp`),
+  con permisos `0700`/`0600`. No se crea una cuenta de MySQL ni de Supabase.
+- Si Apache o `.env` definen `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` o
+  `DB_PASS`, esos valores mandan sobre la conexión guardada.
+- El asistente necesita Linux y la extensión PHP `posix` para proteger ese
+  archivo. En Windows use la instalación manual.
+
+Límites comprobados:
+
+- **Apache debe aplicar los `.htaccess` del paquete** (`AllowOverride All`, el
+  valor de fábrica de XAMPP) y tener `mod_rewrite` (también de fábrica). Sin
+  `mod_rewrite` la aplicación responde 503 con el motivo y los archivos internos
+  siguen negados. Con `AllowOverride None` la aplicación responde 503, pero Apache
+  entrega los archivos estáticos de la carpeta (SQL, documentos); el paquete no
+  trae credenciales, y ese modo no está soportado.
+- Probado con XAMPP 8.0.30 para Linux (Apache 2.4.58, PHP 8.0.30, MariaDB
+  10.4.32), Chromium y Firefox. El XAMPP del equipo de revisión no se ha comprobado.
+
+El ZIP se genera con `bash Tools/empaquetar-entrega.sh` a partir del commit
+actual (no incluye `.env`, `.git`, respaldos ni memoria de agentes).
 
 Compruebe el ejecutable PHP de su instalación; sustituya `/opt/lampp` si XAMPP
 está en otra carpeta:
@@ -218,7 +239,7 @@ MySQL 8.0.
 `bash instalar-local.sh` instala esquema y semillas básicas en el destino
 configurado. Usa siempre TCP con `DB_HOST` y `DB_PORT`, tanto para root como para
 la cuenta de aplicación. `DB_PASS` debe estar configurada localmente para la
-cuenta de aplicación; el script ya no distribuye una contraseña predeterminada.
+cuenta de aplicación; el script exige `DB_PASS` y no trae una contraseña predeterminada propia (la de `.env.example` es la de desarrollo con Docker).
 Configura `DB_ROOT_PASS` localmente si root exige contraseña; no la ponga en
 comandos compartidos ni en documentación.
 

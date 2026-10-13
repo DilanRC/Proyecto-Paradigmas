@@ -14,3 +14,4 @@ graphify-out/
 .vercel/
 .env.local
 .env.production.local
+outputs/

@@ -54,7 +54,8 @@ export const CENTRO_COSTA_RICA = Object.freeze([-84.0907, 9.9281]);
 // el mar territorial. La validación exacta usa el GeoJSON local de límites.
 export const BOUNDS_COSTA_RICA = Object.freeze([[-90, 3.3], [-81.5, 12.8]]);
 export const MAP_LOAD_TIMEOUT_MS = 8000;
-export const LIMITES_COSTA_RICA_URL = '/assets/geo/costa-rica-limits.geojson?v=20260921';
+// Relativa a este módulo: la app puede vivir en una subcarpeta de htdocs.
+export const LIMITES_COSTA_RICA_URL = new URL('../../assets/geo/costa-rica-limits.geojson?v=20260921', import.meta.url).href;
 
 let limitesCostaRicaPromise = null;
 let limitesCostaRicaUrl = null;

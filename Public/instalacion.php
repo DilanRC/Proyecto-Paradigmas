@@ -47,6 +47,28 @@ session_set_cookie_params([
 session_start();
 $_SESSION['installer_csrf'] ??= bin2hex(random_bytes(32));
 
+// Las publicaciones ficticias solo se ofrecen en una base que creó este asistente.
+// Con DB_* en el entorno la app podría estar usando otra base que la que creó el asistente.
+$conexionDemo = static function (): ?PDO {
+    if (LocalDatabaseCredentials::state() !== 'installed' || LocalDatabaseInstaller::credentialsManagedByEnvironment()) {
+        return null;
+    }
+    require_once dirname(__DIR__) . '/Configuration/Database.php';
+    require_once dirname(__DIR__) . '/Application/Service/PublicacionesDemo.php';
+    $conexion = \Configuration\Database::getConnection();
+
+    return \Application\Service\PublicacionesDemo::existentes($conexion) === 0
+        && \Application\Service\PublicacionesDemo::baseSinFincas($conexion) ? $conexion : null;
+};
+$sembrarDemo = static function () use ($conexionDemo): int {
+    $conexion = $conexionDemo();
+    if ($conexion === null) {
+        throw new LocalDatabaseInstallerException('Las publicaciones de demostración solo se cargan una vez, en una base creada por este asistente y todavía sin fincas.', 409);
+    }
+
+    return \Application\Service\PublicacionesDemo::sembrar($conexion);
+};
+
 $redirigir = static function () use ($basePath): void {
     header('Location: ' . $basePath . 'instalacion', true, 303);
     exit;
@@ -96,6 +118,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             $_SESSION['installer_flash'] = [
                 'type' => 'success',
                 'message' => 'Instalación verificada: 48 tablas, 48 llaves primarias y los catálogos iniciales requeridos.',
+            ];
+            if (($_POST['demo'] ?? '') === 'yes') {
+                try {
+                    $_SESSION['installer_flash']['message'] .= ' Se agregaron ' . $sembrarDemo() . ' publicaciones ficticias de demostración.';
+                } catch (Throwable) {
+                    $_SESSION['installer_flash']['message'] .= ' Las publicaciones de demostración no se pudieron cargar; puede intentarlo abajo.';
+                }
+            }
+        } elseif ($action === 'demo') {
+            $_SESSION['installer_flash'] = [
+                'type' => 'success',
+                'message' => 'Se agregaron ' . $sembrarDemo() . ' publicaciones ficticias de demostración.',
             ];
         } elseif ($action === 'save') {
             $credentials = $_SESSION['installer_credentials'] ?? null;
@@ -176,6 +210,14 @@ $canInstall = $report !== null && !$report['databaseExists'] && $sessionCredenti
     && $installerState === null;
 $canSave = $report !== null && $report['databaseExists'] && $report['schemaComplete']
     && $sessionCredentials !== null && $storedCredentials === null && !$environmentManaged;
+$canDemo = false;
+if ($report !== null && $report['schemaComplete']) {
+    try {
+        $canDemo = $conexionDemo() !== null;
+    } catch (Throwable) {
+        // Sin conexión no se ofrece la demostración.
+    }
+}
 $html = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $formAction = $basePath . 'instalacion';
 ?>
@@ -217,7 +259,7 @@ $formAction = $basePath . 'instalacion';
                 </span>
                 <p class="section-kicker">XAMPP local</p>
                 <h2>Una base lista para revisar.</h2>
-                <p>Este asistente prepara MySQL en esta computadora. No crea usuarios de Supabase ni carga productores de demostración.</p>
+                <p>Este asistente prepara MySQL en esta computadora. No crea usuarios de Supabase. Las publicaciones de demostración son ficticias y opcionales.</p>
                 <p><a href="/phpmyadmin/">Abrir phpMyAdmin</a></p>
             </section>
 
@@ -232,6 +274,9 @@ $formAction = $basePath . 'instalacion';
                 <?php endif; ?>
                 <?php if ($inspectionError !== null): ?>
                     <p class="setup-state setup-state--error" role="status" aria-live="polite"><?= $html($inspectionError) ?></p>
+                <?php endif; ?>
+                <?php if ($inspectionError !== null && $environmentManaged): ?>
+                    <p class="setup-detail">La conexión viene de las variables <code>DB_HOST</code>, <code>DB_PORT</code>, <code>DB_NAME</code>, <code>DB_USER</code> o <code>DB_PASS</code> (Apache o el archivo <code>.env</code> del proyecto). Corríjalas, o quite ese <code>.env</code> para escribir la conexión en esta página.</p>
                 <?php endif; ?>
                 <?php if ($report !== null && !$report['databaseExists'] && !$mysqliAvailable): ?>
                     <p class="setup-state setup-state--error" role="status">La conexión PDO funciona, pero falta la extensión <code>mysqli</code> necesaria para importar SQL. Actívela en el <code>php.ini</code> de Apache y reinicie XAMPP antes de instalar.</p>
@@ -249,6 +294,7 @@ $formAction = $basePath . 'instalacion';
                         <span>Se encontraron <?= $html($report['tableCount']) ?>/48 tablas y <?= $html($report['primaryKeyCount']) ?>/48 llaves primarias.</span>
                         <span>El instalador no completa ni vuelve a importar un esquema existente.</span>
                     </div>
+                    <p class="setup-detail">Si es la base de una entrega anterior: en <a href="/phpmyadmin/">phpMyAdmin</a> expórtela como respaldo y cámbiele el nombre (Operaciones → Cambiar el nombre de la base de datos); luego recargue esta página para crear la base nueva. Para conservar esos datos en esta versión, aplique las migraciones pendientes como indica <code>Documentation/Instalacion-XAMPP.md</code>.</p>
                     <?php if ($report['missingTables'] !== [] || $report['missingPrimaryKeys'] !== []): ?>
                         <p class="setup-detail">Tablas faltantes: <?= $html(implode(', ', $report['missingTables']) ?: 'ninguna') ?>. Tablas sin su llave primaria esperada: <?= $html(implode(', ', $report['missingPrimaryKeys']) ?: 'ninguna') ?>.</p>
                     <?php endif; ?>
@@ -274,7 +320,7 @@ $formAction = $basePath . 'instalacion';
                                 <li><span><?= $html($definition['label']) ?></span><strong><?= $html($stateText) ?></strong></li>
                             <?php endforeach; ?>
                         </ul>
-                        <p>La semilla 102 solo guarda una política de acceso; no crea cuentas ni contraseñas. La semilla 103 contiene personas ficticias y no se carga en esta instalación.</p>
+                        <p>La semilla 102 solo guarda una política de acceso; no crea cuentas ni contraseñas. La semilla 103 contiene personas ficticias y no se carga en esta instalación; las publicaciones de demostración se cargan aparte y quedan marcadas como <code>DEMO_EXPLORAR</code>.</p>
                     </section>
                 <?php endif; ?>
 
@@ -283,6 +329,7 @@ $formAction = $basePath . 'instalacion';
                         <input type="hidden" name="csrf" value="<?= $html($_SESSION['installer_csrf']) ?>">
                         <input type="hidden" name="action" value="install">
                         <label class="setup-consent"><input type="checkbox" name="consent" value="yes" required><span>Confirmo que la base bdmercadoganadero no existe y autorizo crearla con el esquema canónico y catálogos iniciales.</span></label>
+                        <label class="setup-consent"><input type="checkbox" name="demo" value="yes" checked><span>Incluir 6 publicaciones ficticias de demostración (un vendedor y una finca de ejemplo), para ver la portada con contenido.</span></label>
                         <p class="setup-detail">El DDL de MySQL/MariaDB confirma tablas por separado. Si ocurre un error, una parte puede quedar creada; el asistente no promete rollback ni repetirá la importación.</p>
                         <button class="auth-submit" type="submit">Instalar esquema y catálogos</button>
                     </form>
@@ -311,8 +358,17 @@ $formAction = $basePath . 'instalacion';
                     <p class="setup-detail">Apache ya proporciona la conexión MySQL. No se guardó una copia adicional de sus credenciales.</p>
                 <?php endif; ?>
 
+                <?php if ($canDemo): ?>
+                    <form class="auth-form setup-confirm" method="post" action="<?= $html($formAction) ?>">
+                        <input type="hidden" name="csrf" value="<?= $html($_SESSION['installer_csrf']) ?>">
+                        <input type="hidden" name="action" value="demo">
+                        <button class="auth-submit" type="submit">Cargar publicaciones de demostración</button>
+                        <p class="setup-detail">Agrega 6 publicaciones ficticias con su propio vendedor y finca de ejemplo. Solo se ofrece mientras la base no tenga fincas.</p>
+                    </form>
+                <?php endif; ?>
+
                 <?php if ($report !== null && $report['databaseExists'] && $report['schemaComplete']): ?>
-                    <p class="auth-card__copy"><a href="explorar">Ir a Explorar</a> · <a href="/phpmyadmin/">Consultar en phpMyAdmin</a></p>
+                    <p class="auth-card__copy"><a href="./">Ver la portada</a> · <a href="explorar">Ir a Explorar</a> · <a href="/phpmyadmin/">Consultar en phpMyAdmin</a></p>
                 <?php endif; ?>
             </section>
         </div>

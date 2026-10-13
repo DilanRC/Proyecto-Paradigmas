@@ -158,18 +158,31 @@ fi
 # ---------------------------------------------------------------
 # 7. Seeds (solo si las tablas estan vacias)
 # ---------------------------------------------------------------
-metodos="$(root_sql -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM tbpagometodo;")"
-if [[ "$metodos" == "0" ]]; then
-    echo "[..] Cargando seeds..."
-    for s in 101initialpagometodo 102administrador 104catalogosanimal; do
-        archivo="$PROYECTO/Database/SeedData/$s.sql"
-        [[ -f "$archivo" ]] || fallo "No existe $archivo"
-        root_sql --default-character-set=utf8mb4 "$DB_NAME" < "$archivo" || fallo "Fallo el seed $s."
+# Cada semilla se decide por sus propias tablas: una base con metodos de pago pero sin
+# catalogos (instalacion interrumpida) recibe lo que le falta. 101 y 102 no se repiten
+# sobre una tabla con filas (su UPDATE desharia cambios del administrador); 104 corre si
+# alguno de sus catalogos esta vacio y protege cada tabla con WHERE NOT EXISTS.
+sembrar_si_vacia() {
+    local semilla="$1"; shift
+    local tabla filas vacia=0
+    for tabla in "$@"; do
+        filas="$(root_sql -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM $tabla;")" \
+            || fallo "No pude leer $tabla; la base no tiene el esquema vigente."
+        [[ "$filas" =~ ^[0-9]+$ ]] || fallo "Conteo inesperado en $tabla."
+        if [[ "$filas" == "0" ]]; then vacia=1; fi
     done
-    echo "[OK] Seeds cargados."
-else
-    echo "[OK] Los seeds ya estaban cargados."
-fi
+    if [[ $vacia -eq 0 ]]; then
+        echo "[OK] $semilla ya estaba cargada."
+        return
+    fi
+    local archivo="$PROYECTO/Database/SeedData/$semilla.sql"
+    [[ -f "$archivo" ]] || fallo "No existe $archivo"
+    root_sql --default-character-set=utf8mb4 "$DB_NAME" < "$archivo" || fallo "Fallo el seed $semilla."
+    echo "[OK] $semilla cargada."
+}
+sembrar_si_vacia 101initialpagometodo tbpagometodo
+sembrar_si_vacia 102administrador tbadministrador
+sembrar_si_vacia 104catalogosanimal tbespecie tbanimaltipo tbraza tbvacuna
 
 # ---------------------------------------------------------------
 # 8. Verificar entrando con el usuario del proyecto

@@ -166,13 +166,25 @@ final class LocalDatabaseCredentials
 
     private static function directoryPath(): string
     {
-        $temporaryRoot = realpath(sys_get_temp_dir());
-        if ($temporaryRoot === false) {
-            throw new RuntimeException('El servidor PHP no tiene un directorio temporal disponible.');
-        }
         $projectRoot = realpath(dirname(__DIR__));
         if ($projectRoot === false) {
             throw new RuntimeException('No se pudo identificar la carpeta de esta instalación.');
+        }
+        // XAMPP guarda sus sesiones en /opt/lampp/temp, que sobrevive a un reinicio del equipo;
+        // /tmp no. Se lee de php.ini (get_cfg_var) porque el asistente cambia session.save_path
+        // en tiempo de ejecución; un valor con formato "N;/ruta" no es una carpeta y cae a /tmp.
+        // Nunca se usa una carpeta dentro del proyecto (sería descargable).
+        $temporaryRoot = false;
+        foreach ([(string) get_cfg_var('session.save_path'), sys_get_temp_dir()] as $candidate) {
+            $candidate = $candidate === '' ? false : realpath($candidate);
+            if ($candidate !== false && is_dir($candidate) && is_writable($candidate)
+                && !str_starts_with($candidate . DIRECTORY_SEPARATOR, $projectRoot . DIRECTORY_SEPARATOR)) {
+                $temporaryRoot = $candidate;
+                break;
+            }
+        }
+        if ($temporaryRoot === false) {
+            throw new RuntimeException('El servidor PHP no tiene un directorio temporal disponible.');
         }
         $identifier = substr(hash('sha256', 'ganado-cerca:' . $projectRoot . ':' . self::DATABASE_NAME), 0, 24);
 

@@ -706,14 +706,11 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
-    $connection->exec("SET LOCAL lock_timeout = '5s'");
-    $connection->exec("SET LOCAL statement_timeout = '60s'");
-    $lockAcquired = (int) $connection->query(
-        "SELECT CASE WHEN pg_try_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10')) THEN 1 ELSE 0 END"
-    )->fetchColumn() === 1;
-    if (!$lockAcquired) {
-        throw new RuntimeException('Otra migración de esquema sigue activa; vuelva a intentar después.');
-    }
+    // Otra instancia que arranca a la vez espera aquí a que termine la primera, con tope:
+    // lock_timeout también limita la espera del advisory lock y de cada ALTER.
+    $connection->exec("SET LOCAL lock_timeout = '30s'");
+    $connection->exec("SET LOCAL statement_timeout = '120s'");
+    $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))");
     $connection->exec($schema);
     ensureCurrentColumns($connection);
     normalizePersonCapabilities($connection);
