@@ -71,6 +71,19 @@ final class SupabaseAuthAdmin
         $this->cambiarCorreo($usuarioId, $correoAnterior);
     }
 
+    /** Correo confirmado que la cuenta tiene ahora mismo, en minúscula. Sin respuesta verificable: 503. */
+    public function correoConfirmado(string $usuarioId): string
+    {
+        $respuesta = $this->consultarUsuario($usuarioId);
+        $usuario = json_decode((string) ($respuesta['body'] ?? ''), true);
+        $correo = is_array($usuario) ? ($usuario['email'] ?? null) : null;
+        if (!is_string($correo) || !$this->coincideUsuario($respuesta, $usuarioId, $correo)) {
+            throw $this->errorSincronizacion();
+        }
+
+        return mb_strtolower($correo, 'UTF-8');
+    }
+
     private function coincideUsuario(array $respuesta, string $usuarioId, string $correo): bool
     {
         $usuario = json_decode((string) ($respuesta['body'] ?? ''), true);

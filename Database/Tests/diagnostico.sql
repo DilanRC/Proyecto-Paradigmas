@@ -362,6 +362,10 @@ SELECT 'tbnotificacion.tbpersonaid', n.tbnotificacionid, n.tbpersonaid
 FROM tbnotificacion n LEFT JOIN tbpersona pe ON pe.tbpersonaid = n.tbpersonaid
 WHERE pe.tbpersonaid IS NULL
 UNION ALL
+SELECT 'tbpersonacorreocambio.tbpersonaid', cc.tbpersonacorreocambioid, cc.tbpersonaid
+FROM tbpersonacorreocambio cc LEFT JOIN tbpersona pe ON pe.tbpersonaid = cc.tbpersonaid
+WHERE pe.tbpersonaid IS NULL
+UNION ALL
 SELECT 'tbanimalpublicacionestadoperiodo.tbanimalpublicacionid', ep.tbanimalpublicacionestadoperiodoid, ep.tbanimalpublicacionid
 FROM tbanimalpublicacionestadoperiodo ep LEFT JOIN tbanimalpublicacion ap ON ap.tbanimalpublicacionid = ep.tbanimalpublicacionid
 WHERE ap.tbanimalpublicacionid IS NULL;

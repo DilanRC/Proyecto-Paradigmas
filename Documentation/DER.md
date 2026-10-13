@@ -263,6 +263,17 @@ erDiagram
         TINYINT tbnotificacionleida
     }
 
+    tbpersonacorreocambio {
+        INT tbpersonacorreocambioid PK
+        INT tbpersonaid
+        VARCHAR tbpersonacorreocambiosujeto
+        VARCHAR tbpersonacorreocambioanterior
+        VARCHAR tbpersonacorreocambionuevo
+        VARCHAR tbpersonacorreocambioestado
+        DATETIME tbpersonacorreocambiofecha
+        DATETIME tbpersonacorreocambiofecharesolucion
+    }
+
     tbanimalproduccionsalud {
         INT tbanimalproduccionsaludid PK
         INT tbanimalid
@@ -529,6 +540,7 @@ erDiagram
     tbsubasta ||--o{ tbsubastacomentario : "comentarios"
     tbpersona ||--o{ tbsubastacomentario : "comenta"
     tbpersona ||--o{ tbnotificacion : "avisos"
+    tbpersona ||--o{ tbpersonacorreocambio : "cambios de correo"
     tbtransportista ||--o{ tbtransportistaresena : "resenas"
 ```
 

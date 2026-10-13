@@ -7,11 +7,11 @@ namespace Application\Controller;
 require_once dirname(__DIR__) . '/Service/TiempoReal.php';
 require_once dirname(__DIR__) . '/Service/SubastaCierreService.php';
 require_once dirname(__DIR__) . '/Model/Administrador.php';
-// Solo se usan sus validaciones estáticas (texto, numero, imagenUrl, validarTodos).
-require_once __DIR__ . '/AnimalPublicacionController.php';
+require_once dirname(__DIR__) . '/Service/CampoValidacion.php';
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Service\CampoValidacion;
 use Application\Model\Administrador;
 use Application\Model\AnimalComercial;
 use Application\Model\AnimalVacunacion;
@@ -142,13 +142,13 @@ final class SubastasController
         if ($desconocidos !== []) {
             throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
         }
-        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
-        $datos = AnimalPublicacionController::validarTodos([
+        $texto = \Closure::fromCallable([CampoValidacion::class, 'texto']);
+        $datos = CampoValidacion::validarTodos([
             'animalId' => fn () => $this->enteroCampo($cuerpo['animalId'] ?? null, 'animalId', 1, 2147483647),
             'fincaNombre' => fn () => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
             'titulo' => fn () => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
             'descripcion' => fn () => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
-            'imagenUrl' => fn () => AnimalPublicacionController::imagenUrl($cuerpo['imagenUrl'] ?? null),
+            'imagenUrl' => fn () => CampoValidacion::imagenUrl($cuerpo['imagenUrl'] ?? null),
             'precioBase' => fn () => $this->dinero($cuerpo['precioBase'] ?? null, 'precioBase'),
             'incrementoMinimo' => fn () => $this->dinero($cuerpo['incrementoMinimo'] ?? null, 'incrementoMinimo'),
             'duracionMinutos' => fn () => $this->enteroCampo($cuerpo['duracionMinutos'] ?? null, 'duracionMinutos',
@@ -195,7 +195,7 @@ final class SubastasController
     {
         $this->exigirNoAdministrador();
         $this->exigirCampos($cuerpo, ['subastaId', 'accion', 'monto']);
-        $datos = AnimalPublicacionController::validarTodos([
+        $datos = CampoValidacion::validarTodos([
             'subastaId' => fn () => $this->enteroCampo($cuerpo['subastaId'] ?? null, 'subastaId', 1, 2147483647),
             'monto' => fn () => $this->dinero($cuerpo['monto'] ?? null, 'monto'),
         ]);
@@ -239,9 +239,9 @@ final class SubastasController
     {
         $this->exigirNoAdministrador();
         $this->exigirCampos($cuerpo, ['subastaId', 'accion', 'texto']);
-        $datos = AnimalPublicacionController::validarTodos([
+        $datos = CampoValidacion::validarTodos([
             'subastaId' => fn () => $this->enteroCampo($cuerpo['subastaId'] ?? null, 'subastaId', 1, 2147483647),
-            'texto' => fn () => AnimalPublicacionController::texto($cuerpo['texto'] ?? null, 'texto', 500, true),
+            'texto' => fn () => CampoValidacion::texto($cuerpo['texto'] ?? null, 'texto', 500, true),
         ]);
         $this->enTransaccion(function () use ($datos): int {
             $subasta = $this->subastas->buscar($datos['subastaId']) ?? throw new HttpException('La subasta no existe.', 404);
@@ -261,7 +261,7 @@ final class SubastasController
     private function cancelar(array $cuerpo): array
     {
         $this->exigirCampos($cuerpo, ['subastaId', 'accion']);
-        $datos = AnimalPublicacionController::validarTodos([
+        $datos = CampoValidacion::validarTodos([
             'subastaId' => fn () => $this->enteroCampo($cuerpo['subastaId'] ?? null, 'subastaId', 1, 2147483647),
         ]);
         $this->enTransaccion(function () use ($datos): bool {
@@ -443,7 +443,7 @@ final class SubastasController
     private function dinero(mixed $valor, string $campo): float
     {
         try {
-            $monto = AnimalPublicacionController::numero($valor, 'precio');
+            $monto = CampoValidacion::numero($valor, 'precio');
         } catch (HttpException $error) {
             throw new HttpException('Revise los campos indicados.', 422, null, [$campo => (string) (array_values($error->errores)[0] ?? '')]);
         }

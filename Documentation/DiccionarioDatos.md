@@ -703,6 +703,24 @@ Avisos de la campana del encabezado: subasta ganada (`SUBASTA_GANADA`), terminad
 | `tbnotificacionfecha` | `DATETIME NOT NULL` | No | Momento (UTC) del aviso. | Aplicación | - |
 | `tbnotificacionleida` | `TINYINT(1) NOT NULL` | No | 1 cuando la persona abrió la campana. | Usuario | - |
 
+## tbpersonacorreocambio
+
+Histórico de los cambios de correo de una Persona (DEC-CORREO-001). El correo vive en dos sistemas, la cuenta de
+Supabase Auth y `tbpersona`, que no comparten transacción. La fila se guarda `PENDIENTE` antes de llamar a Supabase;
+con ella PHP termina o descarta el cambio si la operación se interrumpe. No reemplaza a la bitácora: la bitácora dice
+quién cambió qué, este histórico dice en qué quedó cada intento.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbpersonacorreocambioid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo su lock. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que cambia su correo (sale del JWT). | Aplicación | `tbpersona` |
+| `tbpersonacorreocambiosujeto` | `VARCHAR(100) NOT NULL` | No | Identificador de la cuenta en Supabase Auth (`sub` del JWT). Solo esa cuenta puede terminar el cambio. | Aplicación | - |
+| `tbpersonacorreocambioanterior` | `VARCHAR(150) NOT NULL` | No | Correo que tenía la Persona, en minúscula. | Aplicación | - |
+| `tbpersonacorreocambionuevo` | `VARCHAR(150) NOT NULL` | No | Correo pedido, en minúscula. | Usuario | - |
+| `tbpersonacorreocambioestado` | `VARCHAR(20) NOT NULL` | No | `PENDIENTE`, `APLICADO` (los dos sistemas tienen el nuevo) o `CANCELADO` (los dos conservan el anterior). | Aplicación | - |
+| `tbpersonacorreocambiofecha` | `DATETIME NOT NULL` | No | Momento (UTC) en que se pidió. | Aplicación | - |
+| `tbpersonacorreocambiofecharesolucion` | `DATETIME NULL` | Sí | Momento (UTC) en que dejó de estar pendiente. | Aplicación | - |
+
 ## tbadministrador
 
 Correos autorizados para entrar al panel de administración. Se gestiona en `/admin/administradores`; la cuenta y la

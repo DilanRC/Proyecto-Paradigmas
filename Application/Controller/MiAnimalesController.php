@@ -6,10 +6,11 @@ namespace Application\Controller;
 
 require_once dirname(__DIR__) . '/Service/AnimalValidacionService.php';
 require_once dirname(__DIR__) . '/Model/AnimalCatalogo.php';
-require_once __DIR__ . '/AnimalPublicacionController.php';
+require_once dirname(__DIR__) . '/Service/CampoValidacion.php';
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Service\CampoValidacion;
 use Application\Model\AnimalCatalogo;
 use Application\Model\AnimalComercial;
 use Application\Model\AnimalVacunacion;
@@ -92,9 +93,9 @@ final class MiAnimalesController
                 'especieId' => 'Completa al menos un dato del animal.',
             ]);
         }
-        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
-        $numero = \Closure::fromCallable([AnimalPublicacionController::class, 'numero']);
-        $v = AnimalPublicacionController::validarTodos([
+        $texto = \Closure::fromCallable([CampoValidacion::class, 'texto']);
+        $numero = \Closure::fromCallable([CampoValidacion::class, 'numero']);
+        $v = CampoValidacion::validarTodos([
             'modelo' => function () use ($cuerpo): array {
                 $modelo = AnimalValidacionService::validar($this->catalogo, $cuerpo);
                 if ($modelo['loteCantidad'] > 1) {
@@ -164,13 +165,13 @@ final class MiAnimalesController
         if ($animalId === false) $errores['animalId'] = 'Debe ser un entero positivo.';
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
 
-        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
-        $datos = AnimalPublicacionController::validarTodos([
+        $texto = \Closure::fromCallable([CampoValidacion::class, 'texto']);
+        $datos = CampoValidacion::validarTodos([
             'fincaNombre' => fn () => $texto($cuerpo['fincaNombre'] ?? null, 'fincaNombre', 150, true),
             'titulo' => fn () => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
             'descripcion' => fn () => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
-            'precio' => fn () => AnimalPublicacionController::numero($cuerpo['precio'] ?? null, 'precio'),
-            'imagenUrl' => fn () => AnimalPublicacionController::imagenUrl($cuerpo['imagenUrl'] ?? null),
+            'precio' => fn () => CampoValidacion::numero($cuerpo['precio'] ?? null, 'precio'),
+            'imagenUrl' => fn () => CampoValidacion::imagenUrl($cuerpo['imagenUrl'] ?? null),
         ]);
         $productorId = $this->productorId(true);
         $fincaId = $this->fincas->buscarIdActivo($productorId, $datos['fincaNombre']);
@@ -238,9 +239,9 @@ final class MiAnimalesController
             throw new HttpException('Revise los campos indicados.', 422, null, array_fill_keys(array_map('strval', $desconocidos), 'Campo no permitido.'));
         }
         $animalId = $this->animalId($cuerpo);
-        $texto = \Closure::fromCallable([AnimalPublicacionController::class, 'texto']);
-        $numero = \Closure::fromCallable([AnimalPublicacionController::class, 'numero']);
-        $v = AnimalPublicacionController::validarTodos([
+        $texto = \Closure::fromCallable([CampoValidacion::class, 'texto']);
+        $numero = \Closure::fromCallable([CampoValidacion::class, 'numero']);
+        $v = CampoValidacion::validarTodos([
             'modelo' => fn () => AnimalValidacionService::validar($this->catalogo, $cuerpo),
             'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),
             'sexo' => fn () => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
@@ -309,8 +310,8 @@ final class MiAnimalesController
         }
         $animalId = $this->animalId($cuerpo);
         $hoy = AnimalValidacionService::hoy();
-        $datos = AnimalPublicacionController::validarTodos([
-            'peso' => fn () => AnimalPublicacionController::numero($cuerpo['peso'] ?? null, 'peso')
+        $datos = CampoValidacion::validarTodos([
+            'peso' => fn () => CampoValidacion::numero($cuerpo['peso'] ?? null, 'peso')
                 ?? throw new HttpException('Revise los campos indicados.', 422, null, ['peso' => 'Este campo es obligatorio.']),
             'fecha' => function () use ($cuerpo, $hoy): string {
                 $fecha = $cuerpo['fecha'] ?? null;

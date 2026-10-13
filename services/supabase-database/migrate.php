@@ -196,6 +196,11 @@ const EXPECTED_COLUMNS = [
         'tbnotificacionid', 'tbpersonaid', 'tbnotificaciontipo', 'tbnotificaciontitulo', 'tbnotificacionmensaje',
         'tbnotificacionenlace', 'tbnotificacionfecha', 'tbnotificacionleida',
     ],
+    'tbpersonacorreocambio' => [
+        'tbpersonacorreocambioid', 'tbpersonaid', 'tbpersonacorreocambiosujeto', 'tbpersonacorreocambioanterior',
+        'tbpersonacorreocambionuevo', 'tbpersonacorreocambioestado', 'tbpersonacorreocambiofecha',
+        'tbpersonacorreocambiofecharesolucion',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -284,7 +289,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 47 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 48 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -702,7 +707,7 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=47 migration=v10\n");
+    fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
     if ($sinLlavePrimaria !== []) {
         fwrite(STDERR, 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
             . " causa=identificadores_repetidos_o_nulos\n");

@@ -84,6 +84,7 @@ DESCRIBE tbsubasta;
 DESCRIBE tbsubastapuja;
 DESCRIBE tbsubastacomentario;
 DESCRIBE tbnotificacion;
+DESCRIBE tbpersonacorreocambio;
 
 -- Comprobación 2: cada tabla tiene su llave primaria y nada más: sin llaves
 -- foráneas, UNIQUE, CHECK ni índices adicionales.
@@ -121,7 +122,7 @@ SELECT routine_name FROM information_schema.routines WHERE routine_schema = DATA
 UNION ALL
 SELECT event_name FROM information_schema.events WHERE event_schema = DATABASE();
 
--- Comprobación 4: exactamente 47 tablas base.
-SELECT COUNT(*) AS tablas_esperadas_47
+-- Comprobación 4: exactamente 48 tablas base.
+SELECT COUNT(*) AS tablas_esperadas_48
 FROM information_schema.tables
 WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE';

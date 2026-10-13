@@ -6,15 +6,18 @@ namespace Application\Controller;
 
 require_once dirname(__DIR__) . '/Service/ValidacionService.php';
 require_once dirname(__DIR__) . '/Service/SupabaseAuthAdmin.php';
+require_once dirname(__DIR__) . '/Service/CorreoCambioService.php';
 require_once dirname(__DIR__) . '/Model/Administrador.php';
-// Solo se usa su validación estática imagenUrl(); no instancia sus modelos.
-require_once __DIR__ . '/AnimalPublicacionController.php';
+require_once dirname(__DIR__) . '/Service/CampoValidacion.php';
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Service\CampoValidacion;
 use Application\Model\Administrador;
 use Application\Model\Bitacora;
 use Application\Model\Persona;
+use Application\Model\PersonaCorreoCambio;
+use Application\Service\CorreoCambioService;
 use Application\Service\SupabaseAuthAdmin;
 use Application\Service\ValidacionService;
 use PDO;
@@ -24,7 +27,9 @@ use Throwable;
  * La persona edita sus propios datos de perfil: nombre, identificación, correo,
  * foto, alias, teléfono y el documento de identidad que acaba de subir (queda
  * PENDIENTE de revisión). La Persona sale del JWT verificado, nunca del cuerpo.
- * El correo cambia también en la cuenta de Supabase (la sesión se vincula por él).
+ * El correo cambia también en la cuenta de Supabase (la sesión se vincula por él). Los dos
+ * sistemas no comparten transacción: el cambio se anota antes en tbpersonacorreocambio y
+ * CorreoCambioService lo termina o lo descarta si la operación se interrumpe.
  */
 final class MiPerfilController
 {
@@ -38,12 +43,14 @@ final class MiPerfilController
     private string $solicitudId;
 
     private SupabaseAuthAdmin $authAdmin;
+    private CorreoCambioService $correos;
 
     public function __construct(private PDO $conexion, private ActorContext $actor,
         ?string $solicitudId = null, ?SupabaseAuthAdmin $authAdmin = null)
     {
         $this->authAdmin = $authAdmin ?? new SupabaseAuthAdmin();
         $this->personas = new Persona($conexion);
+        $this->correos = new CorreoCambioService($conexion);
         $this->bitacora = new Bitacora($conexion, $actor);
         $this->solicitudId = is_string($solicitudId) && trim($solicitudId) !== ''
             ? trim($solicitudId)
@@ -106,7 +113,7 @@ final class MiPerfilController
         }
         if (array_key_exists('fotoUrl', $cuerpo)) {
             try {
-                $cambios['fotoUrl'] = AnimalPublicacionController::imagenUrl($cuerpo['fotoUrl'], 'fotoUrl');
+                $cambios['fotoUrl'] = CampoValidacion::imagenUrl($cuerpo['fotoUrl'], 'fotoUrl');
             } catch (HttpException $error) {
                 $errores += $error->errores;
             }
@@ -140,6 +147,8 @@ final class MiPerfilController
         // El bloqueo de alta de Persona serializa la identificación y el correo con el registro (que lo toma primero).
         $nueva = $this->personas->ejecutarConBloqueoAlta(fn (): array => $this->personas->ejecutarConBloqueoTelefono(fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
             function () use ($personaId, $cambios, $numeroLeido): array {
+                // Antes de tocar Supabase y fuera de la transacción: la fila debe sobrevivir al ROLLBACK.
+                $cambioCorreoId = $this->anotarCambioCorreo($personaId, $cambios);
                 $this->conexion->beginTransaction();
                 $authIntentado = false;
                 $commitIntentado = false;
@@ -153,7 +162,8 @@ final class MiPerfilController
                         throw new HttpException('La cuenta está inactiva y no puede editar su perfil.', 409);
                     }
                     $identificacionCambiada = $this->revisarIdentificacion($cambios, $anterior);
-                    $correoCambiado = $this->revisarCorreo($cambios, $anterior);
+                    // anotarCambioCorreo ya validó el correo bajo este mismo bloqueo de alta de Persona.
+                    $correoCambiado = $cambioCorreoId !== null;
                     // Para la lectura del documento cuenta la identificación nueva, si cambió.
                     $conIdentificacion = [
                         'tbpersonaidentificaciontipo' => $cambios['identificacionTipo'] ?? $anterior['tbpersonaidentificaciontipo'],
@@ -202,6 +212,9 @@ final class MiPerfilController
                         $authIntentado = true;
                         $this->authAdmin->cambiarCorreo((string) $this->actor->proveedorSujeto, $cambios['correo']);
                     }
+                    if ($cambioCorreoId !== null) {
+                        $this->correos->cerrar($cambioCorreoId, PersonaCorreoCambio::APLICADO);
+                    }
                     $commitIntentado = true;
                     if (!$this->conexion->commit()) {
                         throw new \RuntimeException('No se confirmó la transacción del perfil.');
@@ -216,18 +229,11 @@ final class MiPerfilController
                     } catch (Throwable) {
                         // La desconexión impide conocer el resultado local.
                     }
-                    if ($authIntentado && !($error instanceof HttpException && $error->estadoHttp === 409)) {
-                        if (!$rollbackConfirmado) {
-                            throw new HttpException('No se pudo confirmar el resultado del cambio de correo. La cuenta requiere comprobar la sincronización antes de reintentar.', 503);
-                        }
-                        $this->authAdmin->recuperarCorreo(
-                            (string) $this->actor->proveedorSujeto,
-                            $cambios['correo'],
-                            (string) $anterior['tbpersonacorreoelectronico'],
-                        );
-                        if ($commitIntentado) {
-                            throw new HttpException('No se guardó el perfil; el correo anterior fue restaurado. Puede reintentar.', 503);
-                        }
+                    // Supabase no cambió si no se llegó a llamar o si rechazó el correo (409).
+                    $remotoCambiado = $authIntentado && !($error instanceof HttpException && $error->estadoHttp === 409);
+                    $this->deshacerCambioCorreo($cambioCorreoId, $remotoCambiado, $rollbackConfirmado, $cambios, $anterior);
+                    if ($remotoCambiado && $commitIntentado) {
+                        throw new HttpException('No se guardó el perfil; el correo anterior fue restaurado. Puede reintentar.', 503);
                     }
                     throw $error;
                 }
@@ -245,6 +251,54 @@ final class MiPerfilController
             'fotoUrl' => $nueva['tbpersonafotourl'] ?? null,
             'documento' => Persona::documentoPublico($nueva),
         ]]);
+    }
+
+    /**
+     * Antes de tocar Supabase y fuera de la transacción: la fila PENDIENTE debe sobrevivir al ROLLBACK.
+     * Devuelve null si el correo no cambia; quita de $cambios el correo igual al actual.
+     */
+    private function anotarCambioCorreo(int $personaId, array &$cambios): ?int
+    {
+        $previa = $this->personas->buscarPorId($personaId);
+        // Persona inexistente o inactiva: la transacción responde su 404 o 409 de siempre.
+        if ($previa === null || (int) $previa['tbpersonaestado'] !== 1 || !$this->revisarCorreo($cambios, $previa)) {
+            return null;
+        }
+
+        return $this->correos->solicitar(
+            $this->actor,
+            (string) $previa['tbpersonacorreoelectronico'],
+            $cambios['correo'],
+            fn (): string => $this->authAdmin->correoConfirmado((string) $this->actor->proveedorSujeto),
+        );
+    }
+
+    /**
+     * El perfil no se guardó. Si Supabase ya tenía el correo nuevo se restaura, pero solo con el ROLLBACK
+     * confirmado; sin resultado local o sin poder restaurar lanza 503 y el cambio queda PENDIENTE para
+     * CorreoCambioService::conciliar. En los demás casos el cambio se CANCELA.
+     */
+    private function deshacerCambioCorreo(?int $cambioCorreoId, bool $remotoCambiado, bool $rollbackConfirmado,
+        array $cambios, ?array $anterior): void
+    {
+        if ($remotoCambiado) {
+            if (!$rollbackConfirmado) {
+                throw new HttpException('No se pudo confirmar el resultado del cambio de correo. La cuenta requiere comprobar la sincronización antes de reintentar.', 503);
+            }
+            $this->authAdmin->recuperarCorreo(
+                (string) $this->actor->proveedorSujeto,
+                $cambios['correo'],
+                (string) $anterior['tbpersonacorreoelectronico'],
+            );
+        }
+        if ($cambioCorreoId === null) {
+            return;
+        }
+        try {
+            $this->correos->cerrar($cambioCorreoId, PersonaCorreoCambio::CANCELADO);
+        } catch (Throwable) {
+            // Sigue PENDIENTE; el próximo cambio de correo lo cierra al comparar con Supabase.
+        }
     }
 
     /**

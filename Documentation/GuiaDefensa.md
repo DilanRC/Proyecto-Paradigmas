@@ -1,7 +1,7 @@
 # Guía de defensa
 
-1. **¿Cuántas tablas hay?** La instalación MySQL vigente tiene 47 tablas, y el espejo PostgreSQL/Supabase conserva las mismas 47 tablas.
-2. **¿Hay PRIMARY KEY?** Sí, una por tabla: las 47 tablas declaran `PRIMARY KEY (<tabla>id)`. Es la única restricción del esquema.
+1. **¿Cuántas tablas hay?** La instalación MySQL vigente tiene 48 tablas, y el espejo PostgreSQL/Supabase conserva las mismas 48 tablas.
+2. **¿Hay PRIMARY KEY?** Sí, una por tabla: las 48 tablas declaran `PRIMARY KEY (<tabla>id)`. Es la única restricción del esquema.
 3. **¿Hay FOREIGN KEY?** No, las asociaciones son lógicas.
 4. **¿Hay CHECK o UNIQUE?** No existe ninguna de esas restricciones.
 5. **¿Qué es `tbproductorid`?** La llave primaria de `tbproductor`: un `INT NOT NULL` que PHP calcula.

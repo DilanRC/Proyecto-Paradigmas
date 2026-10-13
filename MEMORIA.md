@@ -139,7 +139,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - Columna `tbanimalpublicacionimagenurl VARCHAR(500) NULL` (migración
   `012imagenpublicacion.sql`). La API devuelve `imagenUrl` en cada publicación
   y la acepta al crear (`POST api/v1/publicaciones`).
-- `AnimalPublicacionController::imagenUrl()` solo acepta `https://` absoluto,
+- `CampoValidacion::imagenUrl()` (`Application/Service/`) solo acepta `https://` absoluto,
   sin usuario/contraseña, hasta 500 caracteres; rechaza `http`, `javascript:`
   y `data:` con 422. En JS, `safeImageUrl()` hace lo mismo antes de un `<img>`.
 - **Fotos del dispositivo:** el navegador las sube directo a **Supabase
@@ -163,7 +163,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   Las cuentas anteriores quedan en NULL y muestran el avatar con iniciales.
 - `PATCH api/v1/mi-perfil` `{ nombre?, identificacion?, correoElectronico?, alias?, telefono?, fotoUrl? }` (sesión): solo
   cambian las claves enviadas; `alias: ""` o `fotoUrl: null` las dejan en NULL. Otras claves → 422. La foto exige
-  `https://` (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`) y el teléfono usa `ValidacionService`. Un teléfono
+  `https://` (`CampoValidacion::imagenUrl($v, 'fotoUrl')`) y el teléfono usa `ValidacionService`. Un teléfono
   nuevo deja histórico (`Persona::actualizarPerfil`); la bitácora (`PERSONA`, `API_MI_PERFIL`) **no guarda el teléfono**,
   solo `telefonoCambiado`.
 - `api/v1/actividad` devuelve `persona.fotoUrl`; de ahí sale el perfil en caché del navegador y el avatar del encabezado
@@ -178,15 +178,17 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   - `correoElectronico`: se normaliza en minúscula. El de otra Persona o el de un **administrador** → 409 (tomar el correo
     de un admin daría acceso al panel). Como la sesión se vincula con la Persona **por el correo**, el servidor cambia
     también el correo de la cuenta de Supabase (`Application/Service/SupabaseAuthAdmin.php`, `PUT /auth/v1/admin/users/{sub}`
-    con `email_confirm: true` y `SUPABASE_SECRET_KEY`) dentro de la transacción: si Supabase lo rechaza (correo ya usado → 409,
-    otro error → 502), no se guarda nada del PATCH. Después, `ajustes.js` renueva la sesión (`refreshAuthSession`) para que el
+    con `email_confirm: true` y `SUPABASE_SECRET_KEY`): si Supabase lo rechaza (correo ya usado → 409), no se guarda nada del
+    PATCH. Los dos sistemas no comparten transacción: antes de llamar a Supabase el cambio se guarda `PENDIENTE` en
+    `tbpersonacorreocambio` y, si la operación se interrumpe, `CorreoCambioService` lo termina o lo descarta (DEC-CORREO-001,
+    ver "Cambio de correo consistente"). Después, `ajustes.js` renueva la sesión (`refreshAuthSession`) para que el
     token traiga el correo nuevo. Un admin que cambie su correo deja de ser admin (`tbadministrador` va por correo).
 
 ### Foto del vehículo
 - Columna `tbvehiculofotourl VARCHAR(500) NULL` (migración `014vehiculofoto.sql`, en los 4 lugares + diccionario/DER/PDF).
   Una sola foto por vehículo; los vehículos anteriores quedan en NULL.
 - `api/v1/mi-vehiculos` acepta `fotoUrl` en `POST` y `PUT` y lo devuelve en `vehiculo` y `vehiculos[]`. Misma validación que la
-  foto de perfil (`AnimalPublicacionController::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
+  foto de perfil (`CampoValidacion::imagenUrl($v, 'fotoUrl')`: solo `https://`, hasta 500, 422 en `errors.fotoUrl`).
 - Mi panel → Mis vehículos: el diálogo sube la foto (campo compartido `shared/foto-campo.js`, mismo bucket `publicaciones`) y la fila muestra la miniatura. El navegador **solo envía `fotoUrl` si la foto cambió**; así un PUT sin cambio de foto no la borra.
 - En `PUT`, **sin la clave `fotoUrl` la foto se conserva** y `null` o `""` la quita (`Vehiculo::actualizar`). Así el PUT del
   admin (`api/v1/vehiculos`, que no conoce `fotoUrl`) no borra la foto. El admin ve `fotoUrl` en la lectura pero no la edita.
@@ -497,6 +499,21 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   `tbcompra`/`tbventa` al cerrar) → notificación → bitácora → transacción (Cuidados #12).
 - **Admin:** cadena de caché subida a **`auth-gate-11`, `admin-13`, `login.js?v=front-15`** y la versión del script de las 13 vistas admin.
 
+### Cambio de correo consistente (DEC-CORREO-001)
+- Tabla `tbpersonacorreocambio` (esquema de **48 tablas**, migración `026personacorreocambio.sql`; **las siguientes empiezan en
+  `027`**): persona, `sub` de la cuenta de Supabase, correo anterior y nuevo, estado `PENDIENTE|APLICADO|CANCELADO` y fechas.
+- `MiPerfilController` la escribe `PENDIENTE` **antes** de llamar a Supabase y **fuera** de la transacción del perfil (tiene que
+  sobrevivir al ROLLBACK). Pasa a `APLICADO` dentro de la transacción que actualiza `tbpersona`; a `CANCELADO` si Supabase no
+  cambió o si la restauración se comprobó. Si no se sabe qué pasó, queda `PENDIENTE`.
+- **Fuente de verdad: Supabase.** `SupabaseActorResolver`, cuando el correo de la sesión no tiene Persona, llama a
+  `CorreoCambioService::conciliar($sub, $correo, $rol)`: si esa cuenta tiene un `PENDIENTE` hacia ese correo, `tbpersona` avanza,
+  se anota en la bitácora (origen `CONCILIACION_CORREO`) y queda `APLICADO`. Otra cuenta, otro correo, una Persona cambiada por
+  otra vía o un correo que ya es de otra Persona **no** concilian (queda `PENDIENTE`, revisión manual).
+- El resolvedor carga el servicio con `require_once` solo en ese caso (sesión sin Persona): las peticiones normales no pagan nada.
+- Orden de bloqueos: alta de Persona → (histórico de teléfono) → bitácora → transacción. El de `tbpersonacorreocambio`
+  (`tindercows_persona_correo_cambio`) solo lo toma `PersonaCorreoCambio::crear`, siempre el último y sin pedir otro dentro.
+- `test_cleanup_productores()` borra también las filas de `tbpersonacorreocambio` de la Persona de prueba.
+
 ## 4. Cuidados (lo que ya rompió o puede romper)
 
 1. **Columna nueva = 4 lugares** (SQL canónico, migración MySQL, `schema.sql`
@@ -643,7 +660,8 @@ están incluidos ahí.
 ## 6. Estado de pruebas
 
 **Frontend: pasan todas (436/436 el 12/10/2026, rama `fix/xampp-linux-local`).** Las 4 que fallaban desde antes ya
-no fallan. **PHP: 78/78 en XAMPP real** (PHP 8.0.30, MariaDB 10.4.32). Cualquier fallo es una regresión, salvo las
+no fallan. **PHP: 80/80 archivos `Tests/*_test.php` en XAMPP real** (PHP 8.0.30, MariaDB 10.4.32) y 92/92 contando los
+`*_eval.php`, `*_gate.php`, `Database/Tests/*.php` y `services/supabase-database`. Cualquier fallo es una regresión, salvo las
 excepciones de entorno de abajo.
 
 **Pruebas PHP que fallan por el entorno o a veces** (no son regresiones):
@@ -664,6 +682,44 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-10-12 · fix/xampp-linux-local · Cierre para Calidad: correo consistente, controladores divididos y migraciones repetibles
+- **Cambio de correo (DEC-CORREO-001):** tabla `tbpersonacorreocambio` en los 4 lugares (48 tablas), modelo `PersonaCorreoCambio`,
+  `CorreoCambioService` y conciliación en `SupabaseActorResolver` (ver "Cambio de correo consistente"). `SupabaseAuthAdmin` ganó
+  `correoConfirmado()`. Pruebas: nueva `Tests/perfil_correo_conciliacion_test.php` (10 puntos de fallo; sin la conciliación falla con
+  409). Comprobado además contra Apache de XAMPP y el Supabase de pruebas con la cuenta sintética: 16/16 pasos, incluida una
+  interrupción real (Supabase con el correo nuevo y `tbpersona` con el anterior) que la primera petición concilió.
+- **Controladores (observación de Calidad):** `ProductorController` pasó de 582 a 396 líneas: la dirección principal
+  (`api/v1/productores/direccion`) tiene su controlador, `ProductorDireccionController` (`procesar()`; ya no existen
+  `procesarDireccion()` ni `crearDireccion()` en `ProductorController`). `AnimalPublicacionController` pasó de 587 a 492: los
+  validadores de campo (`texto`, `numero`, `validarTodos`, `imagenUrl`) viven en `Application/Service/CampoValidacion.php`.
+  **Ningún controlador carga ya a otro controlador.** Sin cambios en rutas ni en respuestas JSON.
+- **Migraciones:** la `009` fallaba (error 1146) en toda base ya normalizada: MySQL resuelve la tabla de una subconsulta aunque
+  el `IF` no tome esa rama; ahora usa `PREPARE`. `tbadministrador` nunca tuvo migración: la `025` la crea si falta. Y la `025`
+  **no era todo-o-nada en phpMyAdmin**: su importación sigue después del error de la comprobación y dejó 11 llaves declaradas con
+  un identificador repetido; ahora cada `ALTER` exige `@repetidos = 0`. Prueba nueva `Tests/migraciones_cadena_test.php`.
+- **Respaldos antiguos:** `Avance03` (15 tablas, sin llaves) restaurado en MySQL 8.0 y migrado de la `006` a la `026`: 48 tablas,
+  48 llaves, mismas filas y misma estructura que una instalación limpia. Procedimiento en `Documentation/Respaldos.md`.
+- **phpMyAdmin:** la 025 y la 026 importadas por su formulario sobre MariaDB 10.4.32 (base anterior con datos, repetición y caso
+  con un identificador repetido). **PostgreSQL 16:** `migrate.php` sobre una base con el esquema de `origin/dev` (47 tablas, 0
+  llaves) dos veces → 48 tablas, 48 llaves, RLS en las 48; con un id repetido deja esa tabla sin llave, avisa y no tumba el
+  arranque; conciliación de correo probada también ahí.
+- `Database/Tests/personacapacidades_eval.php` fijaba 15 tablas desde hace meses (fallaba sin que nadie lo corriera): ahora 48.
+- Cuidados: una tabla nueva también va en `test_cleanup_productores()` si cuelga de la Persona. Si agregas un `ALTER` a una
+  migración con comprobación previa, condiciona el `ALTER` mismo: phpMyAdmin no se detiene en el primer error.
+- **Seguridad:** la clave secreta del Supabase de **pruebas** (`ganado-cerca-xampp-tests`, no producción) quedó escrita en un
+  registro local de sesión de Codex y en archivos temporales; nunca entró a Git. Se redactó del registro. **Dilan decidió no
+  rotarla**; si ese proyecto se sigue usando, rotarla en Settings → API Keys.
+- **Navegador con sesión (cuenta sintética, Supabase de pruebas):** Chromium 152 y Firefox 153 automatizados, a 1366 px y 390 px:
+  Explorar, Ajustes, Mi panel, Publicar, Fletes, Subastas y Me interesa cargan con 200, sin errores de JavaScript, sin scroll
+  horizontal y con cada campo visible etiquetado (el buscador del encabezado usa una etiqueta `screen-reader-only`). El único
+  aviso de consola es el 403 esperado de `api/v1/admin/status` para una cuenta que no es administradora. **No se probó a mano**
+  el llenado de formularios, los diálogos ni el panel de administración en el navegador.
+- Revisión independiente (dos pasadas): un `PENDIENTE` de otra cuenta de Supabase o uno que no se puede completar ya no se
+  cancela ni se anuncia como completado (409 "pida a un administrador que lo revise"); la conciliación tampoco avanza hacia el
+  correo de un administrador. **Cuidado:** una base MySQL anterior sin la `026` responde 503 con el nombre de la migración a toda
+  sesión sin Persona (registro y administradores sin Persona): aplíquela antes de usar la app. Si falta `SUPABASE_SECRET_KEY`, un
+  intento de cambio de correo queda `PENDIENTE` y los siguientes responden 503 hasta configurarla.
+
 ### 2026-10-12 · fix/xampp-linux-local · Sesión vencida en XAMPP y SQL fuera de los controladores
 - **Sesión vencida o cerrada = 401 también en XAMPP.** Sin el servicio Node, `SupabaseActorResolver` valida el JWT directo contra
   `SUPABASE_URL/auth/v1/user`, y Supabase responde **403** a un token inválido, vencido o de una sesión cerrada. PHP lo reenviaba
@@ -680,8 +736,8 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - Pendiente en producción: `ensurePrimaryKeys()` no fija `lock_timeout` (47 `ALTER` con bloqueo exclusivo, una sola vez) y una
   tabla con ids repetidos queda sin llave hasta limpiarla. Si la bitácora de producción tiene los ids repetidos de Cuidados
   #12, hay que corregirlos a mano para que tenga su llave.
-- Sigue pendiente (no se tocó a propósito antes de la revisión): `ProductorController` y `AnimalPublicacionController` tienen
-  ~580 líneas; partirlos es un refactor mayor.
+- ~~`ProductorController` y `AnimalPublicacionController` de ~580 líneas~~: divididos el 12/10 (ver el registro "Cierre para
+  Calidad").
 - Comprobado contra XAMPP real y el Supabase de pruebas: registro, reintento, correo distinto, datos inválidos, otra cuenta
   con la misma cédula, edición de perfil con histórico de teléfono, cierre de sesión y nuevo login, mirando las filas en MySQL
   (24 casos). Storage con dos usuarios: 19 casos (carpeta ajena, sobrescritura, borrado, anónimo, documento privado).

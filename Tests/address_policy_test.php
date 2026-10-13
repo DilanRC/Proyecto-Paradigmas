@@ -52,7 +52,7 @@ try {
         'PUT conserva exactamente un periodo de dirección abierto (histórico crece con cada cambio)');
 
     // La ruta POST de dirección continúa siendo solo de reparación para datos sin enlace.
-    $reparacion = test_controller()->crearDireccion([
+    $reparacion = test_direccion_controller()->procesar('POST', [], [
         'identificacionNumero' => $productor['identificacionNumero'],
         'direccionPrincipal' => test_direccion_payload(),
     ]);

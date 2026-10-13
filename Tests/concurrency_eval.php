@@ -18,8 +18,12 @@ $section = static function (string $source, string $start, string $end): string 
     return substr($source, $startPosition, $endPosition - $startPosition);
 };
 $create = $section($controller, 'private function crear(', 'private function actualizar(');
-$update = $section($controller, 'private function actualizar(', 'public function crearDireccion(');
-$createDirection = $section($controller, 'public function crearDireccion(', 'private function desactivar(');
+$update = $section($controller, 'private function actualizar(', 'private function sincronizarDireccionesDeFinca(');
+$createDirection = $section(
+    file_get_contents("{$root}/Application/Controller/ProductorDireccionController.php"),
+    'private function crear(',
+    'private function actualizar(',
+);
 $appearsBefore = static function (string $source, string $first, string $second): bool {
     $firstPosition = strpos($source, $first);
     $secondPosition = strpos($source, $second);
@@ -50,7 +54,7 @@ $evaluate(
 $evaluate(
     'direccion_bloqueada',
     $appearsBefore($createDirection, 'direccion->ejecutarConBloqueoAlta(', 'transaccion('),
-    'crearDireccion() retiene el bloqueo de dirección durante la transacción',
+    'ProductorDireccionController::crear() retiene el bloqueo de dirección durante la transacción',
 );
 foreach ([
     'productor' => 'tbproductorid',

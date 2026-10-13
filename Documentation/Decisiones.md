@@ -1297,3 +1297,37 @@ tocar (con un aviso) la que tenga identificadores repetidos o nulos, para no tum
 con el esquema anterior y base con un identificador repetido en PostgreSQL 16. Gates: `Tests/schema_test.php` (una llave
 `<tabla>id` por tabla y ningún otro índice ni restricción), `Tests/naming_gate.php`, `Tests/naming_eval.php` y las pruebas
 de `services/supabase-database`.
+
+## DEC-CORREO-001 - Cambio de correo consistente entre Supabase y la base
+
+**Problema.** El correo de una persona está en dos lugares: la cuenta de Supabase Auth y `tbpersona`. La sesión se
+vincula con la Persona por ese correo. No existe una transacción que cubra los dos sistemas: si Supabase aplicaba el
+cambio y después fallaba el `COMMIT`, la restauración o el proceso, la cuenta quedaba con el correo nuevo y `tbpersona`
+con el anterior. La persona ya no podía entrar y no había forma de repararlo desde la aplicación.
+
+**Qué se decidió.** Tabla `tbpersonacorreocambio` (48 tablas): antes de llamar a Supabase se guarda el cambio como `PENDIENTE`,
+fuera de la transacción del perfil, con el `sub` de la cuenta, el correo anterior y el nuevo. Después:
+
+- todo sale bien: el cambio pasa a `APLICADO` en la misma transacción que actualiza `tbpersona`;
+- Supabase rechaza el correo o el fallo ocurre antes de llamarlo: `CANCELADO`;
+- falla el `COMMIT` y la restauración en Supabase se comprueba: `CANCELADO`, los dos conservan el correo anterior;
+- no se puede saber qué pasó (sin respuesta de Supabase, `COMMIT` ambiguo, proceso caído): queda `PENDIENTE`.
+
+**Fuente de verdad: Supabase.** La sesión nace de su cuenta. Cuando una sesión verificada trae un correo sin Persona,
+`SupabaseActorResolver` llama a `CorreoCambioService::conciliar`: si esa misma cuenta (`sub`) tiene un cambio `PENDIENTE`
+hacia ese correo, `tbpersona` avanza al correo nuevo, se anota en la bitácora (origen `CONCILIACION_CORREO`) y el cambio
+queda `APLICADO`. Se puede repetir sin efecto. Nunca se devuelve la cuenta al correo anterior a ciegas. Al pedir otro
+cambio con uno `PENDIENTE`, se consulta el correo actual de la cuenta: si es el nuevo se termina el anterior y se pide
+volver a entrar (409); si no, se cancela.
+
+**Qué no hace.** No concilia si la Persona cambió por otra vía o si el correo nuevo ya es de otra Persona: queda
+`PENDIENTE` para revisión manual. Otra cuenta de Supabase con el mismo correo no hereda el cambio. No crea una segunda
+Persona ni cambia el vínculo por correo (riesgo aceptado por el equipo el 06/10).
+
+**Por qué una tabla y no la bitácora.** La bitácora registra quién hizo qué y se escribe dentro de la transacción que
+puede deshacerse. La recuperación necesita un hecho propio que sobreviva al `ROLLBACK` y se consulte por cuenta; usar la
+bitácora como estado operativo mezclaría bitácora con histórico.
+
+**Comprobado.** `Tests/perfil_correo_conciliacion_test.php` provoca cada punto de fallo (rechazo, fallo de `COMMIT` con y
+sin restauración, `COMMIT` ambiguo, proceso caído antes y después de Supabase, otra cuenta, correo de otra Persona).
+Sin la conciliación en el resolvedor la prueba falla con 409.

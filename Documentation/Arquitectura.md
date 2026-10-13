@@ -44,6 +44,9 @@ Proyecto-Paradigmas/
 
 **API:** `/api/v1/productores` → `Public/.htaccess` → `Public/api/productores.php`
 → `Application/Controller/ProductorController.php` → `Service/*` → `Model/*` → MySQL.
+Un recurso, un controlador: la dirección principal del productor (`api/v1/productores/direccion`) la atiende
+`ProductorDireccionController.php`. La validación de un campo suelto del cuerpo JSON (texto, número, URL de imagen)
+vive en `Service/CampoValidacion.php`; ningún controlador depende de otro controlador.
 
 ## Cómo agregar algo nuevo
 

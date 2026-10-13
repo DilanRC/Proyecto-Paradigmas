@@ -15,12 +15,12 @@ compatibilidad con cualquier versión de Linux o XAMPP.
 | Extensiones | `pdo_mysql`, `mbstring`, `openssl`, `json` y `fileinfo`; `allow_url_fopen=On` para solicitudes HTTPS de autenticación. |
 | Tiempo | `Configuration/Configuration.php` fija UTC para fechas del negocio. La configuración CLI no demuestra la configuración de Apache. |
 | Apache | 2.4, `mod_rewrite`, `AllowOverride All` para `Public/`; `mod_headers` para los encabezados de protección. |
-| MariaDB | 10.4.32 de XAMPP: esquema de 47 tablas con su llave primaria y ninguna otra restricción ni índice; batería completa de 78 pruebas PHP aprobada, incluida la regresión de observaciones. Migración 025 aplicada sobre una base con datos. |
+| MariaDB | 10.4.32 de XAMPP: esquema de 48 tablas con su llave primaria y ninguna otra restricción ni índice; batería completa de 80 pruebas PHP aprobada, incluida la regresión de observaciones. Migración 025 aplicada sobre una base con datos. |
 | MySQL | 5.7.44: importación desde cero, migración 025 (también el aborto con identificadores repetidos) y tres pruebas de integración de publicaciones/inventario aprobadas. MySQL 8.0 sigue siendo la referencia de Compose; las tres pruebas de 5.7 no equivalen a certificar toda la aplicación. |
 | Otros motores | MySQL 8.0.46 y MariaDB 11.8.8 (contenedores): instalación con 47 llaves primarias y 13 pruebas de modelo cada uno. No se ejecutó la batería completa ni la aplicación por HTTP sobre ellos. |
 | Otras versiones de PHP | 8.1, 8.2, 8.3 y 8.4 (contenedores): sintaxis de todos los archivos y `runtime_compatibility_test`. La aplicación completa solo se ejecutó con PHP 8.0.30 de XAMPP. |
 | Frontend | 436 pruebas automatizadas aprobadas (Node); son pruebas de fuentes y contratos, no sustituyen la revisión en navegador. |
-| phpMyAdmin | 5.2.1: importación desde su interfaz sobre un servidor vacío; 74 consultas de esquema y semillas 101/102/104 con 6/6/8 consultas. Diagnóstico posterior: 47 tablas, 47 llaves primarias y cero restricciones, índices, triggers o rutinas adicionales. |
+| phpMyAdmin | 5.2.1: importación desde su interfaz sobre un servidor vacío; 74 consultas de esquema y semillas 101/102/104 con 6/6/8 consultas. Diagnóstico posterior: 47 tablas, 47 llaves primarias y cero restricciones, índices, triggers o rutinas adicionales (antes de la tabla 48). Migraciones 025 y 026 importadas por el mismo formulario sobre una base anterior con datos. |
 
 Los Dockerfiles usan PHP 8.3 como entorno de despliegue. Ese valor no es el
 mínimo de lenguaje de la aplicación. PHP anterior a 8.0 queda fuera del alcance.
@@ -107,7 +107,7 @@ un error de permisos. Revise el log local de Apache si una ruta devuelve 403.
    Después de importar el esquema, seleccione `bdmercadoganadero` en el panel
    izquierdo y use su pestaña **Importar** para cada semilla. Esto evita mensajes
    auxiliares de phpMyAdmin sobre una base no seleccionada, aunque el SQL use
-   `USE`. El esquema canónico crea 47 tablas con atributos y tipos, cada una con
+   `USE`. El esquema canónico crea 48 tablas con atributos y tipos, cada una con
    su llave primaria (`<tabla>id`), y deliberadamente sin FK, UNIQUE, CHECK, AUTO_INCREMENT,
    índices adicionales, triggers ni rutinas.
    Los cuatro campos que guardan JSON usan `LONGTEXT`; PHP valida y codifica su
@@ -147,11 +147,25 @@ creados manualmente u otras diferencias, deténgase y revise la definición y el
 respaldo antes de corregirlas; esta migración no reconstruye cualquier DB antigua.
 
 La migración `Database/Migrations/025llavesprimarias.sql` declara la llave primaria
-`<tabla>id` en las 47 tablas de una base creada antes de esa regla. No cambia datos.
-Primero cuenta los identificadores repetidos y, si encuentra alguno, se detiene con
-`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS` antes del primer cambio; corrija esas
-filas y vuelva a ejecutarla (se puede repetir). Fue comprobada en MariaDB 10.4.32 y
-MySQL 5.7.44. Aplíquela después de la 024.
+`<tabla>id` en las tablas de una base creada antes de esa regla. No cambia datos.
+Primero cuenta los identificadores repetidos y, si encuentra alguno, muestra
+`MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS` y no declara ninguna llave; corrija esas
+filas y vuelva a ejecutarla (se puede repetir). Aplíquela después de la 024 y antes de
+la `026personacorreocambio.sql`, que crea la tabla 48.
+
+Desde phpMyAdmin: seleccione `bdmercadoganadero`, pestaña **Importar**, y suba cada
+migración en orden. phpMyAdmin no se detiene en el primer error como el cliente `mysql`:
+por eso cada `ALTER` de la 025 vuelve a exigir que no haya repetidos. Con un identificador
+repetido, la importación muestra el error `#1146 ... MIGRACION_ABORTADA_IDENTIFICADORES_REPETIDOS`
+y la base queda con las mismas llaves que tenía. Los `ALTER` confirman solos: no hay
+`ROLLBACK` de una llave ya declarada, así que haga el respaldo antes.
+
+Comprobado importando por el formulario de phpMyAdmin 5.2.1 sobre MariaDB 10.4.32: una
+base con el esquema anterior (47 tablas sin llave, con semillas) quedó con 47 llaves y los
+mismos datos (`CHECKSUM TABLE` igual antes y después); repetirla no cambió nada; con un
+identificador repetido no declaró ninguna llave y, tras corregirlo, terminó en 48 tablas y
+48 llaves con la 026. También con el cliente `mysql` en MariaDB 10.4.32, MySQL 5.7.44 y
+MySQL 8.0.
 
 ## Instalador CLI alternativo
 

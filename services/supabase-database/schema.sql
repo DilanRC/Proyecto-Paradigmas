@@ -521,6 +521,21 @@ CREATE TABLE IF NOT EXISTS public.tbnotificacion (
     PRIMARY KEY (tbnotificacionid)
 );
 
+-- Histórico de cambios de correo de una Persona. La fila PENDIENTE se guarda antes de
+-- llamar a Supabase Auth; con ella PHP concilia los dos sistemas si el cambio se
+-- interrumpe. Estado: PENDIENTE, APLICADO o CANCELADO. Fechas en UTC.
+CREATE TABLE IF NOT EXISTS public.tbpersonacorreocambio (
+    tbpersonacorreocambioid INTEGER NOT NULL,
+    tbpersonaid INTEGER NOT NULL,
+    tbpersonacorreocambiosujeto VARCHAR(100) NOT NULL,
+    tbpersonacorreocambioanterior VARCHAR(150) NOT NULL,
+    tbpersonacorreocambionuevo VARCHAR(150) NOT NULL,
+    tbpersonacorreocambioestado VARCHAR(20) NOT NULL,
+    tbpersonacorreocambiofecha TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+    tbpersonacorreocambiofecharesolucion TIMESTAMP WITHOUT TIME ZONE NULL,
+    PRIMARY KEY (tbpersonacorreocambioid)
+);
+
 
 ALTER TABLE public.tbpersona ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbadministrador ENABLE ROW LEVEL SECURITY;
@@ -569,3 +584,4 @@ ALTER TABLE public.tbsubasta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbsubastapuja ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbsubastacomentario ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tbnotificacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tbpersonacorreocambio ENABLE ROW LEVEL SECURITY;

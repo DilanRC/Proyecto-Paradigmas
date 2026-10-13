@@ -40,7 +40,7 @@ regenerar sin crear un checkpoint nuevo.
 
 ## Entrega vigente
 
-El contrato vigente usa `bdmercadoganadero` y 47 tablas. Los respaldos nuevos
+El contrato vigente usa `bdmercadoganadero` y 48 tablas. Los respaldos nuevos
 se generan con ese nombre; los respaldos históricos con prefijo
 `dbmercadoganadero` se conservan como evidencia y se restauran sin reescribir
 dumps, `MANIFEST.md` ni `SHA256SUMS.txt`.
@@ -51,6 +51,33 @@ Tools/test-restore.sh AvanceNN
 ```
 
 PowerShell dispone de los comandos equivalentes.
+
+## Restaurar un respaldo anterior a la regla de llaves primarias
+
+`Tools/test-restore.sh` valida un respaldo contra el contrato vigente y por eso rechaza los
+respaldos históricos (`Avance02`, `Avance03` y las correcciones de `Avance01`): se tomaron
+cuando el esquema no declaraba llaves. Siguen siendo válidos como evidencia (sus sumas
+SHA256 coinciden) y se pueden llevar al esquema actual sin perder filas:
+
+1. Compruebe las sumas: `cd Database/Backups/Avance03 && sha256sum -c SHA256SUMS.txt`.
+2. Restaure el archivo `_completo.sql` en una base **nueva y vacía** llamada
+   `bdmercadoganadero` (`utf8mb4_unicode_ci`), nunca sobre una base con datos.
+3. Aplique en orden las migraciones posteriores a la última que ya incluía el respaldo.
+   `Avance03` (commit `3b8753b`) incluye hasta la `005`: aplique de la `006` a la `026`.
+4. Importe `Database/SeedData/102administrador.sql` (el respaldo no trae administradores)
+   y `104catalogosanimal.sql` (catálogos del animal).
+5. Verifique con `Database/Tests/comprobacionestructura.sql`: 48 tablas, 48 llaves y
+   ninguna otra restricción.
+
+Comprobado el 12/10/2026 en MySQL 8.0 con `Avance03`: 15 tablas sin llave y 49 personas,
+6 productores y 6 fincas pasaron a 48 tablas con 48 llaves, las mismas filas y las mismas
+columnas, tipos y nulos que una instalación limpia. Repetir la 025 y la 026 no cambió nada.
+`Tests/migraciones_cadena_test.php` falla si una tabla del esquema vigente deja de tener
+una migración que la cree.
+
+Límites: no se probaron por esta vía los respaldos de `Avance01` (base `dbtindercows`, otro
+modelo de datos). Las migraciones 001 a 005 no se pueden repetir sobre una base que ya las
+tiene.
 
 ## Contenido
 
@@ -68,9 +95,9 @@ tablas, columnas, metadatos de claves, CHECK, reglas referenciales, índices,
 intercalación, conteos y checksum de datos. Para respaldos del contrato vigente
 exige:
 
-- 47 tablas exactas, incluida `tbpersona`, históricos de teléfono, clasificación histórica del
+- 48 tablas exactas, incluida `tbpersona`, históricos de teléfono, clasificación histórica del
   Productor, animal, publicación, compra, venta, funnel, carrito y transporte;
-- una PRIMARY KEY por tabla (47) y ninguna otra restricción;
+- una PRIMARY KEY por tabla (48) y ninguna otra restricción;
 - cero FOREIGN KEY y CHECK;
 - cero índices fuera de la llave primaria;
 - cero columnas `AUTO_INCREMENT`;

@@ -101,6 +101,13 @@ final class SupabaseActorResolver
         }
 
         $personaId = $this->personaIdPorCorreo($conexion, $email);
+        if ($personaId === null) {
+            // Un cambio de correo interrumpido deja la cuenta con el correo nuevo y tbpersona con el anterior.
+            require_once dirname(__DIR__) . '/Service/CorreoCambioService.php';
+            // Una petición paralela pudo conciliar entre las dos lecturas: se vuelve a mirar el vínculo.
+            $personaId = (new \Application\Service\CorreoCambioService($conexion))->conciliar($subject, $email, $role)
+                ?? $this->personaIdPorCorreo($conexion, $email);
+        }
         if ($exigirPersona && $personaId === null) {
             throw new HttpException('La sesión verificada no tiene vínculo con una persona.', 409);
         }
