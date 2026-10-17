@@ -34,7 +34,7 @@ test('Ajustes → Perfil edita nombre, identificación y correo con las reglas c
     assert.match(js, /errorIdentificacion/, 'la identificación usa las reglas del servidor');
     assert.match(js, /telefonoValido/, 'el teléfono usa telefono.js');
     assert.match(js, /refreshAuthSession\(\)/, 'con el correo nuevo se renueva la sesión');
-    assert.match(view, /js\/ajustes\.js\?v=ajustes-12/);
+    assert.match(view, /js\/ajustes\.js\?v=ajustes-13/);
 });
 
 test('Ajustes → Perfil permite cambiar y quitar la foto y editar alias y teléfono', () => {

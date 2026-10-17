@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=signup-12"></script>
+    <script type="module" src="js/registro.js?v=signup-13"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">
@@ -36,12 +36,13 @@
         <div>
             <p class="section-kicker">Crear cuenta</p>
             <h1 id="registro-title">Crea tu cuenta en Ganado Cerca.</h1>
-            <p>Te registras como comprador para explorar ganado cerca de ti. Si después quieres vender u ofrecer fletes, lo activas desde tu panel sin volver a registrarte.</p>
+            <p>Elige cómo quieres participar: comprar, vender u ofrecer fletes. Siempre podrás explorar y comprar, y después puedes sumar otras formas de participar sin volver a registrarte.</p>
         </div>
         <ol class="onboarding-progress" aria-label="Progreso de registro">
             <li data-progress="persona" class="is-active"><span>1</span>Tus datos</li>
             <li data-progress="intereses"><span>2</span>Tu actividad</li>
             <li data-progress="fincas"><span>3</span>Tus fincas</li>
+            <li data-progress="vehiculo"><span>3</span>Tu vehículo</li>
             <li data-progress="revision"><span>4</span>Listo</li>
         </ol>
     </section>
@@ -49,6 +50,17 @@
     <section class="onboarding-card">
         <form id="registro-form" novalidate aria-busy="false">
             <section class="onboarding-step signup" data-step="persona">
+                <fieldset class="signup-type" data-rol-registro>
+                    <legend class="signup-type__title">¿Cómo quieres participar?</legend>
+                    <p class="signup-type__question" id="signup-rol-question">Te pediremos solo los datos que necesita lo que elijas.</p>
+                    <div class="signup-type__options" aria-describedby="signup-rol-question signup-rol-ayuda">
+                        <label class="signup-radio"><input type="radio" name="rol" value="COMPRADOR" checked><span>Comprador</span></label>
+                        <label class="signup-radio"><input type="radio" name="rol" value="PRODUCTOR"><span>Vendedor</span></label>
+                        <label class="signup-radio"><input type="radio" name="rol" value="TRANSPORTISTA"><span>Transportista</span></label>
+                    </div>
+                    <small class="field-help" id="signup-rol-ayuda" data-rol-ayuda aria-live="polite"></small>
+                </fieldset>
+
                 <fieldset class="signup-type">
                     <legend class="signup-type__title">Tipo de identificación</legend>
                     <p class="signup-type__question" id="signup-type-question">¿Con qué documento te identificas?</p>
@@ -93,7 +105,7 @@
                             <ul>
                                 <li>Explorar ganado cerca de ti y guardar lo que te interesa.</li>
                                 <li>Contactar a quien vende y coordinar el flete.</li>
-                                <li>Si después quieres vender u ofrecer fletes, lo activas desde tu panel sin volver a registrarte.</li>
+                                <li>Vender (con tus fincas) u ofrecer fletes (con tu vehículo). Puedes sumar o cambiar actividades después en "Más formas de participar".</li>
                             </ul>
                         </div>
                     </details>
@@ -126,6 +138,18 @@
                 <div id="fincas-list" class="fincas-list"></div>
                 <button class="onboarding-add" id="agregar-finca" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Agregar otra finca</button>
                 <p class="auth-error onboarding-error" data-error-for="fincas"></p>
+            </section>
+
+            <section class="onboarding-step signup" data-step="vehiculo" hidden>
+                <div class="signup-section signup-section--first">
+                    <h2 class="signup-title">Tu vehículo</h2>
+                    <p class="signup-required"><span aria-hidden="true">*</span> campos obligatorios · la foto y más vehículos los agregas en Mi panel</p>
+                    <div class="signup-grid">
+                        <div class="auth-field"><label for="registro-vehiculo-placa">Placa *</label><input id="registro-vehiculo-placa" name="placa" type="text" maxlength="20" autocomplete="off" required><small class="auth-error" data-error-for="placa"></small></div>
+                        <div class="auth-field"><label for="registro-vehiculo-vin">VIN *</label><input id="registro-vehiculo-vin" name="vin" type="text" maxlength="50" autocomplete="off" required><small class="auth-error" data-error-for="vin"></small></div>
+                        <div class="auth-field"><label for="registro-vehiculo-modelo">Modelo *</label><input id="registro-vehiculo-modelo" name="modelo" type="text" maxlength="100" autocomplete="off" required placeholder="Ej. Isuzu NPR 2018"><small class="auth-error" data-error-for="modelo"></small></div>
+                    </div>
+                </div>
             </section>
 
             <section class="onboarding-step" data-step="revision" hidden>

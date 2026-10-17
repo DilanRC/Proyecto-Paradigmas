@@ -1,3 +1,4 @@
+<?php $soloParticipacion = $soloParticipacion ?? false; ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
@@ -6,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Ajustes de tu cuenta en Ganado Cerca: perfil y formas de participar.">
     <meta name="theme-color" content="#151a18">
-    <title>Ajustes de cuenta | Ganado Cerca</title>
+    <title><?= $soloParticipacion ? 'Más formas de participar' : 'Ajustes de cuenta' ?> | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=product-7">
@@ -17,10 +18,10 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-12"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-13"></script>
 </head>
-<body class="public-home activity-page settings-page">
+<body class="public-home activity-page settings-page"<?= $soloParticipacion ? ' data-pagina="participar"' : '' ?>>
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
             <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
@@ -40,17 +41,20 @@
             <section id="activity-error" class="activity-panel" hidden role="alert"><div class="purchase-result"><h2>No pudimos cargar tus ajustes</h2><p id="activity-error-message">Intenta nuevamente.</p><button id="activity-retry" class="activity-button activity-button--primary" type="button">Reintentar</button></div></section>
 
             <div id="activity-content" class="settings-layout" hidden>
-                <nav class="settings-nav" aria-label="Secciones de ajustes">
+                <nav class="settings-nav" aria-label="Secciones de ajustes"<?= $soloParticipacion ? ' hidden' : '' ?>>
                     <a href="ajustes#perfil" data-settings-link="perfil"><i class="fa-solid fa-id-card" aria-hidden="true"></i>Perfil</a>
                     <a href="ajustes#participacion" data-settings-link="participacion"><i class="fa-solid fa-route" aria-hidden="true"></i>Cómo participo</a>
                 </nav>
                 <div class="settings-sections">
                     <div class="settings-heading">
                         <a class="panel-link" href="mi-actividad"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Mi panel</a>
-                        <h1 id="settings-title">Ajustes de cuenta</h1>
+                        <h1 id="settings-title"><?= $soloParticipacion ? 'Más formas de participar' : 'Ajustes de cuenta' ?></h1>
+<?php if ($soloParticipacion): ?>
+                        <p class="settings-hint">Activa o desactiva cuándo quieres comprar, vender u ofrecer fletes. Tu cuenta y tus datos siguen siendo los mismos.</p>
+<?php endif; ?>
                     </div>
 
-                    <section class="activity-panel" id="perfil" aria-labelledby="perfil-title" tabindex="-1">
+                    <section class="activity-panel" id="perfil" aria-labelledby="perfil-title" tabindex="-1"<?= $soloParticipacion ? ' hidden' : '' ?>>
                         <div class="panel-head"><h2 id="perfil-title">Perfil</h2><button id="profile-edit" class="activity-button activity-button--sm" type="button">Editar datos</button></div>
                         <div class="profile-photo">
                             <span class="profile-photo__avatar" id="profile-avatar" aria-hidden="true"></span>

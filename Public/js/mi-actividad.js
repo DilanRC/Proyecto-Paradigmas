@@ -78,12 +78,14 @@ function renderHello(data) {
     const activas = Object.keys(BUSINESS_CAPABILITIES).filter((id) => capacidades[id]?.estado === 'ACTIVO');
     const roles = document.querySelector('#panel-roles');
     roles.innerHTML = activas.map((id) => `<span class="activity-state" data-state="ACTIVO">${BUSINESS_CAPABILITIES[id].shortLabel}</span>`).join('')
-        + '<a class="panel-link" href="ajustes#participacion">Gestionar</a>';
+        + '<a class="panel-link" href="participar">Gestionar</a>';
     document.querySelector('#panel-no-activity').hidden = activas.length > 0;
 
     document.querySelector('#panel-actions').innerHTML = panelActions(capacidades)
         .map((action) => `<a class="activity-button${action.primary ? ' activity-button--primary' : ''}" href="${escapeHtml(action.href)}">${action.primary ? '<i class="fa-solid fa-plus" aria-hidden="true"></i>' : ''}${action.label}</a>`)
-        .join('');
+        .join('')
+        // Siempre visible: activar, desactivar o sumar formas de participar.
+        + '<a class="activity-button" href="participar"><i class="fa-solid fa-route" aria-hidden="true"></i>Más formas de participar</a>';
 }
 
 function renderProfileCard(persona = {}) {

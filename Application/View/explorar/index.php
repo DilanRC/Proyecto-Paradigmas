@@ -23,7 +23,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
     <script type="module" src="js/explore.js?v=explore-13"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-5"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>

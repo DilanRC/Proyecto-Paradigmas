@@ -1,4 +1,4 @@
-// Fase 2: el alta inicial crea solo Comprador y lleva a Explorar.
+// El alta elige un rol (Comprador, Vendedor o Transportista), pide solo sus datos y siempre suma Comprador.
 //
 // Ejecutar: node --test Tests/frontend/registro_comprador.test.mjs
 
@@ -8,12 +8,14 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
-test('el alta inicial no pregunta actividades; la ampliación sí', async () => {
+test('el alta pide el formulario del rol elegido; la ampliación conserva su flujo', async () => {
     const { registrationSteps, registrationCapabilities } = await import('../../Public/js/registro.js');
-    assert.deepEqual(registrationSteps(['PRODUCTOR', 'TRANSPORTISTA'], false), ['persona'],
-        'una cuenta nueva es un solo formulario que termina en "Registrar"');
-    assert.deepEqual(registrationCapabilities(['PRODUCTOR', 'TRANSPORTISTA'], false), ['COMPRADOR'],
-        'una cuenta nueva siempre se envía como Comprador');
+    assert.deepEqual(registrationSteps(['COMPRADOR'], false), ['persona'], 'Comprador: un solo formulario');
+    assert.deepEqual(registrationSteps(['PRODUCTOR'], false), ['persona', 'fincas'], 'Vendedor: sus fincas');
+    assert.deepEqual(registrationSteps(['TRANSPORTISTA'], false), ['persona', 'vehiculo'], 'Transportista: su vehículo');
+    assert.deepEqual(registrationCapabilities(['PRODUCTOR'], false), ['COMPRADOR', 'PRODUCTOR'],
+        'una cuenta nueva siempre es también Comprador');
+    assert.deepEqual(registrationCapabilities(['COMPRADOR'], false), ['COMPRADOR']);
     // Activar Vendedor desde Ajustes muestra solo el formulario de fincas.
     assert.deepEqual(registrationSteps(['COMPRADOR', 'TRANSPORTISTA'], true, 'PRODUCTOR'), ['fincas']);
     assert.deepEqual(registrationCapabilities(['COMPRADOR', 'TRANSPORTISTA'], true, 'PRODUCTOR'), ['PRODUCTOR'],
@@ -32,11 +34,15 @@ test('"Configurar" desde Ajustes preselecciona la actividad aun con URL bonita',
 
 test('después de registrarse va a Explorar; al ampliar vuelve al panel', () => {
     const js = read('Public/js/registro.js');
-    assert.match(js, /const fallback = extending \? 'mi-actividad\?actualizado=1' : 'explorar';/);
-    // Una cuenta nueva nunca envía fincas; una ampliación solo si activa Vendedor.
-    assert.match(js, /fincas: extending && registrationCapabilities\(summary\.capacidades, extending, solicitada\)\.includes\('PRODUCTOR'\)/);
+    assert.match(js, /const fallback = extending \? 'mi-actividad\?actualizado=1' : vehiculoPendiente \? 'mi-actividad' : 'explorar';/);
+    // Las fincas solo viajan si se activa Vendedor (en el alta o al ampliar).
+    assert.match(js, /fincas: capacidadesEnvio\.includes\('PRODUCTOR'\) \? summary\.fincas : \[\]/);
+    // El vehículo del Transportista se crea con la API de Mi panel, después del alta.
+    assert.match(js, /request\('api\/v1\/mi-vehiculos', \{ method: 'POST', body: JSON\.stringify\(draft\.vehiculo\) \}\)/);
     const vista = read('Application/View/registro/index.php');
-    assert.match(vista, /Te registras como comprador/);
+    assert.equal((vista.match(/type="radio" name="rol"/g) || []).length, 3, 'Comprador, Vendedor y Transportista');
+    assert.match(vista, /name="rol" value="COMPRADOR" checked/);
+    for (const campo of ['placa', 'vin', 'modelo']) assert.match(vista, new RegExp(`name="${campo}"`));
     // Diseño del formulario: tipo con radios, cuadrícula, plegables y "Registrar".
     assert.equal((vista.match(/type="radio" name="identificacionTipo"/g) || []).length, 5);
     assert.match(vista, /value="CEDULA_FISICA" checked/);
@@ -91,7 +97,7 @@ test('al entrar tras confirmar, el registro se termina con el borrador y sin con
 
     assert.equal(await completarRegistroPendiente('ana@example.test', { storage, requestImpl }), true);
     assert.equal(llamadas[0].url, 'api/v1/registro');
-    assert.deepEqual(llamadas[0].cuerpo.capacidades, ['COMPRADOR'], 'una cuenta nueva siempre es Comprador');
+    assert.deepEqual(llamadas[0].cuerpo.capacidades, ['COMPRADOR', 'PRODUCTOR'], 'el rol elegido, siempre con Comprador');
     assert.equal('password' in llamadas[0].cuerpo.persona, false);
     assert.equal(memoria.has(REGISTRATION_DRAFT_KEY), false, 'el borrador se borra al terminar');
 });

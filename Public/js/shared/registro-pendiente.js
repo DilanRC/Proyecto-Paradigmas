@@ -7,7 +7,7 @@
 // no tiene que volver a escribir nada.
 
 import { request } from './api.js';
-import { buildRegistrationSummary } from './business-rules.js';
+import { buildRegistrationSummary, normalizeCapabilities } from './business-rules.js';
 
 export const REGISTRATION_DRAFT_KEY = 'tindercows:registration-draft';
 
@@ -21,19 +21,27 @@ export function leerBorradorRegistro(storage = globalThis.sessionStorage) {
 }
 
 /**
- * Crea la Persona (como Comprador) con el borrador guardado al registrarse.
- * Devuelve false si no hay borrador para ese correo; el login cae entonces al
- * formulario de registro, como antes.
+ * Crea la Persona (siempre Comprador, más el rol elegido) con el borrador
+ * guardado al registrarse: las fincas si eligió Vendedor y el vehículo si eligió
+ * Transportista. Devuelve false si no hay borrador para ese correo; el login cae
+ * entonces al formulario de registro, como antes.
  */
 export async function completarRegistroPendiente(email, { storage = globalThis.sessionStorage, requestImpl = request } = {}) {
     const borrador = leerBorradorRegistro(storage);
     const correo = String(borrador?.persona?.correoElectronico ?? '').trim().toLowerCase();
     if (!borrador || correo === '' || correo !== String(email ?? '').trim().toLowerCase()) return false;
-    const { persona } = buildRegistrationSummary(borrador);
+    const { persona, fincas } = buildRegistrationSummary(borrador);
+    const capacidades = normalizeCapabilities(['COMPRADOR', ...(borrador.capacidades ?? [])]);
     await requestImpl('api/v1/registro', {
         method: 'POST',
-        body: JSON.stringify({ persona, capacidades: ['COMPRADOR'], fincas: [] }),
+        body: JSON.stringify({ persona, capacidades, fincas: capacidades.includes('PRODUCTOR') ? fincas : [] }),
     });
     storage?.removeItem(REGISTRATION_DRAFT_KEY);
+    if (capacidades.includes('TRANSPORTISTA') && borrador.vehiculo) {
+        // La cuenta ya existe: si el vehículo falla se agrega desde Mi panel.
+        try {
+            await requestImpl('api/v1/mi-vehiculos', { method: 'POST', body: JSON.stringify(borrador.vehiculo) });
+        } catch { /* sigue el login */ }
+    }
     return true;
 }

@@ -17,8 +17,8 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
-    <script type="module" src="js/mi-actividad.js?v=panel-18"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
+    <script type="module" src="js/mi-actividad.js?v=panel-19"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">
@@ -53,7 +53,7 @@
                 <section id="panel-no-activity" class="activity-panel panel-empty" hidden>
                     <strong>Todavía no tienes actividades activas</strong>
                     <p>Elige si quieres comprar, vender u ofrecer fletes para empezar.</p>
-                    <a class="activity-button" href="ajustes#participacion">Elegir cómo participo</a>
+                    <a class="activity-button" href="participar">Elegir cómo participo</a>
                 </section>
 
                 <div class="panel-grid">

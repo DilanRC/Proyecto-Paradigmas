@@ -214,6 +214,7 @@ function createAccountMenu(actions, session, profile) {
             <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
             <a href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"></i><span>Mi panel</span></a>
             <a href="me-interesa"><i class="fa-solid fa-heart" aria-hidden="true"></i><span>Me interesa</span></a>
+            <a href="participar"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Más formas de participar</span></a>
             <a href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Ajustes de cuenta</span></a>
             <a href="admin/dashboard" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
             <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>

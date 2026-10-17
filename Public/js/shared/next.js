@@ -4,7 +4,7 @@
 // la lista y solo parámetros conocidos. Así next no puede llevar a otro sitio
 // y aun así devuelve a la persona a la publicación o búsqueda de donde venía.
 
-export const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar', 'ajustes']);
+export const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar', 'ajustes', 'participar']);
 
 const NEXT_PARAMS = Object.freeze({
     publicacion: (valor) => /^\d{1,9}$/.test(valor),

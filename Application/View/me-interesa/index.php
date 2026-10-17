@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/explore.css?v=explore-9">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
     <script type="module" src="js/me-interesa.js?v=interesa-6"></script>
 </head>
 <body class="public-home activity-page">

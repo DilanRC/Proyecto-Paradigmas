@@ -323,7 +323,7 @@ export function necesitaFormulario(id) {
 function activityControl(id, detail) {
     const state = detail?.estado ?? 'NO_CONFIGURADO';
     if (state === 'NO_CONFIGURADO' && necesitaFormulario(id)) {
-        return `<a class="activity-button activity-button--sm" href="registro/productor?next=ajustes">Configurar</a>`;
+        return `<a class="activity-button activity-button--sm" href="registro/productor?next=${document.body.dataset.pagina === 'participar' ? 'participar' : 'ajustes'}">Configurar</a>`;
     }
     if (state === 'NO_CONFIGURADO') {
         return `<input class="settings-switch" type="checkbox" role="switch" data-toggle-capability="${id}" data-configurar="true" aria-labelledby="cap-${id}-title" aria-describedby="cap-${id}-desc">`;

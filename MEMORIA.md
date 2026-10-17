@@ -75,11 +75,19 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - **Con sesión no hay portada.** `public-ui.js` quita "Inicio" del menú y del pie, el logo lleva a Explorar y la portada (`<body data-portada>` en `home/index.php`) redirige a `explorar`. Sin sesión todo sigue igual. Si cambias la portada, conserva `data-portada` y no se la pongas a Explorar (bucle de redirección).
 
 ### Registro y actividades (comprador, vendedor, transportista)
-- **Alta inicial = solo Comprador.** El formulario no pregunta actividades y
-  el **backend** lo garantiza: `RegistroPublicoService::capacidadesDeAlta()`
-  agrega `COMPRADOR` cuando la sesión todavía no tiene Persona vinculada. Si
-  la Persona ya tenía Comprador (activo o inactivo) no se toca.
-- Tras registrarse va a **Explorar**.
+- **Alta con rol elegido (16/10; antes era solo Comprador).** El primer paso del registro tiene un selector
+  `name="rol"` (Comprador, Vendedor, Transportista; Comprador por defecto) y se pide solo lo de ese rol:
+  Vendedor → paso "Tus fincas"; Transportista → paso "Tu vehículo" (placa, VIN, modelo). Se envía
+  `capacidades: ['COMPRADOR', <rol>]` y las fincas solo si va `PRODUCTOR`. El vehículo se crea **después**
+  del alta con `POST api/v1/mi-vehiculos` (necesita la Persona); si falla, la cuenta queda creada y se va a
+  Mi panel con un aviso. `registro-pendiente.js` (alta tras confirmar el correo) hace lo mismo con el borrador.
+  El **backend** sigue garantizando Comprador (`RegistroPublicoService::capacidadesDeAlta()`); no cambió.
+- Tras registrarse va a **Explorar** (a Mi panel si el vehículo no se pudo guardar).
+- **"Más formas de participar" (`/participar`)**: página visible desde el menú del avatar y Mi panel (botón
+  junto a las acciones, "Gestionar" y "Elegir cómo participo"). Es la **misma vista y `ajustes.js`** de Ajustes
+  con `$soloParticipacion = true` (`Public/participar.php`): oculta el menú lateral y el perfil y marca
+  `<body data-pagina="participar">`, que hace que "Configurar" Vendedor vuelva a `participar`. `participar`
+  está en `PUBLIC_DESTINATIONS` de `next.js`. Ajustes → Cómo participo sigue existiendo.
 - **Confirmación de correo:** el proyecto de Supabase la tiene activada
   (`mailer_autoconfirm: false`). Si `signUp` no devuelve sesión, el registro
   lleva a `entrar?registro=confirmar` con un aviso neutro. Al confirmar e
@@ -668,6 +676,16 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-10-16 · jefersonbustamante · Rol al registrarse y página "Más formas de participar"
+- Ver "Registro y actividades": el alta elige Comprador, Vendedor o Transportista con su formulario, y `/participar`
+  muestra las actividades fuera de Ajustes. Sin cambios de backend ni de esquema.
+- Archivos: vista y `registro.js` (`signup-13`), `shared/registro-pendiente.js` (import `?v=rol-1` en `registro.js` y
+  `login.js`, `front-17`), `shared/next.js` (import `?v=participar-1` en `registro.js`), nuevo `Public/participar.php`,
+  vista de Ajustes (`ajustes-13`), `mi-actividad.js` (`panel-19`), `public-ui.js` (`public-17` en las 9 vistas), `.htaccess`.
+- Pruebas: `registro_comprador`, `mi_actividad`, `carrito`, `mis_animales` y `perfil` ajustadas. Frontend: solo las 4 conocidas.
+- Cuidado: `api.js` y `documentos.js` estaban con CRLF en la copia local; se normalizaron (Cuidados #4).
+  **Sin probar con una sesión real en el navegador** (sin Chrome en la sesión): revisar a mano los tres registros.
 
 ### 2026-10-12 · jefersonbustamante · Validaciones juntas en los formularios, teclas numéricas y login más claro
 - **Todos los campos a la vez:** nuevo `Public/js/shared/validacion-nativa.js` (`nativa-1`): `erroresNativos(form)` devuelve cada campo inválido

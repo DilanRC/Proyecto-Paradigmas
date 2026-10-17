@@ -2,7 +2,7 @@ import { request } from './shared/api.js?v=api-2';
 import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
 import { safeNext } from './shared/next.js';
-import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js';
+import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js?v=rol-1';
 import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-11';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 

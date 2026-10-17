@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-16"></script>
+    <script type="module" src="js/public-ui.js?v=public-17"></script>
     <script type="module" src="js/subastas.js?v=subastas-4"></script>
 </head>
 <body class="public-home activity-page subastas-page">

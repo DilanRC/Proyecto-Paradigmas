@@ -103,7 +103,8 @@ test('Ajustes activa Transportista ahí mismo y Vendedor abre solo su formulario
     assert.equal(necesitaFormulario('TRANSPORTISTA'), false);
     assert.equal(necesitaFormulario('COMPRADOR'), false);
     assert.match(mensajeActivacion('TRANSPORTISTA', true), /ya ofreces fletes/);
-    assert.ok(ajustesJs.includes('href="registro/productor?next=ajustes">Configurar</a>'));
+    // Vuelve a la página desde la que se abrió: Ajustes o "Más formas de participar".
+    assert.ok(ajustesJs.includes("href=\"registro/productor?next=${document.body.dataset.pagina === 'participar' ? 'participar' : 'ajustes'}\">Configurar</a>"));
     // Misma ampliación de cuenta que hacía el formulario, sin datos extra.
     assert.ok(ajustesJs.includes("request(REGISTRO_API, { method: 'POST', body: JSON.stringify({ capacidades: [id], fincas: [] }) })"));
 });

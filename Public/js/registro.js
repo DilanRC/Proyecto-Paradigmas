@@ -13,8 +13,8 @@ import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
 import { request } from './shared/api.js';
 import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js';
 import { syncPublicProfile } from './shared/public-profile.js';
-import { safeNext } from './shared/next.js';
-import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js';
+import { safeNext } from './shared/next.js?v=participar-1';
+import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js?v=rol-1';
 import { aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './shared/telefono.js?v=mascaras-1';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
@@ -42,12 +42,17 @@ export function loginPendiente(search = globalThis.location?.search ?? '') {
 }
 
 /**
- * El alta inicial no pregunta actividades: toda cuenta nueva empieza como
- * Comprador (el backend lo garantiza). Vender u ofrecer fletes se activa luego
- * desde Ajustes → Cómo participo, que reutiliza este mismo formulario.
+ * En el alta se elige un rol (Comprador, Vendedor o Transportista) y se piden
+ * solo sus datos: fincas para Vendedor, vehículo para Transportista. Toda cuenta
+ * nueva es además Comprador (el backend lo garantiza). Lo demás se activa luego
+ * desde "Más formas de participar", que reutiliza este mismo formulario.
  */
 export function registrationSteps(capabilities, extending, solicitada = null) {
-    if (!extending) return ['persona'];
+    if (!extending) {
+        return ['persona',
+            ...(capabilities.includes('PRODUCTOR') ? ['fincas'] : []),
+            ...(capabilities.includes('TRANSPORTISTA') ? ['vehiculo'] : [])];
+    }
     // "Configurar" desde Ajustes: Vendedor solo pide sus fincas.
     if (solicitada === 'PRODUCTOR') return ['fincas'];
     if (solicitada) return ['revision'];
@@ -55,8 +60,19 @@ export function registrationSteps(capabilities, extending, solicitada = null) {
 }
 
 export function registrationCapabilities(selected, extending, solicitada = null) {
-    if (!extending) return ['COMPRADOR'];
+    if (!extending) return normalizeCapabilities(['COMPRADOR', ...selected]);
     return solicitada ? [solicitada] : selected;
+}
+
+export const AYUDA_ROL = {
+    COMPRADOR: 'Explora ganado cerca de ti, guarda lo que te interesa y solicita compras.',
+    PRODUCTOR: 'Publica tu ganado. Te pediremos al menos una finca. También podrás comprar.',
+    TRANSPORTISTA: 'Ofrece fletes. Te pediremos los datos de tu vehículo. También podrás comprar.',
+};
+
+function formVehiculo(form) {
+    const data = new FormData(form);
+    return Object.fromEntries(['placa', 'vin', 'modelo'].map((campo) => [campo, String(data.get(campo) ?? '').trim()]));
 }
 
 function formPersona(form) {
@@ -78,6 +94,9 @@ function formPersona(form) {
 }
 
 function selectedCapabilities(form) {
+    // Alta: un solo rol elegido. Al ampliar el selector de rol no existe.
+    const rol = form.querySelector('input[name="rol"]:checked');
+    if (rol) return normalizeCapabilities([rol.value]);
     return normalizeCapabilities([...form.querySelectorAll('input[name="capacidades"]:checked')].map((input) => input.value));
 }
 
@@ -241,7 +260,7 @@ function snapshot(form, existingProfile = null) {
     const persona = existingProfile?.persona
         ? { ...existingProfile.persona, ...formPersona(form) }
         : formPersona(form);
-    return { persona, capacidades: selectedCapabilities(form), fincas: readFincas() };
+    return { persona, capacidades: selectedCapabilities(form), fincas: readFincas(), vehiculo: formVehiculo(form) };
 }
 
 function persistDraft(form, existingProfile = null) {
@@ -309,6 +328,14 @@ function restoreDraft(form, existingProfile) {
     // solo esa: volver a enviar una actividad ya configurada pero inactiva
     // haría que el servidor rechace toda la ampliación.
     const requested = requestedCapability(window.location);
+    // Alta: el rol elegido (el borrador guarda solo ese) y los datos del vehículo.
+    const rolGuardado = (draft?.capacidades ?? []).find((capacidad) => capacidad !== 'COMPRADOR') ?? 'COMPRADOR';
+    const rol = form.querySelector(`input[name="rol"][value="${CSS.escape(rolGuardado)}"]`);
+    if (rol instanceof HTMLInputElement && !existingProfile) rol.checked = true;
+    for (const [campo, valor] of Object.entries(draft?.vehiculo ?? {})) {
+        const control = form.elements.namedItem(campo);
+        if (control instanceof HTMLInputElement && ['placa', 'vin', 'modelo'].includes(campo)) control.value = String(valor ?? '');
+    }
     const storedCapabilities = requested ? [] : (existingProfile?.capacidades ?? draft?.capacidades ?? []);
     for (const capability of storedCapabilities) {
         const control = form.querySelector(`input[name="capacidades"][value="${CSS.escape(capability)}"]`);
@@ -415,6 +442,13 @@ async function initialize() {
     }
     if (!document.querySelector('[data-finca]')) addFinca();
 
+    const ayudaRol = form.querySelector('[data-rol-ayuda]');
+    const actualizarAyudaRol = () => {
+        if (ayudaRol) ayudaRol.textContent = AYUDA_ROL[selectedCapabilities(form)[0]] ?? '';
+    };
+    if (extending) form.querySelector('[data-rol-registro]')?.remove();
+    else actualizarAyudaRol();
+
     if (extending) {
         const etiquetaFinal = finishButton.querySelector('[data-finish-label]');
         if (etiquetaFinal) etiquetaFinal.textContent = solicitada === 'PRODUCTOR' ? 'Activar vendedor' : 'Guardar actividad';
@@ -425,8 +459,8 @@ async function initialize() {
         if (kicker) kicker.textContent = 'Tu cuenta';
         const volver = document.querySelector('.auth-header__actions .auth-back');
         if (volver instanceof HTMLAnchorElement) {
-            volver.href = 'ajustes#participacion';
-            volver.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Volver a ajustes</span>';
+            volver.href = 'participar';
+            volver.innerHTML = '<i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>Volver</span>';
         }
         if (solicitada === 'PRODUCTOR') {
             if (title) title.textContent = 'Activa tu cuenta de vendedor.';
@@ -633,6 +667,10 @@ async function initialize() {
                 if (desajuste) { errors = { fincas: `${finca.nombre || 'La finca'}: ${desajuste}` }; break; }
             }
         }
+        if (active === 'vehiculo') {
+            errors = Object.fromEntries(Object.entries(formVehiculo(form))
+                .filter(([, valor]) => !valor).map(([campo]) => [campo, 'Este dato es obligatorio.']));
+        }
         setErrors(errors);
         if (errors.fincas) {
             const fincaError = document.querySelector('[data-finca-error]');
@@ -670,6 +708,7 @@ async function initialize() {
     };
     form.addEventListener('change', (event) => {
         if (event.target instanceof HTMLInputElement && event.target.name === 'identificacionTipo') actualizarIdentificacion();
+        if (event.target instanceof HTMLInputElement && event.target.name === 'rol') { actualizarAyudaRol(); sync(); }
     });
     identificacionNumero?.addEventListener('input', scheduleIdentityCheck);
     identityRetry?.addEventListener('click', () => { void checkIdentity(); });
@@ -772,13 +811,13 @@ async function initialize() {
             }
 
             setStatus(status, 'Guardando tu identidad y actividades…');
+            const capacidadesEnvio = registrationCapabilities(summary.capacidades, extending, solicitada);
             await request('api/v1/registro', {
                 method: 'POST',
                 body: JSON.stringify({
                     persona: summary.persona,
-                    capacidades: registrationCapabilities(summary.capacidades, extending, solicitada),
-                    fincas: extending && registrationCapabilities(summary.capacidades, extending, solicitada).includes('PRODUCTOR')
-                        ? summary.fincas : [],
+                    capacidades: capacidadesEnvio,
+                    fincas: capacidadesEnvio.includes('PRODUCTOR') ? summary.fincas : [],
                 }),
             });
 
@@ -786,6 +825,17 @@ async function initialize() {
             // auxiliar; si su lectura falla, no debemos dejar a la persona
             // atrapada en el botón ni hacerle repetir una operación exitosa.
             sessionStorage.removeItem(DRAFT_KEY);
+            // Transportista: el vehículo va aparte (necesita la Persona ya creada).
+            // Si falla, la cuenta queda creada y Mi panel permite agregarlo.
+            let vehiculoPendiente = false;
+            if (!extending && capacidadesEnvio.includes('TRANSPORTISTA')) {
+                try {
+                    setStatus(status, 'Guardando tu vehículo…');
+                    await request('api/v1/mi-vehiculos', { method: 'POST', body: JSON.stringify(draft.vehiculo) });
+                } catch {
+                    vehiculoPendiente = true;
+                }
+            }
             // Documento opcional: se envía ahora que hay sesión y Persona. Si falla, la
             // cuenta ya está creada y Explorar la invita a subirlo desde Ajustes.
             let documentoEnviado = false;
@@ -807,10 +857,13 @@ async function initialize() {
             // Cuenta nueva sin documento: Explorar la invita una vez a subirlo (P2-5).
             if (!extending && !documentoEnviado) marcarAvisoDocumento();
             // Cuenta nueva: directo a Explorar. Ampliación: de vuelta al panel.
-            const fallback = extending ? 'mi-actividad?actualizado=1' : 'explorar';
+            // Si el vehículo no se guardó, Mi panel muestra "Mis vehículos" para agregarlo.
+            const fallback = extending ? 'mi-actividad?actualizado=1' : vehiculoPendiente ? 'mi-actividad' : 'explorar';
             setStatus(status, extending
                 ? 'Actividad guardada. Abriendo tu perfil…'
-                : 'Cuenta creada. Abriendo Explorar…', 'success');
+                : vehiculoPendiente
+                    ? 'Cuenta creada, pero no pudimos guardar el vehículo. Agrégalo desde Mi panel.'
+                    : 'Cuenta creada. Abriendo Explorar…', vehiculoPendiente ? 'error' : 'success');
             try {
                 const activity = await request('api/v1/actividad', { timeoutMs: 10000 });
                 syncPublicProfile(activity.data);
