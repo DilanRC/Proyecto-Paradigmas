@@ -5,7 +5,7 @@
 // separados por recurso y por contexto crear/editar. No persiste contrasenas,
 // archivos, errores visuales, loading ni estado de botones.
 
-import { DIALOG_OPEN_EVENT } from './dialog.js';
+import { DIALOG_OPEN_EVENT } from './dialog.js?v=dialog-2';
 
 const VERSION = 1;
 const PREFIX = 'tindercows:draft';

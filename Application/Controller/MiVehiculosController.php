@@ -6,6 +6,7 @@ namespace Application\Controller;
 
 use Application\Auth\ActorContext;
 use Application\HttpException;
+use Application\Service\CampoValidacion;
 use Application\Model\Bitacora;
 use Application\Model\Transportista;
 use Application\Model\TransportistaVehiculo;
@@ -14,7 +15,7 @@ use Application\Service\ValidacionService;
 use PDO;
 use Throwable;
 
-require_once __DIR__ . '/AnimalPublicacionController.php';
+require_once dirname(__DIR__) . '/Service/CampoValidacion.php';
 require_once dirname(__DIR__) . '/Service/ValidacionService.php';
 
 final class MiVehiculosController
@@ -26,8 +27,8 @@ final class MiVehiculosController
     private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
+        private PDO $conexion,
+        private ActorContext $actor,
         ?string $solicitudId = null,
     ) {
         $this->enlace = new TransportistaVehiculo($conexion);
@@ -208,7 +209,7 @@ final class MiVehiculosController
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
         // Sin `fotoUrl` en un PUT la foto se conserva; `null` o "" la quita.
         if (array_key_exists('fotoUrl', $cuerpo)) {
-            $resultado['fotoUrl'] = AnimalPublicacionController::imagenUrl($cuerpo['fotoUrl'], 'fotoUrl');
+            $resultado['fotoUrl'] = CampoValidacion::imagenUrl($cuerpo['fotoUrl'], 'fotoUrl');
         }
         return $resultado;
     }

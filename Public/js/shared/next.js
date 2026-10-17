@@ -21,7 +21,7 @@ export function safeNext(search = '') {
     if (!PUBLIC_DESTINATIONS.has(ruta)) return null;
     const limpia = new URLSearchParams();
     for (const [clave, valor] of new URLSearchParams(consulta)) {
-        if (Object.hasOwn(NEXT_PARAMS, clave) && NEXT_PARAMS[clave](valor)) limpia.set(clave, valor);
+        if (Object.prototype.hasOwnProperty.call(NEXT_PARAMS, clave) && NEXT_PARAMS[clave](valor)) limpia.set(clave, valor);
     }
     const texto = limpia.toString();
     return texto ? `${ruta}?${texto}` : ruta;

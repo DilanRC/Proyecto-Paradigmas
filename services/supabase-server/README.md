@@ -1,16 +1,18 @@
 # Supabase Server sidecar
 
 Servicio Node independiente para validar JWT de Supabase sin modificar el CRUD
-PHP. Usa `@supabase/server/core` con `auth: 'user'` y crea un cliente limitado
-por RLS. No expone ni usa el cliente administrativo.
+PHP. Usa `@supabase/server/core` con `auth: 'user'` para validar el JWT y consulta
+`/auth/v1/user` con el mismo Bearer para obtener el perfil actual, incluida la
+confirmación de correo. Comprueba que el perfil corresponda a la misma identidad
+firmada. No expone ni usa el cliente administrativo.
 
 ## Contrato
 
 - `GET /health`: preparación del servicio, sin mostrar valores de configuración.
 - `GET /v1/auth/verify`: exige `Authorization: Bearer <jwt>` y devuelve `id`,
-  `email` y `role` verificados. Si Supabase expone el estado de confirmación,
-  también transporta `email_confirmed_at`; PHP rechaza la sesión cuando está
-  explícitamente sin confirmar.
+  `email` y `role` verificados. `email_confirmed_at` proviene del objeto User
+  actual de Supabase Auth, no de un claim JWT opcional. Una lectura fallida o una
+  identidad distinta responde 503; PHP rechaza el correo que no está confirmado.
 - OpenAPI: `contracts/supabase-auth-v1.openapi.json`.
 
 El CRUD PHP consume este endpoint cuando recibe `Authorization`. La identidad

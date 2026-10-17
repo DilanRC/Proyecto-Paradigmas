@@ -27,13 +27,13 @@ final class AdminDocumentoController
     private const ESTADOS_FILTRO = ['PENDIENTE', 'VERIFICADO', 'RECHAZADO', 'TODOS'];
     private const DECISIONES = ['VERIFICADO', 'RECHAZADO'];
 
-    private readonly Persona $personas;
-    private readonly Bitacora $bitacora;
-    private readonly ActorContext $actor;
-    private readonly SupabaseStorage $storage;
-    private readonly string $solicitudId;
+    private Persona $personas;
+    private Bitacora $bitacora;
+    private ActorContext $actor;
+    private SupabaseStorage $storage;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null,
+    public function __construct(private PDO $conexion, ?string $solicitudId = null,
         ?ActorContext $actor = null, ?SupabaseStorage $storage = null)
     {
         $this->actor = $actor ?? ActorContext::noAutenticado();

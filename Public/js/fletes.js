@@ -1,3 +1,4 @@
+import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Página Fletes: ofertas de flete cercanas (cualquier persona con sesión) y
 // "Mis ofertas" para quien tiene Transportista activo. API: api/v1/fletes y api/v1/mi-ofertas.
 import { request } from './shared/api.js';
@@ -182,16 +183,14 @@ function abrirOferta(id = null, trigger = null) {
     mostrarErrores();
     mostrarEstado($('#oferta-form-status'), '', 'info');
     editor = montarEditorDireccion($('#oferta-zona'), oferta?.zona ?? null, { titulo: 'Punto exacto de tu zona base', opcional: true, lugar: 'tu zona base' });
-    if (typeof dialogo.showModal === 'function') dialogo.showModal();
-    else { dialogo.hidden = false; dialogo.setAttribute('open', ''); }
+    openDialog(dialogo);
     form.elements.vehiculoId.focus();
 }
 
 function cerrarOferta() {
     const dialogo = $('#oferta-modal');
     liberarEditor();
-    if (typeof dialogo.close === 'function' && dialogo.open) dialogo.close();
-    else { dialogo.hidden = true; dialogo.removeAttribute('open'); }
+    closeDialog(dialogo);
     disparador?.focus?.();
     editandoId = null;
 }

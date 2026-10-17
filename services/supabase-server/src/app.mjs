@@ -1,4 +1,4 @@
-import { createContextClient, verifyAuth } from '@supabase/server/core'
+import { verifyAuth } from '@supabase/server/core'
 
 import { validateEnvironment } from './config.mjs'
 
@@ -10,7 +10,7 @@ const json = (body, status = 200) => Response.json(body, {
 export function createHandler({
   env = process.env,
   verify = verifyAuth,
-  createClient = createContextClient,
+  getUser = getUserFromAuth,
 } = {}) {
   return async function handle(request) {
     const url = new URL(request.url)
@@ -48,19 +48,75 @@ export function createHandler({
       }, error.status)
     }
 
-    createClient({ auth: { token: auth.token, keyName: auth.keyName } })
     const claims = auth.userClaims
-    const confirmation = Object.prototype.hasOwnProperty.call(claims, 'email_confirmed_at')
-      ? claims.email_confirmed_at
-      : claims.confirmed_at
+    let lookup
+    try {
+      lookup = await getUser({ token: auth.token, env })
+    } catch {
+      return json({
+        success: false,
+        error: { code: 'USER_LOOKUP_UNAVAILABLE', message: 'Unable to verify the current user.' },
+      }, 503)
+    }
+    if (lookup?.status === 401 || lookup?.status === 403) {
+      return json({
+        success: false,
+        error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' },
+      }, 401)
+    }
+    if (lookup?.status !== 200 || !lookup.user || typeof lookup.user !== 'object') {
+      return json({
+        success: false,
+        error: { code: 'USER_LOOKUP_UNAVAILABLE', message: 'Unable to verify the current user.' },
+      }, 503)
+    }
+
+    const user = lookup.user
+    const claimId = typeof claims.id === 'string' ? claims.id : ''
+    const userId = typeof user.id === 'string' ? user.id : ''
+    const claimEmail = typeof claims.email === 'string' ? claims.email.trim().toLowerCase() : ''
+    const userEmail = typeof user.email === 'string' ? user.email.trim().toLowerCase() : ''
+    if (!claimId || userId !== claimId || !claimEmail || userEmail !== claimEmail) {
+      return json({
+        success: false,
+        error: { code: 'USER_IDENTITY_MISMATCH', message: 'Unable to verify the current user.' },
+      }, 503)
+    }
+
+    const confirmation = Object.prototype.hasOwnProperty.call(user, 'email_confirmed_at')
+      ? user.email_confirmed_at
+      : (user.confirmed_at ?? null)
     return json({
       success: true,
       data: {
-        id: claims.id,
-        email: claims.email ?? null,
+        id: user.id,
+        email: user.email,
         role: claims.role ?? null,
-        ...(confirmation !== undefined && { email_confirmed_at: confirmation }),
+        email_confirmed_at: confirmation,
       },
     })
   }
+}
+
+async function getUserFromAuth({ token, env }) {
+  const endpoint = new URL('/auth/v1/user', env.SUPABASE_URL)
+  const response = await fetch(endpoint, {
+    method: 'GET',
+    headers: {
+      apikey: env.SUPABASE_PUBLISHABLE_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+    signal: AbortSignal.timeout(3000),
+  })
+  if (!response.ok) {
+    return { status: response.status, user: null }
+  }
+
+  let user
+  try {
+    user = await response.json()
+  } catch {
+    return { status: 503, user: null }
+  }
+  return { status: response.status, user }
 }

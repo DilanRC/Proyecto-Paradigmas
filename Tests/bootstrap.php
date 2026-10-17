@@ -6,6 +6,7 @@ use Application\Controller\AnimalPublicacionController;
 use Application\Controller\CompradorController;
 use Application\Controller\FincaController;
 use Application\Controller\ProductorController;
+use Application\Controller\ProductorDireccionController;
 use Application\Controller\ProductorUbicacionController;
 use Application\Controller\IdentidadController;
 use Application\Model\Bitacora;
@@ -28,6 +29,7 @@ foreach (['ProductorDireccionService', 'ProductorEstadoService', 'ValidacionServ
 }
 require_once $testRoot . '/Application/Controller/MiActividadController.php';
 require_once $testRoot . '/Application/Controller/ProductorController.php';
+require_once $testRoot . '/Application/Controller/ProductorDireccionController.php';
 require_once $testRoot . '/Application/Controller/CompradorController.php';
 require_once $testRoot . '/Application/Controller/FincaController.php';
 require_once $testRoot . '/Application/Controller/ProductorUbicacionController.php';
@@ -71,6 +73,11 @@ function test_new_db(): PDO
 function test_controller(?string $requestId = null): ProductorController
 {
     return new ProductorController(test_db(), $requestId ?? test_token('request'));
+}
+
+function test_direccion_controller(?string $requestId = null): ProductorDireccionController
+{
+    return new ProductorDireccionController(test_db(), $requestId ?? test_token('request'));
 }
 
 function test_publicacion_controller(?string $requestId = null): AnimalPublicacionController
@@ -305,6 +312,7 @@ function test_cleanup_productores(array $identificaciones): void
             }
         }
         $db->prepare("DELETE p FROM tbproductor p INNER JOIN tbpersona pe ON pe.tbpersonaid=p.tbpersonaid WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
+        $db->prepare("DELETE cc FROM tbpersonacorreocambio cc INNER JOIN tbpersona pe ON pe.tbpersonaid=cc.tbpersonaid WHERE pe.tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->prepare("DELETE FROM tbpersona WHERE tbpersonaidentificacionnumero IN ({$marcadores})")->execute($ids);
         $db->commit();
     } catch (Throwable $exception) {

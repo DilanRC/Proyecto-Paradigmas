@@ -23,7 +23,7 @@ final class TransportistaController
     private EstadoService $estadoService;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $vehiculos = new TransportistaVehiculo($conexion);
         $this->transportista = new Transportista($conexion, $vehiculos);

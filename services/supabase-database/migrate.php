@@ -196,6 +196,11 @@ const EXPECTED_COLUMNS = [
         'tbnotificacionid', 'tbpersonaid', 'tbnotificaciontipo', 'tbnotificaciontitulo', 'tbnotificacionmensaje',
         'tbnotificacionenlace', 'tbnotificacionfecha', 'tbnotificacionleida',
     ],
+    'tbpersonacorreocambio' => [
+        'tbpersonacorreocambioid', 'tbpersonaid', 'tbpersonacorreocambiosujeto', 'tbpersonacorreocambioanterior',
+        'tbpersonacorreocambionuevo', 'tbpersonacorreocambioestado', 'tbpersonacorreocambiofecha',
+        'tbpersonacorreocambiofecharesolucion',
+    ],
 ];
 
 function postgresConnection(string $url): PDO
@@ -284,7 +289,7 @@ function validateSchema(PDO $connection): void
             }
         }
         throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 47 tablas: ' . implode('; ', $differences)
+            'El esquema Supabase no coincide con el contrato de 48 tablas: ' . implode('; ', $differences)
         );
     }
 }
@@ -507,6 +512,54 @@ function eliminarEstadoProductor(PDO $connection): void
 }
 
 /**
+ * Declara la llave primaria `<tabla>id` en las tablas que todavía no la tienen
+ * (Calidad: una por tabla, sin llaves foráneas). Una base nueva ya la trae de
+ * schema.sql. Si una tabla tiene identificadores repetidos o nulos no se toca:
+ * se devuelve su nombre para avisar, porque abortar aquí dejaría el despliegue
+ * caído y repararla exige revisar los datos a mano.
+ *
+ * @return list<string> tablas que quedaron sin llave primaria
+ */
+function ensurePrimaryKeys(PDO $connection): array
+{
+    $primaryKeyColumns = $connection->query(
+        "SELECT c.relname AS table_name, a.attname AS column_name
+         FROM pg_constraint k
+         INNER JOIN pg_class c ON c.oid = k.conrelid
+         INNER JOIN pg_namespace n ON n.oid = c.relnamespace
+         CROSS JOIN LATERAL unnest(k.conkey) WITH ORDINALITY AS pk_column(attnum, ordinal)
+         INNER JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = pk_column.attnum
+         WHERE n.nspname = 'public' AND k.contype = 'p'
+         ORDER BY c.relname, pk_column.ordinal"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    $primaryKeys = [];
+    foreach ($primaryKeyColumns as $row) {
+        $primaryKeys[(string) $row['table_name']][] = (string) $row['column_name'];
+    }
+    $pendientes = [];
+    foreach (array_keys(EXPECTED_COLUMNS) as $table) {
+        $id = $table . 'id';
+        if (isset($primaryKeys[$table])) {
+            if ($primaryKeys[$table] === [$id]) {
+                continue;
+            }
+            $pendientes[] = $table;
+            continue;
+        }
+        $invalidos = (int) $connection->query(
+            "SELECT (SELECT COUNT(*) FROM public.{$table} WHERE {$id} IS NULL)
+                  + (SELECT COUNT(*) FROM (SELECT 1 FROM public.{$table} GROUP BY {$id} HAVING COUNT(*) > 1) repetidos)"
+        )->fetchColumn();
+        if ($invalidos > 0) {
+            $pendientes[] = $table;
+            continue;
+        }
+        $connection->exec("ALTER TABLE public.{$table} ADD PRIMARY KEY ({$id})");
+    }
+    return $pendientes;
+}
+
+/**
  * Catálogos del animal (P2-2) y vacunas (P2-3). Solo se siembra una tabla VACÍA: lo que un administrador haya cambiado,
  * agregado o desactivado no se reinserta al redesplegar. Mismos datos que Database/SeedData/104catalogosanimal.sql.
  */
@@ -653,6 +706,10 @@ try {
         throw new RuntimeException('No fue posible leer schema.sql.');
     }
     $connection->beginTransaction();
+    // Otra instancia que arranca a la vez espera aquí a que termine la primera, con tope:
+    // lock_timeout también limita la espera del advisory lock y de cada ALTER.
+    $connection->exec("SET LOCAL lock_timeout = '30s'");
+    $connection->exec("SET LOCAL statement_timeout = '120s'");
     $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))");
     $connection->exec($schema);
     ensureCurrentColumns($connection);
@@ -662,10 +719,18 @@ try {
     eliminarEstadoProductor($connection);
     seedInitialData($connection);
     seedCatalogs($connection);
+    $sinLlavePrimaria = ensurePrimaryKeys($connection);
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
-    fwrite(STDOUT, "supabase_schema_status=ready tables=47 migration=v10\n");
+    if ($sinLlavePrimaria !== []) {
+        fwrite(STDOUT, 'supabase_schema_status=degraded tables=48 migration=v10 primary_key_pending='
+            . count($sinLlavePrimaria) . "\n");
+        fwrite(STDERR, 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
+            . " causa=llave_existente_incorrecta_o_identificadores_repetidos_o_nulos\n");
+        exit(2);
+    }
+    fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();

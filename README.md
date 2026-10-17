@@ -1,11 +1,11 @@
 # TinderCows — CRUD de Productores
 
-Aplicación académica PHP 8.3, MVC, MySQL 8, AJAX y JSON. La corrección del
+Aplicación académica PHP 8.0 o posterior, MVC, MySQL/MariaDB, AJAX y JSON. La corrección del
 Avance 01 aplica el modelo simplificado indicado por el profesor.
 
 ## Modelo vigente
 
-La base `bdmercadoganadero` contiene exactamente 47 tablas:
+La base `bdmercadoganadero` contiene exactamente 48 tablas:
 
 1. `tbpersona`
 2. `tbproductor`
@@ -54,6 +54,7 @@ La base `bdmercadoganadero` contiene exactamente 47 tablas:
 45. `tbsubastapuja`
 46. `tbsubastacomentario`
 47. `tbnotificacion`
+48. `tbpersonacorreocambio`
 
 `tbpersona` guarda una sola identidad y contacto. `tbproductor`, `tbcomprador`
 y `tbtransportista` son contextos de esa misma persona (DEC-28): cada perfil de
@@ -74,7 +75,8 @@ y finca pueden compartir el mismo lugar sin duplicar el dato. Ver
 `Documentation/MatrizArquitectonicaP0C.md`, `Documentation/DER.md`,
 `Documentation/DiccionarioDatos.md` y `Database/Tests/README.md`.
 
-El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
+Cada tabla tiene su llave primaria (`<tabla>id`), como pide Calidad. El esquema no contiene llaves foráneas,
+otras restricciones, índices adicionales, valores `DEFAULT`,
 columnas `AUTO_INCREMENT`, triggers, rutinas ni eventos. Todos los nombres SQL están en minúscula. PHP calcula los
 consecutivos y `tbproductordireccion`/`tbfinca` usan `tbproductorid` como
 asociación lógica. No existen tablas de participante, roles ni catálogos de
@@ -173,9 +175,28 @@ local `NO_AUTENTICADO`.
 
 ## Despliegue
 
-Para ejecutar sin Docker en XAMPP, configure Apache con `Public/` como raíz
-del sitio o abra la aplicación bajo `/Proyecto-Paradigmas/Public/`. La guía
-completa está en [`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md).
+Para la revisión en XAMPP, extraiga `GanadoCerca.zip` directamente en `htdocs`
+(el ZIP ya trae la carpeta `GanadoCerca/`; no cree otra con el mismo nombre),
+inicie Apache y MySQL desde el panel y abra
+`http://localhost/GanadoCerca/Public/`. Aparece la portada: no hay asistente de
+instalación. En la primera visita la aplicación localiza el MySQL de XAMPP, usa
+`bdmercadoganadero` si ya existe con la estructura de esta versión y, si no
+existe, la crea con las 48 tablas, sus llaves primarias y los catálogos
+requeridos, sin personas ni publicaciones de ejemplo. El ZIP trae su `.env`
+(MySQL local de XAMPP y los valores públicos de Supabase Auth): no hay que
+editar Apache, crear archivos ni importar SQL. Este modo requiere que
+Apache aplique los `.htaccess` (`AllowOverride All`); con `AllowOverride None`
+los archivos privados no quedan protegidos por el paquete. Consulte
+[`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md) para
+el alcance comprobado y la alternativa avanzada con `Public/` como
+`DocumentRoot`.
+
+En Linux, use PHP 8.0 o posterior con `pdo_mysql`, `mysqli`, `posix`, `mbstring` y OpenSSL. Se comprobó XAMPP
+8.0.30 con MariaDB 10.4.32; la versión del Ubuntu y XAMPP del profesor sigue
+desconocida. El repositorio completo no requiere Node ni Composer para XAMPP,
+pero Auth, Storage, Realtime y mapas externos necesitan Internet. Revise la
+guía antes de importar o migrar la base:
+[`Documentation/Instalacion-XAMPP.md`](Documentation/Instalacion-XAMPP.md).
 
 `Dockerfile` genera una imagen autocontenida; el volumen de Compose solo sirve
 para desarrollo. `Dockerfile.vercel` permite que Vercel ejecute la misma
@@ -222,7 +243,7 @@ curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 
 Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
 antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
-El migrador crea y valida las 47 tablas, incluida la identidad compartida en
+El migrador crea y valida las 48 tablas, incluida la identidad compartida en
 `tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
 migración remota de persona no se ejecuta ni se activa mediante push hasta
 confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
@@ -368,9 +389,9 @@ incorrecto, se conserva su bitácora y se crea el registro correcto. La
 identificación existente no se modifica directamente.
 
 POST instancia una dirección vacía y PUT completa o edita esa misma fila. Ambos
-flujos evitan fincas duplicadas como políticas de aplicación. Sin PK, FK,
-UNIQUE ni CHECK, SQL directo puede insertar duplicados, huérfanos o valores
-fuera del dominio.
+flujos evitan fincas duplicadas como políticas de aplicación. Sin FK,
+UNIQUE ni CHECK, SQL directo puede insertar duplicados lógicos, huérfanos o valores
+fuera del dominio; la llave primaria solo impide repetir un identificador.
 
 La migración a persona compartida respalda primero, detecta identificaciones
 duplicadas y datos incompatibles, y aborta antes de retirar columnas ante
@@ -435,7 +456,7 @@ acepta `NAVEGADOR` o `MANUAL`. Latitud, longitud y precisión se validan por
 rango con errores por campo. Cada inserción queda en la bitácora dentro de la
 misma transacción.
 
-La base y las 47 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
+La base y las 48 tablas usan `utf8mb4_unicode_ci`. Compose fija esta
 intercalación en MySQL y `000instalacioncompleta.sql` altera también una base que
 `MYSQL_DATABASE` haya creado antes de ejecutar los scripts.
 

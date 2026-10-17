@@ -19,6 +19,9 @@ final class AdminAuthorization
         if (!$actor->estaAutenticado()) {
             throw new HttpException('Debe autenticarse para ejecutar esta operación.', 401);
         }
+        if (!$actor->correoConfirmado) {
+            throw new HttpException('Debe confirmar su correo antes de recibir autorización administrativa.', 403);
+        }
 
         try {
             $sentencia = $conexion->prepare(

@@ -8,7 +8,7 @@ use PDO;
 
 final class TransportistaVehiculo
 {
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {

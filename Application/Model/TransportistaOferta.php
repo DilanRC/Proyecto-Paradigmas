@@ -21,7 +21,7 @@ final class TransportistaOferta
 
     private int $profundidadBloqueoAlta = 0;
 
-    public function __construct(private readonly PDO $conexion, private readonly Direccion $direccion) {}
+    public function __construct(private PDO $conexion, private Direccion $direccion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -244,11 +244,13 @@ final class TransportistaOferta
         ];
     }
 
-    /** Una oferta con la vista de moderación. Con $bloquear toma solo la fila de la oferta (FOR UPDATE OF o). */
+    /** PostgreSQL admite OF; MySQL/MariaDB bloquean la consulta con FOR UPDATE. */
     public function buscarAdmin(int $ofertaId, bool $bloquear = false): ?array
     {
         $sentencia = $this->conexion->prepare(
-            $this->seleccionAdmin() . ' WHERE o.tbtransportistaofertaid = :ofertaId' . ($bloquear ? ' FOR UPDATE OF o' : '')
+            $this->seleccionAdmin() . ' WHERE o.tbtransportistaofertaid = :ofertaId' . ($bloquear
+                ? ($this->conexion->getAttribute(PDO::ATTR_DRIVER_NAME) === 'pgsql' ? ' FOR UPDATE OF o' : ' FOR UPDATE')
+                : '')
         );
         $sentencia->execute(['ofertaId' => $ofertaId]);
         $fila = $sentencia->fetch();

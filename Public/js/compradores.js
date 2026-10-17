@@ -2,9 +2,9 @@
 // Comprador es un contexto de negocio relacionado con Persona; no se administra
 // como un rol manual desde esta pantalla.
 
-import { request } from './shared/api.js?v=auth-gate-11';
+import { request } from './shared/api.js?v=auth-gate-12';
 import { consultarCapacidades, describirCapacidad } from './shared/capacidades.js';
-import { createDialogController } from './shared/dialog.js';
+import { createDialogController } from './shared/dialog.js?v=dialog-2';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
 } from './shared/list-state.js';

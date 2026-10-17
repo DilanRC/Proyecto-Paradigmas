@@ -24,10 +24,10 @@ final class ProductorUbicacionController
     private string $solicitudId;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly Productor $productor,
-        private readonly ProductorUbicacion $ubicacion,
-        private readonly Bitacora $bitacora,
+        private PDO $conexion,
+        private Productor $productor,
+        private ProductorUbicacion $ubicacion,
+        private Bitacora $bitacora,
         ?string $solicitudId = null,
     ) {
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);

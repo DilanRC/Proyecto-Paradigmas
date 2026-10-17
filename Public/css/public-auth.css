@@ -1123,7 +1123,10 @@ html[data-theme='light'] .brand-logo--dark {
     .public-section--transparency { padding:30px; }
     .public-footer__links { grid-template-columns:1fr 1fr; gap:28px; }
     .auth-stage { padding-inline:14px; }
-    .auth-header { width:min(100% - 28px,1500px); }
+    .auth-header { width:min(100% - 28px,1500px); gap:8px; }
+    .auth-header .public-brand { gap:8px; font-size:16px; }
+    .auth-header__actions { gap:6px; }
+    .auth-header__actions .auth-back { padding-inline:12px; }
     .auth-layout { width:100%; }
     .auth-context { display:none; }
     .auth-card { padding:28px 22px; }

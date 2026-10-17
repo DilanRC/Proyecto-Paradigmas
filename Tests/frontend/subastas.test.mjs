@@ -56,7 +56,7 @@ test('la página, Explorar, el encabezado y Mis animales llevan a las subastas',
     }
     const explorar = read('Application/View/explorar/index.php');
     assert.match(explorar, /data-subastas-banda/);
-    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-1/);
+    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-2/);
     assert.match(explorar, /css\/subastas\.css\?v=subastas-1/);
     const ui = read('Public/js/public-ui.js');
     assert.match(ui, /PRIVATE_PAGES = Object\.freeze\(\[[^\]]*'subastas'/);
@@ -64,7 +64,7 @@ test('la página, Explorar, el encabezado y Mis animales llevan a las subastas',
     assert.match(ui, /api\/v1\/notificaciones/);
     assert.match(ui, /notificaciones-\$\{personaId\}/, 'la campana escucha su tópico');
     assert.match(read('Public/js/mis-animales.js'), /subastas\?nueva=\$\{id\}/, 'Mis animales ofrece Subastar');
-    assert.match(read('Application/View/subastas/index.php'), /js\/subastas\.js\?v=subastas-4/);
+    assert.match(read('Application/View/subastas/index.php'), /js\/subastas\.js\?v=subastas-5/);
 });
 
 test('los estilos usan solo variables del sitio', () => {

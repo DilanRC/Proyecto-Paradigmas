@@ -7,7 +7,7 @@
 # Detecta automaticamente:
 #   - El cliente mysql o mariadb disponible en el PATH.
 #   - Como entrar como root: contrasena vacia, DB_ROOT_PASS del .env,
-#     autenticacion por socket con sudo (lo normal en Ubuntu/Debian) y,
+#     sin ejecutar sudo automaticamente y,
 #     si nada sirve, la pide por pantalla.
 #   - Usuario, contrasena y nombre de la base desde el .env.
 #
@@ -52,9 +52,9 @@ if [[ -f "$ENV_RUTA" ]]; then
     while IFS= read -r linea || [[ -n "$linea" ]]; do
         linea="${linea%$'\r'}"
         [[ "$linea" =~ ^[[:space:]]*# ]] && continue
-        if [[ "$linea" =~ ^[[:space:]]*([A-Za-z0-9_]+)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
-            clave="${BASH_REMATCH[1]}"
-            valor="${BASH_REMATCH[2]}"
+        if [[ "$linea" =~ ^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=[[:space:]]*(.*)$ ]]; then
+            clave="${BASH_REMATCH[2]}"
+            valor="${BASH_REMATCH[3]}"
             valor="${valor%"${valor##*[![:space:]]}"}"
             if [[ "$valor" =~ ^\"(.*)\"$ || "$valor" =~ ^\'(.*)\'$ ]]; then
                 valor="${BASH_REMATCH[1]}"
@@ -67,82 +67,58 @@ else
     aviso "No hay .env en $PROYECTO; se usan valores por defecto."
 fi
 
-DB_NAME="${CFG[DB_NAME]:-bdmercadoganadero}"
-DB_USER="${CFG[DB_USER]:-tinder_cows}"
-DB_PASS="${CFG[DB_PASS]:-tinder_vacas_dev}"
-ROOT_ENV="${CFG[DB_ROOT_PASS]:-}"
-
-if [[ "$DB_NAME" != "bdmercadoganadero" ]]; then
-    aviso "DB_NAME es '$DB_NAME' pero 000instalacioncompleta.sql crea 'bdmercadoganadero'."
-    aviso "Ajusta el .env o el script SQL para que coincidan."
-fi
-
-# ---------------------------------------------------------------
-# 2. Encontrar el cliente
-# ---------------------------------------------------------------
-CLI=""
-for candidato in mysql mariadb /opt/lampp/bin/mysql; do
-    if command -v "$candidato" >/dev/null 2>&1; then
-        CLI="$(command -v "$candidato")"
-        break
-    fi
-done
-[[ -n "$CLI" ]] || fallo "No encontre el cliente mysql/mariadb. Instalalo (ej. sudo apt install mariadb-client) y vuelve a intentar."
-echo "[OK] Cliente: $CLI"
-
-# ---------------------------------------------------------------
-# 3. Encontrar como entrar como root
-# ---------------------------------------------------------------
-# ROOT_CMD guarda el prefijo para correr el cliente como root.
-ROOT_CMD=()
-ROOT_PASS=""
-
-probar_root() {
-    MYSQL_PWD="$1" "$CLI" -u root --connect-timeout=5 -e "SELECT 1" >/dev/null 2>&1
+configuracion() {
+    local nombre="$1" defecto="$2"
+    if [[ -v "$nombre" ]]; then printf '%s' "${!nombre}"; else printf '%s' "${CFG[$nombre]-$defecto}"; fi
 }
-
-for intento in "" "$ROOT_ENV"; do
-    if probar_root "$intento"; then
-        ROOT_CMD=("$CLI" -u root)
-        ROOT_PASS="$intento"
-        break
-    fi
-    [[ -n "$ROOT_ENV" ]] || break
-done
-
-if [[ ${#ROOT_CMD[@]} -eq 0 ]] && command -v sudo >/dev/null 2>&1; then
-    echo "[..] Probando root por socket con sudo (puede pedir tu contrasena de usuario)..."
-    if sudo "$CLI" -u root --connect-timeout=5 -e "SELECT 1" >/dev/null 2>&1; then
-        ROOT_CMD=(sudo "$CLI" -u root)
-    fi
+DB_NAME="$(configuracion DB_NAME bdmercadoganadero)"
+DB_USER="$(configuracion DB_USER tinder_cows)"
+DB_PASS="$(configuracion DB_PASS '')"
+DB_HOST="$(configuracion DB_HOST 127.0.0.1)"
+DB_PORT="$(configuracion DB_PORT 3306)"
+DB_ACCOUNT_HOST="$(configuracion DB_ACCOUNT_HOST localhost)"
+ROOT_ENV="$(configuracion DB_ROOT_PASS '')"
+XAMPP_ROOT="$(configuracion XAMPP_ROOT /opt/lampp)"
+CLI="$(configuracion MYSQL_CLIENT '')"
+[[ "$DB_NAME" =~ ^[A-Za-z0-9_]+$ && ${#DB_NAME} -le 64 ]] || fallo "DB_NAME debe ser un identificador SQL simple de hasta 64 caracteres."
+[[ "$DB_USER" =~ ^[A-Za-z0-9_]+$ && ${#DB_USER} -le 32 ]] || fallo "DB_USER debe contener solo letras, numeros o guion bajo (hasta 32)."
+[[ "$DB_ACCOUNT_HOST" =~ ^[A-Za-z0-9_.:%-]+$ ]] || fallo "DB_ACCOUNT_HOST no es valido."
+[[ "$DB_PORT" =~ ^[0-9]{1,5}$ ]] && ((10#$DB_PORT > 0 && 10#$DB_PORT <= 65535)) || fallo "DB_PORT debe estar entre 1 y 65535."
+[[ -n "$DB_HOST" && "$DB_HOST" != -* && "$DB_HOST" != *$'\n'* ]] || fallo "DB_HOST no es valido."
+[[ "$DB_NAME" == bdmercadoganadero ]] || fallo "El esquema y las semillas usan bdmercadoganadero. Ajusta DB_NAME antes de instalar."
+[[ -n "$DB_PASS" ]] || fallo "Configura DB_PASS localmente antes de usar el instalador CLI; no hay una contrasena predeterminada."
+if [[ -z "$CLI" ]]; then
+    for candidato in "$XAMPP_ROOT/bin/mysql" "$XAMPP_ROOT/bin/mariadb" mysql mariadb; do
+        if command -v "$candidato" >/dev/null 2>&1; then CLI="$(command -v "$candidato")"; break; fi
+    done
 fi
-
-if [[ ${#ROOT_CMD[@]} -eq 0 ]]; then
-    aviso "root no acepta contrasena vacia, la del .env ni el socket."
-    read -r -s -p "Escribe la contrasena de root de MySQL: " plano
+[[ -n "$CLI" ]] && command -v "$CLI" >/dev/null 2>&1 || fallo "No encontre el cliente. Configura MYSQL_CLIENT o XAMPP_ROOT."
+echo "[OK] Cliente: $CLI; destino TCP: $DB_HOST:$DB_PORT / $DB_NAME"
+CONEXION=(--no-defaults --binary-mode --protocol=TCP --host="$DB_HOST" --port="$DB_PORT" --connect-timeout=5)
+probar_root() { MYSQL_PWD="$1" "$CLI" "${CONEXION[@]}" -u root -e "SELECT 1" >/dev/null 2>&1; }
+ROOT_PASS="$ROOT_ENV"
+if ! probar_root "$ROOT_PASS"; then
+    [[ -t 0 ]] || fallo "No pude autenticar root por TCP. Configura DB_ROOT_PASS; para socket usa phpMyAdmin o un administrador local."
+    read -r -s -p "Contrasena de root de MySQL para $DB_HOST:$DB_PORT: " ROOT_PASS
     echo
-    if probar_root "$plano"; then
-        ROOT_CMD=("$CLI" -u root)
-        ROOT_PASS="$plano"
-    fi
+    probar_root "$ROOT_PASS" || fallo "No pude autenticar root por TCP. No se ejecuta sudo automaticamente."
 fi
-
-[[ ${#ROOT_CMD[@]} -gt 0 ]] || fallo "No pude entrar como root. Si no recuerdas la contrasena, reseteala con --init-file y vuelve a correr el script."
+root_sql() { MYSQL_PWD="$ROOT_PASS" "$CLI" "${CONEXION[@]}" -u root "$@"; }
+app_sql() { MYSQL_PWD="$DB_PASS" "$CLI" "${CONEXION[@]}" -u "$DB_USER" "$@"; }
 echo "[OK] root autenticado."
-
-# Corre el cliente como root con la contrasena encontrada.
-root_sql() {
-    if [[ "${ROOT_CMD[0]}" == "sudo" ]]; then
-        "${ROOT_CMD[@]}" "$@"
-    else
-        MYSQL_PWD="$ROOT_PASS" "${ROOT_CMD[@]}" "$@"
-    fi
-}
+# La cuenta existente se comprueba antes de cualquier cambio o borrado.
+usuario_existe="$(root_sql -N -B -e "SELECT COUNT(*) FROM mysql.user WHERE User='$DB_USER' AND Host='$DB_ACCOUNT_HOST';")"
+if [[ "$usuario_existe" != 0 ]]; then
+    app_sql -e 'SELECT 1' >/dev/null 2>&1 || fallo "La cuenta existente no acepta DB_PASS desde este destino. No se cambia su contrasena; corrige la configuracion."
+fi
 
 # ---------------------------------------------------------------
 # 4. Reinstalar (opcional)
 # ---------------------------------------------------------------
 if [[ $REINSTALAR -eq 1 ]]; then
+    # Sin el esquema a mano, borrar dejaria la base vacia y sin forma de recrearla.
+    [[ -f "$PROYECTO/Database/SqlScripts/000instalacioncompleta.sql" ]] \
+        || fallo "No existe Database/SqlScripts/000instalacioncompleta.sql; no borro la base."
     echo "[..] Borrando la base $DB_NAME..."
     root_sql -e "DROP DATABASE IF EXISTS \`$DB_NAME\`;" || fallo "No pude borrar la base."
 fi
@@ -151,10 +127,16 @@ fi
 # 5. Usuario del proyecto
 # ---------------------------------------------------------------
 echo "[..] Creando usuario $DB_USER..."
-root_sql -e "CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-             ALTER USER '$DB_USER'@'localhost' IDENTIFIED BY '$DB_PASS';
-             GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'localhost';
-             FLUSH PRIVILEGES;" || fallo "No pude crear el usuario $DB_USER."
+# NO_BACKSLASH_ESCAPES y apostrofes duplicados hacen literal la contrasena.
+# El SQL viaja por stdin para no exponer credenciales en argumentos de procesos.
+PASS_SQL="${DB_PASS//\'/\'\'}"
+{
+    printf "SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\n"
+    if [[ "$usuario_existe" == 0 ]]; then
+        printf "CREATE USER '%s'@'%s' IDENTIFIED BY '%s';\n" "$DB_USER" "$DB_ACCOUNT_HOST" "$PASS_SQL"
+    fi
+    printf 'GRANT ALL PRIVILEGES ON `%s`.* TO '\''%s'\''@'\''%s'\'';\n' "$DB_NAME" "$DB_USER" "$DB_ACCOUNT_HOST"
+} | root_sql 2>/dev/null || fallo "No pude preparar el usuario $DB_USER."
 echo "[OK] Usuario listo."
 
 # ---------------------------------------------------------------
@@ -176,27 +158,38 @@ fi
 # ---------------------------------------------------------------
 # 7. Seeds (solo si las tablas estan vacias)
 # ---------------------------------------------------------------
-metodos="$(root_sql -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM tbpagometodo;")"
-if [[ "$metodos" == "0" ]]; then
-    echo "[..] Cargando seeds..."
-    for s in 101initialpagometodo 102administrador 104catalogosanimal; do
-        archivo="$PROYECTO/Database/SeedData/$s.sql"
-        [[ -f "$archivo" ]] || fallo "No existe $archivo"
-        root_sql --default-character-set=utf8mb4 "$DB_NAME" < "$archivo" || fallo "Fallo el seed $s."
+# Cada semilla se decide por sus propias tablas: una base con metodos de pago pero sin
+# catalogos (instalacion interrumpida) recibe lo que le falta. 101 y 102 no se repiten
+# sobre una tabla con filas (su UPDATE desharia cambios del administrador); 104 corre si
+# alguno de sus catalogos esta vacio y protege cada tabla con WHERE NOT EXISTS.
+sembrar_si_vacia() {
+    local semilla="$1"; shift
+    local tabla filas vacia=0
+    for tabla in "$@"; do
+        filas="$(root_sql -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM $tabla;")" \
+            || fallo "No pude leer $tabla; la base no tiene el esquema vigente."
+        [[ "$filas" =~ ^[0-9]+$ ]] || fallo "Conteo inesperado en $tabla."
+        if [[ "$filas" == "0" ]]; then vacia=1; fi
     done
-    echo "[OK] Seeds cargados."
-else
-    echo "[OK] Los seeds ya estaban cargados."
-fi
+    if [[ $vacia -eq 0 ]]; then
+        echo "[OK] $semilla ya estaba cargada."
+        return
+    fi
+    local archivo="$PROYECTO/Database/SeedData/$semilla.sql"
+    [[ -f "$archivo" ]] || fallo "No existe $archivo"
+    root_sql --default-character-set=utf8mb4 "$DB_NAME" < "$archivo" || fallo "Fallo el seed $semilla."
+    echo "[OK] $semilla cargada."
+}
+sembrar_si_vacia 101initialpagometodo tbpagometodo
+sembrar_si_vacia 102administrador tbadministrador
+sembrar_si_vacia 104catalogosanimal tbespecie tbanimaltipo tbraza tbvacuna
 
 # ---------------------------------------------------------------
 # 8. Verificar entrando con el usuario del proyecto
 # ---------------------------------------------------------------
 # -h 127.0.0.1 fuerza TCP, que es como se conecta la app.
-tablas="$(MYSQL_PWD="$DB_PASS" "$CLI" -h 127.0.0.1 -u "$DB_USER" -N -B "$DB_NAME" -e "SHOW TABLES;" 2>/dev/null \
-    || MYSQL_PWD="$DB_PASS" "$CLI" -u "$DB_USER" -N -B "$DB_NAME" -e "SHOW TABLES;")" \
-    || fallo "El usuario $DB_USER no puede entrar a $DB_NAME."
-admin="$(MYSQL_PWD="$DB_PASS" "$CLI" -u "$DB_USER" -N -B "$DB_NAME" -e "SELECT tbadministradorcorreoelectronico FROM tbadministrador;")"
+tablas="$(app_sql -N -B "$DB_NAME" -e 'SHOW TABLES;')" || fallo "El usuario $DB_USER no puede entrar a $DB_NAME."
+admin="$(app_sql -N -B "$DB_NAME" -e 'SELECT tbadministradorcorreoelectronico FROM tbadministrador;')"
 
 echo
 echo "${VERDE}=========== RESULTADO ===========${NORMAL}"

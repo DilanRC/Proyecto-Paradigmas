@@ -16,7 +16,7 @@ final class PagoMetodosDisponiblesController
 {
     private PagoMetodo $pagos;
 
-    public function __construct(PDO $conexion, private readonly ActorContext $actor)
+    public function __construct(PDO $conexion, private ActorContext $actor)
     {
         $this->pagos = new PagoMetodo($conexion);
     }

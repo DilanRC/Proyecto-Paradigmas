@@ -15,7 +15,7 @@ use PDO;
  */
 final class PersonaTelefonoHistorico
 {
-    public function __construct(private readonly PDO $conexion)
+    public function __construct(private PDO $conexion)
     {
     }
 

@@ -1,6 +1,7 @@
 # Diccionario de datos
 
-El esquema no contiene claves, restricciones, índices, valores `DEFAULT`,
+Cada tabla declara una **llave primaria** sobre su identificador `<tabla>id` (DEC-CALIDAD-PK-001). Fuera de eso el
+esquema no contiene llaves foráneas, `UNIQUE`, `CHECK`, índices adicionales, valores `DEFAULT`,
 columnas `AUTO_INCREMENT` ni objetos programables. Las asociaciones, la unicidad lógica y los consecutivos son
 políticas de PHP. Todos los identificadores SQL están en minúscula.
 
@@ -18,7 +19,7 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbpersonaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
 | `tbpersonaidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación canónica; PHP impide duplicados. | Usuario | - |
 | `tbpersonaidentificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de identificación validado por PHP. | Usuario | - |
 | `tbpersonanombre` | `VARCHAR(150) NOT NULL` | No | Nombre compartido por todos los perfiles. | Usuario | - |
@@ -37,7 +38,7 @@ Fuente única de identidad y contacto compartida por todas las capacidades.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbproductorid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad. | Aplicación | `tbpersona` |
 
 El productor no guarda estado propio: su estado vigente es el del periodo
@@ -50,7 +51,7 @@ ubicación: la política del modelo espera una sola fila por `tbproductorid`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbproductordireccionid` | `INT NOT NULL` | No | Identificador de la asociación, distinto del productor y de la dirección. | Aplicación | - |
+| `tbproductordireccionid` | `INT NOT NULL` | No | **Llave primaria.** Identificador de la asociación, distinto del productor y de la dirección. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Identificador lógico del productor asociado. | Aplicación | `tbproductor` |
 | `tbdireccionid` | `INT NOT NULL` | No | Identificador lógico de la ubicación física. | Aplicación | `tbdireccion` |
 | `tbproductordireccionfechainicio` | `DATETIME NULL` | Sí | Inicio del periodo de residencia. | Aplicación | - |
@@ -68,7 +69,7 @@ Ubicación física reutilizable. No pertenece a productor ni a finca.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbdireccionid` | `INT NOT NULL` | No | Identificador lógico de la ubicación. | Aplicación | - |
+| `tbdireccionid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico de la ubicación. | Aplicación | - |
 | `tbdireccionprovincia` | `VARCHAR(100) NOT NULL` | No | Provincia. | Usuario | - |
 | `tbdireccioncanton` | `VARCHAR(100) NOT NULL` | No | Cantón. | Usuario | - |
 | `tbdirecciondistrito` | `VARCHAR(100) NOT NULL` | No | Distrito. | Usuario | - |
@@ -79,7 +80,7 @@ Ubicación física reutilizable. No pertenece a productor ni a finca.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbfincaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbfincaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor dueño de la finca. Soporta la cardinalidad 1 a N. | Aplicación | `tbproductor` |
 | `tbfincanombre` | `VARCHAR(150) NOT NULL` | No | Nombre validado por aplicación. | Usuario | - |
 | `tbfincaestado` | `TINYINT(1) NOT NULL` | No | Estado lógico. | Aplicación | - |
@@ -91,7 +92,7 @@ por `tbfincaid`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbfincadireccionid` | `INT NOT NULL` | No | Identificador de la asociación. | Aplicación | - |
+| `tbfincadireccionid` | `INT NOT NULL` | No | **Llave primaria.** Identificador de la asociación. | Aplicación | - |
 | `tbfincaid` | `INT NOT NULL` | No | Identificador lógico de la finca. | Aplicación | `tbfinca` |
 | `tbdireccionid` | `INT NOT NULL` | No | Identificador lógico de la ubicación. Puede repetir el valor usado por `tbproductordireccion` cuando es el mismo lugar físico. | Aplicación | `tbdireccion` |
 
@@ -101,7 +102,7 @@ Catálogo de métodos de pago. No se relaciona todavía con ninguna operación.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbpagometodoid` | `INT NOT NULL` | No | Identificador lógico del método. | Datos iniciales | - |
+| `tbpagometodoid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico del método. | Datos iniciales | - |
 | `tbpagometodonombre` | `VARCHAR(100) NOT NULL` | No | Nombre del método. Valor vigente: `Efectivo`. | Datos iniciales | - |
 | `tbpagometododescripcion` | `VARCHAR(250) NOT NULL` | No | Descripción del método. | Datos iniciales | - |
 | `tbpagometodoactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad del método. | Datos iniciales | - |
@@ -112,7 +113,7 @@ Capacidad logística de una persona. Conserva su identificador histórico.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistaid` | `INT NOT NULL` | No | Identificador lógico propio del transportista. | Aplicación | - |
+| `tbtransportistaid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico propio del transportista. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que posee la capacidad logística. | Aplicación | `tbpersona` |
 | `tbtransportistaestado` | `TINYINT(1) NOT NULL` | No | Participación independiente como transportista. | Aplicación | - |
 
@@ -120,7 +121,7 @@ Capacidad logística de una persona. Conserva su identificador histórico.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbvehiculoid` | `INT NOT NULL` | No | Identificador lógico interno del vehículo. | Aplicación | - |
+| `tbvehiculoid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico interno del vehículo. | Aplicación | - |
 | `tbvehiculoplaca` | `VARCHAR(20) NOT NULL` | No | Placa del vehículo. Sin unicidad en el motor. | Usuario | - |
 | `tbvehiculovin` | `VARCHAR(50) NOT NULL` | No | VIN del vehículo. Sin unicidad en el motor. | Usuario | - |
 | `tbvehiculomodelo` | `VARCHAR(100) NOT NULL` | No | Modelo del vehículo. | Usuario | - |
@@ -139,7 +140,7 @@ Asocia transportista y vehículo.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistavehiculoid` | `INT NOT NULL` | No | Identificador de la asociación. | Aplicación | - |
+| `tbtransportistavehiculoid` | `INT NOT NULL` | No | **Llave primaria.** Identificador de la asociación. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Identificador lógico del transportista. | Aplicación | `tbtransportista` |
 | `tbvehiculoid` | `INT NOT NULL` | No | Identificador lógico del vehículo. | Aplicación | `tbvehiculo` |
 
@@ -150,7 +151,7 @@ columna `activo` permite al panel de administración (P2-6) retirar una especie 
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbespecieid` | `INT NOT NULL` | No | Identificador lógico de la especie. | Datos iniciales | - |
+| `tbespecieid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico de la especie. | Datos iniciales | - |
 | `tbespecienombre` | `VARCHAR(80) NOT NULL` | No | Nombre de la especie. | Datos iniciales | - |
 | `tbespecieactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece en los formularios). | Administración | - |
 
@@ -161,7 +162,7 @@ vaca, toro y buey en bovinos, y los equivalentes de las demás especies. "Catego
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimaltipoid` | `INT NOT NULL` | No | Identificador lógico del tipo. | Datos iniciales | - |
+| `tbanimaltipoid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico del tipo. | Datos iniciales | - |
 | `tbespecieid` | `INT NOT NULL` | No | Especie a la que pertenece; PHP valida la pertenencia. | Datos iniciales | `tbespecie` |
 | `tbanimaltiponombre` | `VARCHAR(80) NOT NULL` | No | Nombre del tipo. | Datos iniciales | - |
 | `tbanimaltiposexo` | `VARCHAR(1) NULL` | Sí | Sexo que implica el tipo: `M`, `H` o NULL (sin sexo fijo, p. ej. lechón). | Datos iniciales | - |
@@ -174,7 +175,7 @@ Girolando, Criollo, Mestizo y otras.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbrazaid` | `INT NOT NULL` | No | Identificador lógico de la raza. | Datos iniciales | - |
+| `tbrazaid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico de la raza. | Datos iniciales | - |
 | `tbespecieid` | `INT NOT NULL` | No | Especie a la que pertenece; PHP valida la pertenencia. | Datos iniciales | `tbespecie` |
 | `tbrazanombre` | `VARCHAR(100) NOT NULL` | No | Nombre de la raza. | Datos iniciales | - |
 | `tbrazaactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece). | Administración | - |
@@ -187,7 +188,7 @@ primer animal y esta tabla lista **los N animales, incluido el primero**.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalpublicacionanimalid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbanimalpublicacionanimalid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo lock. | Aplicación | - |
 | `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación del lote. | Aplicación | `tbanimalpublicacion` |
 | `tbanimalid` | `INT NOT NULL` | No | Animal que forma parte del lote. | Aplicación | `tbanimal` |
 
@@ -195,13 +196,13 @@ primer animal y esta tabla lista **los N animales, incluido el primero**.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbbitacoraid` | `BIGINT UNSIGNED NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbbitacoraid` | `BIGINT UNSIGNED NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP. | Aplicación | - |
 | `tbbitacoraentidad` | `VARCHAR(80) NOT NULL` | No | Entidad auditada. | Aplicación | - |
 | `tbbitacoraregistroidentificacionnumero` | `VARCHAR(250) NOT NULL` | No | Identificación lógica auditada. | Aplicación | - |
 | `tbbitacoraaccion` | `VARCHAR(30) NOT NULL` | No | Acción. | Aplicación | - |
 | `tbbitacorafecha` | `DATETIME NOT NULL` | No | Fecha del evento, enviada por PHP. | Aplicación | - |
-| `tbbitacoradatosanteriores` | `JSON NULL` | Sí | Estado anterior. | Aplicación | - |
-| `tbbitacoradatosnuevos` | `JSON NULL` | Sí | Estado nuevo. | Aplicación | - |
+| `tbbitacoradatosanteriores` | `LONGTEXT NULL` | Sí | Estado anterior. | Aplicación | - |
+| `tbbitacoradatosnuevos` | `LONGTEXT NULL` | Sí | Estado nuevo. | Aplicación | - |
 | `tbbitacoraactortipo` | `VARCHAR(30) NOT NULL` | No | Tipo de actor. | Aplicación | - |
 | `tbbitacorausuarioid` | `BIGINT UNSIGNED NULL` | Sí | Usuario, nulo antes de autenticación. | Aplicación | - |
 | `tbbitacoraorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico. | Aplicación | - |
@@ -215,7 +216,7 @@ elimina. La fecha la asigna siempre PHP con el reloj del servidor.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbproductorubicacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el bloqueo `tindercows_productor_ubicacion_alta`. | Aplicación | - |
+| `tbproductorubicacionid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo el bloqueo `tindercows_productor_ubicacion_alta`. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor al que pertenece la lectura. | Aplicación | `tbproductor` |
 | `tbproductorubicacionlatitud` | `DECIMAL(10,7) NOT NULL` | No | Latitud validada por aplicación en el rango -90 a 90. | Usuario | - |
 | `tbproductorubicacionlongitud` | `DECIMAL(10,7) NOT NULL` | No | Longitud validada por aplicación en el rango -180 a 180. | Usuario | - |
@@ -230,7 +231,7 @@ abierto por productor.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbproductorestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductorestadoperiodoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor observado. | Aplicación | `tbproductor` |
 | `tbproductorestadoperiodoestado` | `TINYINT(1) NOT NULL` | No | Estado durante el periodo. | Aplicación | - |
 | `tbproductorestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo. | Aplicación | - |
@@ -250,7 +251,7 @@ profesor); el dominio lo valida PHP al escribir (Tramo 15) y
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbproductoractividadid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbproductoractividadid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor relacionado. | Aplicación | `tbproductor` |
 | `tbproductoractividadtipo` | `VARCHAR(60) NOT NULL` | No | Tipo de actividad, catálogo cerrado (ver arriba), validado por PHP. | Aplicación | - |
 | `tbproductoractividadfecha` | `DATETIME NOT NULL` | No | Fecha asignada por PHP. | Aplicación | - |
@@ -271,7 +272,7 @@ gobierna el contexto: queda como registro analítico (DEC-29).
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcompradorid` | `INT NOT NULL` | No | Consecutivo calculado por PHP (`MAX(id)+1`) bajo lock `tindercows_persona_alta`. | Aplicación | - |
+| `tbcompradorid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP (`MAX(id)+1`) bajo lock `tindercows_persona_alta`. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona del contexto Comprador; se reutiliza por identificación o se crea al inscribir. | Aplicación | `tbpersona` |
 | `tbcompradorestado` | `TINYINT(1) NOT NULL` | No | Alta/baja del contexto Comprador (1 activo). El periodo `COMPRADOR` de `tbproductorclasificacionperiodo` es analítico y no determina este bit. | Aplicación | - |
 
@@ -288,7 +289,7 @@ la vez porque son tipos distintos.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbproductorclasificacionperiodoid` | `INT NOT NULL` | No | Consecutivo que Backend debe calcular con `MAX(id)+1` bajo lock global. | Aplicación | - |
+| `tbproductorclasificacionperiodoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo que Backend debe calcular con `MAX(id)+1` bajo lock global. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor clasificado. | Aplicación | `tbproductor` |
 | `tbproductorclasificacionperiodotipo` | `VARCHAR(30) NOT NULL` | No | Clasificación lógica: `COMPRADOR` o `VENDEDOR`. | Aplicación | - |
 | `tbproductorclasificacionperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio confiable del periodo. | Aplicación | - |
@@ -304,7 +305,7 @@ No guarda peso ni edad actual, porque cambian y viven en `tbanimalproduccionsalu
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalidentificacion` | `VARCHAR(100) NULL` | Sí | Código, arete u otro identificador declarado. Si se ingresó como **arete SENASA** son los 13 dígitos (`188` + control + provincia `01`-`07` + 7 del correlativo), sin espacios ni guiones; PHP impide dos animales vigentes con el mismo arete. | Usuario | - |
 | `tbanimalsexo` | `VARCHAR(20) NULL` | Sí | Sexo declarado; dominio pendiente de Backend. | Usuario | - |
 | `tbanimalraza` | `VARCHAR(100) NULL` | Sí | Raza declarada estable o inicial. | Usuario | - |
@@ -328,7 +329,7 @@ en qué contexto; nada se sobrescribe.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalproduccionsaludid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalproduccionsaludid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal observado. | Aplicación | `tbanimal` |
 | `tbanimalproduccionsaludfecha` | `DATETIME NOT NULL` | No | Fecha de la observación o registro confiable. | Aplicación | - |
 | `tbanimalproduccionsaludorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico o funcional de la observación. | Aplicación | - |
@@ -339,8 +340,8 @@ en qué contexto; nada se sobrescribe.
 | `tbanimalproduccionsaludestadoreproductivo` | `VARCHAR(80) NULL` | Sí | Estado reproductivo observado. | Usuario | - |
 | `tbanimalproduccionsaludpartos` | `INT NULL` | Sí | Partos observados/declarados. | Usuario | - |
 | `tbanimalproduccionsaludlitrosleche` | `DECIMAL(10,2) NULL` | Sí | Litros de leche observados/declarados. | Usuario | - |
-| `tbanimalproduccionsaludproduccion` | `JSON NULL` | Sí | Otros datos aprobados de producción. | Aplicación | - |
-| `tbanimalproduccionsaludsalud` | `JSON NULL` | Sí | Otros datos aprobados de salud. | Aplicación | - |
+| `tbanimalproduccionsaludproduccion` | `LONGTEXT NULL` | Sí | Otros datos aprobados de producción. | Aplicación | - |
+| `tbanimalproduccionsaludsalud` | `LONGTEXT NULL` | Sí | Otros datos aprobados de salud. | Aplicación | - |
 
 ## tbanimalpublicacion
 
@@ -349,7 +350,7 @@ estado no es columna: vive en `tbanimalpublicacionestadoperiodo`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalpublicacionid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalpublicacionid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal publicado. | Aplicación | `tbanimal` |
 | `tbproductorvendedorid` | `INT NOT NULL` | No | Productor vendedor congelado al publicar. | Aplicación | `tbproductor` |
 | `tbfincaid` | `INT NOT NULL` | No | Finca congelada al publicar. | Aplicación | `tbfinca` |
@@ -369,7 +370,7 @@ publicación, regla que aplica PHP bajo lock nombrado.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalpublicacionestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalpublicacionestadoperiodoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación afectada. | Aplicación | `tbanimalpublicacion` |
 | `tbanimalpublicacionestadoperiodoestado` | `VARCHAR(30) NOT NULL` | No | Estado funcional validado por Backend; el catálogo lo define Backend. | Aplicación | - |
 | `tbanimalpublicacionestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo, calculado por PHP. | Aplicación | - |
@@ -384,7 +385,7 @@ un ciclo de estados suficiente.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcompraid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbcompraid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal comprado. | Aplicación | `tbanimal` |
 | `tbproductorcompradorid` | `INT NULL` | Sí | Productor comprador del momento; nulo cuando compra un Comprador (DEC-COMPRA-001). | Aplicación | `tbproductor` |
 | `tbcompradorid` | `INT NULL` | Sí | Comprador del momento, cuando la compra sale de una solicitud. | Aplicación | `tbcomprador` |
@@ -403,7 +404,7 @@ en finca o existir antes del sistema. Edad, peso y raza son snapshots del hecho.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbventaid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbventaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal vendido. | Aplicación | `tbanimal` |
 | `tbproductorvendedorid` | `INT NOT NULL` | No | Productor vendedor del momento. | Aplicación | `tbproductor` |
 | `tbproductorcompradorid` | `INT NULL` | Sí | Productor comprador del momento; nulo cuando compra un Comprador (DEC-COMPRA-001). | Aplicación | `tbproductor` |
@@ -431,7 +432,7 @@ visualización queda fuera hasta que Calidad la confirme.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalinteraccionid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbanimalinteraccionid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor que interactúa. | Aplicación | `tbproductor` |
 | `tbanimalid` | `INT NOT NULL` | No | Animal relacionado. | Aplicación | `tbanimal` |
 | `tbanimalinteracciontipo` | `VARCHAR(30) NOT NULL` | No | Tipo lógico del funnel, validado por PHP. | Aplicación | - |
@@ -446,7 +447,7 @@ Colección comercial de un productor. Su estado no es columna: vive en
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcarritoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbcarritoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Productor dueño del carrito. | Aplicación | `tbproductor` |
 | `tbcarritofechacreacion` | `DATETIME NOT NULL` | No | Fecha de creación. | Aplicación | - |
 
@@ -457,7 +458,7 @@ que `tbproductorestadoperiodo`. Reemplaza la columna mutable `tbcarritoestado`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcarritoestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbcarritoestadoperiodoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbcarritoid` | `INT NOT NULL` | No | Carrito afectado. | Aplicación | `tbcarrito` |
 | `tbcarritoestadoperiodoestado` | `VARCHAR(30) NOT NULL` | No | Estado funcional validado por Backend. | Aplicación | - |
 | `tbcarritoestadoperiodofechainicio` | `DATETIME NOT NULL` | No | Inicio del periodo, calculado por PHP. | Aplicación | - |
@@ -472,7 +473,7 @@ estado actual se deriva del último evento válido por animal.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcarritoanimalid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbcarritoanimalid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbcarritoid` | `INT NOT NULL` | No | Carrito afectado. | Aplicación | `tbcarrito` |
 | `tbanimalid` | `INT NOT NULL` | No | Animal agregado o retirado. | Aplicación | `tbanimal` |
 | `tbcarritoanimalaccion` | `VARCHAR(30) NOT NULL` | No | `AGREGAR` o `RETIRAR`, validado por PHP. | Aplicación | - |
@@ -487,7 +488,7 @@ fecha de migración.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistaestadoperiodoid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistaestadoperiodoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Transportista observado. | Aplicación | `tbtransportista` |
 | `tbtransportistaestadoperiodoestado` | `TINYINT(1) NOT NULL` | No | Estado lógico del periodo. | Aplicación | - |
 | `tbtransportistaestadoperiodofechainicio` | `DATETIME NULL` | Sí | Fecha real de inicio si existe evidencia. | Aplicación | - |
@@ -504,7 +505,7 @@ agregaciones.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistafleteid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistafleteid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Transportista que realiza el flete. | Aplicación | `tbtransportista` |
 | `tbproductororigenid` | `INT NULL` | Sí | Productor origen, si aplica. | Aplicación | `tbproductor` |
 | `tbfincaorigenid` | `INT NULL` | Sí | Finca origen, si aplica. | Aplicación | `tbfinca` |
@@ -528,7 +529,7 @@ sobrescribe. La cobertura geográfica sigue pendiente de Calidad.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistahorarioid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistahorarioid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Transportista dueño del horario. | Aplicación | `tbtransportista` |
 | `tbtransportistahorariodiasemana` | `VARCHAR(15) NOT NULL` | No | Día de la semana declarado; dominio validado por PHP. | Usuario | - |
 | `tbtransportistahorariohorainicio` | `TIME NOT NULL` | No | Hora de inicio de disponibilidad. | Usuario | - |
@@ -543,7 +544,7 @@ Reseña histórica de transportista. No almacena promedio; se deriva con `AVG`.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistaresenaid` | `INT NOT NULL` | No | Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
+| `tbtransportistaresenaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Transportista reseñado. | Aplicación | `tbtransportista` |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que reseña: quien contrató el flete, sea o no productor. | Aplicación | `tbpersona` |
 | `tbtransportistafleteid` | `INT NULL` | Sí | Flete reseñado, si aplica. | Aplicación | `tbtransportistaflete` |
@@ -560,7 +561,7 @@ más de 60 segundos, así que la tabla no guarda historia.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbregistroconsultaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP. | Aplicación | - |
+| `tbregistroconsultaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP. | Aplicación | - |
 | `tbregistroconsultaclave` | `CHAR(64) NOT NULL` | No | Hash SHA-256 de la IP del cliente. Nunca se guarda la IP. | Aplicación | - |
 | `tbregistroconsultafecha` | `DATETIME NOT NULL` | No | Fecha UTC de la consulta, asignada por PHP. | Aplicación | - |
 
@@ -572,7 +573,7 @@ que los clientes lo encuentren por cercanía. No es un viaje realizado (eso es
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbtransportistaofertaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbtransportistaofertaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo lock. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Transportista dueño de la oferta. | Aplicación | `tbtransportista.tbtransportistaid` |
 | `tbvehiculoid` | `INT NOT NULL` | No | Vehículo con el que presta el servicio (su foto se muestra en la tarjeta). | Aplicación | `tbvehiculo.tbvehiculoid` |
 | `tbdireccionid` | `INT NOT NULL` | No | Zona base, con latitud y longitud para ordenar por distancia. | Aplicación | `tbdireccion.tbdireccionid` |
@@ -592,7 +593,7 @@ transportista.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbcomprasolicitudid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbcomprasolicitudid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo lock. | Aplicación | - |
 | `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación solicitada. | Aplicación | `tbanimalpublicacion` |
 | `tbcompradorid` | `INT NOT NULL` | No | Comprador que solicita. | Aplicación | `tbcomprador` |
 | `tbtransportistaofertaid` | `INT NULL` | Sí | Oferta de flete pedida junto con el animal; nulo si no pidió flete. | Cliente | `tbtransportistaoferta` |
@@ -614,7 +615,7 @@ panel de administración (P2-6) retirar una vacuna sin perder el historial que y
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbvacunaid` | `INT NOT NULL` | No | Identificador lógico de la vacuna. | Datos iniciales | - |
+| `tbvacunaid` | `INT NOT NULL` | No | **Llave primaria.** Identificador lógico de la vacuna. | Datos iniciales | - |
 | `tbvacunanombre` | `VARCHAR(100) NOT NULL` | No | Nombre de la vacuna. | Datos iniciales | - |
 | `tbvacunaactivo` | `TINYINT(1) NOT NULL` | No | Disponibilidad (1 = se ofrece al registrar). | Administración | - |
 
@@ -626,7 +627,7 @@ publicación) solo expone vacuna, fecha y próxima dosis.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbanimalvacunacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo lock. | Aplicación | - |
+| `tbanimalvacunacionid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo lock. | Aplicación | - |
 | `tbanimalid` | `INT NOT NULL` | No | Animal vacunado; PHP exige que sea del vendedor (dueño explícito o de su publicación) y que no esté vendido. | Aplicación | `tbanimal` |
 | `tbvacunaid` | `INT NOT NULL` | No | Vacuna aplicada; PHP exige que exista y esté activa al registrarla. | Usuario | `tbvacuna` |
 | `tbanimalvacunacionfecha` | `DATE NOT NULL` | No | Fecha de aplicación; no puede ser futura. | Usuario | - |
@@ -645,7 +646,7 @@ por Supabase Realtime; la base es la única fuente de verdad. Fechas en UTC.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbsubastaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
+| `tbsubastaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
 | `tbproductorid` | `INT NOT NULL` | No | Vendedor que abrió la subasta (actividad Vendedor activa). | Aplicación | `tbproductor` |
 | `tbanimalid` | `INT NOT NULL` | No | Animal subastado; debe ser propio y estar `ACTIVO` en el inventario. Mientras dura queda `SUBASTA`. | Usuario | `tbanimal` |
 | `tbfincaid` | `INT NOT NULL` | No | Finca donde está el animal (da la zona y el punto para los fletes del ganador). | Usuario | `tbfinca` |
@@ -667,7 +668,7 @@ no sea el vendedor ni un administrador, que no vaya ganando ya y que el monto ll
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbsubastapujaid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
+| `tbsubastapujaid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
 | `tbsubastaid` | `INT NOT NULL` | No | Subasta a la que pertenece. | Usuario | `tbsubasta` |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que pujó (sale del JWT, nunca del cuerpo). | Aplicación | `tbpersona` |
 | `tbsubastapujamonto` | `DECIMAL(12,2) NOT NULL` | No | Monto: el precio base o la más alta + el incremento mínimo, como mínimo. | Usuario | - |
@@ -680,7 +681,7 @@ administrador; se muestran con el alias o el primer nombre.
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbsubastacomentarioid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
+| `tbsubastacomentarioid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo el lock de subastas. | Aplicación | - |
 | `tbsubastaid` | `INT NOT NULL` | No | Subasta comentada. | Usuario | `tbsubasta` |
 | `tbpersonaid` | `INT NOT NULL` | No | Autor (sale del JWT). | Aplicación | `tbpersona` |
 | `tbsubastacomentariotexto` | `VARCHAR(500) NOT NULL` | No | Texto del comentario. | Usuario | - |
@@ -693,7 +694,7 @@ Avisos de la campana del encabezado: subasta ganada (`SUBASTA_GANADA`), terminad
 
 | Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
 |---|---|---|---|---|---|
-| `tbnotificacionid` | `INT NOT NULL` | No | Consecutivo calculado por PHP bajo su lock. | Aplicación | - |
+| `tbnotificacionid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo su lock. | Aplicación | - |
 | `tbpersonaid` | `INT NOT NULL` | No | Persona que recibe el aviso. | Aplicación | `tbpersona` |
 | `tbnotificaciontipo` | `VARCHAR(40) NOT NULL` | No | Tipo de aviso. | Aplicación | - |
 | `tbnotificaciontitulo` | `VARCHAR(150) NOT NULL` | No | Título corto. | Aplicación | - |
@@ -701,6 +702,72 @@ Avisos de la campana del encabezado: subasta ganada (`SUBASTA_GANADA`), terminad
 | `tbnotificacionenlace` | `VARCHAR(250) NULL` | Sí | Ruta interna a la que lleva (p. ej. `subastas?id=5`). | Aplicación | - |
 | `tbnotificacionfecha` | `DATETIME NOT NULL` | No | Momento (UTC) del aviso. | Aplicación | - |
 | `tbnotificacionleida` | `TINYINT(1) NOT NULL` | No | 1 cuando la persona abrió la campana. | Usuario | - |
+
+## tbpersonacorreocambio
+
+Histórico de los cambios de correo de una Persona (DEC-CORREO-001). El correo vive en dos sistemas, la cuenta de
+Supabase Auth y `tbpersona`, que no comparten transacción. La fila se guarda `PENDIENTE` antes de llamar a Supabase;
+con ella PHP termina o descarta el cambio si la operación se interrumpe. No reemplaza a la bitácora: la bitácora dice
+quién cambió qué, este histórico dice en qué quedó cada intento.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbpersonacorreocambioid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo su lock. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que cambia su correo (sale del JWT). | Aplicación | `tbpersona` |
+| `tbpersonacorreocambiosujeto` | `VARCHAR(100) NOT NULL` | No | Identificador de la cuenta en Supabase Auth (`sub` del JWT). Solo esa cuenta puede terminar el cambio. | Aplicación | - |
+| `tbpersonacorreocambioanterior` | `VARCHAR(150) NOT NULL` | No | Correo que tenía la Persona, en minúscula. | Aplicación | - |
+| `tbpersonacorreocambionuevo` | `VARCHAR(150) NOT NULL` | No | Correo pedido, en minúscula. | Usuario | - |
+| `tbpersonacorreocambioestado` | `VARCHAR(20) NOT NULL` | No | `PENDIENTE`, `APLICADO` (los dos sistemas tienen el nuevo) o `CANCELADO` (los dos conservan el anterior). | Aplicación | - |
+| `tbpersonacorreocambiofecha` | `DATETIME NOT NULL` | No | Momento (UTC) en que se pidió. | Aplicación | - |
+| `tbpersonacorreocambiofecharesolucion` | `DATETIME NULL` | Sí | Momento (UTC) en que dejó de estar pendiente. | Aplicación | - |
+
+## tbadministrador
+
+Correos autorizados para entrar al panel de administración. Se gestiona en `/admin/administradores`; la cuenta y la
+contraseña viven en Supabase Auth, no aquí.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbadministradorid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbadministradorcorreoelectronico` | `VARCHAR(150) NOT NULL` | No | Correo autorizado, en minúscula. | Aplicación | - |
+| `tbadministradorestado` | `TINYINT(1) NOT NULL` | No | 1 activo, 0 desactivado. Debe quedar al menos uno activo. | Aplicación | - |
+
+## tbproductorpersonatelefonohistorico
+
+Histórico de teléfonos de la Persona en su contexto de Vendedor. Cada cambio de teléfono agrega una fila; nunca se edita.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbproductorpersonatelefonohistoricoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbproductorid` | `INT NOT NULL` | No | Vendedor cuyo teléfono cambió. | Aplicación | `tbproductor` |
+| `tbproductorpersonatelefonohistoriconuevo` | `VARCHAR(20) NOT NULL` | No | Teléfono que quedó vigente desde esa fecha. | Usuario | - |
+| `tbproductorpersonatelefonohistoricofecha` | `DATETIME NOT NULL` | No | Momento del cambio, en UTC. | Aplicación | - |
+
+## tbcompradorpersonatelefonohistorico
+
+Histórico de teléfonos de la Persona en su contexto de Comprador. Misma política que el del Vendedor.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbcompradorpersonatelefonohistoricoid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbcompradorid` | `INT NOT NULL` | No | Comprador cuyo teléfono cambió. | Aplicación | `tbcomprador` |
+| `tbcompradorpersonatelefonohistoriconuevo` | `VARCHAR(20) NOT NULL` | No | Teléfono que quedó vigente desde esa fecha. | Usuario | - |
+| `tbcompradorpersonatelefonohistoricofecha` | `DATETIME NOT NULL` | No | Momento del cambio, en UTC. | Aplicación | - |
+
+## tbanimalpublicacioninteraccion
+
+Historial de lo que una Persona hace con una publicación (por ejemplo "Me interesa"). Solo crece: la marca vigente es
+la última acción del par persona y publicación.
+
+| Columna | Tipo | NULL | Descripción | Origen | Relación conceptual |
+|---|---|---|---|---|---|
+| `tbanimalpublicacioninteraccionid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por PHP bajo bloqueo nombrado. | Aplicación | - |
+| `tbpersonaid` | `INT NOT NULL` | No | Persona que hizo la acción. | Aplicación | `tbpersona` |
+| `tbanimalpublicacionid` | `INT NOT NULL` | No | Publicación sobre la que actuó. | Aplicación | `tbanimalpublicacion` |
+| `tbanimalpublicacioninteracciontipo` | `VARCHAR(30) NOT NULL` | No | Tipo de interacción, por ejemplo `ME_INTERESA`. | Aplicación | - |
+| `tbanimalpublicacioninteraccionaccion` | `VARCHAR(30) NOT NULL` | No | `REGISTRAR` la marca o `RETIRAR` la quita. | Aplicación | - |
+| `tbanimalpublicacioninteraccionfecha` | `DATETIME NOT NULL` | No | Momento de la acción, en UTC. | Aplicación | - |
+| `tbanimalpublicacioninteraccionorigen` | `VARCHAR(100) NOT NULL` | No | Pantalla o API que la originó. | Aplicación | - |
 
 ## Histórico transversal (Tramo 12/13 y avance 3)
 
@@ -742,7 +809,7 @@ garantizan con transacciones, sentencias preparadas y bloqueos nombrados.
 | Relación conceptual | `tbtransportistavehiculo.tbtransportistaid` indica el transportista del vehículo | el dato, sin verificación del motor |
 | Política | un vehículo pertenece a un solo transportista | la capa de aplicación, todavía no implementada |
 
-Ninguna política de este documento se implementa con llaves, restricciones,
+Ninguna política de este documento se implementa con llaves foráneas, restricciones,
 triggers, procedimientos, funciones ni eventos. `Database/Tests/diagnostico.sql`
 solamente permite detectar los incumplimientos.
 

@@ -29,9 +29,9 @@ test('Mi panel carga la sección y sus diálogos', () => {
     for (const id of ['animals-panel', 'animal-add', 'animal-modal', 'animal-publish-modal', 'animal-vaccines-modal', 'animal-weights-modal', 'animal-publish-foto']) {
         assert.match(vista, new RegExp(`id="${id}"`), `falta #${id}`);
     }
-    assert.match(vista, /js\/mi-actividad\.js\?v=panel-19/);
+    assert.match(vista, /js\/mi-actividad\.js\?v=panel-20/);
     const panel = read('Public/js/mi-actividad.js');
-    assert.match(panel, /from '\.\/mis-animales\.js\?v=animales-7'/);
+    assert.match(panel, /from '\.\/mis-animales\.js\?v=animales-8'/);
     assert.match(panel, /#animals-panel'\)\.hidden = !isActive\('PRODUCTOR'\)/);
     assert.doesNotMatch(read('Public/js/mis-animales.js'), /\.insertAdjacentHTML\(/);
 });

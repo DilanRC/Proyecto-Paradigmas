@@ -5,11 +5,10 @@
  * en CF4. La politica visual es semantica: los iconos ayudan a reconocer modulo,
  * accion o estado; no se agregan a cada texto solo por decoracion.
  *
- * Como este frontend PHP no tiene pipeline npm para CSS, se fija la version del
- * paquete publicado en jsDelivr. Todas las vistas cargan base.css y heredan esta
- * capa sin repetir dependencias.
+ * El paquete y sus fuentes se distribuyen localmente para conservar los
+ * controles visibles sin acceso a un CDN.
  */
-@import url('https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css');
+@import url('../vendor/fontawesome-7.3.1/css/all.min.css');
 
 :root {
     --tc-fa-family:'Font Awesome 7 Free';

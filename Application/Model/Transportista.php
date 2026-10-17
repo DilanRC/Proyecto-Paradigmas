@@ -10,8 +10,8 @@ final class Transportista
 {
     private Persona $persona;
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly TransportistaVehiculo $vehiculos,
+        private PDO $conexion,
+        private TransportistaVehiculo $vehiculos,
     ) {
         $this->persona = new Persona($conexion);
     }

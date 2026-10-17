@@ -23,7 +23,7 @@ final class NotificacionesController
     private Notificacion $notificaciones;
     private SubastaCierreService $cierre;
 
-    public function __construct(PDO $conexion, private readonly ActorContext $actor, ?TiempoReal $tiempoReal = null)
+    public function __construct(PDO $conexion, private ActorContext $actor, ?TiempoReal $tiempoReal = null)
     {
         $this->notificaciones = new Notificacion($conexion);
         $this->cierre = new SubastaCierreService($conexion, $tiempoReal ?? new TiempoReal());

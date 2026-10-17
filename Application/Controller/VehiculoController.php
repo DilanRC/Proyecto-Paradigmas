@@ -19,7 +19,7 @@ final class VehiculoController
     private EstadoService $estadoService;
     private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->vehiculo = new Vehiculo($conexion);
         $this->bitacora = new Bitacora($conexion, $actor);

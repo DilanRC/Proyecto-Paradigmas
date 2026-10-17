@@ -8,6 +8,7 @@ namespace Application\Controller;
 // se carga aqui tambien para mantener el controlador autocontenido.
 require_once dirname(__DIR__) . '/Service/PublicacionCercaniaService.php';
 require_once dirname(__DIR__) . '/Service/AnimalValidacionService.php';
+require_once dirname(__DIR__) . '/Service/CampoValidacion.php';
 require_once dirname(__DIR__) . '/Model/AnimalCatalogo.php';
 
 use Application\HttpException;
@@ -18,6 +19,7 @@ use Application\Model\Bitacora;
 use Application\Model\Productor;
 use Application\Model\ProductorFinca;
 use Application\Service\AnimalValidacionService;
+use Application\Service\CampoValidacion;
 use Application\Service\PublicacionCercaniaService;
 use PDO;
 use Throwable;
@@ -31,15 +33,15 @@ final class AnimalPublicacionController
     private const LOCKS_CREAR = ['tbanimal', 'tbanimalproduccionsalud', 'tbanimalpublicacion',
         'tbanimalpublicacionestadoperiodo', 'tbanimalpublicacionanimal'];
 
-    private readonly AnimalComercial $animales;
-    private readonly AnimalCatalogo $catalogo;
-    private readonly PublicacionCercaniaService $cercania;
-    private readonly ?ActorContext $actor;
-    private readonly Productor $productor;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private AnimalComercial $animales;
+    private AnimalCatalogo $catalogo;
+    private PublicacionCercaniaService $cercania;
+    private ?ActorContext $actor;
+    private Productor $productor;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null,
+    public function __construct(private PDO $conexion, ?string $solicitudId = null,
         ?ActorContext $actor = null)
     {
         $this->animales = new AnimalComercial($conexion);
@@ -131,10 +133,10 @@ final class AnimalPublicacionController
 
         $publicacionId = $this->enteroConsulta($cuerpo['publicacionId'] ?? null, 'publicacionId');
         $campos = [];
-        if (array_key_exists('titulo', $cuerpo)) $campos['titulo'] = self::texto($cuerpo['titulo'], 'titulo', 150, true);
-        if (array_key_exists('descripcion', $cuerpo)) $campos['descripcion'] = self::texto($cuerpo['descripcion'], 'descripcion', 500);
-        if (array_key_exists('precio', $cuerpo)) $campos['precio'] = self::numero($cuerpo['precio'], 'precio');
-        if (array_key_exists('imagenUrl', $cuerpo)) $campos['imagenUrl'] = self::imagenUrl($cuerpo['imagenUrl']);
+        if (array_key_exists('titulo', $cuerpo)) $campos['titulo'] = CampoValidacion::texto($cuerpo['titulo'], 'titulo', 150, true);
+        if (array_key_exists('descripcion', $cuerpo)) $campos['descripcion'] = CampoValidacion::texto($cuerpo['descripcion'], 'descripcion', 500);
+        if (array_key_exists('precio', $cuerpo)) $campos['precio'] = CampoValidacion::numero($cuerpo['precio'], 'precio');
+        if (array_key_exists('imagenUrl', $cuerpo)) $campos['imagenUrl'] = CampoValidacion::imagenUrl($cuerpo['imagenUrl']);
         $estado = null;
         if (array_key_exists('estado', $cuerpo)) {
             $estado = is_string($cuerpo['estado']) ? mb_strtoupper(trim($cuerpo['estado']), 'UTF-8') : '';
@@ -145,7 +147,7 @@ final class AnimalPublicacionController
                 ]);
             }
         }
-        $motivo = self::texto($cuerpo['motivo'] ?? null, 'motivo', 250);
+        $motivo = CampoValidacion::texto($cuerpo['motivo'] ?? null, 'motivo', 250);
         if ($campos === [] && $estado === null) {
             throw new HttpException('Indique qué desea cambiar.', 422);
         }
@@ -275,12 +277,7 @@ final class AnimalPublicacionController
 
     private function fincaActiva(int $productorId, string $nombre): ?array
     {
-        $sentencia = $this->conexion->prepare(
-            'SELECT tbfincaid, tbfincanombre FROM tbfinca
-             WHERE tbproductorid = :productorId AND tbfincanombre = :nombre AND tbfincaestado = 1'
-        );
-        $sentencia->execute(['productorId' => $productorId, 'nombre' => $nombre]);
-        $filas = $sentencia->fetchAll();
+        $filas = (new ProductorFinca($this->conexion))->listarActivasPorNombre($productorId, $nombre);
         if (count($filas) > 1) {
             throw new HttpException('La finca está duplicada para este Productor.', 409);
         }
@@ -288,77 +285,11 @@ final class AnimalPublicacionController
         return $filas[0] ?? null;
     }
 
-    public static function texto(mixed $valor, string $campo, int $maximo, bool $obligatorio = false): ?string
-    {
-        // Una lista u objeto se convertiría en el texto "Array": se rechaza con un mensaje claro.
-        if ($valor !== null && !is_string($valor) && !is_int($valor) && !is_float($valor)) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser texto.']);
-        }
-        if ($valor === null || trim((string) $valor) === '') {
-            if ($obligatorio) {
-                throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Este campo es obligatorio.']);
-            }
-            return null;
-        }
-        $valor = trim((string) $valor);
-        if (mb_strlen($valor) > $maximo) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => "No puede superar {$maximo} caracteres."]);
-        }
-        return $valor;
-    }
-
-    /** Topes por campo: los de la columna (precio NUMERIC(12,2)) o uno razonable para el dato. */
-    private const MAXIMOS = ['precio' => 9999999999.99, 'peso' => 5000, 'edadMeses' => 600];
-
-    public static function numero(mixed $valor, string $campo, bool $entero = false): ?float
-    {
-        if ($valor === null || $valor === '') return null;
-        if (is_bool($valor) || !is_numeric($valor) || (float) $valor < 0 || !is_finite((float) $valor)) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un número mayor o igual a cero.']);
-        }
-        $maximo = self::MAXIMOS[$campo] ?? 2147483647;
-        if ((float) $valor > $maximo) {
-            $texto = number_format($maximo, $maximo == floor($maximo) ? 0 : 2, ',', '.');
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => "No puede ser mayor que {$texto}."]);
-        }
-        if ($entero && floor((float) $valor) !== (float) $valor) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser un entero no negativo.']);
-        }
-        return (float) $valor;
-    }
-
-    /**
-     * Corre todas las reglas y junta sus errores en un solo 422: la persona ve de una vez todo lo que debe
-     * corregir (antes solo el primero, p. ej. el peso, y el precio aparecía recién al reenviar).
-     *
-     * @param array<string,callable():mixed> $reglas
-     * @return array<string,mixed>
-     */
-    public static function validarTodos(array $reglas): array
-    {
-        $datos = [];
-        $errores = [];
-        foreach ($reglas as $clave => $regla) {
-            try {
-                $datos[$clave] = $regla();
-            } catch (HttpException $error) {
-                if ($error->errores === []) throw $error;
-                $errores += $error->errores;
-                $datos[$clave] = null;
-            }
-        }
-        if ($errores !== []) {
-            throw new HttpException('Revise los campos indicados.', 422, null, $errores);
-        }
-
-        return $datos;
-    }
-
     private function validarPublicacion(array $cuerpo): array
     {
-        $texto = self::texto(...);
-        $numero = self::numero(...);
-        $v = self::validarTodos([
+        $texto = \Closure::fromCallable([CampoValidacion::class, 'texto']);
+        $numero = \Closure::fromCallable([CampoValidacion::class, 'numero']);
+        $v = CampoValidacion::validarTodos([
             'animalIdentificacion' => fn () => $texto($cuerpo['animalIdentificacion'] ?? null, 'animalIdentificacion', 100),
             'raza' => fn () => $texto($cuerpo['raza'] ?? null, 'raza', 120),
             'sexo' => fn () => $texto($cuerpo['sexo'] ?? null, 'sexo', 40),
@@ -371,7 +302,7 @@ final class AnimalPublicacionController
             'titulo' => fn () => $texto($cuerpo['titulo'] ?? null, 'titulo', 150, true),
             'descripcion' => fn () => $texto($cuerpo['descripcion'] ?? null, 'descripcion', 500),
             'precio' => fn () => $numero($cuerpo['precio'] ?? null, 'precio'),
-            'imagenUrl' => fn () => self::imagenUrl($cuerpo['imagenUrl'] ?? null),
+            'imagenUrl' => fn () => CampoValidacion::imagenUrl($cuerpo['imagenUrl'] ?? null),
         ]);
         $modelo = $v['modelo'];
         $identificacion = $v['animalIdentificacion'];
@@ -400,36 +331,6 @@ final class AnimalPublicacionController
             'precio' => $v['precio'],
             'imagenUrl' => $v['imagenUrl'],
         ];
-    }
-
-    /**
-     * Imagen opcional: solo URLs https absolutas, sin credenciales embebidas.
-     * Vale para Supabase Storage y para direcciones externas; un esquema como
-     * javascript: o data: nunca llega a la base ni a un <img>.
-     */
-    public static function imagenUrl(mixed $valor, string $campo = 'imagenUrl'): ?string
-    {
-        if ($valor === null || (is_string($valor) && trim($valor) === '')) {
-            return null;
-        }
-        if (!is_string($valor)) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [$campo => 'Debe ser la dirección (URL) de la imagen.']);
-        }
-        $url = trim($valor);
-        $partes = parse_url($url);
-        $valida = mb_strlen($url) <= 500
-            && filter_var($url, FILTER_VALIDATE_URL) !== false
-            && is_array($partes)
-            && strtolower((string) ($partes['scheme'] ?? '')) === 'https'
-            && ($partes['host'] ?? '') !== ''
-            && !isset($partes['user'])
-            && !isset($partes['pass']);
-        if (!$valida) {
-            throw new HttpException('Revise los campos indicados.', 422, null, [
-                $campo => 'Usa una dirección https válida de hasta 500 caracteres.',
-            ]);
-        }
-        return $url;
     }
 
     private function consultar(array $consulta): array
@@ -506,10 +407,10 @@ final class AnimalPublicacionController
      */
     private function filtrosConsulta(array $consulta, ?int $personaId): array
     {
-        $v = self::validarTodos([
-            'ubicacion' => fn () => self::texto($consulta['ubicacion'] ?? null, 'ubicacion', 100),
-            'precioMin' => fn () => self::numero($consulta['precioMin'] ?? null, 'precioMin'),
-            'precioMax' => fn () => self::numero($consulta['precioMax'] ?? null, 'precioMax'),
+        $v = CampoValidacion::validarTodos([
+            'ubicacion' => fn () => CampoValidacion::texto($consulta['ubicacion'] ?? null, 'ubicacion', 100),
+            'precioMin' => fn () => CampoValidacion::numero($consulta['precioMin'] ?? null, 'precioMin'),
+            'precioMax' => fn () => CampoValidacion::numero($consulta['precioMax'] ?? null, 'precioMax'),
         ]);
         if ($v['precioMin'] !== null && $v['precioMax'] !== null && $v['precioMin'] > $v['precioMax']) {
             throw new HttpException('Revise los campos indicados.', 422, null, [

@@ -4,11 +4,31 @@ declare(strict_types=1);
 
 namespace Configuration;
 
+require_once __DIR__ . '/Compatibility.php';
+
+date_default_timezone_set('UTC');
+
 const APPLICATION_NAME = 'TinderCows';
 
 // Apache/XAMPP no carga `.env` por sí mismo. Las variables definidas por el
 // servidor conservan prioridad; el archivo solo completa las que falten.
 loadEnvironmentFile(dirname(__DIR__) . '/.env');
+
+/**
+ * Variables que completó el archivo `.env` (nombre => valor). Son valores por defecto de la
+ * instalación: admiten las alternativas locales de `LocalDatabaseBootstrap`; las que fija el servidor, no.
+ *
+ * @return array<string, string>
+ */
+function environmentFileValues(?string $name = null, string $value = ''): array
+{
+    static $values = [];
+    if ($name !== null) {
+        $values[$name] = $value;
+    }
+
+    return $values;
+}
 
 function loadEnvironmentFile(string $path): void
 {
@@ -42,8 +62,17 @@ function loadEnvironmentFile(string $path): void
         if (strlen($value) >= 2 && (($value[0] === '"' && $value[-1] === '"') || ($value[0] === "'" && $value[-1] === "'"))) {
             $value = substr($value, 1, -1);
         }
-        if (getenv($name) === false) {
+        $current = getenv($name);
+        // Apache con hilos (XAMPP en Windows): putenv es de todo el proceso y PHP lo deshace al terminar cada
+        // petición, así que otra petición simultánea podía perder SUPABASE_URL a medio camino. apache_setenv
+        // deja el valor en la petición; un valor del proceso igual al del archivo es ese putenv de otro hilo.
+        $perRequest = function_exists('apache_setenv') && apache_getenv($name) === false;
+        if ($current === false || ($perRequest && $current === $value)) {
+            if ($perRequest) {
+                apache_setenv($name, $value);
+            }
             putenv("{$name}={$value}");
+            environmentFileValues($name, $value);
         }
     }
 }

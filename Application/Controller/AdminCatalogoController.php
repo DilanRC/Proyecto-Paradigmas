@@ -24,11 +24,11 @@ final class AdminCatalogoController
     private const LISTAS = ['ESPECIE' => 'especies', 'TIPO' => 'tipos', 'RAZA' => 'razas', 'VACUNA' => 'vacunas'];
     private const NOMBRE_MAXIMO = ['ESPECIE' => 80, 'TIPO' => 80, 'RAZA' => 100, 'VACUNA' => 100];
 
-    private readonly AnimalCatalogo $catalogo;
-    private readonly Bitacora $bitacora;
-    private readonly string $solicitudId;
+    private AnimalCatalogo $catalogo;
+    private Bitacora $bitacora;
+    private string $solicitudId;
 
-    public function __construct(private readonly PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?string $solicitudId = null, ?ActorContext $actor = null)
     {
         $this->catalogo = new AnimalCatalogo($conexion);
         $this->bitacora = new Bitacora($conexion, $actor ?? ActorContext::noAutenticado());

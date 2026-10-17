@@ -23,7 +23,7 @@ final class AnimalVacunacion
         'observaciones' => 'tbanimalvacunacionobservaciones',
     ];
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     public function ejecutarConBloqueoAlta(callable $operacion): mixed
     {
@@ -70,7 +70,7 @@ final class AnimalVacunacion
         );
         $sentencia->execute(['animalId' => $animalId]);
 
-        return array_map(self::mapear(...), $sentencia->fetchAll());
+        return array_map(\Closure::fromCallable([self::class, 'mapear']), $sentencia->fetchAll());
     }
 
     /** El registro, sin comprobar el dueño: el controlador verifica el animal con animalPropio(). */

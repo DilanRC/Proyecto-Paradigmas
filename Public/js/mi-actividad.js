@@ -1,5 +1,6 @@
+import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 import { request } from './shared/api.js';
-import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=panel-2';
+import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
 import { syncPublicProfile } from './shared/public-profile.js';
 import { safeImageUrl } from './explore.js?v=foto-3';
@@ -8,7 +9,7 @@ import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
-import { montarMisAnimales } from './mis-animales.js?v=animales-7';
+import { montarMisAnimales } from './mis-animales.js?v=animales-8';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
@@ -426,16 +427,14 @@ function openPublicationModal(id, trigger = null) {
     setPublicationErrors({});
     publicationPhoto.reiniciar(safeImageUrl(item.imagenUrl));
     mostrarEstado(document.querySelector('#publication-form-status'), '', 'info');
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else { dialog.hidden = false; dialog.setAttribute('open', ''); }
+    openDialog(dialog);
     form.elements.titulo.focus();
 }
 
 function closePublicationModal() {
     const dialog = document.querySelector('#publication-modal');
     if (!dialog) return;
-    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
-    else { dialog.hidden = true; dialog.removeAttribute('open'); }
+    closeDialog(dialog);
     lastPublicationTrigger?.focus?.();
     editingPublicationId = null;
 }
@@ -553,8 +552,7 @@ function openFarmModal(id = null, trigger = null) {
         onPuntoChange: completarDesdePunto,
     });
     farmEditor = { direccion, mapa, cancelarGeocodificacion: () => { geoTurn += 1; geoAbort?.abort(); geoAbort = null; } };
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else { dialog.hidden = false; dialog.setAttribute('open', ''); }
+    openDialog(dialog);
     document.querySelector('#farm-name')?.focus();
 }
 
@@ -562,8 +560,7 @@ function closeFarmModal() {
     const dialog = document.querySelector('#farm-modal');
     if (!dialog) return;
     disposeFarmEditor();
-    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
-    else { dialog.hidden = true; dialog.removeAttribute('open'); }
+    closeDialog(dialog);
     lastFarmTrigger?.focus?.();
     editingFarmId = null;
 }
@@ -572,7 +569,7 @@ function setFarmErrors(errors = {}) {
     document.querySelectorAll('[data-farm-error]').forEach((node) => { node.textContent = ''; });
     document.querySelectorAll('#farm-form [aria-invalid="true"]').forEach((node) => node.removeAttribute('aria-invalid'));
     for (const [field, message] of Object.entries(errors)) {
-        const key = field.split('.').at(-1);
+        const key = field.split('.').pop();
         const messageNode = document.querySelector(`[data-farm-error="${field}"], [data-farm-error="${key}"]`);
         const control = document.querySelector(`#farm-form [name="${key}"]`);
         if (messageNode) messageNode.textContent = String(message);
@@ -670,16 +667,14 @@ function openVehicleModal(id = null, trigger = null) {
     setFormErrors({});
     vehiclePhoto.reiniciar(safeImageUrl(vehicle?.fotoUrl));
     mostrarEstado(document.querySelector('#vehicle-form-status'), '', 'info');
-    if (typeof dialog.showModal === 'function') dialog.showModal();
-    else { dialog.hidden = false; dialog.setAttribute('open', ''); }
+    openDialog(dialog);
     document.querySelector('#vehicle-placa')?.focus();
 }
 
 function closeVehicleModal() {
     const dialog = document.querySelector('#vehicle-modal');
     if (!dialog) return;
-    if (typeof dialog.close === 'function' && dialog.open) dialog.close();
-    else { dialog.hidden = true; dialog.removeAttribute('open'); }
+    closeDialog(dialog);
     lastVehicleTrigger?.focus?.();
     editingVehicleId = null;
 }

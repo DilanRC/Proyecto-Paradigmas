@@ -85,7 +85,7 @@ export function readBrowserSession(storage) {
 
 export function routeName(pathname = '') {
     const parts = String(pathname).split('/').filter(Boolean);
-    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts.at(-1) || '';
+    return parts[0] === 'admin' ? parts.slice(0, 2).join('/') : parts[parts.length - 1] || '';
 }
 
 export function isPrivateRoute(pathname = '') {

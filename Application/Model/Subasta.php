@@ -17,7 +17,7 @@ final class Subasta
     public const VISTAS = ['ACTIVAS', 'HISTORIAL', 'MIAS', 'PARTICIPO'];
     private const LOCK = 'tindercows_subastas';
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     // ponytail: un solo lock para todas las subastas; pasar a uno por subasta si las pujas simultáneas lo piden.
     public function ejecutarConBloqueo(callable $operacion): mixed
@@ -109,7 +109,7 @@ final class Subasta
         $sentencia->execute();
 
         return [
-            'subastas' => array_map($this->mapear(...), $sentencia->fetchAll()),
+            'subastas' => array_map(\Closure::fromCallable([$this, 'mapear']), $sentencia->fetchAll()),
             'total' => (int) $conteo->fetchColumn(),
         ];
     }

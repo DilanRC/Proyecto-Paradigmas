@@ -17,7 +17,7 @@ docker compose exec -T db mysql -uroot -p"$DB_ROOT_PASS" < Database/Tests/diagno
 
 | Script | Qué comprueba | Resultado esperado |
 |---|---|---|
-| `comprobacionestructura.sql` | `DESCRIBE` de las 47 tablas y ausencia de llaves, índices, valores automáticos y objetos programables | estructura declarada y cero filas en las consultas de metadatos |
+| `comprobacionestructura.sql` | `DESCRIBE` de las 48 tablas, una llave primaria por tabla y ausencia de otras restricciones, índices adicionales, valores automáticos y objetos programables | estructura declarada y cero filas en las consultas de metadatos |
 | `comprobaciondatosiniciales.sql` | contenido de `tbpagometodo` | una fila: `1`, `Efectivo`, `Pago realizado en efectivo`, `1` |
 | `comprobacionrelaciones.sql` | productor y finca compartiendo ubicación, productor y finca en ubicaciones distintas, un productor con varias fincas, un transportista con varios vehículos | cinco resultados descritos en el script y limpieza en ceros |
 | `diagnostico.sql` | duplicados, cardinalidades fuera de política, asociaciones huérfanas, periodos abiertos duplicados, solapes y dominios lógicos fuera de rango | cero filas en consultas de detalle sobre datos válidos |
@@ -28,7 +28,7 @@ aplicación ni deja datos de prueba en la base.
 
 ## Alcance
 
-`diagnostico.sql` **detecta**, no **impide**. El esquema no declara llaves ni
-restricciones, así que el motor acepta duplicados y huérfanos. Rechazarlos es
+`diagnostico.sql` **detecta**, no **impide**. El esquema solo declara la llave
+primaria de cada tabla (sin llaves foráneas ni otras restricciones), así que el motor acepta duplicados lógicos y huérfanos. Rechazarlos es
 responsabilidad de la capa de aplicación y queda fuera de este avance de base
 de datos.

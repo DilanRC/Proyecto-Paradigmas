@@ -49,6 +49,23 @@ try {
     if ($actor->rolTecnico !== 'authenticated') {
         throw new RuntimeException('El rol del proveedor solo se conserva como dato técnico.');
     }
+    if ($actor->correoConfirmado !== false) {
+        throw new RuntimeException('La ausencia de confirmación explícita no debe habilitar privilegios administrativos.');
+    }
+
+    $confirmado = new SupabaseActorResolver(
+        fn (): array => [
+            'status' => 200,
+            'body' => json_encode(['success' => true, 'data' => [
+                'id' => 'supabase-user-1',
+                'email' => $email,
+                'role' => 'authenticated',
+                'email_confirmed_at' => '2026-01-01T00:00:00Z',
+            ]], JSON_THROW_ON_ERROR),
+        ],
+    );
+    $actorConfirmado = $confirmado->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer token-confirmado']);
+    test_same(true, $actorConfirmado->correoConfirmado, 'La confirmación autenticada debe conservarse en el actor');
 
     (new Bitacora($db, $actor))->registrar('CREAR', $registro, null, ['ok' => true], test_token('auth'));
     $bitacora = $db->prepare('SELECT tbbitacoraactortipo, tbbitacorausuarioid FROM tbbitacora
@@ -70,6 +87,28 @@ try {
         throw new RuntimeException('Token inválido debe fallar.');
     } catch (HttpException $error) {
         test_same(401, $error->estadoHttp, 'Token inválido debe preservar 401');
+    }
+
+    // XAMPP valida directo contra Supabase Auth, que responde 403 a un JWT inválido, vencido
+    // o de una sesión cerrada. El navegador solo trata el 401 como sesión terminada.
+    $verifyAnterior = getenv('SUPABASE_AUTH_VERIFY_URL');
+    $urlAnterior = getenv('SUPABASE_URL');
+    putenv('SUPABASE_AUTH_VERIFY_URL');
+    putenv('SUPABASE_URL=https://directo.example.test');
+    try {
+        $directo = new SupabaseActorResolver(fn (): array => [
+            'status' => 403,
+            'body' => '{"code":403,"error_code":"session_not_found","msg":"Session from session_id claim in JWT does not exist"}',
+        ]);
+        try {
+            $directo->resolve($db, ['HTTP_AUTHORIZATION' => 'Bearer sesion-cerrada']);
+            throw new RuntimeException('Una sesión cerrada debe fallar.');
+        } catch (HttpException $error) {
+            test_same(401, $error->estadoHttp, 'La sesión cerrada o vencida validada contra Supabase responde 401');
+        }
+    } finally {
+        putenv($verifyAnterior === false ? 'SUPABASE_AUTH_VERIFY_URL' : "SUPABASE_AUTH_VERIFY_URL={$verifyAnterior}");
+        putenv($urlAnterior === false ? 'SUPABASE_URL' : "SUPABASE_URL={$urlAnterior}");
     }
 
     $caido = new SupabaseActorResolver(fn (): array => throw new RuntimeException('down'));

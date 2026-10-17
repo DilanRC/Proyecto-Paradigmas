@@ -30,7 +30,7 @@ final class ProductorEstadoPeriodo
     private int $profundidadBloqueo = 0;
     private int $productorBloqueado = 0;
 
-    public function __construct(private readonly PDO $conexion) {}
+    public function __construct(private PDO $conexion) {}
 
     /**
      * Envuelve la operación bajo el lock nombrado del productor indicado.

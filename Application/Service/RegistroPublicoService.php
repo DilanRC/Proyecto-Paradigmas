@@ -39,9 +39,9 @@ final class RegistroPublicoService
     private Transportista $transportista;
 
     public function __construct(
-        private readonly PDO $conexion,
-        private readonly ActorContext $actor,
-        private readonly string $solicitudId,
+        private PDO $conexion,
+        private ActorContext $actor,
+        private string $solicitudId,
     ) {
         $this->persona = new Persona($conexion);
         $this->fincas = new ProductorFinca($conexion);
@@ -108,6 +108,7 @@ final class RegistroPublicoService
                 (string) $this->actor->proveedorSujeto,
                 $this->actor->correoElectronico,
                 $this->actor->rolTecnico,
+                $this->actor->correoConfirmado,
             );
             $bitacora = new Bitacora($this->conexion, $actorVinculado);
 
@@ -195,7 +196,7 @@ final class RegistroPublicoService
         if (!$primeraAlta || $compradorExiste || in_array('COMPRADOR', $capacidades, true)) {
             return $capacidades;
         }
-        return ['COMPRADOR', ...$capacidades];
+        return ['COMPRADOR', ...array_values($capacidades)];
     }
 
     private function resolverPersona(array $datos): array

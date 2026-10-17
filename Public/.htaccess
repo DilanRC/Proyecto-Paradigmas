@@ -1,11 +1,31 @@
-RewriteEngine On
+# La carpeta del proyecto puede vivir entera dentro de htdocs: su .htaccess raíz
+# niega todo y solo esta carpeta se publica.
+Require all granted
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
 
 DirectoryIndex index.php
 Options -Indexes
 
+# Señal para PHP de que Apache sí aplica este archivo (AllowOverride).
+<IfModule mod_env.c>
+    SetEnv TC_HTACCESS 1
+</IfModule>
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
 # Apache puede ocultar Authorization antes de entregarlo a PHP. El backend
-# resuelve la Persona únicamente desde este Bearer verificado.
-RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+# resuelve la Persona únicamente desde este Bearer verificado. TC_REWRITE le
+# confirma a PHP que mod_rewrite funciona; sin él la aplicación se rechaza.
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},E=TC_REWRITE:1]
+
+# TC_BASE = URL de esta carpeta ("/" con VirtualHost, "/GanadoCerca/Public/"
+# dentro de htdocs). Las redirecciones la usan para no salir del proyecto.
+RewriteCond $0#%{REQUEST_URI} ^([^#]*)#(.*)\1$
+RewriteRule ^.*$ - [E=TC_BASE:%2]
+</IfModule>
 
 <IfModule mod_headers.c>
     Header always set X-Content-Type-Options "nosniff"
@@ -13,47 +33,48 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
+<IfModule mod_rewrite.c>
 # La URL pública no expone los wrappers PHP. Estas redirecciones solo se
 # activan cuando la persona pidió directamente el legado; las reescrituras
 # internas de abajo no vuelven a dispararlas.
-RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/registro\.php(?:[?\s]) [NC]
 RewriteCond %{QUERY_STRING} (^|&)capacidad=comprador(&|$) [NC]
-RewriteRule ^registro\.php$ /registro/comprador [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteRule ^registro\.php$ %{ENV:TC_BASE}registro/comprador [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/registro\.php(?:[?\s]) [NC]
 RewriteCond %{QUERY_STRING} (^|&)capacidad=productor(&|$) [NC]
-RewriteRule ^registro\.php$ /registro/productor [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
+RewriteRule ^registro\.php$ %{ENV:TC_BASE}registro/productor [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/registro\.php(?:[?\s]) [NC]
 RewriteCond %{QUERY_STRING} (^|&)capacidad=transportista(&|$) [NC]
-RewriteRule ^registro\.php$ /registro/transportista [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s/+registro\.php(?:[?\s]) [NC]
-RewriteRule ^registro\.php$ /registro [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s/+login\.php(?:[?\s]) [NC]
+RewriteRule ^registro\.php$ %{ENV:TC_BASE}registro/transportista [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/registro\.php(?:[?\s]) [NC]
+RewriteRule ^registro\.php$ %{ENV:TC_BASE}registro [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/login\.php(?:[?\s]) [NC]
 RewriteCond %{QUERY_STRING} (^|&)area=admin(&|$) [NC]
-RewriteRule ^login\.php$ /admin/entrar [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s/+login\.php(?:[?\s]) [NC]
-RewriteRule ^login\.php$ /entrar [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s/+index\.php(?:[?\s]) [NC]
-RewriteRule ^index\.php$ / [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/explorar\.php(?:[?\s]) [NC]
-RewriteRule ^explorar\.php$ /explorar [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/fletes\.php(?:[?\s]) [NC]
-RewriteRule ^fletes\.php$ /fletes [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/mi-actividad\.php(?:[?\s]) [NC]
-RewriteRule ^mi-actividad\.php$ /mi-actividad [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/ajustes\.php(?:[?\s]) [NC]
-RewriteRule ^ajustes\.php$ /ajustes [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/publicar\.php(?:[?\s]) [NC]
-RewriteRule ^publicar\.php$ /publicar [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/sobre-nosotros\.php(?:[?\s]) [NC]
-RewriteRule ^sobre-nosotros\.php$ /sobre-nosotros [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/como-usar\.php(?:[?\s]) [NC]
-RewriteRule ^como-usar\.php$ /como-usar [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/privacidad\.php(?:[?\s]) [NC]
-RewriteRule ^privacidad\.php$ /privacidad [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/terminos\.php(?:[?\s]) [NC]
-RewriteRule ^terminos\.php$ /terminos [R=301,L,NE,QSD]
-RewriteCond %{THE_REQUEST} \s+/legal\.php(?:[?\s]) [NC]
-RewriteRule ^legal\.php$ /legal [R=301,L,NE,QSD]
+RewriteRule ^login\.php$ %{ENV:TC_BASE}admin/entrar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/login\.php(?:[?\s]) [NC]
+RewriteRule ^login\.php$ %{ENV:TC_BASE}entrar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/index\.php(?:[?\s]) [NC]
+RewriteRule ^index\.php$ %{ENV:TC_BASE} [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/explorar\.php(?:[?\s]) [NC]
+RewriteRule ^explorar\.php$ %{ENV:TC_BASE}explorar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/fletes\.php(?:[?\s]) [NC]
+RewriteRule ^fletes\.php$ %{ENV:TC_BASE}fletes [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/mi-actividad\.php(?:[?\s]) [NC]
+RewriteRule ^mi-actividad\.php$ %{ENV:TC_BASE}mi-actividad [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/ajustes\.php(?:[?\s]) [NC]
+RewriteRule ^ajustes\.php$ %{ENV:TC_BASE}ajustes [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/publicar\.php(?:[?\s]) [NC]
+RewriteRule ^publicar\.php$ %{ENV:TC_BASE}publicar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/sobre-nosotros\.php(?:[?\s]) [NC]
+RewriteRule ^sobre-nosotros\.php$ %{ENV:TC_BASE}sobre-nosotros [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/como-usar\.php(?:[?\s]) [NC]
+RewriteRule ^como-usar\.php$ %{ENV:TC_BASE}como-usar [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/privacidad\.php(?:[?\s]) [NC]
+RewriteRule ^privacidad\.php$ %{ENV:TC_BASE}privacidad [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/terminos\.php(?:[?\s]) [NC]
+RewriteRule ^terminos\.php$ %{ENV:TC_BASE}terminos [R=301,L,NE,QSD]
+RewriteCond %{THE_REQUEST} \s[^?\s]*/legal\.php(?:[?\s]) [NC]
+RewriteRule ^legal\.php$ %{ENV:TC_BASE}legal [R=301,L,NE,QSD]
 
 # Superficie pública.
 RewriteRule ^$ index.php [END]
@@ -133,3 +154,4 @@ RewriteRule ^api/v1/fincas/direccion/?$ api/fincas-direccion.php [END]
 
 # Compatibilidad: los clientes y pruebas antiguas que aún llaman /api/*.php
 # siguen funcionando durante la migración, pero la interfaz ya no los genera.
+</IfModule>

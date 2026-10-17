@@ -5,7 +5,7 @@
 // decoracion. Los botones conservan su texto real en el DOM.
 
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync, statSync } from 'node:fs';
 import test from 'node:test';
 
 const panelCss = readFileSync(new URL('../../Public/css/panel.css', import.meta.url), 'utf8');
@@ -26,10 +26,25 @@ test('el contenido rural deja de limitar la tabla a 1030 px', () => {
 test('Paradigmas usa Font Awesome Free 7.3.1 de forma global', () => {
     assert.ok(baseCss.includes("./icons.css?v=fa-7.3.1"), 'base.css debe invalidar cache con la version nueva');
     assert.ok(
-        iconsCss.includes('@fortawesome/fontawesome-free@7.3.1/css/all.min.css'),
+        iconsCss.includes('../vendor/fontawesome-7.3.1/css/all.min.css'),
         'la version de Font Awesome debe quedar fijada a 7.3.1',
     );
     assert.ok(iconsCss.includes("--tc-fa-family:'Font Awesome 7 Free'"));
+    assert.doesNotMatch(iconsCss, /@import\s+url\(['"]?https?:/);
+    const libraryUrl = new URL('../../Public/vendor/fontawesome-7.3.1/css/all.min.css', import.meta.url);
+    const library = readFileSync(libraryUrl, 'utf8');
+    assert.match(library, /Font Awesome Free 7\.3\.1/);
+    const fonts = [...library.matchAll(/url\(["']?([^"')]+)["']?\)/g)].map((match) => match[1]);
+    assert.ok(fonts.length > 0, 'la biblioteca incluye archivos de fuentes');
+    for (const source of fonts) {
+        assert.doesNotMatch(source, /^(?:https?:|data:|\/)/, 'las fuentes se distribuyen localmente');
+        const font = new URL(source, libraryUrl);
+        assert.ok(existsSync(font), `fuente incluida: ${source}`);
+        assert.ok(statSync(font).size > 0, `fuente no vacia: ${source}`);
+    }
+    const license = readFileSync(new URL('../LICENSE.txt', libraryUrl), 'utf8');
+    assert.match(license, /SIL OFL|SIL OPEN FONT LICENSE/i);
+    assert.match(license, /MIT License/i);
 
     for (const view of views) {
         const html = readFileSync(new URL(`../../Application/View/${view}/index.php`, import.meta.url), 'utf8');

@@ -1,9 +1,9 @@
 // Administradores del panel (P3-4). api.js se versiona: un api.js viejo en caché
 // carga el auth-gate anterior, que no conoce esta ruta y deja el panel oculto
 // (ver MEMORIA.md, "Administrador: moderar publicaciones").
-import { request } from './shared/api.js?v=auth-gate-11';
-import { createDialogController } from './shared/dialog.js';
-import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
+import { request } from './shared/api.js?v=auth-gate-12';
+import { createDialogController } from './shared/dialog.js?v=dialog-2';
+import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js?v=form-2';
 import { createToast } from './shared/toast.js';
 
 const API_URL = 'api/v1/admin/administradores';

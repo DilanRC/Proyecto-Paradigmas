@@ -10,7 +10,7 @@
     <title><?= $soloParticipacion ? 'Más formas de participar' : 'Ajustes de cuenta' ?> | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-7">
+    <link rel="stylesheet" href="css/base.css?v=product-9">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <link rel="stylesheet" href="css/public-product.css?v=product-10">
@@ -18,8 +18,8 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-17"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-13"></script>
+    <script type="module" src="js/public-ui.js?v=public-18"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-14"></script>
 </head>
 <body class="public-home activity-page settings-page"<?= $soloParticipacion ? ' data-pagina="participar"' : '' ?>>
     <div class="public-shell" id="inicio">

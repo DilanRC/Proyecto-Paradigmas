@@ -1,8 +1,8 @@
 // Catálogos del animal (P2-6): especies, tipos, razas y vacunas. api.js se versiona
 // junto con la cadena de caché admin (MEMORIA.md, Cuidados #11).
-import { request } from './shared/api.js?v=auth-gate-11';
-import { createDialogController } from './shared/dialog.js';
-import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js';
+import { request } from './shared/api.js?v=auth-gate-12';
+import { createDialogController } from './shared/dialog.js?v=dialog-2';
+import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js?v=form-2';
 import { createToast } from './shared/toast.js';
 
 const API_URL = 'api/v1/admin/catalogos';

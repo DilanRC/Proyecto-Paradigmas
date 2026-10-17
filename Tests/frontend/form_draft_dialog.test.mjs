@@ -20,6 +20,7 @@ class FakeDialog {
     }
 
     showModal() { this.open = true; }
+    close() { this.open = false; }
     setAttribute() { this.open = true; }
     querySelector() { return null; }
     addEventListener(type, listener) {

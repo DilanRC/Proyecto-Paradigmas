@@ -22,7 +22,7 @@ final class FletesController
     private CompraSolicitud $solicitudes;
     private Subasta $subastas;
 
-    public function __construct(PDO $conexion, private readonly ?ActorContext $actor = null)
+    public function __construct(PDO $conexion, private ?ActorContext $actor = null)
     {
         $this->ofertas = new TransportistaOferta($conexion, new Direccion($conexion));
         $this->solicitudes = new CompraSolicitud($conexion);

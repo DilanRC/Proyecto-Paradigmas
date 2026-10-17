@@ -10,10 +10,10 @@ use PDO;
 
 final class Bitacora
 {
-    private readonly ActorContext $actor;
+    private ActorContext $actor;
     private int $profundidadBloqueoAlta = 0;
 
-    public function __construct(private readonly PDO $conexion, ?ActorContext $actor = null)
+    public function __construct(private PDO $conexion, ?ActorContext $actor = null)
     {
         $this->actor = $actor ?? ActorContext::noAutenticado();
     }
@@ -56,7 +56,7 @@ final class Bitacora
         }
 
         $this->ejecutarConBloqueoAlta(
-            fn (): null => $this->insertar(
+            fn () => $this->insertar(
                 $accion,
                 $identificacionNumero,
                 $anteriores,
@@ -77,7 +77,7 @@ final class Bitacora
         string $solicitudId,
         string $entidad,
         string $origen,
-    ): null {
+    ): void {
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbbitacora
              (tbbitacoraid, tbbitacoraentidad, tbbitacoraregistroidentificacionnumero, tbbitacoraaccion, tbbitacorafecha,
@@ -100,7 +100,6 @@ final class Bitacora
             'solicitudId' => $solicitudId,
         ]);
 
-        return null;
     }
 
     /**

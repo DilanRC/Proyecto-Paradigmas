@@ -7,7 +7,7 @@
 // no tiene que volver a escribir nada.
 
 import { request } from './api.js';
-import { buildRegistrationSummary, normalizeCapabilities } from './business-rules.js';
+import { buildRegistrationSummary, normalizeCapabilities } from './business-rules.js?v=business-2';
 
 export const REGISTRATION_DRAFT_KEY = 'tindercows:registration-draft';
 
