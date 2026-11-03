@@ -171,8 +171,9 @@ final class TransportistaOferta
         if ($personaId !== null) $parametros['personaId'] = $personaId;
         $sentencia->execute($parametros);
 
-        $normalizar = static fn (?string $texto): string => strtr(mb_strtolower(trim((string) $texto), 'UTF-8'),
-            ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u']);
+        // "Provincia de San José" (como a veces la nombra el mapa) y "san jose" son la misma provincia.
+        $normalizar = static fn (?string $texto): string => preg_replace('/^provincia\s+(de\s+)?/u', '',
+            strtr(mb_strtolower(trim((string) $texto), 'UTF-8'), ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u']));
         $provinciaBuscada = $normalizar($provincia);
         $conPunto = $latitud !== null && $longitud !== null;
         $ofertas = [];

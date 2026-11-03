@@ -16,9 +16,10 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
+    <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-18"></script>
-    <script type="module" src="js/fletes.js?v=fletes-7"></script>
+    <script type="module" src="js/fletes.js?v=fletes-9"></script>
 </head>
 <body class="public-home">
 <div class="public-shell">
@@ -110,6 +111,15 @@
             <p id="oferta-form-status" class="auth-status" role="status" aria-live="polite"></p>
             <div class="activity-dialog__actions"><button id="oferta-cancel" class="activity-button" type="button">Cancelar</button><button id="oferta-save" class="activity-button activity-button--primary" type="submit">Publicar oferta</button></div>
         </form>
+    </dialog>
+
+    <!-- Elegir este flete: ¿para cuál publicación de Me interesa? Luego abre la solicitud de compra con el flete marcado. -->
+    <dialog id="elegir-modal" class="activity-dialog" aria-labelledby="elegir-modal-title">
+        <div class="activity-dialog__header"><div><p class="section-kicker" id="elegir-modal-flete">Flete elegido</p><h2 id="elegir-modal-title">¿Qué animal quieres transportar?</h2></div><button id="elegir-close" class="dialog-close" type="button" aria-label="Cerrar">×</button></div>
+        <p class="fieldset-help">Elige una publicación de tu lista Me interesa. Después confirmas la solicitud de compra con este flete.</p>
+        <div id="elegir-estado" class="resource-state" role="status" aria-live="polite"></div>
+        <div id="elegir-lista" class="panel-rows"></div>
+        <div class="activity-dialog__actions"><a class="activity-button" href="explorar">Ir a Explorar</a><button id="elegir-cancel" class="activity-button" type="button">Cancelar</button></div>
     </dialog>
 </div>
 </body>

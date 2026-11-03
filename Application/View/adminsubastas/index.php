@@ -61,7 +61,7 @@
 
             <section class="panel" aria-label="Lista de subastas" aria-busy="true" id="panel-subastas">
                 <div class="tools">
-                    <label class="filter"><span>Ver</span><select id="filtro-vista"><option value="ACTIVAS">Activas</option><option value="HISTORIAL">Historial</option></select></label>
+                    <label class="filter"><span>Ver</span><select id="filtro-vista"><option value="ACTIVAS">Activas</option><option value="HISTORIAL">Finalizadas</option></select></label>
                     <label class="filter"><span>Buscar</span><input id="filtro-busqueda" type="search" maxlength="100" autocomplete="off" placeholder="Título, raza o zona"></label>
                 </div>
                 <div class="list-summary">

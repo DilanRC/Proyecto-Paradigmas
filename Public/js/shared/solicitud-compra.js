@@ -39,10 +39,12 @@ function opcion(nombre, valor, titulo, detalle, marcada = false) {
 }
 
 /**
- * @param {{publicacionId:number, titulo?:string, precio?:string, conFlete?:boolean,
+ * ofertaId (desde la página Fletes): abre en "El animal con flete" con ese flete ya marcado.
+ * @param {{publicacionId:number, titulo?:string, precio?:string, conFlete?:boolean, ofertaId?:number|null,
  *          aviso?:(mensaje:string, tipo:'ok'|'error')=>void, alEnviar?:(solicitud:object)=>void}} opciones
  */
-export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', precio = '', conFlete = false, aviso = () => {}, alEnviar = () => {} }) {
+export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', precio = '', conFlete = false, ofertaId = null, aviso = () => {}, alEnviar = () => {} }) {
+    if (ofertaId != null) conFlete = true;
     const dialogo = el('dialog', 'solicitud-dialog');
     dialogo.setAttribute('aria-labelledby', 'solicitud-titulo');
     const form = el('form', 'solicitud-form');
@@ -121,7 +123,11 @@ export function abrirSolicitudCompra({ publicacionId, titulo = 'Publicación', p
                 'oferta', String(oferta.ofertaId),
                 `${oferta.vehiculo?.modelo || 'Flete'} · hasta ${oferta.capacidad} cabezas · ${colones(oferta.precio)}`,
                 `${oferta.transportista || ''} · ${ubicacion(oferta.zona)} · ${oferta.distanciaKm == null ? 'en la misma provincia (sin punto en el mapa)' : `a ${Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 })} km de la finca`}`,
+                oferta.ofertaId === ofertaId,
             )));
+            if (ofertaId != null && !ofertas.some((oferta) => oferta.ofertaId === ofertaId)) {
+                fletes.prepend(el('p', 'solicitud-note', 'El flete que elegiste no cubre la finca de este animal. Elige otro de la lista o solicita solo el animal.'));
+            }
         } catch (error) {
             fletesCargados = false;
             fletes.replaceChildren(el('p', 'solicitud-note', error?.errors?.publicacionId || error?.message || 'No pudimos buscar fletes ahora.'));
