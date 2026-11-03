@@ -28,7 +28,7 @@ test('la pantalla usa las API de ofertas y las versiona donde importa', () => {
     assert.match(js, /api\/v1\/mi-ofertas/);
     assert.match(js, /editor-direccion\.js\?v=oferta-1/);
     assert.match(read('Public/js/shared/editor-direccion.js'), /finca-mapa\.js\?v=oferta-1/);
-    assert.match(vista, /js\/fletes\.js\?v=fletes-9/);
+    assert.match(vista, /js\/fletes\.js\?v=fletes-10/);
 });
 
 test('solo manda fletes cercanos con ubicación y no pinta HTML sin escapar', () => {
@@ -54,4 +54,9 @@ test('cada flete disponible se puede elegir y abre la solicitud con ese flete ma
     const solicitud = read('Public/js/shared/solicitud-compra.js');
     assert.match(solicitud, /ofertaId = null/);
     assert.match(solicitud, /oferta\.ofertaId === ofertaId/);
+});
+
+test('más de 200 cabezas no se recorta a 200: no muestra fletes que no alcanzan', () => {
+    assert.doesNotMatch(js, /Math\.min\(200/);
+    assert.match(js, /if \(capacidad > 200\) \{/);
 });

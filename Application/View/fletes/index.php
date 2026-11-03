@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-18"></script>
-    <script type="module" src="js/fletes.js?v=fletes-9"></script>
+    <script type="module" src="js/fletes.js?v=fletes-10"></script>
 </head>
 <body class="public-home">
 <div class="public-shell">
