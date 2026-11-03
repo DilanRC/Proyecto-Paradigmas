@@ -135,7 +135,14 @@ async function cargarCercanos() {
     estado.hidden = false;
     estado.textContent = 'Buscando fletes cerca de ti…';
     const turno = ++turnoCercanos;
-    const capacidad = Math.min(200, Math.max(1, Math.trunc(Number($('#cercanos-capacidad').value)) || 1));
+    const capacidad = Math.max(1, Math.trunc(Number($('#cercanos-capacidad').value)) || 1);
+    // Una oferta lleva como máximo 200 cabezas (MiOfertasController). Antes 300 se recortaba a 200 y salían fletes que no alcanzan.
+    if (capacidad > 200) {
+        lista.replaceChildren();
+        cuenta.textContent = '';
+        estado.textContent = 'Ningún flete lleva más de 200 cabezas. Para más animales, pide varios fletes.';
+        return;
+    }
     const consulta = new URLSearchParams({
         latitud: ubicacion.latitud, longitud: ubicacion.longitud, capacidadMinima: String(capacidad), tamanoPagina: '50',
     });

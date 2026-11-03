@@ -711,6 +711,12 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
 
+### 2026-11-03 · backend · Fletes: más de 200 cabezas ya no se recorta a 200
+- `fletes.js` recortaba la "Capacidad mínima" a 200: con 300 buscaba 200 y mostraba fletes que no alcanzan. Ahora, con más de 200
+  (el máximo de una oferta), no consulta y dice que ningún flete lleva tantas cabezas. `fletes-10`.
+- **Probado en Vercel (`dev`, PR #48) por Jeremi con dos cuentas:** Me interesa es de cada persona (marcar en una no oculta nada en la
+  otra), "Elegir este flete" abre la solicitud con el flete marcado, la pestaña "Finalizadas" y el filtro de cabezas (≤ 200).
+
 ### 2026-11-03 · backend · Elegir un flete, fletes que desaparecían al cambiar las cabezas, pestaña "Finalizadas" y prueba de Me interesa
 - **Elegir este flete (pedido del equipo, opción A):** cada fila de "Fletes disponibles" tiene "Elegir este flete". Abre el diálogo
   `#elegir-modal` con las publicaciones ACTIVAS de Me interesa; al escoger una se abre la solicitud de compra de siempre en "El
