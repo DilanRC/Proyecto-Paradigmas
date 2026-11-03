@@ -22,6 +22,7 @@ let editandoId = null;
 let editor = null;
 let disparador = null;
 let turnoCercanos = 0;
+let provinciaGuardada = { clave: '', valor: null };
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -55,7 +56,65 @@ function filaCercana(oferta) {
     const distancia = oferta.distanciaKm == null
         ? 'en tu provincia'
         : `a ${Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 })} km (cubre ${Number(oferta.radioKm)} km)`;
-    return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo || 'Flete')} · hasta ${Number(oferta.capacidad)} cabezas</h3><p>${escapeHtml(formatLocation(oferta.zona))} · ${distancia}</p><p>${escapeHtml(oferta.transportista || '')} · ${escapeHtml(formatPrice(oferta.precio))}</p>${oferta.descripcion ? `<p>${escapeHtml(oferta.descripcion)}</p>` : ''}</div></article>`;
+    const elegir = `<div class="panel-row__actions"><button class="activity-button activity-button--sm" type="button" data-flete-elegir="${Number(oferta.ofertaId)}"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>Elegir este flete</button></div>`;
+    return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo || 'Flete')} · hasta ${Number(oferta.capacidad)} cabezas</h3><p>${escapeHtml(formatLocation(oferta.zona))} · ${distancia}</p><p>${escapeHtml(oferta.transportista || '')} · ${escapeHtml(formatPrice(oferta.precio))}</p>${oferta.descripcion ? `<p>${escapeHtml(oferta.descripcion)}</p>` : ''}</div>${elegir}</article>`;
+}
+
+// ---------- Elegir un flete: se pide junto con una publicación de Me interesa ----------
+
+let cercanas = [];
+let ofertaElegida = null;
+
+function filaPublicacion(publicacion) {
+    return `<article class="panel-row panel-row--media">${miniatura(publicacion.imagenUrl)}<div><h3>${escapeHtml(publicacion.titulo || 'Publicación')}</h3><p>${escapeHtml(formatLocation(publicacion.direccion))} · ${escapeHtml(formatPrice(publicacion.precio))}</p></div><div class="panel-row__actions"><button class="activity-button activity-button--sm" type="button" data-elegir-publicacion="${Number(publicacion.publicacionId)}">Transportar este</button></div></article>`;
+}
+
+let publicacionesInteres = [];
+
+async function abrirElegir(ofertaId, trigger) {
+    ofertaElegida = cercanas.find((oferta) => Number(oferta.ofertaId) === ofertaId) ?? null;
+    if (!ofertaElegida) return;
+    disparador = trigger;
+    const estado = $('#elegir-estado');
+    const lista = $('#elegir-lista');
+    $('#elegir-modal-flete').textContent = `Flete elegido: ${ofertaElegida.vehiculo?.modelo || 'Flete'} · hasta ${Number(ofertaElegida.capacidad)} cabezas`;
+    lista.replaceChildren();
+    estado.hidden = false;
+    estado.textContent = 'Cargando tu lista Me interesa…';
+    openDialog($('#elegir-modal'));
+    try {
+        const respuesta = await request('api/v1/publicaciones/interacciones?tipo=ME_INTERESA&pagina=1&tamanoPagina=100');
+        publicacionesInteres = (respuesta.data?.publicaciones ?? []).filter((publicacion) => publicacion.estado === 'ACTIVO');
+        lista.innerHTML = publicacionesInteres.map(filaPublicacion).join('');
+        estado.hidden = publicacionesInteres.length > 0;
+        if (!publicacionesInteres.length) estado.textContent = 'Todavía no tienes publicaciones disponibles en Me interesa. Marca en Explorar el animal que quieres comprar y vuelve aquí.';
+    } catch (error) {
+        if (error?.status === 401) { endExpiredSession(); return; }
+        estado.textContent = error?.message || 'No pudimos cargar tu lista Me interesa.';
+    }
+}
+
+function cerrarElegir() {
+    closeDialog($('#elegir-modal'));
+    disparador?.focus?.();
+}
+
+async function elegirPublicacion(publicacionId) {
+    const publicacion = publicacionesInteres.find((item) => Number(item.publicacionId) === publicacionId);
+    if (!publicacion || !ofertaElegida) return;
+    closeDialog($('#elegir-modal'));
+    const { abrirSolicitudCompra } = await import('./shared/solicitud-compra.js?v=solicitud-5');
+    abrirSolicitudCompra({
+        publicacionId,
+        titulo: publicacion.titulo || 'Publicación',
+        precio: formatPrice(publicacion.precio),
+        ofertaId: Number(ofertaElegida.ofertaId),
+        aviso: (mensaje) => {
+            const estado = $('#cercanos-estado');
+            estado.hidden = false;
+            estado.textContent = mensaje;
+        },
+    });
 }
 
 async function cargarCercanos() {
@@ -80,14 +139,20 @@ async function cargarCercanos() {
     const consulta = new URLSearchParams({
         latitud: ubicacion.latitud, longitud: ubicacion.longitud, capacidadMinima: String(capacidad), tamanoPagina: '50',
     });
-    // Con la provincia también salen las ofertas que no marcaron punto en el mapa.
-    const provincia = await provinciaDePunto(ubicacion);
+    // Con la provincia también salen las ofertas que no marcaron punto en el mapa. Se pide una vez por punto:
+    // Nominatim limita a 1 consulta por segundo y, si fallaba al cambiar las cabezas, esas ofertas desaparecían.
+    const clave = `${ubicacion.latitud},${ubicacion.longitud}`;
+    if (provinciaGuardada.clave !== clave || !provinciaGuardada.valor) {
+        provinciaGuardada = { clave, valor: await provinciaDePunto(ubicacion) };
+    }
+    const provincia = provinciaGuardada.valor;
     if (turno !== turnoCercanos) return;
     if (provincia) consulta.set('provincia', provincia);
     try {
         const respuesta = await request(`${FLETES_API}?${consulta}`);
         if (turno !== turnoCercanos) return;
         const encontradas = respuesta.data?.ofertas ?? [];
+        cercanas = encontradas;
         lista.innerHTML = encontradas.map(filaCercana).join('');
         cuenta.textContent = encontradas.length ? String(respuesta.data.total ?? encontradas.length) : '';
         estado.hidden = encontradas.length > 0;
@@ -267,6 +332,17 @@ function conectarEventos() {
     });
     $('#cercanos-filtro')?.addEventListener('submit', (event) => event.preventDefault());
     $('#cercanos-ubicacion')?.addEventListener('click', usarMiUbicacion);
+    $('#cercanos-lista')?.addEventListener('click', (event) => {
+        const boton = event.target.closest('[data-flete-elegir]');
+        if (boton) abrirElegir(Number(boton.dataset.fleteElegir), boton);
+    });
+    $('#elegir-lista')?.addEventListener('click', (event) => {
+        const boton = event.target.closest('[data-elegir-publicacion]');
+        if (boton) elegirPublicacion(Number(boton.dataset.elegirPublicacion));
+    });
+    $('#elegir-close')?.addEventListener('click', cerrarElegir);
+    $('#elegir-cancel')?.addEventListener('click', cerrarElegir);
+    $('#elegir-modal')?.addEventListener('cancel', (event) => { event.preventDefault(); cerrarElegir(); });
     window.addEventListener(UBICACION_USUARIO_EVENT, cargarCercanos);
 
     $('#oferta-nueva')?.addEventListener('click', (event) => abrirOferta(null, event.currentTarget));

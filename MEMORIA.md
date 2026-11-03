@@ -252,7 +252,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   registro y del admin de productores) con la provincia que Nominatim da para el punto. Solo la provincia (el pueblo o cantón del mapa puede
   llamarse distinto). Si Nominatim no responde, no bloquea. **No hay validación en el servidor** (habría que llamar a Nominatim desde PHP).
 - `api/v1/fletes` **no devuelve las ofertas de quien consulta** (viven en "Mis ofertas"), igual que Explorar con las publicaciones propias.
-- **Pantalla `/fletes`** (`fletes.js`, `fletes-1`): "Fletes disponibles" (lista las ofertas cercanas a la ubicación del navegador, con filtro de
+- **Pantalla `/fletes`** (`fletes.js`, `fletes-1`; desde el 03/11 cada oferta tiene "Elegir este flete", ver el registro de esa fecha): "Fletes disponibles" (lista las ofertas cercanas a la ubicación del navegador, con filtro de
   capacidad mínima; sin ubicación pide "Usar mi ubicación") y, con Transportista activo, "Mis ofertas" (Publicar, Editar, Pausar/Reactivar).
   Sin vehículo activo no deja publicar y manda a Mi panel. La columna lateral conserva el estado de la actividad; activar Transportista se hace
   en Ajustes → Cómo participo (ya no se manda a `registro/transportista`).
@@ -495,7 +495,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 ### Subastas en tiempo real (DEC-SUBASTA-001)
 - **Qué hay:** un vendedor abre una subasta con un animal `ACTIVO` de su inventario (finca, título, descripción, foto, precio base,
   incremento mínimo y duración de 5 minutos a 30 días). Se ve en Explorar (banda "Subastas en vivo"), en `/subastas` (Activas,
-  Historial, Mis subastas, Donde pujé) y en `/admin/subastas`. Varias subastas abiertas y varias pujas a la vez, sin límite.
+  Finalizadas, Mis subastas, Donde pujé) y en `/admin/subastas`. Varias subastas abiertas y varias pujas a la vez, sin límite.
 - **Esquema de 47 tablas:** `tbsubasta`, `tbsubastapuja`, `tbsubastacomentario` y `tbnotificacion`, en los 4 lugares (migración
   `023subastas.sql`; las siguientes empiezan en **024**). Estado del animal nuevo: `SUBASTA` (`AnimalComercial::ESTADOS_ANIMAL`).
 - **Tiempo real = Supabase Realtime (Broadcast), sin librerías ni servidor propio.** El navegador abre un WebSocket nativo con la
@@ -710,6 +710,26 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-11-03 · backend · Elegir un flete, fletes que desaparecían al cambiar las cabezas, pestaña "Finalizadas" y prueba de Me interesa
+- **Elegir este flete (pedido del equipo, opción A):** cada fila de "Fletes disponibles" tiene "Elegir este flete". Abre el diálogo
+  `#elegir-modal` con las publicaciones ACTIVAS de Me interesa; al escoger una se abre la solicitud de compra de siempre en "El
+  animal con flete" con esa oferta marcada. `abrirSolicitudCompra` ganó la opción `ofertaId` (si el flete no cubre la finca del
+  animal avisa y deja elegir otro; el servidor sigue validando la cobertura). Sin cambios de API ni de esquema. Caché:
+  `solicitud-compra.js?v=solicitud-5` (en `fletes.js`, `explore-interactions.js` `interactions-7` y `me-interesa.js`
+  `interesa-8`), `fletes.js` `fletes-9`; la vista de Fletes carga ahora `solicitud.css`. **Sin probar en el navegador con sesión.**
+  Queda pendiente, si se pide, la disponibilidad por días (opción B: columna nueva en los 4 lugares).
+- **Fletes:** `fletes.js` pedía la provincia a Nominatim en cada cambio de "Capacidad mínima"; Nominatim limita a 1 consulta por
+  segundo y, cuando fallaba, las ofertas sin punto en el mapa (que se emparejan por provincia) dejaban de salir. Ahora la provincia
+  se guarda por punto (`provinciaGuardada`) y solo se vuelve a pedir si cambia la ubicación o si la anterior falló. Además
+  `TransportistaOferta::listarCercanas` trata "Provincia de X" igual que "X".
+- **Subastas:** la pestaña y el filtro admin "Historial" se llaman **Finalizadas** (el valor de la API sigue siendo `HISTORIAL`).
+- **Me interesa:** se revisó el reporte de que una marca ocultaba la publicación a las demás personas. El servidor filtra por la
+  persona de la sesión (`SQL_ME_INTERESA`) y no se reprodujo: ni en MySQL local con tres personas ni en Postgres 16 (esquema de
+  `migrate.php`, `api_publicaciones_test` completo). La sesión vive en `sessionStorage` (una por pestaña), así que tampoco se
+  mezclan cuentas entre pestañas. `api_publicaciones_test` comprueba ahora que las marcas de otra persona y la falta de sesión no
+  ocultan nada. **Sin probar en el despliegue de `dev` con dos cuentas reales:** si se repite, anotar las cuentas y la publicación.
+  `main` (02/09) aún no tiene Me interesa. Ojo: `test_cleanup_productores()` usa `DELETE p FROM …` (solo MySQL) y falla en Postgres.
 
 ### 2026-10-16 · jefersonbustamante · Rol al registrarse y página "Más formas de participar"
 - Ver "Registro y actividades": el alta elige Comprador, Vendedor o Transportista con su formulario, y `/participar`

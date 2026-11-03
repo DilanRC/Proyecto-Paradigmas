@@ -52,7 +52,7 @@
                 <div class="subastas-tools">
                     <div class="subastas-tabs" role="tablist" aria-label="Qué subastas ver">
                         <button type="button" role="tab" aria-selected="true" data-subastas-vista="ACTIVAS">Activas</button>
-                        <button type="button" role="tab" aria-selected="false" data-subastas-vista="HISTORIAL">Historial</button>
+                        <button type="button" role="tab" aria-selected="false" data-subastas-vista="HISTORIAL">Finalizadas</button>
                         <button type="button" role="tab" aria-selected="false" data-subastas-vista="MIAS">Mis subastas</button>
                         <button type="button" role="tab" aria-selected="false" data-subastas-vista="PARTICIPO">Donde pujé</button>
                     </div>

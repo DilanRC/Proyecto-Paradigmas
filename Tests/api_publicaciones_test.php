@@ -320,6 +320,10 @@ try {
     test_same([$terceraId], $explorar(['precioMin' => '600000']), 'Precio mínimo');
     test_same([$guardableId], $explorar(['precioMax' => '500000']), 'Precio máximo inclusivo');
     test_same([], $explorar(['excluirMarcadas' => 'true']), 'excluirMarcadas deja fuera lo que está en Me interesa');
+    test_same(2, $publicador->procesar('GET', ['q' => 'Para guardar', 'excluirMarcadas' => 'true'], [])['body']['data']['total'] ?? null,
+        'Me interesa es de cada persona: las marcas de otra no ocultan nada');
+    test_same(2, test_publicacion_controller()->procesar('GET', ['q' => 'Para guardar', 'excluirMarcadas' => 'true'], [])['body']['data']['total'] ?? null,
+        'Sin sesión excluirMarcadas no oculta nada');
     test_same(422, $ajeno->procesar('GET', ['precioMin' => '9', 'precioMax' => '1'], [])['status'], 'Mínimo mayor que máximo es 422');
     test_same(422, $ajeno->procesar('POST', [], ['consulta' => ['ubicacion' => ['x']]])['status'], 'Ubicación que no es texto es 422');
     test_same(2, $ajeno->procesar('GET', ['q' => 'Para guardar', 'ubicacion' => 'san carlos', 'latitud' => '10', 'longitud' => '-84'], [])['body']['data']['total'] ?? null,
