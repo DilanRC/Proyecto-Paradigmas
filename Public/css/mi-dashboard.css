@@ -1,0 +1,364 @@
+/* Mi dashboard (/mi-dashboard, dashboard-4). Solo variables --tc-* y mezclas color-mix (sin colores nuevos ni
+   degradados decorativos; las rayas de los estados son textura, la segunda señal además del color). Medidas del
+   diseño: contenedor de 1280 px, tarjetas con esquinas de 16 px, 28 px entre secciones y 16 px entre tarjetas. */
+
+.dash { width:min(1280px, calc(100% - 32px)); }
+
+/* ───── Encabezado y control segmentado ───── */
+.dash-cabecera {
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    align-items:flex-end;
+    justify-content:space-between;
+    margin-bottom:20px;
+}
+.dash-cabecera h1 { margin:0 0 6px; font-size:clamp(1.8rem, 4vw, 2.4rem); line-height:1.1; }
+.dash-subtitulo { margin:0; color:var(--tc-text-soft); }
+
+.dash-segmento {
+    display:inline-flex;
+    gap:4px;
+    padding:4px;
+    border:1px solid var(--tc-line);
+    border-radius:12px;
+    background:var(--tc-surface);
+}
+.dash-segmento button {
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+    min-height:40px;
+    padding:0 14px;
+    border:0;
+    border-radius:9px;
+    color:var(--tc-text-soft);
+    background:transparent;
+    font:inherit;
+    font-weight:700;
+    cursor:pointer;
+}
+.dash-segmento button:hover { color:var(--tc-text); }
+.dash-segmento button[aria-selected='true'] { color:var(--tc-bg); background:var(--tc-success); }
+.dash-segmento button[hidden] { display:none; }
+
+/* ───── Tarjeta base, botones y foco ───── */
+.dash-tarjeta {
+    min-width:0;
+    padding:18px;
+    border:1px solid var(--tc-line);
+    border-radius:16px;
+    background:var(--tc-surface);
+}
+
+.dash-boton {
+    display:inline-flex;
+    gap:8px;
+    align-items:center;
+    justify-content:center;
+    min-height:42px;
+    padding:0 16px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:10px;
+    color:var(--tc-text);
+    background:transparent;
+    font:inherit;
+    font-weight:700;
+    white-space:nowrap;
+    cursor:pointer;
+}
+.dash-boton:hover { border-color:var(--tc-text-soft); }
+.dash-boton:disabled { opacity:.6; cursor:wait; }
+.dash-boton--chico { min-height:40px; margin-top:10px; padding:0 12px; font-size:.86rem; }
+
+.dash :is(button, a, select, input, [tabindex]):focus-visible {
+    outline:3px solid color-mix(in srgb, var(--tc-primary) 60%, transparent);
+    outline-offset:2px;
+}
+
+/* ───── Filtros: una tarjeta, una fila que se ajusta ───── */
+.dash-filtros {
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px 14px;
+    align-items:flex-end;
+    margin-bottom:28px;
+}
+.dash-campo { display:grid; flex:1 1 150px; gap:6px; min-width:0; }
+.dash-campo[hidden] { display:none; }
+.dash-campo > span { color:var(--tc-text-soft); font-size:.8rem; font-weight:700; }
+.dash-campo select,
+.dash-campo input {
+    width:100%;
+    min-height:42px;
+    padding:0 12px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:10px;
+    color:var(--tc-text);
+    background:var(--tc-bg);
+    font:inherit;
+}
+.dash-filtros__acciones { display:flex; flex-wrap:wrap; gap:10px; }
+.dash-filtros__acciones [hidden] { display:none; }
+.dash-filtros__nota { flex-basis:100%; color:var(--tc-text-soft); font-size:.82rem; }
+.dash-filtros__nota:empty { display:none; }
+.dash-filtros .field-error { color:var(--tc-danger); }
+
+/* ───── Secciones ───── */
+.dash-contenido { display:grid; gap:28px; transition:opacity .15s; }
+.dash-contenido--cargando { opacity:.55; }
+.dash-seccion__titulo { margin:0 0 14px; font-size:1.15rem; }
+
+/* ───── Resultados del periodo (KPI) ───── */
+.dash-kpis { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:16px; }
+.dash-kpi { display:grid; align-content:start; gap:8px; }
+.dash-kpi--destacado { border-color:color-mix(in srgb, var(--tc-success) 35%, var(--tc-line)); background:var(--tc-success-bg); }
+.dash-kpi__etiqueta { margin:0; color:var(--tc-text-soft); font-size:.88rem; font-weight:700; }
+.dash-kpi__valor { margin:0; color:var(--tc-text); font-size:36px; font-weight:800; line-height:1.1; letter-spacing:-.01em; overflow-wrap:anywhere; }
+.dash-kpi__valor--positivo { color:var(--tc-success); }
+.dash-kpi__detalle { margin:0; color:var(--tc-text-soft); font-size:.86rem; }
+
+.dash-progreso { height:8px; overflow:hidden; border-radius:999px; background:var(--tc-line-strong); }
+.dash-progreso__lleno { height:100%; border-radius:999px; background:var(--tc-success); }
+
+/* ───── Estados: barra segmentada y mini tarjetas ───── */
+.dash-estados { display:grid; gap:16px; }
+.dash-segmentada { display:flex; gap:2px; height:22px; overflow:hidden; border-radius:8px; }
+.dash-segmentada__parte { min-width:6px; cursor:default; }
+.dash-segmentada__parte:hover { filter:brightness(1.12); }
+
+/* Color + textura por estado. Vecinos siempre distintos en textura (lleno / rayas 45° / lleno / rayas 135°). */
+.estado--adjudicada,
+.estado--ganada { background:var(--tc-success); }
+.estado--vivo,
+.estado--ganando {
+    background:repeating-linear-gradient(45deg, var(--tc-success) 0 3px,
+        color-mix(in srgb, var(--tc-success) 40%, var(--tc-surface)) 3px 6px);
+}
+.estado--sin-ofertas,
+.estado--superada { background:var(--tc-warning); }
+.estado--cancelada,
+.estado--perdida {
+    background:repeating-linear-gradient(135deg, var(--tc-neutral-status) 0 3px,
+        color-mix(in srgb, var(--tc-neutral-status) 40%, var(--tc-surface)) 3px 6px);
+}
+.estado--cerca { border:2px solid var(--tc-success); background:transparent; }
+
+.dash-estados__lista { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+.dash-estado {
+    display:grid;
+    gap:6px;
+    min-height:44px;
+    padding:14px;
+    border:1px solid var(--tc-line);
+    border-radius:12px;
+    color:var(--tc-text);
+    background:var(--tc-bg-elevated);
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+}
+.dash-estado:hover { border-color:var(--tc-line-strong); }
+.dash-estado__cabeza { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.dash-estado__nombre { font-weight:700; }
+.dash-estado__numero { font-size:1.6rem; font-weight:800; line-height:1.1; }
+.dash-estado__descripcion { color:var(--tc-text-soft); font-size:.82rem; }
+.dash-muestra { flex:0 0 auto; width:14px; height:14px; border-radius:4px; box-sizing:border-box; }
+.dash-ahora {
+    padding:2px 7px;
+    border:1px solid var(--tc-success);
+    border-radius:999px;
+    color:var(--tc-success);
+    font-size:.68rem;
+    font-weight:800;
+    letter-spacing:.06em;
+}
+.dash-enlace { justify-self:start; min-height:40px; padding:10px 0; color:var(--tc-text); font-weight:700; }
+
+/* ───── Dos gráficos o dos tarjetas lado a lado ───── */
+.dash-dos { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; align-items:start; }
+
+.grafico { display:grid; gap:14px; margin:0; }
+.grafico figcaption { display:grid; gap:4px; }
+.grafico__titulo { margin:0; font-size:1rem; }
+.grafico__ayuda,
+.grafico__vacio { margin:0; color:var(--tc-text-soft); font-size:.84rem; line-height:1.45; }
+.grafico__vacio { font-style:italic; }
+
+/* Columnas por mes con el valor encima de cada una. */
+.grafico-columnas { display:flex; gap:8px; align-items:flex-end; padding-top:4px; overflow-x:auto; }
+.grafico-columnas__columna { display:grid; flex:1 1 0; gap:8px; justify-items:center; min-width:44px; }
+.grafico-columnas__zona {
+    position:relative;
+    display:flex;
+    align-items:flex-end;
+    justify-content:center;
+    width:100%;
+    height:200px;
+    padding-top:26px;
+    border-bottom:1px solid var(--tc-line-strong);
+    cursor:default;
+}
+.grafico-columnas__barra { position:relative; width:min(24px, 60%); border-radius:4px 4px 0 0; background:var(--tc-success); }
+.grafico-columnas__zona:hover .grafico-columnas__barra { filter:brightness(1.12); }
+.grafico-columnas__valor { position:absolute; bottom:calc(100% + 6px); left:50%; color:var(--tc-text); font-size:.78rem; font-weight:700; white-space:nowrap; transform:translateX(-50%); }
+.grafico-columnas__mes { color:var(--tc-text-soft); font-size:.78rem; white-space:nowrap; }
+
+/* Barras horizontales (y divergentes): etiqueta | pista | valor; 16 px de grosor. */
+.grafico-barras { display:grid; gap:12px; }
+.grafico-barras__fila { display:grid; grid-template-columns:minmax(0, 11rem) minmax(0, 1fr) 4.5rem; gap:12px; align-items:center; }
+.grafico-barras__etiqueta { overflow:hidden; color:var(--tc-text); font-size:.86rem; text-overflow:ellipsis; white-space:nowrap; }
+.grafico-barras__valor { color:var(--tc-success); font-size:.86rem; font-weight:800; text-align:right; white-space:nowrap; }
+/* En las divergentes el signo y la dirección ya dicen si es más caro o más barato: el valor va en el color del texto. */
+.grafico-barras__valor--neutro { color:var(--tc-text); }
+.grafico-barras__pista { display:flex; align-items:center; min-height:24px; border-left:1px solid var(--tc-line-strong); }
+.grafico-barras__barra { height:16px; border-radius:0 4px 4px 0; background:var(--tc-success); cursor:default; }
+.grafico-barras__barra:hover { filter:brightness(1.12); }
+
+.grafico-promedio {
+    display:flex;
+    justify-content:space-between;
+    padding-top:12px;
+    border-top:1px solid var(--tc-line);
+    color:var(--tc-text-soft);
+    font-size:.86rem;
+}
+.grafico-promedio strong { color:var(--tc-text); }
+
+.grafico-divergente__guia {
+    display:flex;
+    justify-content:space-between;
+    margin:0 calc(4.5rem + 12px) 0 calc(min(11rem, 30%) + 12px);
+    color:var(--tc-text-soft);
+    font-size:.76rem;
+}
+.grafico-divergente__pista { position:relative; min-height:24px; }
+.grafico-divergente__pista::before {
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:50%;
+    width:1px;
+    background:var(--tc-line-strong);
+    content:'';
+}
+.grafico-divergente__barra { position:absolute; top:4px; height:16px; background:var(--tc-success); cursor:default; }
+.grafico-divergente__barra:hover { filter:brightness(1.12); }
+.grafico-divergente__barra--derecha { left:50%; border-radius:0 4px 4px 0; }
+.grafico-divergente__barra--izquierda { right:50%; border-radius:4px 0 0 4px; }
+
+.grafico__tabla summary { color:var(--tc-text); font-size:.84rem; font-weight:700; cursor:pointer; }
+.grafico__tabla table { width:100%; margin-top:8px; border-collapse:collapse; font-size:.8rem; }
+.grafico__tabla th,
+.grafico__tabla td { padding:6px 8px; border-bottom:1px solid var(--tc-line); text-align:left; }
+.grafico__tabla th { color:var(--tc-text-soft); }
+.grafico__tabla td { color:var(--tc-text); }
+
+.grafico-tooltip {
+    position:fixed;
+    z-index:60;
+    display:grid;
+    gap:2px;
+    max-width:260px;
+    padding:8px 10px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:10px;
+    background:var(--tc-bg-elevated);
+    box-shadow:var(--tc-shadow-soft);
+    pointer-events:none;
+}
+.grafico-tooltip[hidden] { display:none; }
+.grafico-tooltip__fila { display:flex; gap:8px; align-items:baseline; font-size:.8rem; }
+.grafico-tooltip__fila strong { color:var(--tc-text); }
+.grafico-tooltip__fila span { color:var(--tc-text-soft); }
+
+/* ───── Actividad: tarjetas horizontales con ícono ───── */
+.dash-actividad { display:flex; gap:16px; align-items:flex-start; }
+.dash-actividad__icono {
+    display:grid;
+    flex:0 0 auto;
+    width:48px;
+    height:48px;
+    place-items:center;
+    border-radius:12px;
+    color:var(--tc-success);
+    background:var(--tc-success-bg);
+    font-size:1.2rem;
+}
+.dash-actividad__valor { margin:0; color:var(--tc-text); font-size:1.6rem; font-weight:800; line-height:1.15; }
+.dash-actividad__texto { margin:4px 0 0; color:var(--tc-text-soft); font-size:.88rem; }
+
+/* ───── Tus ejemplares: chips + tabla ───── */
+.dash-ejemplares { display:grid; gap:14px; scroll-margin-top:16px; }
+.dash-chips { display:flex; flex-wrap:wrap; gap:8px; }
+.dash-chip {
+    min-height:40px;
+    padding:0 14px;
+    border:1px solid var(--tc-line-strong);
+    border-radius:999px;
+    color:var(--tc-text-soft);
+    background:transparent;
+    font:inherit;
+    font-size:.86rem;
+    font-weight:700;
+    cursor:pointer;
+}
+.dash-chip:hover { color:var(--tc-text); }
+.dash-chip[aria-pressed='true'] { border-color:var(--tc-success); color:var(--tc-text); background:var(--tc-success-bg); }
+
+.dash-tabla { overflow-x:auto; border-radius:12px; }
+.dash-tabla table { width:100%; min-width:640px; border-collapse:collapse; }
+.dash-tabla th {
+    padding:10px 12px;
+    border-bottom:1px solid var(--tc-line-strong);
+    color:var(--tc-text-soft);
+    font-size:.78rem;
+    font-weight:700;
+    text-align:left;
+    white-space:nowrap;
+}
+.dash-tabla td { padding:10px 12px; border-bottom:1px solid var(--tc-line); color:var(--tc-text); font-size:.9rem; vertical-align:middle; }
+.dash-tabla tbody tr:last-child td { border-bottom:0; }
+.dash-tabla__numero { text-align:right !important; white-space:nowrap; }
+.dash-tabla__vacio { color:var(--tc-text-soft) !important; text-align:center; }
+.dash-positivo { color:var(--tc-success) !important; font-weight:800; }
+
+.dash-ejemplar { display:flex; gap:12px; align-items:center; min-height:44px; color:var(--tc-text); text-decoration:none; }
+.dash-ejemplar:hover strong { text-decoration:underline; }
+.dash-ejemplar__textos { display:grid; min-width:0; }
+.dash-ejemplar__textos strong { font-size:.9rem; }
+.dash-ejemplar__textos small { color:var(--tc-text-soft); font-size:.78rem; }
+.dash-foto {
+    display:grid;
+    flex:0 0 44px;
+    width:44px;
+    height:44px;
+    place-items:center;
+    overflow:hidden;
+    border-radius:10px;
+    color:var(--tc-text-soft);
+    background:var(--tc-bg-elevated);
+}
+.dash-foto img { width:100%; height:100%; object-fit:cover; }
+
+.dash-tag { display:inline-flex; gap:8px; align-items:center; font-size:.86rem; white-space:nowrap; }
+
+/* ───── Responsive: en celular todo se apila en una columna ───── */
+@media (max-width:1024px) {
+    .dash-kpis,
+    .dash-estados__lista { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width:720px) {
+    .dash { width:min(100% - 32px, 1280px); }
+    .dash-dos,
+    .dash-kpis,
+    .dash-estados__lista { grid-template-columns:1fr; }
+    .dash-segmento { width:100%; }
+    .dash-segmento button { flex:1; justify-content:center; padding:0 8px; white-space:nowrap; }
+    .dash-segmento button i { display:none; }
+    .dash-filtros__acciones { width:100%; }
+    .dash-filtros__acciones .dash-boton { flex:1; }
+    .grafico-barras__fila { grid-template-columns:minmax(0, 7rem) minmax(0, 1fr) 4rem; gap:8px; }
+    .grafico-divergente__guia { margin:0 calc(4rem + 8px) 0 calc(7rem + 8px); }
+}

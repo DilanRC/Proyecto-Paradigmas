@@ -253,6 +253,170 @@ final class Subasta
         ];
     }
 
+    /**
+     * Dashboard del vendedor: todas sus subastas que cumplen los filtros (DashboardService calcula los indicadores).
+     * $filtros: desde/hasta ('Y-m-d H:i:s' UTC, sobre la fecha de inicio), especieId, tipoId, razaId y provincia (texto).
+     * Sin paginar: un vendedor tiene pocas subastas.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function paraDashboardVendedor(int $productorId, array $filtros): array
+    {
+        return $this->filasDashboard(['s.tbproductorid = :productorId'], ['productorId' => $productorId], $filtros, null);
+    }
+
+    /** Dashboard del comprador: las subastas donde la persona pujó, con su puja más alta (`miPuja`). */
+    public function paraDashboardComprador(int $personaId, array $filtros): array
+    {
+        return $this->filasDashboard(
+            ['EXISTS (SELECT 1 FROM tbsubastapuja pp WHERE pp.tbsubastaid = s.tbsubastaid AND pp.tbpersonaid = :participa)'],
+            ['participa' => $personaId], $filtros, $personaId,
+        );
+    }
+
+    /** Subastas ACTIVAS de otros vendedores (las oportunidades del comprador; la distancia se calcula en PHP). */
+    public function activasDeOtros(int $personaId, array $filtros): array
+    {
+        return $this->filasDashboard(
+            ["s.tbsubastaestado = 'ACTIVA'", 'pr.tbpersonaid <> :yo'], ['yo' => $personaId], $filtros, $personaId,
+        );
+    }
+
+    /**
+     * Precios adjudicados de todas las subastas FINALIZADAS (de cualquier vendedor y fecha): la base de "animales
+     * comparables" del comprador.
+     *
+     * @return array<int,array{especieId:?int,tipoId:?int,razaId:?int,monto:float}>
+     */
+    public function preciosAdjudicados(): array
+    {
+        $sentencia = $this->conexion->prepare(
+            "SELECT a.tbespecieid AS especieid, a.tbanimaltipoid AS tipoid, a.tbrazaid AS razaid, pg.tbsubastapujamonto AS monto
+             FROM tbsubasta s
+             INNER JOIN tbanimal a ON a.tbanimalid = s.tbanimalid
+             INNER JOIN tbsubastapuja pg ON pg.tbsubastapujaid = s.tbsubastapujaganadoraid
+             WHERE s.tbsubastaestado = 'FINALIZADA'"
+        );
+        $sentencia->execute();
+        $entero = static fn (mixed $v): ?int => $v === null ? null : (int) $v;
+
+        return array_map(static fn (array $f): array => [
+            'especieId' => $entero($f['especieid']), 'tipoId' => $entero($f['tipoid']), 'razaId' => $entero($f['razaid']),
+            'monto' => (float) $f['monto'],
+        ], $sentencia->fetchAll());
+    }
+
+    /**
+     * Filas de los dashboards. `punto` (latitud/longitud de la finca) es solo para calcular en PHP: el controlador lo
+     * quita antes de responder, porque las coordenadas de una finca no se exponen al navegador.
+     */
+    private function filasDashboard(array $condiciones, array $parametros, array $filtros, ?int $personaId): array
+    {
+        $this->filtrosDashboard($filtros, $condiciones, $parametros);
+        $miPuja = 'NULL';
+        if ($personaId !== null) {
+            $miPuja = '(SELECT MAX(pm.tbsubastapujamonto) FROM tbsubastapuja pm WHERE pm.tbsubastaid = s.tbsubastaid AND pm.tbpersonaid = :mipersona)';
+            $parametros['mipersona'] = $personaId;
+        }
+        $sentencia = $this->conexion->prepare(
+            "SELECT s.tbsubastaid AS subastaid, s.tbsubastatitulo AS titulo, s.tbsubastaimagenurl AS imagenurl,
+                    s.tbsubastapreciobase AS preciobase, s.tbsubastafechainicio AS inicio, s.tbsubastafechafin AS fin,
+                    s.tbsubastafechacierre AS cierre, s.tbsubastaestado AS estado,
+                    a.tbanimalraza AS raza, es.tbespecienombre AS especie, ti.tbanimaltiponombre AS tipo,
+                    a.tbespecieid AS especieid, a.tbanimaltipoid AS tipoid, a.tbrazaid AS razaid,
+                    d.tbdireccionprovincia AS provincia, d.tbdireccioncanton AS canton,
+                    d.tbdireccionlatitud AS latitud, d.tbdireccionlongitud AS longitud,
+                    (SELECT pg.tbsubastapujamonto FROM tbsubastapuja pg WHERE pg.tbsubastapujaid = s.tbsubastapujaganadoraid) AS montoganador,
+                    (SELECT pg.tbpersonaid FROM tbsubastapuja pg WHERE pg.tbsubastapujaid = s.tbsubastapujaganadoraid) AS ganadorid,
+                    (SELECT MAX(p.tbsubastapujamonto) FROM tbsubastapuja p WHERE p.tbsubastaid = s.tbsubastaid) AS maximo,
+                    (SELECT COUNT(*) FROM tbsubastapuja p WHERE p.tbsubastaid = s.tbsubastaid) AS pujas,
+                    {$miPuja} AS mipuja
+             FROM tbsubasta s
+             INNER JOIN tbproductor pr ON pr.tbproductorid = s.tbproductorid
+             INNER JOIN tbanimal a ON a.tbanimalid = s.tbanimalid
+             LEFT JOIN tbespecie es ON es.tbespecieid = a.tbespecieid
+             LEFT JOIN tbanimaltipo ti ON ti.tbanimaltipoid = a.tbanimaltipoid
+             LEFT JOIN tbdireccion d ON d.tbdireccionid = (SELECT MAX(fd.tbdireccionid) FROM tbfincadireccion fd
+                                                           WHERE fd.tbfincaid = s.tbfincaid)
+             WHERE " . implode(' AND ', $condiciones) . '
+             ORDER BY s.tbsubastafechainicio DESC, s.tbsubastaid DESC'
+        );
+        $sentencia->execute($parametros);
+        $numero = static fn (mixed $v): ?float => $v === null ? null : (float) $v;
+        $entero = static fn (mixed $v): ?int => $v === null ? null : (int) $v;
+
+        return array_map(static fn (array $f): array => [
+            'subastaId' => (int) $f['subastaid'],
+            'titulo' => $f['titulo'],
+            'imagenUrl' => $f['imagenurl'],
+            'precioBase' => (float) $f['preciobase'],
+            'fechaInicio' => self::iso($f['inicio']),
+            'fechaFin' => self::iso($f['fin']),
+            'fechaCierre' => self::iso($f['cierre']),
+            'estado' => $f['estado'],
+            'montoAdjudicado' => $f['estado'] === 'FINALIZADA' ? $numero($f['montoganador'] ?? $f['maximo']) : null,
+            'ganadorPersonaId' => $entero($f['ganadorid']),
+            'precioActual' => $numero($f['maximo']),
+            'pujasTotal' => (int) $f['pujas'],
+            'miPuja' => $numero($f['mipuja']),
+            'animal' => [
+                'especie' => $f['especie'], 'tipo' => $f['tipo'], 'raza' => $f['raza'],
+                'especieId' => $entero($f['especieid']), 'tipoId' => $entero($f['tipoid']), 'razaId' => $entero($f['razaid']),
+            ],
+            'zona' => ['provincia' => $f['provincia'], 'canton' => $f['canton']],
+            'punto' => $f['latitud'] === null || $f['longitud'] === null ? null
+                : ['latitud' => (float) $f['latitud'], 'longitud' => (float) $f['longitud']],
+        ], $sentencia->fetchAll());
+    }
+
+    /**
+     * Pares (subasta, persona) distintos de quienes pujaron en esas subastas. Toda puja guardada es válida: el
+     * controlador rechaza las que no cumplen el mínimo antes de registrarlas.
+     *
+     * @param int[] $subastaIds
+     * @return array<int,array{subastaId:int,personaId:int}>
+     */
+    public function postores(array $subastaIds): array
+    {
+        $subastaIds = array_values(array_unique(array_map('intval', $subastaIds)));
+        if ($subastaIds === []) return [];
+        $marcas = implode(', ', array_fill(0, count($subastaIds), '?'));
+        $sentencia = $this->conexion->prepare(
+            "SELECT DISTINCT tbsubastaid AS subastaid, tbpersonaid AS personaid FROM tbsubastapuja WHERE tbsubastaid IN ({$marcas})"
+        );
+        $sentencia->execute($subastaIds);
+
+        return array_map(static fn (array $f): array => ['subastaId' => (int) $f['subastaid'], 'personaId' => (int) $f['personaid']],
+            $sentencia->fetchAll());
+    }
+
+    /** Agrega a la consulta los filtros comunes de los dashboards (alias s = subasta, a = animal, d = dirección de la finca). */
+    private function filtrosDashboard(array $filtros, array &$condiciones, array &$parametros): void
+    {
+        if (($filtros['desde'] ?? null) !== null) {
+            $condiciones[] = 's.tbsubastafechainicio >= :desde';
+            $parametros['desde'] = $filtros['desde'];
+        }
+        if (($filtros['hasta'] ?? null) !== null) {
+            $condiciones[] = 's.tbsubastafechainicio < :hasta';
+            $parametros['hasta'] = $filtros['hasta'];
+        }
+        foreach (['especieId' => 'a.tbespecieid', 'tipoId' => 'a.tbanimaltipoid', 'razaId' => 'a.tbrazaid'] as $clave => $columna) {
+            if (($filtros[$clave] ?? null) !== null) {
+                $condiciones[] = "{$columna} = :{$clave}";
+                $parametros[$clave] = (int) $filtros[$clave];
+            }
+        }
+        if (($filtros['provincia'] ?? '') !== '') {
+            // Sin tildes ni mayúsculas en los dos lados ("San Jose" = "San José"; "Provincia de X" también coincide).
+            $tildes = ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u'];
+            $columna = 'LOWER(d.tbdireccionprovincia)';
+            foreach ($tildes as $con => $sin) $columna = "REPLACE({$columna}, '{$con}', '{$sin}')";
+            $condiciones[] = "{$columna} LIKE :provincia";
+            $parametros['provincia'] = '%' . strtr(mb_strtolower(trim((string) $filtros['provincia']), 'UTF-8'), $tildes) . '%';
+        }
+    }
+
     /** 'Y-m-d H:i:s' (UTC) → ISO 8601 con Z, para que el navegador lo lea sin adivinar la zona. */
     public static function iso(mixed $fecha): ?string
     {

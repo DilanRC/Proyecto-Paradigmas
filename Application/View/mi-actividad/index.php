@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-18"></script>
+    <script type="module" src="js/public-ui.js?v=public-19"></script>
     <script type="module" src="js/mi-actividad.js?v=panel-20"></script>
 </head>
 <body class="public-home activity-page">

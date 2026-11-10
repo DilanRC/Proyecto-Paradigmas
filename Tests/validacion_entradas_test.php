@@ -15,6 +15,7 @@ foreach (['Vehiculo', 'CompraSolicitud', 'TransportistaOferta', 'PagoMetodo', 'P
 require_once dirname(__DIR__) . '/Application/Service/RegistroPublicoService.php';
 foreach (['Notificacion', 'Subasta'] as $modelo) require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
 require_once dirname(__DIR__) . '/Application/Controller/SubastasController.php';
+require_once dirname(__DIR__) . '/Application/Controller/MiDashboardController.php';
 foreach (['MiVehiculosController', 'MiOfertasController', 'AdminPublicacionController', 'AdminDocumentoController', 'MiPerfilController', 'MiFincasController', 'SolicitudesCompraController', 'PublicacionInteraccionController',
           'FletesController', 'RegistroPublicoController'] as $controlador) {
     require_once dirname(__DIR__) . "/Application/Controller/{$controlador}.php";
@@ -171,6 +172,14 @@ try {
     $atacar('Explorar', fn (array $c): array => $publicaciones->procesar('GET', $c, []), [],
         ['q', 'estado', 'pagina', 'tamanoPagina', 'latitud', 'longitud', 'ubicacion', 'precioMin', 'precioMax'],
         ['pagina', 'tamanoPagina', 'latitud', 'longitud', 'precioMin', 'precioMax']);
+
+    // Mi dashboard (DEC-DASHBOARD-001): los filtros se validan antes de mirar los roles.
+    $dashboard = new Application\Controller\MiDashboardController($db, $actor, new Application\Service\TiempoReal(static function (): void {}));
+    foreach (['VENDEDOR', 'COMPRADOR'] as $rolDashboard) {
+        $atacar("Mi dashboard ({$rolDashboard})", fn (array $c): array => $dashboard->procesar('GET', $c), ['rol' => $rolDashboard],
+            ['rol', 'desde', 'hasta', 'especieId', 'tipoId', 'razaId', 'provincia', 'latitud', 'longitud', 'radioKm'],
+            ['radioKm', 'latitud', 'longitud']);
+    }
 
     // Registro público: cada dato de la persona, uno a la vez.
     $correo = strtolower(test_token('val-reg')) . '@example.test';

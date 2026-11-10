@@ -49,6 +49,7 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 | Cierre de subastas vencidas | `Application/Service/SubastaCierreService.php` |
 | Campana de avisos (encabezado) | `createBell()` en `Public/js/public-ui.js` + API `Public/api/notificaciones.php` |
 | Admin: subastas (`/admin/subastas`, solo lectura) | `Application/View/adminsubastas/` + `Public/js/adminsubastas.js` + API `Public/api/admin-subastas.php` |
+| Mi dashboard (`/mi-dashboard`, indicadores de subastas por rol) | `Application/View/mi-dashboard/` + `Public/js/mi-dashboard.js` + `Public/css/mi-dashboard.css` + API `Public/api/mi-dashboard.php` (`MiDashboardController`, `DashboardService`) |
 
 ## 3. Decisiones vigentes
 
@@ -528,6 +529,42 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   `tbcompra`/`tbventa` al cerrar) → notificación → bitácora → transacción (Cuidados #12).
 - **Admin:** cadena de caché subida a **`auth-gate-11`, `admin-13`, `login.js?v=front-15`** y la versión del script de las 13 vistas admin.
 
+### Mi dashboard (DEC-DASHBOARD-001)
+- **Pedido:** un dashboard por rol (vendedor y comprador) sobre las subastas, cada indicador con la foto del ejemplar. Quien tiene
+  varios roles ve una pestaña por rol y cada dashboard es **igual** al de alguien con un solo rol. Fase 1 (vendedor) y fase 2
+  (comprador) hechas el 09/11. Con un solo rol se abre directo el que tiene (`rolDisponible` en `mi-dashboard.js`).
+- Página `/mi-dashboard` (enlace "Mi dashboard" en el menú del avatar y en el pie). Sin sesión → `entrar?next=mi-dashboard`.
+- **API `GET api/v1/mi-dashboard?rol=VENDEDOR|COMPRADOR&desde&hasta&especieId&tipoId&razaId&provincia`** (+ `latitud`, `longitud`,
+  `radioKm` 1-500, por defecto 50, para el comprador; sesión; solo lectura). Devuelve `roles` (`vendedor` = tiene Productor,
+  `comprador` = tiene Comprador), `indicadores` y `subastas` (con `imagenUrl`). Cada indicador trae `ids` de las subastas que lo
+  forman (la pantalla pinta sus fotos). Rol que no tiene → 409 (con `roles`); parámetro desconocido o inválido → 422 (los filtros se
+  validan antes que los roles; está en `validacion_entradas_test`). Antes de contar llama a `SubastaCierreService::cerrarVencidas()`.
+- **Privacidad:** la respuesta **no trae coordenadas de las fincas ni el id de quien ganó** (`MiDashboardController::publica` quita
+  `punto` y `ganadorPersonaId`); el comprador solo ve `distanciaKm`, `soyGanador` y `voyGanando`. La ubicación del navegador se pide
+  solo al tocar "Usar mi ubicación", vive en memoria y no se guarda.
+- **Definiciones del comprador (`DashboardService::indicadoresComprador`):** pujas activas = `ACTIVA` donde pujó; superadas = de esas,
+  donde la más alta no es la suya; adjudicación = ganadas / `FINALIZADA` donde pujó; monto adjudicado = suma de las ganadas;
+  oportunidades = `ACTIVA` de otros vendedores, donde no puja, con la finca **con punto en el mapa** dentro del radio (sin ubicación:
+  `requiereUbicacion`); comparación = promedio de (precio actual − promedio histórico) / promedio histórico en sus activas y en las
+  oportunidades; costo estimado = su puja + el flete `ACTIVA` **con precio** más barato que cubre la finca
+  (`TransportistaOferta::listarCercanas`; los "a convenir" no cuentan y la tarjeta avisa cuántas quedaron sin flete).
+- **"Animales comparables"** (`promedioComparable`): precios adjudicados de **todas** las subastas `FINALIZADA` (de cualquier vendedor
+  y fecha, sin los filtros), del grupo más parecido con datos: mismo tipo y raza → mismo tipo → misma especie. La pantalla dice cuál
+  usó. No incluye las ventas por solicitud de compra (`tbventa` sin subasta); si se quiere, sumarlas en `Subasta::preciosAdjudicados`.
+- **Filtros:** `desde`/`hasta` son días de **Costa Rica**, ambos inclusive, sobre la **fecha de inicio** de la subasta. "Tipo de
+  ganado" = especie, "Categoría" = tipo (decisión del 06/10), raza y "Ubicación" = provincia de la finca (sin tildes ni mayúsculas).
+- **Definiciones (vendedor, `DashboardService`):** cerradas = `FINALIZADA` + `DESIERTA` (son las "finalizadas"; las `CANCELADA` no
+  cuentan); exitosas = adjudicadas / cerradas × 100; precio promedio = suma adjudicada / animales adjudicados (una subasta = un
+  animal); incremento = promedio de (final − base) / base; compradores = personas distintas que pujaron (toda puja guardada ya es
+  válida); tiempo de adjudicación = promedio de cierre − inicio de las adjudicadas; sin ofertas = `DESIERTA`. Sin base → `null` ("—"),
+  nunca un 0 inventado.
+- El cálculo se hace en PHP sobre la lista del vendedor (`Subasta::paraDashboardVendedor`, sin paginar): mismo resultado en MySQL y
+  Postgres. Si un vendedor llega a tener miles de subastas, pasar a agregados en SQL.
+- **Datos de prueba:** `php Tools/seed-dashboard-demo.php [--correo=…]`: la persona indicada (o `DMDASH01`) subasta 8 animales en
+  todos los estados y además puja en 5 subastas de un segundo vendedor (`DMDASH02`, finca en San Carlos 10.3239, -84.4309) y en 1 de un tercero
+  (`DMDASH03`, San José centro, 9.9281, -84.0907); entre los dos hay 4 subastas abiertas en las que no puja (oportunidades); un transportista `DMDASH21` ofrece flete a ₡85.000. Compradores `DMDASH1x`, marca `[demo-dashboard]`, fotos
+  de Wikimedia; `--limpiar` borra solo eso. Solo base local.
+
 ### Cambio de correo consistente (DEC-CORREO-001)
 - Tabla `tbpersonacorreocambio` (esquema de **48 tablas**, migración `026personacorreocambio.sql`; **las siguientes empiezan en
   `027`**): persona, `sub` de la cuenta de Supabase, correo anterior y nuevo, estado `PENDIENTE|APLICADO|CANCELADO` y fechas.
@@ -688,7 +725,7 @@ están incluidos ahí.
 
 ## 6. Estado de pruebas
 
-**Frontend: pasan todas (436/436 el 12/10/2026, rama `fix/xampp-linux-local`).** Las 4 que fallaban desde antes ya
+**Frontend: pasan todas (452/452 el 09/11/2026, rama `feat/dashboards`; 436/436 el 12/10).** Las 4 que fallaban desde antes ya
 no fallan. **PHP: 80/80 archivos `Tests/*_test.php` en XAMPP real** (PHP 8.0.30, MariaDB 10.4.32) y 92/92 contando los
 `*_eval.php`, `*_gate.php`, `Database/Tests/*.php` y `services/supabase-database`. Cualquier fallo es una regresión, salvo las
 excepciones de entorno de abajo.
@@ -710,6 +747,70 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-11-09 · feat/dashboards · Mi dashboard rediseñado (prompt de diseño de Jeferson)
+- Jeferson pidió rehacer la página con un prompt de diseño (estructura, medidas y colores propios). **Decidió usar los colores y
+  fuentes actuales** (tokens `--tc-*`, tema claro y oscuro), no los del prompt; de ese prompt se tomó la estructura y las medidas:
+  contenedor de 1280 px, tarjetas con esquinas de 16 px, 28 px entre secciones, 16 px entre tarjetas y KPI de 36 px.
+- Estructura, igual en los dos roles: encabezado con control segmentado (Como vendedor / Como comprador) → filtros en una tarjeta →
+  "Resultados del periodo" (4 KPI; el primero destacado y la tasa con barra de progreso) → estados en una **barra segmentada** con 4
+  mini tarjetas que filtran la tabla ("AHORA" en los vivos) → dos gráficos → dos tarjetas de actividad → "Tus ejemplares", **una sola
+  tabla** con foto de 44 px y chips de filtro (reemplaza las miniaturas repetidas; en celular se desplaza dentro de su caja).
+- **Colores de los estados:** con la paleta del sitio ningún juego de 4 tonos pasa la prueba de daltonismo (`validate_palette.js`:
+  verde junto a ámbar, coral o rosado queda en ΔE 2-3). Por eso los vecinos se distinguen también por **textura**: lleno verde
+  (adjudicada/ganada), verde con rayas a 45° (en vivo/vas ganando), ámbar lleno (sin ofertas/te superaron) y gris con rayas a 135°
+  (cancelada/perdida). Cada estado lleva siempre nombre y número. No hay azul en la paleta: "En vivo" no es azul.
+- En las barras divergentes del comprador el valor va en el color del texto (más caro no es "bueno"); el verde queda para lo favorable.
+- Archivos: vista `mi-dashboard/` (sin `subastas.css`), `mi-dashboard.js` reescrito (`claveEstado`, `contarEstados`, `ESTADOS`,
+  `textoPeriodo`), `dashboard-graficos.js` (`barraSegmentada`, `montoCorto`, promedio al final de las barras; `graficos-2`),
+  `mi-dashboard.css` reescrito. Caché `dashboard-4`. API sin cambios.
+- Revisado en Chrome con la cuenta de Jeferson (persona 9): escritorio, 360 px y tema claro. Frontend 452/452.
+- **Antes de subir a `dev`:** las consultas del dashboard (`paraDashboardVendedor`, `paraDashboardComprador`, `activasDeOtros`,
+  `preciosAdjudicados`, `postores`) se corrieron en un **Postgres 16 desechable con `schema.sql`**, con datos y todos los filtros
+  (la provincia "san jose" encuentra "San José"): sin errores y con los montos correctos. PHP: 83/85 `Tests/*_test.php`; fallan
+  `vercel_prune_registry_test` (conocida) y `entrega_xampp_test` porque el contenedor no tiene `git` (`git ls-files`), no por este
+  cambio. **Sigue sin probarse con una sesión real de Supabase en Vercel.**
+
+### 2026-11-09 · feat/dashboards · Gráficos en Mi dashboard y datos de prueba en la cuenta de Jeferson
+- Pedido: "deben aparecer gráficos, no solo números". Sección "Resumen en gráficos" **arriba** de las tarjetas, en el módulo nuevo
+  `Public/js/dashboard-graficos.js` (`graficos-1`; HTML y CSS, sin librerías). Vendedor: subastas por estado, monto vendido por mes y
+  cuánto subió cada subasta. Comprador: cómo van tus pujas, monto comprado por mes, precio actual frente al promedio (barras
+  divergentes desde 0) y costo estimado por subasta. Se calculan en el navegador con la misma respuesta de la API (sin cambios de API).
+- **Color:** un solo tono de datos, `--tc-success` (no hay colores nuevos). Se probó un "antes → después" con gris + verde y el
+  validador de paleta lo rechazó (ΔE 12,7 con visión normal, mínimo 15), así que la dirección de las divergentes la dan la posición y
+  el signo. Cada gráfico trae tooltip con puntero **y teclado** y "Ver como tabla".
+- Caché: `mi-dashboard.js` y `.css` → `dashboard-3`.
+- **Datos:** `seed-dashboard-demo.php` suma un tercer vendedor `DMDASH03` en San José centro (9.9281, -84.0907) para que haya
+  oportunidades cerca en San José y en San Carlos. Se cargó con `--correo=` en la cuenta local de Jeferson (persona 9, finca en Aguas
+  Zarcas **sin punto en el mapa**): 18 subastas.
+- Revisado en Chrome con esos datos (escritorio y 375 px). Frontend 449/449.
+
+### 2026-11-09 · feat/dashboards · Mi dashboard, fase 2: dashboard del comprador
+- Pestaña "Como comprador" con sus 7 indicadores, radio y "Usar mi ubicación" (ver "Mi dashboard (DEC-DASHBOARD-001)"). Sin cambios
+  de esquema.
+- `Subasta`: `paraDashboardVendedor` pasó a usar `filasDashboard` (consulta común con ids de catálogo, punto de la finca y `miPuja`);
+  nuevos `paraDashboardComprador`, `activasDeOtros` y `preciosAdjudicados`. `DashboardService`: `indicadoresComprador` y
+  `promedioComparable`. `MiDashboardController` acepta `COMPRADOR`, `latitud`, `longitud` y `radioKm`.
+- `Public/api/mi-dashboard.php` carga además `Direccion` y `TransportistaOferta` (lo exige `api_requires_test`).
+- Caché: `mi-dashboard.js` y `.css` → `dashboard-2`.
+- Pruebas: `dashboard_service_test` (comprador), nueva `Tests/frontend/mi_dashboard.test.mjs`, `validacion_entradas_test` ataca los 10
+  filtros con los dos roles. Frontend 447/447 y las 4 sueltas; PHP: `subastas_test`, `api_requires_test`, `validacion_entradas_test`,
+  `sql_alias_minuscula_test`, `bitacora_bloqueo_test`, `controladores_sin_sql_test` y `runtime_compatibility_test` en verde.
+- Revisado en Chrome con los datos del semillero y una página temporal que simulaba la sesión y la ubicación (borrada): escritorio,
+  375 px (sin scroll horizontal) y tema claro. **Sin probar con una sesión real de Supabase** ni en Postgres.
+
+### 2026-11-09 · feat/dashboards · Mi dashboard, fase 1: dashboard del vendedor
+- Ver "Mi dashboard (DEC-DASHBOARD-001)". Sin cambios de esquema. Archivos nuevos: `MiDashboardController`, `DashboardService`,
+  `Public/api/mi-dashboard.php`, `Public/mi-dashboard.php`, vista `mi-dashboard/`, `mi-dashboard.js` y `.css` (`dashboard-1`),
+  `Tests/dashboard_service_test.php` y `Tools/seed-dashboard-demo.php`. `Subasta` ganó `paraDashboardVendedor` y `postores`.
+- Rutas nuevas en `Public/.htaccess`: `mi-dashboard` y `api/v1/mi-dashboard`.
+- `public-ui.js` suma "Mi dashboard" al menú del avatar: **`public-19`** en las 9 vistas públicas y en `carrito.test.mjs`.
+- Probado: `dashboard_service_test`, `subastas_test`, `sql_alias_minuscula_test`, `bitacora_bloqueo_test`, frontend 438/438 y las
+  4 pruebas sueltas de frontend. Revisado en Chrome con datos reales del semillero (escritorio y 375 px, sin scroll horizontal),
+  con una página temporal que simulaba la sesión (ya borrada). **Sin probar con una sesión real de Supabase** ni en Postgres.
+- Cuidado: en este equipo el puerto 8080 estaba ocupado; se levantó en 8082 con un `compose` de reemplazo fuera del repo.
+  Al clonar en Windows con `core.autocrlf=true` volvieron los CRLF de Cuidados #4 (`base.css`, `api.js`, `public-ui.js`,
+  `documentos.js`, `icons.css`, `admin-sidebar-collapse.css`): se normalizaron en la copia local.
 
 ### 2026-11-03 · backend · Fletes: más de 200 cabezas ya no se recorta a 200
 - `fletes.js` recortaba la "Capacidad mínima" a 200: con 300 buscaba 200 y mostraba fletes que no alcanzan. Ahora, con más de 200
