@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <script type="module" src="js/catalogos.js?v=catalogos-3"></script>
+    <script type="module" src="js/catalogos.js?v=catalogos-4"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel">

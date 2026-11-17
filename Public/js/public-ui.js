@@ -1,10 +1,7 @@
 import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
-import { readAuthSession, getAccessToken } from './shared/supabase-auth.js';
-import { readPublicProfile } from './shared/public-profile.js';
-import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-12';
-
-const SESSION_KEY = 'tindercows:login';
-const PROFILE_KEY = 'tindercows:profile';
+import { readAuthSession, getAccessToken } from './shared/supabase-auth.js?v=session-4';
+import { publicProfileForSession } from './shared/public-profile.js?v=profile-2';
+import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-14';
 
 function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
@@ -13,10 +10,6 @@ function ensureProductStyles() {
     link.href = 'css/public-product.css?v=product-10';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
-}
-
-function readStorage(key) {
-    try { return JSON.parse(sessionStorage.getItem(key) || 'null'); } catch { return null; }
 }
 
 function readSession() { return readAuthSession(); }
@@ -317,6 +310,15 @@ function hideAnonymousLinks() {
     document.querySelectorAll('.public-header [data-public-search]').forEach((buscar) => buscar.remove());
 }
 
+/** El pie también debe reflejar la cuenta actual, igual que el menú del encabezado. */
+function synchronizeFooterAccountLink(session) {
+    if (session?.authenticated !== true) return;
+    document.querySelectorAll('.public-footer a[href="entrar"]').forEach((link) => {
+        link.href = 'mi-actividad';
+        link.textContent = 'Mi panel';
+    });
+}
+
 /** Enlaces y búsquedas hacia páginas privadas: sin sesión, primero Entrar. */
 function initializeAnonymousGate() {
     document.addEventListener('click', (event) => {
@@ -340,6 +342,7 @@ function initializeAnonymousGate() {
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
     const session = readSession();
+    synchronizeFooterAccountLink(session);
     if (session?.authenticated === true) {
         addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
         addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
@@ -358,7 +361,7 @@ function enhancePublicNavigation() {
     if (!actions || !login) return;
 
     if (session?.authenticated === true) {
-        const menu = createAccountMenu(actions, session, readPublicProfile());
+        const menu = createAccountMenu(actions, session, publicProfileForSession(session));
         void resolveAdminLink(menu);
         return;
     }
@@ -382,15 +385,12 @@ function initializeBusinessActionGate() {
         const action = button.dataset.exploreAction;
         if (!['Me interesa', 'Contactar'].includes(action)) return;
 
-        const session = readStorage(SESSION_KEY);
-        const profile = readStorage(PROFILE_KEY);
+        const session = readSession();
         let destination = null;
 
         if (!session?.authenticated) {
             const id = Number(button.closest('.explore-card')?.dataset.publicacionId);
             destination = `entrar?next=${encodeURIComponent(Number.isInteger(id) && id > 0 ? `explorar?publicacion=${id}` : 'explorar')}`;
-        } else if (!profile?.persona) {
-            destination = 'registro?next=explorar';
         }
 
         if (!destination) return;

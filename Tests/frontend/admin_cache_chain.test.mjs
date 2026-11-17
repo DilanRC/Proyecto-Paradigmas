@@ -2,7 +2,8 @@
 // un número de versión, exige que toda la cadena use la misma: si alguien sube
 // auth-gate y olvida un módulo, esa pantalla queda en blanco o sin ícono.
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import test from 'node:test';
 
 const read = (ruta) => readFileSync(ruta, 'utf8');
@@ -23,6 +24,28 @@ test('todos los módulos admin importan la misma api.js', () => {
         assert.ok(read(`Public/js/${modulo}.js`).includes(`from './shared/api.js?v=${versionAuthGate}'`),
             `${modulo}.js debe importar shared/api.js?v=${versionAuthGate}`);
     }
+});
+
+test('todos los consumidores del API versionan la misma URL', () => {
+    const modules = [];
+    const visit = (directory) => {
+        for (const entry of readdirSync(directory, { withFileTypes: true })) {
+            const path = join(directory, entry.name);
+            if (entry.isDirectory()) visit(path);
+            else if (entry.isFile() && entry.name.endsWith('.js')) modules.push(path);
+        }
+    };
+    visit('Public/js');
+
+    let consumers = 0;
+    for (const path of modules) {
+        const source = read(path);
+        for (const [, imported] of source.matchAll(/(?:from\s*|import\s*)'([^']*(?:shared\/)?api\.js(?:\?v=[^']*)?)'/g)) {
+            assert.equal(imported.split('/').pop(), `api.js?v=${versionAuthGate}`, `${path} debe invalidar api.js`);
+            consumers++;
+        }
+    }
+    assert.ok(consumers > 0, 'deben encontrarse consumidores del API');
 });
 
 test('admin-ui y login usan la misma versión de auth-gate, y admin-ui la de su CSS', () => {
@@ -72,5 +95,5 @@ test('formularios y modales reutilizan una URL completa para cada módulo compar
         }
         assert.equal(urls.size, 1, `${module} se instancia desde una única URL versionada`);
     }
-    assert.match(read('Public/js/mi-actividad.js'), /mis-animales\.js\?v=animales-8/);
+    assert.match(read('Public/js/mi-actividad.js'), /mis-animales\.js\?v=animales-9/);
 });

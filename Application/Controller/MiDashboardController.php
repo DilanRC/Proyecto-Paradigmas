@@ -26,7 +26,8 @@ use DateTimeZone;
 use PDO;
 
 /**
- * Dashboards de subastas de la persona autenticada (DEC-DASHBOARD-001). Solo lectura.
+ * Dashboards de subastas de la persona autenticada (DEC-DASHBOARD-001). La consulta de una actividad válida cierra
+ * subastas vencidas antes de calcular los indicadores, porque este proyecto aún no tiene un proceso programado.
  *  GET ?rol=VENDEDOR|COMPRADOR&desde=AAAA-MM-DD&hasta=AAAA-MM-DD&especieId&tipoId&razaId&provincia
  *      (COMPRADOR además: latitud, longitud y radioKm para las oportunidades cercanas)
  * Responde `roles` (qué dashboards puede ver: vendedor si tiene Productor, comprador si tiene Comprador) y, para el rol
@@ -61,6 +62,11 @@ final class MiDashboardController
                 'vendedor' => $productor !== null,
                 'comprador' => (new Comprador($this->conexion))->buscarPorPersona($personaId) !== null,
             ];
+            $tieneRol = $filtros['rol'] === 'VENDEDOR' ? $roles['vendedor'] : $roles['comprador'];
+            if (!$tieneRol) {
+                $actividad = $filtros['rol'] === 'VENDEDOR' ? 'Vendedor' : 'Comprador';
+                throw new HttpException("Activa la actividad {$actividad} para ver este dashboard.", 409, ['roles' => $roles]);
+            }
             // Los estados deben estar al día antes de contarlos (no hay tarea programada que cierre las vencidas).
             (new SubastaCierreService($this->conexion, $this->tiempoReal ?? new TiempoReal()))->cerrarVencidas();
 
@@ -156,9 +162,10 @@ final class MiDashboardController
         $punto = $subasta['punto'];
         $provincia = $subasta['zona']['provincia'] ?? null;
         if ($punto === null && ($provincia ?? '') === '') return null;
-        $cercanas = $ofertas->listarCercanas($punto['latitud'] ?? null, $punto['longitud'] ?? null, 1, 1, 50, $personaId, false, $provincia);
-        $precios = array_filter(array_column($cercanas['ofertas'], 'precio'), static fn (mixed $p): bool => $p !== null);
-        return $precios === [] ? null : (float) min($precios);
+        // listarCercanas ya ordena y pagina; pedir 1 devolvía solo la más próxima, no necesariamente la más barata.
+        $cercanas = $ofertas->listarCercanas($punto['latitud'] ?? null, $punto['longitud'] ?? null,
+            1, 1, PHP_INT_MAX, $personaId, false, $provincia);
+        return DashboardService::precioFleteMasBarato($cercanas['ofertas']);
     }
 
     /** Quita lo que no debe salir de la API: coordenadas de la finca y la persona que ganó. */

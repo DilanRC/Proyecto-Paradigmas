@@ -1,10 +1,10 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Página Fletes: ofertas de flete cercanas (cualquier persona con sesión) y
 // "Mis ofertas" para quien tiene Transportista activo. API: api/v1/fletes y api/v1/mi-ofertas.
-import { request } from './shared/api.js';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-2';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { UBICACION_USUARIO_EVENT, capturarUbicacionAutomatica, leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
-import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=foto-3';
+import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=explore-14';
 import { montarEditorDireccion } from './shared/editor-direccion.js?v=oferta-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
@@ -89,7 +89,7 @@ async function abrirElegir(ofertaId, trigger) {
         estado.hidden = publicacionesInteres.length > 0;
         if (!publicacionesInteres.length) estado.textContent = 'Todavía no tienes publicaciones disponibles en Me interesa. Marca en Explorar el animal que quieres comprar y vuelve aquí.';
     } catch (error) {
-        if (error?.status === 401) { endExpiredSession(); return; }
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
         estado.textContent = error?.message || 'No pudimos cargar tu lista Me interesa.';
     }
 }
@@ -166,7 +166,7 @@ async function cargarCercanos() {
         if (!encontradas.length) estado.textContent = 'Todavía no hay fletes que cubran tu zona con esa capacidad.';
     } catch (error) {
         if (turno !== turnoCercanos) return;
-        if (error?.status === 401) { endExpiredSession(); return; }
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
         lista.replaceChildren();
         estado.hidden = false;
         estado.textContent = error?.message || 'No pudimos cargar los fletes.';
@@ -214,7 +214,7 @@ async function cargarMisOfertas() {
         vehiculos = (propiosVehiculos.data?.vehiculos ?? []).filter((vehiculo) => vehiculo.estado === 'ACTIVO');
         mostrarMisOfertas();
     } catch (error) {
-        if (error?.status === 401) { endExpiredSession(); return; }
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
         estado.hidden = false;
         estado.textContent = error?.message || 'No pudimos cargar tus ofertas.';
     }
@@ -305,7 +305,7 @@ async function guardarOferta(event) {
         $('#ofertas-estado').hidden = false;
         $('#ofertas-estado').textContent = respuesta.message || 'Oferta guardada.';
     } catch (error) {
-        if (error?.status === 401) { endExpiredSession(); return; }
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
         mostrarErrores(error?.errors ?? {});
         mostrarEstado(estado, [error?.message || 'No fue posible guardar la oferta.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
     } finally {
@@ -325,7 +325,7 @@ async function cambiarEstado(id, estado) {
         aviso.hidden = false;
         aviso.textContent = respuesta.message;
     } catch (error) {
-        if (error?.status === 401) { endExpiredSession(); return; }
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
         aviso.hidden = false;
         aviso.textContent = error?.message || 'No fue posible actualizar la oferta.';
     }

@@ -165,7 +165,7 @@ test('Explorar es una vista distinta con tarjetas completas y acciones icono má
 });
 
 test('publicar persiste mediante el endpoint autenticado y limpia el borrador solo al guardar', () => {
-    assert.match(publicarJs, /import\s*\{[^}]*\bgetAccessToken\b[^}]*\}\s*from\s*'\.\/shared\/supabase-auth\.js';/);
+    assert.match(publicarJs, /import\s*\{[^}]*\bgetAccessToken\b[^}]*\}\s*from\s*'\.\/shared\/supabase-auth\.js(?:\?v=session-\d+)?';/);
     assert.ok(publicarJs.includes("method: 'POST'"));
     assert.ok(publicarJs.includes("fetch('api/v1/publicaciones'"));
     assert.ok(publicarJs.includes("sessionStorage.removeItem(DRAFT_KEY)"));
@@ -274,8 +274,13 @@ test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => 
     assert.match(publicUi, /href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"><\/i><span>Mi panel<\/span>/);
     // Ajustes de cuenta vive en el menú del avatar.
     assert.match(publicUi, /href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"><\/i><span>Ajustes de cuenta<\/span>/);
+    assert.match(publicUi, /function synchronizeFooterAccountLink\(session\)[\s\S]*?a\[href="entrar"\][\s\S]*?link\.href = 'mi-actividad'[\s\S]*?link\.textContent = 'Mi panel'/,
+        'el pie de página no debe seguir diciendo Entrar con una sesión activa');
     assert.match(publicUi, /api\/v1\/admin\/status/);
+    const actionGate = publicUi.slice(publicUi.indexOf('function initializeBusinessActionGate'), publicUi.indexOf('function initialize()'));
+    assert.doesNotMatch(actionGate, /profile\?\.persona/, 'el caché por pestaña no debe decidir si la cuenta tiene Persona');
     assert.doesNotMatch(publicUi, /sessionStorage\.setItem\(SESSION_KEY/);
+    assert.match(interactionJs, /response\.status === 401 && payload\?\.message === 'Debe iniciar sesión para registrar la interacción\.'[\s\S]*?registro\?next=explorar/);
 });
 
 test('el registro guiado persiste mediante Supabase y la API, no mediante una sesión falsa', () => {

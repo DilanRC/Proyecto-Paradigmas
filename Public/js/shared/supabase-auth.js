@@ -1,4 +1,4 @@
-import { PROFILE_KEY } from './public-profile.js';
+import { PROFILE_KEY } from './public-profile.js?v=profile-2';
 
 export const SESSION_KEY = 'tindercows:login';
 export const SIGNUP_NEXT_STEPS_MESSAGE = 'Si el correo puede usarse para crear una cuenta, te enviaremos instrucciones. Si ya tienes acceso, inicia sesión.';
@@ -6,6 +6,7 @@ export const SIGNUP_NEXT_STEPS_MESSAGE = 'Si el correo puede usarse para crear u
 const SESSION_VERSION = 2;
 const SESSION_MODE = 'supabase';
 const REFRESH_MARGIN_SECONDS = 60;
+const REFRESH_LOCK_NAME = 'ganadocerca:supabase-auth-refresh';
 let configPromise = null;
 let refreshPromise = null;
 
@@ -19,7 +20,30 @@ export class AuthError extends Error {
 }
 
 function storageAvailable() {
-    return typeof window !== 'undefined' && window.sessionStorage;
+    if (typeof window === 'undefined') return null;
+    try {
+        if (window.localStorage) return window.localStorage;
+    } catch { /* el navegador puede bloquear el almacenamiento persistente */ }
+    try { return window.sessionStorage ?? null; } catch { return null; }
+}
+
+function legacySessionStorage(storage) {
+    if (typeof window === 'undefined') return null;
+    try {
+        return window.localStorage === storage && window.sessionStorage !== storage
+            ? window.sessionStorage
+            : null;
+    } catch {
+        return null;
+    }
+}
+
+function storedValue(storage, key) {
+    try { return storage?.getItem?.(key) ?? null; } catch { return null; }
+}
+
+function removeStoredValue(storage, key) {
+    try { storage?.removeItem?.(key); } catch { /* cerrar sesión no depende de que el navegador permita limpiar */ }
 }
 
 function parseSession(raw) {
@@ -47,13 +71,91 @@ function parseSession(raw) {
     }
 }
 
+function sessionStoredAt(session) {
+    const writtenAt = Number(session?.writtenAt);
+    if (Number.isFinite(writtenAt) && writtenAt > 0) return writtenAt;
+    return Date.parse(session?.startedAt) || 0;
+}
+
 export function readAuthSession(storage = storageAvailable()) {
-    return parseSession(storage?.getItem?.(SESSION_KEY) ?? null);
+    const legacy = legacySessionStorage(storage);
+    const primarySession = parseSession(storedValue(storage, SESSION_KEY));
+    const legacySession = parseSession(storedValue(legacy, SESSION_KEY));
+    const useLegacy = legacySession && (!primarySession
+        || sessionStoredAt(legacySession) > sessionStoredAt(primarySession));
+    return useLegacy ? legacySession : primarySession;
+}
+
+/** Identidad estable de una sesión almacenada, sin exponer sus tokens. */
+export function authSessionIdentity(raw) {
+    const session = parseSession(raw);
+    return session ? `${session.userId ?? ''}\u0000${session.email}` : null;
+}
+
+/** Identifica un inicio de sesión concreto; permanece estable al renovar sus tokens. */
+export function authSessionGeneration(raw) {
+    const session = parseSession(raw);
+    return session ? `${session.userId ?? ''}\u0000${session.email}\u0000${session.startedAt}` : null;
+}
+
+/** Revisión concreta del almacenamiento, distinta cuando rota el token. */
+export function authSessionVersion(raw) {
+    const session = parseSession(raw);
+    return session ? `${session.userId ?? ''}\u0000${session.email}\u0000${session.startedAt}\u0000${sessionStoredAt(session)}` : null;
+}
+
+function accountChangedError() {
+    return new AuthError('La cuenta cambió en otra pestaña. Recarga la página para continuar.', { code: 'session_changed' });
 }
 
 function writeAuthSession(session, storage = storageAvailable()) {
-    storage?.setItem?.(SESSION_KEY, JSON.stringify(session));
-    return session;
+    const previous = readAuthSession(storage);
+    const storedSession = {
+        ...session,
+        writtenAt: Math.max(Date.now(), previous ? sessionStoredAt(previous) + 1 : 0),
+    };
+    if (previous && authSessionIdentity(JSON.stringify(previous)) !== authSessionIdentity(JSON.stringify(storedSession))) {
+        removeStoredValue(storage, PROFILE_KEY);
+        const legacy = legacySessionStorage(storage);
+        removeStoredValue(legacy, PROFILE_KEY);
+    }
+    try {
+        storage?.setItem?.(SESSION_KEY, JSON.stringify(storedSession));
+        const legacy = legacySessionStorage(storage);
+        removeStoredValue(legacy, SESSION_KEY);
+    } catch (error) {
+        // Cuota o política del navegador: conserva la sesión en la pestaña si puede.
+        const fallback = legacySessionStorage(storage);
+        if (!fallback || fallback === storage) throw error;
+        fallback.setItem(SESSION_KEY, JSON.stringify(storedSession));
+        removeStoredValue(storage, SESSION_KEY);
+    }
+    return storedSession;
+}
+
+function withAuthSessionLock(callback) {
+    const locks = globalThis.navigator?.locks;
+    return typeof locks?.request === 'function'
+        ? locks.request(REFRESH_LOCK_NAME, callback)
+        : callback();
+}
+
+/** Promueve una sesión anterior de pestaña sin competir con login, refresh o logout. */
+export function migrateLegacyAuthSession(storage = storageAvailable()) {
+    return withAuthSessionLock(() => {
+        const legacy = legacySessionStorage(storage);
+        const primary = parseSession(storedValue(storage, SESSION_KEY));
+        const previous = parseSession(storedValue(legacy, SESSION_KEY));
+        if (!previous) return primary;
+        if (primary && sessionStoredAt(previous) <= sessionStoredAt(primary)) {
+            removeStoredValue(legacy, SESSION_KEY);
+            if (authSessionIdentity(JSON.stringify(previous)) !== authSessionIdentity(JSON.stringify(primary))) {
+                removeStoredValue(legacy, PROFILE_KEY);
+            }
+            return primary;
+        }
+        return writeAuthSession(previous, storage);
+    });
 }
 
 /**
@@ -64,14 +166,29 @@ function writeAuthSession(session, storage = storageAvailable()) {
  * borra: se necesita cuando Supabase pide confirmar el correo.
  */
 export function clearAuthSession(storage = storageAvailable()) {
-    storage?.removeItem?.(SESSION_KEY);
-    storage?.removeItem?.(PROFILE_KEY);
+    removeStoredValue(storage, SESSION_KEY);
+    removeStoredValue(storage, PROFILE_KEY);
+    const legacy = legacySessionStorage(storage);
+    removeStoredValue(legacy, SESSION_KEY);
+    removeStoredValue(legacy, PROFILE_KEY);
 }
 
-/** Sesión vencida o rechazada por el servidor: se limpia y se vuelve a Inicio. */
-export function endExpiredSession(storage = storageAvailable()) {
-    clearAuthSession(storage);
+/** Sesión vencida o rechazada por el servidor; una respuesta vieja no borra otra sesión. */
+export async function endExpiredSession(expectedVersion = undefined, storage = storageAvailable()) {
+    const outcome = await withAuthSessionLock(() => {
+        if (expectedVersion !== undefined) {
+            const currentVersion = authSessionVersion(JSON.stringify(readAuthSession(storage)));
+            if (currentVersion !== expectedVersion && currentVersion !== null) return 'reload';
+        }
+        clearAuthSession(storage);
+        return 'redirect';
+    });
+    if (outcome === 'reload') {
+        globalThis.location?.reload?.();
+        return false;
+    }
     globalThis.location?.assign('./');
+    return true;
 }
 
 async function readJsonResponse(response) {
@@ -227,7 +344,7 @@ export async function signInWithPassword(email, password, storage = storageAvail
         email: normalizedEmail,
         password: String(password ?? ''),
     });
-    return writeAuthSession(sessionFromTokenResponse(payload), storage);
+    return withAuthSessionLock(() => writeAuthSession(sessionFromTokenResponse(payload), storage));
 }
 
 /**
@@ -255,7 +372,7 @@ export async function signUpWithPassword(email, password, storage = storageAvail
         ? { ...payload.session, user: payload.user ?? payload.session.user }
         : payload;
     if (tokenPayload?.access_token && tokenPayload?.refresh_token) {
-        const session = writeAuthSession(sessionFromTokenResponse(tokenPayload), storage);
+        const session = await withAuthSessionLock(() => writeAuthSession(sessionFromTokenResponse(tokenPayload), storage));
         return {
             session,
             user: tokenPayload.user ?? payload?.user ?? null,
@@ -265,7 +382,7 @@ export async function signUpWithPassword(email, password, storage = storageAvail
 
     const user = payload?.user ?? (typeof payload?.id === 'string' ? payload : null);
     if (user && (typeof user.email === 'string' || normalizedEmail !== '')) {
-        clearAuthSession(storage);
+        await withAuthSessionLock(() => clearAuthSession(storage));
         return {
             session: null,
             user,
@@ -276,22 +393,63 @@ export async function signUpWithPassword(email, password, storage = storageAvail
     throw new AuthError('Supabase creó una respuesta de registro que no pudimos interpretar.');
 }
 
-export async function refreshAuthSession(storage = storageAvailable()) {
+async function refreshAuthSessionLocked(storage, original) {
     const current = readAuthSession(storage);
     if (!current) {
         clearAuthSession(storage);
         throw new AuthError('La sesión no está disponible.', { status: 401 });
     }
+    if (authSessionGeneration(JSON.stringify(current)) !== authSessionGeneration(JSON.stringify(original))) {
+        throw accountChangedError();
+    }
+
+    // Otra pestaña pudo completar la rotación mientras esta esperaba el lock.
+    if (current.accessToken !== original.accessToken
+        && current.expiresAt > Math.floor(Date.now() / 1000) + REFRESH_MARGIN_SECONDS) return current;
+
     if (!refreshPromise) {
         refreshPromise = tokenRequest('refresh_token', { refresh_token: current.refreshToken })
-            .then((payload) => writeAuthSession(sessionFromTokenResponse(payload, current), storage))
+            .then((payload) => {
+                const latest = readAuthSession(storage);
+                if (!latest) throw new AuthError('La sesión cambió mientras se renovaba.', { status: 401 });
+                if (authSessionGeneration(JSON.stringify(latest)) !== authSessionGeneration(JSON.stringify(current))) {
+                    throw accountChangedError();
+                }
+                if (latest.accessToken !== current.accessToken
+                    && latest.expiresAt > Math.floor(Date.now() / 1000) + REFRESH_MARGIN_SECONDS) return latest;
+                return writeAuthSession(sessionFromTokenResponse(payload, current), storage);
+            })
             .catch((error) => {
-                if (error.status === 400 || error.status === 401) clearAuthSession(storage);
+                // Si un navegador sin Web Locks alcanzó a renovar en otra pestaña,
+                // conserva esa sesión aunque este refresh antiguo sea rechazado.
+                const latest = readAuthSession(storage);
+                if (latest && authSessionGeneration(JSON.stringify(latest)) !== authSessionGeneration(JSON.stringify(current))) {
+                    throw accountChangedError();
+                }
+                if (latest && latest.accessToken !== current.accessToken
+                    && latest.expiresAt > Math.floor(Date.now() / 1000) + REFRESH_MARGIN_SECONDS) return latest;
+                if ((error.status === 400 || error.status === 401) && (!latest
+                    || authSessionGeneration(JSON.stringify(latest)) === authSessionGeneration(JSON.stringify(current)))) {
+                    clearAuthSession(storage);
+                }
                 throw error;
             })
             .finally(() => { refreshPromise = null; });
     }
     return refreshPromise;
+}
+
+export async function refreshAuthSession(storage = storageAvailable()) {
+    const original = readAuthSession(storage);
+    if (!original) {
+        return withAuthSessionLock(() => {
+            if (readAuthSession(storage)) throw accountChangedError();
+            clearAuthSession(storage);
+            throw new AuthError('La sesión no está disponible.', { status: 401 });
+        });
+    }
+
+    return withAuthSessionLock(() => refreshAuthSessionLocked(storage, original));
 }
 
 export async function getAccessToken({ storage = storageAvailable(), forceRefresh = false } = {}) {
@@ -308,10 +466,12 @@ export async function getAccessToken({ storage = storageAvailable(), forceRefres
 export async function signOut({ storage = storageAvailable() } = {}) {
     const session = readAuthSession(storage);
     if (!session) {
-        clearAuthSession(storage);
-        return;
+        return withAuthSessionLock(() => {
+            if (!readAuthSession(storage)) clearAuthSession(storage);
+        });
     }
 
+    const generation = authSessionGeneration(JSON.stringify(session));
     try {
         const config = await authConfig();
         await fetch(`${config.url}/auth/v1/logout?scope=local`, {
@@ -323,6 +483,13 @@ export async function signOut({ storage = storageAvailable() } = {}) {
             },
         });
     } finally {
-        clearAuthSession(storage);
+        await withAuthSessionLock(() => {
+            const latest = readAuthSession(storage);
+            if (authSessionGeneration(JSON.stringify(latest)) === generation) clearAuthSession(storage);
+        });
     }
+}
+
+if (typeof window !== 'undefined') {
+    void Promise.resolve().then(() => migrateLegacyAuthSession()).catch(() => {});
 }

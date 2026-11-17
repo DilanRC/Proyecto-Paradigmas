@@ -244,6 +244,15 @@
     gap:28px;
 }
 
+body.settings-page[data-pagina="participar"] .settings-layout {
+    grid-template-columns:minmax(0,1fr);
+}
+
+body.settings-page[data-pagina="participar"] .settings-sections {
+    width:min(100%,960px);
+    margin-inline:auto;
+}
+
 .settings-nav {
     position:sticky;
     top:100px;

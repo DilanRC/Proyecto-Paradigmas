@@ -1,4 +1,4 @@
-import { request } from './shared/api.js?v=auth-gate-12';
+import { request } from './shared/api.js?v=auth-gate-14';
 import { createDialogController } from './shared/dialog.js?v=dialog-2';
 import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js?v=form-2';
 import {

@@ -21,6 +21,19 @@ namespace Application\Service;
  */
 final class DashboardService
 {
+    /** Precio mínimo disponible entre las ofertas que sí publicaron un monto. */
+    public static function precioFleteMasBarato(array $ofertas): ?float
+    {
+        $precios = [];
+        foreach ($ofertas as $oferta) {
+            $precio = $oferta['precio'] ?? null;
+            if (is_numeric($precio) && is_finite((float) $precio) && (float) $precio >= 0) {
+                $precios[] = (float) $precio;
+            }
+        }
+        return $precios === [] ? null : round(min($precios), 2);
+    }
+
     /**
      * @param array<int,array<string,mixed>> $subastas filas de Subasta::paraDashboardVendedor
      * @param array<int,array{subastaId:int,personaId:int}> $postores pares distintos (subasta, persona)

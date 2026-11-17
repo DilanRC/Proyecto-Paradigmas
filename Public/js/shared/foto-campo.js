@@ -1,6 +1,6 @@
 // Campo de foto de los diálogos de Mi panel (publicación y vehículo): elegir un
 // archivo, ver la vista previa y quitarla. La subida usa el mismo bucket que Publicar.
-import { subirImagenPublicacion, validarImagen } from './storage.js';
+import { subirImagenPublicacion, validarImagen } from './storage.js?v=documento-3';
 
 /**
  * `raiz` trae `input[type=file]`, `[data-foto-preview]` (con un `img`),

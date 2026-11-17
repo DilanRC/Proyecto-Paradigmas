@@ -8,7 +8,7 @@ foreach (['Vehiculo', 'TransportistaOferta', 'CompraSolicitud', 'AnimalVacunacio
     require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
 }
 foreach (['MiVehiculosController', 'MiOfertasController', 'MiAnimalesController', 'FletesController', 'RegistroPublicoController',
-    'SubastasController', 'NotificacionesController', 'AdminSubastasController'] as $controlador) {
+    'SubastasController', 'NotificacionesController', 'AdminSubastasController', 'MiDashboardController'] as $controlador) {
     require_once dirname(__DIR__) . "/Application/Controller/{$controlador}.php";
 }
 require_once dirname(__DIR__) . '/Application/Service/RegistroPublicoService.php';
@@ -19,6 +19,7 @@ use Application\Controller\FletesController;
 use Application\Controller\MiAnimalesController;
 use Application\Controller\MiOfertasController;
 use Application\Controller\MiVehiculosController;
+use Application\Controller\MiDashboardController;
 use Application\Controller\NotificacionesController;
 use Application\Controller\RegistroPublicoController;
 use Application\Controller\SubastasController;
@@ -149,7 +150,13 @@ try {
         ->procesar('POST', ['placa' => 'SB-' . strtoupper(bin2hex(random_bytes(3))), 'vin' => 'VIN-' . bin2hex(random_bytes(4)), 'modelo' => 'Camión jaula'])['body']['data']['vehiculo']['vehiculoId'];
     $ofertaCerca = (int) (new MiOfertasController($db, $actorT, test_token('of')))->procesar('POST', ['vehiculoId' => $vehiculoT,
         'direccion' => ['provincia' => 'X', 'canton' => 'Central', 'distrito' => 'Y', 'latitud' => 9.9350, 'longitud' => -84.0800],
-        'radioKm' => 50, 'capacidad' => 8])['body']['data']['oferta']['ofertaId'];
+        'radioKm' => 50, 'capacidad' => 8, 'precio' => 30000])['body']['data']['oferta']['ofertaId'];
+    // La segunda oferta está un poco más lejos, pero cuesta menos. El dashboard debe comparar ambas.
+    $vehiculoT2 = (int) (new MiVehiculosController($db, $actorT, test_token('veh2')))->procesar('POST', [
+        'placa' => 'SB-' . strtoupper(bin2hex(random_bytes(3))), 'vin' => 'VIN-' . bin2hex(random_bytes(4)), 'modelo' => 'Camión alterno'])['body']['data']['vehiculo']['vehiculoId'];
+    (new MiOfertasController($db, $actorT, test_token('of2')))->procesar('POST', ['vehiculoId' => $vehiculoT2,
+        'direccion' => ['provincia' => 'San José', 'canton' => 'Central', 'distrito' => 'Carmen', 'latitud' => 9.9400, 'longitud' => -84.0900],
+        'radioKm' => 50, 'capacidad' => 8, 'precio' => 12000]);
 
     $v = new SubastasController($db, $actorV, test_token('sv'), $tiempoReal);
     $a = new SubastasController($db, $actorA, test_token('sa'), $tiempoReal);
@@ -209,6 +216,11 @@ try {
     test_same(1, sub_contar("SELECT COUNT(*) FROM tbnotificacion WHERE tbpersonaid = :p AND tbnotificaciontipo = 'SUBASTA_SUPERADA'", ['p' => $personaA]), 'Queda la notificación de superada');
     $verB = $pujaB['body']['data']['subasta'];
     test_assert($verB['voyGanando'] && !$verB['puedoPujar'], 'B va ganando');
+    $dashboard = (new MiDashboardController($db, $actorA, $tiempoReal))->procesar('GET', ['rol' => 'COMPRADOR']);
+    test_same(200, $dashboard['status'], 'El dashboard del comprador carga mientras la subasta está activa');
+    $filaDashboard = array_values(array_filter($dashboard['body']['data']['subastas'], static fn (array $fila): bool => $fila['subastaId'] === $subastaId))[0] ?? null;
+    test_same(12000.0, $filaDashboard['costoFlete'] ?? null, 'El dashboard elige el flete más barato, no el más cercano');
+    test_same(512000.0, $filaDashboard['costoEstimado'] ?? null, 'El costo estimado suma la puja propia y el flete más barato');
     test_same(['Tú', 'Pujador A'], array_column($verB['pujas'], 'participante'), 'Las pujas muestran el alias, no el nombre completo');
     test_same(409, $v->procesar('PATCH', [], ['subastaId' => $subastaId, 'accion' => 'CANCELAR'])['status'], 'Con pujas no se cancela');
     test_same(422, $a->procesar('PATCH', [], ['subastaId' => $subastaId, 'accion' => 'REMATAR'])['status'], 'Acción desconocida es 422');
@@ -284,4 +296,4 @@ try {
     sub_cleanup($identificaciones, $vendedores, $animalIds, $subastaIds, $adminCorreo);
 }
 
-echo "OK subastas_test: abrir, pujar, admin sin participar, comentar, cerrar con ganador (venta y avisos), desierta, campana y fletes del ganador.\n";
+echo "OK subastas_test: abrir, pujar, dashboard con flete mínimo, admin, cierre con ganador/desierta, avisos y fletes del ganador.\n";

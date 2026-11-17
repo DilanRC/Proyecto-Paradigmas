@@ -24,6 +24,11 @@ function dash_subasta(int $id, string $estado, float $base, ?float $adjudicado =
     ];
 }
 
+dash_igual(12000.0, DashboardService::precioFleteMasBarato([
+    ['precio' => 25000.0], ['precio' => null], ['precio' => 12000.0],
+]), 'el flete elegido es el precio menor, no la primera oferta');
+dash_igual(null, DashboardService::precioFleteMasBarato([['precio' => null]]), 'sin precio de flete el costo es desconocido');
+
 // Sin subastas: todo en cero o null (no se inventa un 0 % ni un promedio).
 $vacio = DashboardService::indicadoresVendedor([], []);
 dash_igual(0, $vacio['estados']['activas']['total'], 'sin subastas no hay activas');

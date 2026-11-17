@@ -4,11 +4,11 @@ import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Tiempo real: Supabase Realtime avisa "cambió" (shared/tiempo-real.js) y esta página vuelve a pedir el estado a la
 // API. Además consulta cada pocos segundos por si el WebSocket no está. La hora sale del servidor (`ahora`).
 
-import { request } from './shared/api.js';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
-import { formatPrice, safeImageUrl } from './explore.js?v=foto-4';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
+import { formatPrice, safeImageUrl } from './explore.js?v=explore-14';
 import { createToast } from './shared/toast.js';
-import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
+import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-2';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
@@ -96,7 +96,7 @@ function fila(dl, etiqueta, valor) {
 }
 
 function manejarSesion(error) {
-    if (error?.status === 401) { endExpiredSession(); return true; }
+    if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return true; }
     return false;
 }
 

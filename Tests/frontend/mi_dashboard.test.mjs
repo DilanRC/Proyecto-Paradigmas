@@ -17,9 +17,9 @@ test('/mi-dashboard es una ruta con sesión y su API existe', () => {
     assert.ok(readFileSync('Public/js/public-ui.js', 'utf8').includes('href="mi-dashboard"'), 'enlace en el menú del avatar');
 });
 
-test('la vista carga el CSS y el JS con la misma versión y tiene una pestaña por rol', () => {
+test('la vista invalida el JS del dashboard y mantiene su hoja de estilos', () => {
     assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-4/);
-    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-4/);
+    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-5/);
     assert.match(vista, /data-dashboard-rol="VENDEDOR"/);
     assert.match(vista, /data-dashboard-rol="COMPRADOR"/);
 });

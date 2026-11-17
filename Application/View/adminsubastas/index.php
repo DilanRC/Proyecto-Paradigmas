@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-2">
-    <script type="module" src="js/adminsubastas.js?v=subastas-admin-2"></script>
+    <script type="module" src="js/adminsubastas.js?v=subastas-admin-3"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel">

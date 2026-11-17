@@ -13,13 +13,13 @@ test('cerrar sesión y una sesión vencida llevan a Inicio', () => {
     assert.match(publicUi, /data-public-logout\]'\)\?\.addEventListener\('click', \(\) => signOutEverywhere\(\)\)/);
     // El panel admin cierra la sesión completa (no solo el permiso admin).
     const gate = read('Public/js/shared/auth-gate.js');
-    assert.match(gate, /export async function signOutEverywhere[\s\S]*?await signOut\(\{ storage \}\)[\s\S]*?clearAdminBrowserSession\(storage\);[\s\S]*?assign\('\.\/'\)/);
+    assert.match(gate, /export async function signOutEverywhere[\s\S]*?await signOut\(storage \? \{ storage \} : \{\}\)[\s\S]*?clearAdminBrowserSession\(storage\);[\s\S]*?assign\('\.\/'\)/);
     assert.match(gate, /rural-panel__admin-link\[href\$="entrar"\]/);
     assert.match(gate, /void signOutEverywhere\(storage\)/);
-    assert.match(read('Public/js/shared/supabase-auth.js'), /export function endExpiredSession[\s\S]*?location\?\.assign\('\.\/'\)/);
+    assert.match(read('Public/js/shared/supabase-auth.js'), /export async function endExpiredSession[\s\S]*?location\?\.assign\('\.\/'\)/);
     for (const archivo of ['Public/js/mi-actividad.js', 'Public/js/ajustes.js']) {
         const js = read(archivo);
-        assert.ok(js.includes('if (error?.status === 401) endExpiredSession();'), `${archivo} no cierra la sesión vencida`);
+        assert.ok(js.includes('if (error?.status === 401) endExpiredSession(error?.authSessionVersion);'), `${archivo} no cierra solo la sesión que generó el 401`);
         // Sin sesión se pide entrar; una sesión vencida (401) ya no vuelve a Entrar.
         assert.equal(/status === 401\) window\.location\.assign\('entrar/.test(js), false, `${archivo} aún manda a Entrar con 401`);
     }

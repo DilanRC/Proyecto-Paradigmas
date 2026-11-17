@@ -1,6 +1,6 @@
-import './auth-gate.js?v=auth-gate-12';
-import './admin-ui.js?v=admin-14';
-import { getAccessToken, readAuthSession } from './supabase-auth.js';
+import './auth-gate.js?v=auth-gate-14';
+import './admin-ui.js?v=admin-15';
+import { AuthError, authSessionGeneration, authSessionVersion, getAccessToken, readAuthSession } from './supabase-auth.js?v=session-4';
 
 // Token Bearer vigente en esta pestaña (Supabase/proveedor de identidad).
 // Se adjunta a las peticiones para que la API resuelva al actor y las
@@ -107,15 +107,38 @@ function hasAuthorizationHeader(headers = {}) {
 }
 
 async function bearerForRequest(options) {
-    if (hasAuthorizationHeader(options.headers ?? {})) return null;
+    if (hasAuthorizationHeader(options.headers ?? {})) return { bearer: null, generation: undefined, version: undefined, tracksSession: false };
+    const initialSession = readAuthSession();
+    const initialGeneration = authSessionGeneration(JSON.stringify(initialSession));
+    const initialVersion = authSessionVersion(JSON.stringify(initialSession));
     try {
-        return await getAccessToken();
-    } catch {
+        const bearer = await getAccessToken();
+        const session = readAuthSession();
+        const generation = authSessionGeneration(JSON.stringify(session));
+        if (generation !== initialGeneration) {
+            throw new AuthError('La cuenta cambió en otra pestaña. Recarga la página para continuar.', { code: 'session_changed' });
+        }
+        return { bearer, generation, version: authSessionVersion(JSON.stringify(session)), error: null, tracksSession: true };
+    } catch (error) {
+        if (error?.code === 'session_changed') throw error;
+        const session = readAuthSession();
+        const generation = authSessionGeneration(JSON.stringify(session));
+        if (generation !== initialGeneration && generation !== null) throw authSessionChangedError();
         // Una sesión expirada no debe romper las rutas públicas. El helper de
         // Auth elimina la sesión únicamente cuando Supabase la rechaza; la API
         // PHP decidirá si el recurso concreto admite acceso anónimo.
-        return null;
+        return {
+            bearer: null,
+            generation,
+            version: authSessionVersion(JSON.stringify(session)) ?? initialVersion,
+            error,
+            tracksSession: true,
+        };
     }
+}
+
+function authSessionChangedError() {
+    return new AuthError('La cuenta cambió en otra pestaña. Recarga la página para continuar.', { code: 'session_changed' });
 }
 
 async function executeJsonRequest(url, options, fetchImpl, bearer) {
@@ -163,19 +186,30 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
     const requestOptions = controller ? { ...options, signal: controller.signal } : options;
     const timeout = controller && Number.isFinite(timeoutMs) && timeoutMs > 0
         ? setTimeout(() => controller.abort(), timeoutMs) : null;
-    const bearer = await bearerForRequest(options);
     try {
+        const auth = await bearerForRequest(options);
+        let bearer = auth.bearer;
+        const { generation, tracksSession } = auth;
+        const authError = auth.error;
+        let sessionVersion = auth.version;
         let { response, payload } = await executeJsonRequest(url, requestOptions, fetchImpl, bearer);
+        const generationChanged = () => tracksSession
+            && authSessionGeneration(JSON.stringify(readAuthSession())) !== generation;
 
     if (
         response.status === 401
         && bearer
+        && !generationChanged()
         && readAuthSession()
         && !hasAuthorizationHeader(options.headers ?? {})
     ) {
         try {
             const refreshedBearer = await getAccessToken({ forceRefresh: true });
             if (refreshedBearer) {
+                const refreshedSession = readAuthSession();
+                if (authSessionGeneration(JSON.stringify(refreshedSession)) !== generation) throw authSessionChangedError();
+                bearer = refreshedBearer;
+                sessionVersion = authSessionVersion(JSON.stringify(refreshedSession));
                 ({ response, payload } = await executeJsonRequest(url, requestOptions, fetchImpl, refreshedBearer));
             }
         } catch {
@@ -184,8 +218,15 @@ export async function request(url, options = {}, { fetchImpl = globalThis.fetch 
         }
     }
 
+        if (generationChanged() && (response.status !== 401 || authSessionGeneration(JSON.stringify(readAuthSession())) !== null)) {
+            throw authSessionChangedError();
+        }
+        if (response.status === 401 && authError && authError.status !== 401) throw authError;
+
         if (!response.ok || payload.success !== true) {
-            throw toError(describeHttpFailure(response.status, payload));
+            const error = toError(describeHttpFailure(response.status, payload));
+            if (response.status === 401 && tracksSession) error.authSessionVersion = sessionVersion ?? auth.version;
+            throw error;
         }
         return payload;
     } catch (error) {

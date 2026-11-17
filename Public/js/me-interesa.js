@@ -1,9 +1,9 @@
 // Me interesa: las publicaciones que la persona marcó, con la tarjeta compacta de la
 // portada (buildCard con compacta) y un botón "Quitar" (acción RETIRAR, idempotente).
 
-import { request } from './shared/api.js';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
-import { buildCard } from './explore.js?v=foto-4';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
+import { buildCard } from './explore.js?v=explore-14';
 import { createToast } from './shared/toast.js';
 
 const API = 'api/v1/publicaciones/interacciones';
@@ -83,7 +83,7 @@ async function load() {
         document.querySelector('#saved-list').replaceChildren(...items.map(savedCard));
         setView(items.length ? 'content' : 'empty');
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else setView('error', error?.message || 'No pudimos cargar tus publicaciones.');
     }
 }

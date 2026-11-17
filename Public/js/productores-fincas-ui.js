@@ -1,4 +1,4 @@
-import { request } from './shared/api.js';
+import { request } from './shared/api.js?v=auth-gate-14';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 

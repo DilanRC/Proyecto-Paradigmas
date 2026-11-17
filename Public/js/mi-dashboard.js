@@ -3,9 +3,9 @@
 // tarjetas, dos gráficos, actividad y una tabla única de ejemplares con foto y chips de filtro. Todo se pinta con DOM
 // (textContent). La ubicación del navegador solo vive en memoria (no se guarda).
 
-import { request } from './shared/api.js';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
-import { formatPrice, safeImageUrl } from './explore.js?v=foto-4';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
+import { formatPrice, safeImageUrl } from './explore.js?v=explore-14';
 import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-2';
 
 const API = 'api/v1/mi-dashboard';
@@ -520,7 +520,7 @@ async function cargar() {
         vista((datos.subastas ?? []).length || estado.rol === 'COMPRADOR' ? 'content' : 'vacio');
     } catch (error) {
         if (pedido !== estado.pedido) return;
-        if (error?.status === 401) { endExpiredSession(); return; }
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
         if (error?.status === 409) {
             const roles = error.data?.roles ?? {};
             const otro = rolDisponible(estado.rol, roles);

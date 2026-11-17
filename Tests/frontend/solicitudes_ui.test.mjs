@@ -46,8 +46,8 @@ test('Explorar tiene "Solicitar compra" como acción principal y la abre sin env
     assert.doesNotMatch(interacciones.match(/const ACTION_TYPES = \{[^}]*\}/)[0], /Solicitar/);
     const vista = read('Application/View/explorar/index.php');
     assert.match(vista, /css\/solicitud\.css\?v=solicitud-2/);
-    assert.match(vista, /js\/explore\.js\?v=explore-13/);
-    assert.match(vista, /js\/explore-interactions\.js\?v=interactions-7/);
+    assert.match(vista, /js\/explore\.js\?v=explore-14/);
+    assert.match(vista, /js\/explore-interactions\.js\?v=interactions-8/);
 });
 
 test('Me interesa ofrece solicitar y ver fletes cercanos solo si la publicación sigue activa', () => {
@@ -58,7 +58,7 @@ test('Me interesa ofrece solicitar y ver fletes cercanos solo si la publicación
     assert.match(interesa, /Ver fletes cercanos/);
     const vista = read('Application/View/me-interesa/index.php');
     assert.match(vista, /css\/solicitud\.css\?v=solicitud-2/);
-    assert.match(vista, /js\/me-interesa\.js\?v=interesa-8/);
+    assert.match(vista, /js\/me-interesa\.js\?v=interesa-9/);
 });
 
 test('el diálogo usa la API de solicitudes y los fletes por publicación, sin innerHTML', () => {

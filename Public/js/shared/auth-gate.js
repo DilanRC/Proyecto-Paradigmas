@@ -6,29 +6,70 @@
 // gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
 import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
-import { readAuthSession, signOut } from './supabase-auth.js';
+import { authSessionIdentity, readAuthSession, SESSION_KEY as AUTH_SESSION_KEY, signOut } from './supabase-auth.js?v=session-4';
+import { PROFILE_KEY } from './public-profile.js?v=profile-2';
 
 export const SESSION_KEY = 'tindercows:admin-session';
+
+function availableBrowserStorage(target = globalThis) {
+    try {
+        const persistent = target.localStorage;
+        if (persistent) return persistent;
+    } catch { /* se usa el almacenamiento temporal si el navegador bloquea el persistente */ }
+    try { return target.sessionStorage ?? null; } catch { return null; }
+}
+
+function availableTabStorage(target = globalThis) {
+    try { return target.sessionStorage ?? null; } catch { return null; }
+}
 
 /**
  * El marcador solo habilita la navegación del shell. La autorización real se
  * vuelve a comprobar en cada API mediante el Bearer y la allowlist del
  * servidor; por eso nunca contiene credenciales ni sustituye al JWT.
  */
-export function writeAdminBrowserSession(email, storage = globalThis.sessionStorage) {
+export function writeAdminBrowserSession(email, storage = availableBrowserStorage()) {
     if (!storage?.setItem) return;
-    storage.setItem(SESSION_KEY, JSON.stringify({
+    const session = JSON.stringify({
         authenticated: true,
         version: 1,
         adminAuthorized: true,
         email: String(email ?? '').trim().toLowerCase(),
         startedAt: new Date().toISOString(),
         mode: 'admin-server-session',
-    }));
+    });
+    try { storage.setItem(SESSION_KEY, session); } catch {
+        const fallback = availableTabStorage();
+        if (fallback && fallback !== storage) {
+            try { fallback.setItem(SESSION_KEY, session); } catch { /* el marcador no debe bloquear el sitio público */ }
+        }
+    }
 }
 
-export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
-    storage?.removeItem?.(SESSION_KEY);
+export function clearAdminBrowserSession(storage = availableBrowserStorage()) {
+    try { storage?.removeItem?.(SESSION_KEY); } catch { /* la salida de sesión debe continuar */ }
+}
+
+/** Recarga las otras pestañas cuando cambia la cuenta o se cierra sesión. */
+export function watchAuthSessionAcrossTabs(targetWindow = globalThis.window, tabStorage = null) {
+    if (!targetWindow?.addEventListener) return () => {};
+    let sharedStorage;
+    try { sharedStorage = targetWindow.localStorage; } catch { return () => {}; }
+    if (!sharedStorage) return () => {};
+    if (tabStorage === null) {
+        tabStorage = availableTabStorage(targetWindow);
+    }
+
+    const handleStorage = (event) => {
+        if (event.key !== AUTH_SESSION_KEY || event.storageArea !== sharedStorage) return;
+        if (authSessionIdentity(event.oldValue) === authSessionIdentity(event.newValue)) return;
+
+        try { tabStorage?.removeItem?.(PROFILE_KEY); } catch { /* el perfil en caché es opcional */ }
+        clearAdminBrowserSession(sharedStorage);
+        targetWindow.location?.reload?.();
+    };
+    targetWindow.addEventListener('storage', handleStorage);
+    return () => targetWindow.removeEventListener?.('storage', handleStorage);
 }
 
 /**
@@ -37,8 +78,8 @@ export function clearAdminBrowserSession(storage = globalThis.sessionStorage) {
  * vuelve a Inicio. Si solo se borrara el permiso admin, el JWT seguiría vivo y
  * el menú de cuenta volvería a ofrecer el panel sin pedir contraseña.
  */
-export async function signOutEverywhere(storage = globalThis.sessionStorage) {
-    try { await signOut({ storage }); } finally {
+export async function signOutEverywhere(storage = availableBrowserStorage()) {
+    try { await signOut(storage ? { storage } : {}); } finally {
         clearAdminBrowserSession(storage);
         globalThis.location?.assign('./');
     }
@@ -131,24 +172,26 @@ function revealPrivateUi() {
 }
 
 if (typeof window !== 'undefined') {
+    watchAuthSessionAcrossTabs();
     const pathname = window.location.pathname;
     // Las rutas públicas, incluido /entrar, no deben inicializar el shell
     // privado ni ejecutar efectos que puedan provocar navegación o recargas.
     if (isPrivateRoute(pathname)) {
-        const allowed = enforceBrowserSession({ location: window.location, storage: window.sessionStorage });
-        const hasVerifiedAuthSession = readAuthSession(window.sessionStorage) !== null;
+        const storage = availableBrowserStorage(window);
+        const allowed = enforceBrowserSession({ location: window.location, storage });
+        const hasVerifiedAuthSession = readAuthSession() !== null;
         if (allowed && !hasVerifiedAuthSession) {
-            clearAdminBrowserSession(window.sessionStorage);
+            clearAdminBrowserSession(storage);
             window.location.replace(loginTarget(pathname));
         } else if (allowed && typeof document !== 'undefined') {
             revealPrivateUi();
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => {
-                    wirePrivateShell(window.sessionStorage);
+                    wirePrivateShell(storage);
                     inicializarUbicacionAutomatica();
                 }, { once: true });
             } else {
-                wirePrivateShell(window.sessionStorage);
+                wirePrivateShell(storage);
                 inicializarUbicacionAutomatica();
             }
         }

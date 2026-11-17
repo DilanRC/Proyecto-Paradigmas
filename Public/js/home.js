@@ -5,11 +5,11 @@
 // monta el carrusel automático; con 4 o menos quedan fijas. Sin publicaciones,
 // o si la API falla, la sección da la bienvenida en vez de decir "no hay".
 
-import { request } from './shared/api.js';
-import { readAuthSession } from './shared/supabase-auth.js';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
 import { montarCarrusel } from './shared/carousel.js';
-import { buildCard } from './explore.js?v=foto-4';
+import { buildCard } from './explore.js?v=explore-14';
 
 const MAXIMO = 12;
 const FIJAS_HASTA = 4;

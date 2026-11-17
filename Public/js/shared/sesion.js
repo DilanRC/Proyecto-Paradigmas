@@ -14,7 +14,7 @@
 // La identidad vive en tbpersona: Productor, Comprador y Transportista son
 // contextos de la misma persona (DEC-28/29), nunca roles administrativos.
 
-import { request } from './api.js';
+import { request } from './api.js?v=auth-gate-14';
 
 export const IDENTIDAD_URL = 'api/v1/identidad';
 export const SESSION_KEY = 'tindercows:login';

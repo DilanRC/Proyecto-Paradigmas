@@ -1,10 +1,22 @@
 export const PROFILE_KEY = 'tindercows:profile';
 
-export function readPublicProfile(storage = globalThis.sessionStorage) {
+function profileStorage() {
+    try { return globalThis.sessionStorage ?? null; } catch { return null; }
+}
+
+export function readPublicProfile(storage = profileStorage()) {
     try { return JSON.parse(storage?.getItem?.(PROFILE_KEY) || 'null'); } catch { return null; }
 }
 
-export function syncPublicProfile(activityData, storage = globalThis.sessionStorage) {
+/** Nunca presenta datos cacheados si no pertenecen al correo de la sesión activa. */
+export function publicProfileForSession(session, storage = profileStorage()) {
+    const profile = readPublicProfile(storage);
+    const profileEmail = String(profile?.persona?.correoElectronico ?? '').trim().toLowerCase();
+    const sessionEmail = String(session?.email ?? '').trim().toLowerCase();
+    return profileEmail !== '' && profileEmail === sessionEmail ? profile : null;
+}
+
+export function syncPublicProfile(activityData, storage = profileStorage()) {
     const existing = readPublicProfile(storage) ?? {};
     const persona = activityData?.persona ?? null;
     const capacidades = activityData?.capacidades ?? {};
@@ -33,10 +45,10 @@ export function syncPublicProfile(activityData, storage = globalThis.sessionStor
         updatedAt: new Date().toISOString(),
         persistence: 'server-cache',
     };
-    storage?.setItem?.(PROFILE_KEY, JSON.stringify(profile));
+    try { storage?.setItem?.(PROFILE_KEY, JSON.stringify(profile)); } catch { /* el perfil en caché no es requisito de identidad */ }
     return profile;
 }
 
-export function clearPublicProfile(storage = globalThis.sessionStorage) {
-    storage?.removeItem?.(PROFILE_KEY);
+export function clearPublicProfile(storage = profileStorage()) {
+    try { storage?.removeItem?.(PROFILE_KEY); } catch { /* la salida de sesión no depende de esta caché */ }
 }

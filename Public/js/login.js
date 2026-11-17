@@ -1,9 +1,9 @@
-import { request } from './shared/api.js?v=auth-gate-12';
-import { clearAuthSession, getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js';
-import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js?v=session-4';
+import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js?v=profile-2';
 import { safeNext } from './shared/next.js?v=next-3';
-import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js?v=pendiente-2';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-12';
+import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js?v=pendiente-3';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-14';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 
 const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones', 'admin/administradores', 'admin/bitacora', 'admin/fletes', 'admin/documentos', 'admin/catalogos', 'admin/subastas']);
@@ -103,7 +103,6 @@ function initialize() {
         setStatus(status, 'Verificando credenciales…');
 
         try {
-            clearAuthSession();
             clearAdminBrowserSession();
             await signInWithPassword(email, password);
             setStatus(status, 'Credenciales válidas. Vinculando tu identidad de TinderCows…');
@@ -141,7 +140,7 @@ function initialize() {
                         window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
                         return;
                     }
-                    try { await signOut(); } catch { clearAuthSession(); }
+                    try { await signOut(); } catch { /* signOut limpia solo la sesión que intentó revocar */ }
                     setStatus(status, 'La sesión no pudo verificarse. Vuelve a iniciar sesión.', 'error');
                     return;
                 }

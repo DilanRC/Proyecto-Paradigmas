@@ -1,4 +1,4 @@
-import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
+import { getAccessToken, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 
 const API_URL = 'api/v1/publicaciones/interacciones';
 const ACTION_TYPES = {
@@ -53,6 +53,10 @@ async function save(button, type) {
         let payload = null;
         try { payload = await response.json(); } catch { /* Se muestra un mensaje común. */ }
         if (!response.ok || payload?.success !== true) {
+            if (response.status === 401 && payload?.message === 'Debe iniciar sesión para registrar la interacción.') {
+                window.location.assign('registro?next=explorar');
+                return;
+            }
             throw new Error(payload?.message || 'No pudimos guardar tu acción.');
         }
 

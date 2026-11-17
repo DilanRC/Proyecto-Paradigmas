@@ -16,10 +16,10 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-10">
     <link rel="stylesheet" href="css/components.css?v=official-shell-2">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-4">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-5">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-19"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-14"></script>
+    <script type="module" src="js/public-ui.js?v=public-21"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-15"></script>
 </head>
 <body class="public-home activity-page settings-page"<?= $soloParticipacion ? ' data-pagina="participar"' : '' ?>>
     <div class="public-shell" id="inicio">

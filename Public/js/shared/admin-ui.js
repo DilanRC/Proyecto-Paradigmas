@@ -1,10 +1,18 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-12';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-14';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-14';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-15';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
+
+function browserStorage(target = globalThis) {
+    try {
+        const persistent = target.localStorage;
+        if (persistent) return persistent;
+    } catch { /* sigue con el almacenamiento disponible en esta pestaña */ }
+    try { return target.sessionStorage ?? null; } catch { return null; }
+}
 
 const MODULES = {
     'admin/dashboard': {
@@ -90,7 +98,7 @@ function injectStylesheet(href, marker) {
 
 function readSession() {
     try {
-        const raw = globalThis.sessionStorage?.getItem(SESSION_KEY);
+        const raw = browserStorage()?.getItem(SESSION_KEY);
         if (!raw) return null;
         return JSON.parse(raw);
     } catch {
@@ -121,7 +129,7 @@ function createIcon(className) {
     return icon;
 }
 
-export function readSidebarCollapsed(storage = globalThis.localStorage) {
+export function readSidebarCollapsed(storage = browserStorage()) {
     try {
         return storage?.getItem(ADMIN_SIDEBAR_KEY) === 'true';
     } catch {
@@ -129,7 +137,7 @@ export function readSidebarCollapsed(storage = globalThis.localStorage) {
     }
 }
 
-function storeSidebarCollapsed(collapsed, storage = globalThis.localStorage) {
+function storeSidebarCollapsed(collapsed, storage = browserStorage()) {
     try {
         storage?.setItem(ADMIN_SIDEBAR_KEY, String(collapsed));
     } catch {
@@ -171,7 +179,7 @@ function updateCollapsedTitles(collapsed) {
     }
 }
 
-export function applySidebarState(collapsed, { persist = false, storage = globalThis.localStorage } = {}) {
+export function applySidebarState(collapsed, { persist = false, storage = browserStorage() } = {}) {
     if (typeof document === 'undefined') return;
     const safeCollapsed = collapsed === true;
     setSidebarRootState(safeCollapsed);

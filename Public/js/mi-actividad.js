@@ -1,15 +1,15 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
-import { request } from './shared/api.js';
+import { request } from './shared/api.js?v=auth-gate-14';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
-import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-3';
-import { syncPublicProfile } from './shared/public-profile.js';
-import { safeImageUrl } from './explore.js?v=foto-3';
-import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-1';
+import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
+import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
+import { safeImageUrl } from './explore.js?v=explore-14';
+import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-2';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
-import { montarMisAnimales } from './mis-animales.js?v=animales-8';
+import { montarMisAnimales } from './mis-animales.js?v=animales-9';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
@@ -155,7 +155,7 @@ async function loadFarms() {
         await loadPublications();
         await misAnimales?.cargar();
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else setFarmView('error', error?.message || 'No pudimos cargar tus fincas.');
     }
 }
@@ -205,7 +205,7 @@ async function loadVehicles() {
         renderVehicles(response.data?.vehiculos ?? []);
         setVehicleView('content');
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else setVehicleView('error', error?.message || 'No pudimos cargar tus vehículos.');
     }
 }
@@ -220,7 +220,7 @@ async function loadActivity({ quiet = false } = {}) {
         await loadSolicitudes();
         return response.data;
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else setActivityView('error', error?.message || 'No fue posible consultar tu actividad.');
         return null;
     }
@@ -303,7 +303,7 @@ async function loadSolicitudes() {
         const response = await request(SOLICITUDES_API);
         renderSolicitudes(response.data);
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else toast?.error(error?.message || 'No pudimos cargar tus solicitudes.');
     }
 }
@@ -334,7 +334,7 @@ async function responderSolicitud(id, accion) {
         await loadSolicitudes();
         if (accion === 'ACEPTAR' && isActive('PRODUCTOR')) await loadPublications();
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else toast?.error(error?.errors?.precio || error?.message || 'No pudimos responder la solicitud.');
     }
 }
@@ -382,7 +382,7 @@ async function loadPublications() {
         renderPublications(response.data?.publicaciones ?? []);
         setPublicationsView('content');
     } catch (error) {
-        if (error?.status === 401) endExpiredSession();
+        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
         else setPublicationsView('error', error?.message || 'No pudimos cargar tus publicaciones.');
     }
 }

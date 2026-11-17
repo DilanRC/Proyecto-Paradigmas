@@ -1,7 +1,7 @@
-import { getAccessToken, readAuthSession } from './shared/supabase-auth.js';
-import { request } from './shared/api.js';
-import { subirImagenPublicacion, validarImagen } from './shared/storage.js';
-import { safeImageUrl } from './explore.js?v=foto-4';
+import { getAccessToken, readAuthSession } from './shared/supabase-auth.js?v=session-4';
+import { request } from './shared/api.js?v=auth-gate-14';
+import { subirImagenPublicacion, validarImagen } from './shared/storage.js?v=documento-3';
+import { safeImageUrl } from './explore.js?v=explore-14';
 import { digitosArete, errorArete, formatearArete } from './shared/arete.js';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 

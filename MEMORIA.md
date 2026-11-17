@@ -9,7 +9,7 @@
 
 ## 1. Estado actual
 
-- Rama de trabajo del frente: `jefersonbustamante` (sale de `origin/dev`).
+- Rama de trabajo de esta revisión: `fix/session-persistence-participar-layout` (sale del `dev` verificado en `aa63e27`).
 - Sprint actual: Jeferson Bustamante lleva el **frontend**; otro compañero
   continúa el **backend** en esta misma línea.
 - App local: `docker compose up --build -d` → http://localhost:8080
@@ -75,6 +75,16 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - **`AllowOverride None` no está soportado:** la app falla cerrada con 503, pero Apache puede servir archivos privados estáticos porque ignora las reglas, **incluido el `.env` del ZIP, con la clave secreta de Supabase si se empaquetó con ella**. Hay que comprobar la configuración real del equipo de revisión antes de declarar el ZIP listo.
 
 ### Navegación y sesión
+- La sesión de Supabase se guarda en `localStorage` para compartirla entre pestañas del mismo sitio. Al cargar el módulo,
+  `migrateLegacyAuthSession()` compara y promueve la sesión anterior de `sessionStorage` si no existe una sesión primaria o si la
+  legada es más reciente y el almacenamiento persistente permite escribir; usa `Web Locks` cuando están disponibles. `readAuthSession()` solo lee la copia más reciente.
+  `Web Locks` serializa la renovación del refresh token entre pestañas compatibles; el evento `storage` recarga las otras páginas al entrar, salir o
+  cambiar de cuenta, e ignora la mera rotación de tokens. Si el navegador bloquea el acceso a `localStorage` o rechaza sus
+  escrituras, se usa `sessionStorage` y la sesión queda limitada a esa pestaña.
+- `tindercows:profile` es solo caché para presentación y borradores: su ausencia en una pestaña no significa que falte Persona.
+  Las APIs autenticadas vuelven a resolver y validar la identidad. La caché de perfil continúa siendo por pestaña y se limpia
+  al cambiar de cuenta o cerrar sesión.
+- El marcador visual del panel admin también se comparte en `localStorage`; no sustituye la autorización que comprueba cada API.
 - **Sin sesión**, el header muestra solo logo, tema, Entrar y Crear cuenta
   (sin Inicio, Buscar, Explorar, Publicar ni Fletes). Lo hace `public-ui.js`
   en el navegador; las vistas PHP siguen trayendo los enlaces.
@@ -108,7 +118,8 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
 - **"Más formas de participar" (`/participar`)**: página visible desde el menú del avatar y Mi panel (botón
   junto a las acciones, "Gestionar" y "Elegir cómo participo"). Es la **misma vista y `ajustes.js`** de Ajustes
   con `$soloParticipacion = true` (`Public/participar.php`): oculta el menú lateral y el perfil y marca
-  `<body data-pagina="participar">`, que hace que "Configurar" Vendedor vuelva a `participar`. `participar`
+  `<body data-pagina="participar">`, que hace que "Configurar" Vendedor vuelva a `participar`. Como oculta el menú
+  lateral, esa página usa una columna centrada de hasta 960 px (en móvil conserva el ancho fluido). `participar`
   está en `PUBLIC_DESTINATIONS` de `next.js`. Ajustes → Cómo participo sigue existiendo.
 - **Confirmación de correo:** el proyecto de Supabase la tiene activada
   (`mailer_autoconfirm: false`). Si `signUp` no devuelve sesión, el registro
@@ -535,10 +546,12 @@ Detalle completo en `Documentation/Arquitectura.md`. Lo nuevo de esta línea:
   (comprador) hechas el 09/11. Con un solo rol se abre directo el que tiene (`rolDisponible` en `mi-dashboard.js`).
 - Página `/mi-dashboard` (enlace "Mi dashboard" en el menú del avatar y en el pie). Sin sesión → `entrar?next=mi-dashboard`.
 - **API `GET api/v1/mi-dashboard?rol=VENDEDOR|COMPRADOR&desde&hasta&especieId&tipoId&razaId&provincia`** (+ `latitud`, `longitud`,
-  `radioKm` 1-500, por defecto 50, para el comprador; sesión; solo lectura). Devuelve `roles` (`vendedor` = tiene Productor,
+  `radioKm` 1-500, por defecto 50, para el comprador; sesión). Antes de contar llama a `SubastaCierreService::cerrarVencidas()`:
+  consultar una actividad válida puede cerrar subastas, registrar compra/venta, notificar y escribir bitácora. Si la actividad
+  pedida no está activa, responde 409 sin ejecutar ese cierre. Devuelve `roles` (`vendedor` = tiene Productor,
   `comprador` = tiene Comprador), `indicadores` y `subastas` (con `imagenUrl`). Cada indicador trae `ids` de las subastas que lo
   forman (la pantalla pinta sus fotos). Rol que no tiene → 409 (con `roles`); parámetro desconocido o inválido → 422 (los filtros se
-  validan antes que los roles; está en `validacion_entradas_test`). Antes de contar llama a `SubastaCierreService::cerrarVencidas()`.
+  validan antes que los roles; está en `validacion_entradas_test`).
 - **Privacidad:** la respuesta **no trae coordenadas de las fincas ni el id de quien ganó** (`MiDashboardController::publica` quita
   `punto` y `ganadorPersonaId`); el comprador solo ve `distanciaKm`, `soyGanador` y `voyGanando`. La ubicación del navegador se pide
   solo al tocar "Usar mi ubicación", vive en memoria y no se guarda.
@@ -725,7 +738,7 @@ están incluidos ahí.
 
 ## 6. Estado de pruebas
 
-**Frontend: pasan todas (452/452 el 09/11/2026, rama `feat/dashboards`; 436/436 el 12/10).** Las 4 que fallaban desde antes ya
+**Frontend: pasan todas (475/475 el 17/11/2026, rama `fix/session-persistence-participar-layout`; 452/452 el 09/11, rama `feat/dashboards`).** Las 4 que fallaban desde antes ya
 no fallan. **PHP: 80/80 archivos `Tests/*_test.php` en XAMPP real** (PHP 8.0.30, MariaDB 10.4.32) y 92/92 contando los
 `*_eval.php`, `*_gate.php`, `Database/Tests/*.php` y `services/supabase-database`. Cualquier fallo es una regresión, salvo las
 excepciones de entorno de abajo.
@@ -747,6 +760,37 @@ pasó al repetirla: parece intermitente, no relacionada con los alias.
 ## 7. Registro de cambios
 
 Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos clave · cuidados.
+
+### 2026-11-17 · fix/session-persistence-participar-layout · Sesión entre pestañas y revisión de Calidad
+- La sesión compartida pasa a `localStorage`, migra sesiones anteriores de `sessionStorage`, coordina el refresh con Web Locks y
+  serializa los inicios de sesión y la renovación de token. Cada guardado lleva `writtenAt`: si el almacenamiento persistente
+  conserva una sesión vieja y solo permite leer, `readAuthSession` prefiere la sesión nueva del respaldo por pestaña. Refresh,
+  logout y respuestas 401 usan la generación/versión de sesión que inició la operación; una petición vieja no recibe el token de
+  otra cuenta ni borra su sesión. Al cambiar de identidad se borra el perfil cacheado antes de consultar el nuevo. El caché de
+  perfil ya no decide si existe Persona; las interacciones sin Persona se derivan a registro solo ante el 401 específico del
+  servidor. Un fallo temporal de refresh conserva la sesión y deja operar APIs públicas como anónimo; si el resultado es 401, no
+  convierte el error de red en cierre de la cuenta. El pie público actualiza `Entrar` a `Mi panel` con sesión.
+- `/participar` tenía una columna vacía reservada al menú lateral que esa vista oculta; CSS ahora usa una columna y centra el
+  contenido hasta 960 px.
+- La pasada final detectó módulos y páginas que seguían cargando URLs de caché anteriores. Se versionaron los consumidores
+  de `api.js` y las cadenas afectadas de `storage.js`, perfil, sesión, fotos, registro y subastas; también se avanzaron los
+  entrypoints de las vistas. `admin_cache_chain.test.mjs` ahora comprueba todos los consumidores de `api.js`, no solo admin.
+- En el dashboard de comprador se comprobó que “flete más barato” pedía una página de un resultado ordenada por distancia. Ahora
+  considera todas las ofertas aplicables y una prueba de subastas compara una oferta cercana más cara con otra más lejana y barata.
+- En staging se vinculó la cuenta de evaluación a una Persona con capacidades Comprador, Productor y Transportista, y se añadieron
+  una finca y un vehículo ficticios. `/api/v1/identidad`, `/actividad`, `/mi-fincas`, `/mi-vehiculos` y `/admin/status` dieron 200.
+  Explorar registró respuestas 500 intermitentes en la primera carga; en cuatro rondas posteriores las APIs consultadas dieron 200.
+  Queda pendiente observar si el 500 reaparece para capturar el error de servidor.
+- Comprobado: frontend **475/475**, `frontend_contract_test`, `ui_test`, contraste AA **44/44** y `official_app_shell.eval` **13/13**;
+  PHP `dashboard_service_test`, `subastas_test`, `validacion_entradas_test`, `api_requires_test`, `sql_alias_minuscula_test` y
+  `runtime_compatibility_test` contra una base MySQL aislada que se eliminó al terminar. Navegador local: sesión simulada compartida
+  en dos pestañas, cierre propagado a la otra, cambio de cuenta sin conservar el perfil anterior y `/participar` a 960 px en escritorio
+  y 368 px a 390 px sin scroll horizontal. No se probó autenticación real contra Supabase en local.
+- La cadena de caché quedó verificada contra `dev`: los módulos JavaScript cambiados y sus entrypoints ya no comparten las
+  URLs anteriores. `git diff --check` pasó. Thermos final de corrección/seguridad y mantenibilidad: **PASS**, sin hallazgos
+  concretos pendientes. Se añadieron regresiones para las carreras de refresh, cierre de sesión, 401 atrasados y migración del perfil.
+- Sin commit, push ni despliegue. Las verificaciones de staging no prueban el código de esta rama porque staging sigue en su
+  despliegue existente.
 
 ### 2026-11-09 · feat/dashboards · Mi dashboard rediseñado (prompt de diseño de Jeferson)
 - Jeferson pidió rehacer la página con un prompt de diseño (estructura, medidas y colores propios). **Decidió usar los colores y
@@ -833,8 +877,8 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - **Subastas:** la pestaña y el filtro admin "Historial" se llaman **Finalizadas** (el valor de la API sigue siendo `HISTORIAL`).
 - **Me interesa:** se revisó el reporte de que una marca ocultaba la publicación a las demás personas. El servidor filtra por la
   persona de la sesión (`SQL_ME_INTERESA`) y no se reprodujo: ni en MySQL local con tres personas ni en Postgres 16 (esquema de
-  `migrate.php`, `api_publicaciones_test` completo). La sesión vive en `sessionStorage` (una por pestaña), así que tampoco se
-  mezclan cuentas entre pestañas. `api_publicaciones_test` comprueba ahora que las marcas de otra persona y la falta de sesión no
+  `migrate.php`, `api_publicaciones_test` completo). En esa revisión la sesión vivía en `sessionStorage`; desde 17/11 se comparte
+  entre pestañas con la decisión de Navegación y sesión de arriba. `api_publicaciones_test` comprueba ahora que las marcas de otra persona y la falta de sesión no
   ocultan nada. **Sin probar en el despliegue de `dev` con dos cuentas reales:** si se repite, anotar las cuentas y la publicación.
   `main` (02/09) aún no tiene Me interesa. Ojo: `test_cleanup_productores()` usa `DELETE p FROM …` (solo MySQL) y falla en Postgres.
 
