@@ -5,7 +5,10 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $schema = file_get_contents("{$root}/schema.sql");
 $migration = file_get_contents("{$root}/migrate.php");
-$entrypoint = file_get_contents(dirname(__DIR__, 3) . '/docker/apache/container-entrypoint.sh');
+$repoRoot = dirname(__DIR__, 3);
+$entrypoint = file_get_contents("{$repoRoot}/docker/apache/container-entrypoint.sh");
+$phpConfiguration = file_get_contents("{$repoRoot}/docker/php-errores.ini");
+$requestMigrator = file_get_contents("{$root}/migrate-request.php");
 $checks = [
     'cuarenta_y_ocho_tablas' => substr_count($schema, 'CREATE TABLE IF NOT EXISTS') === 48,
     'politica_administrativa' => str_contains($schema, 'CREATE TABLE IF NOT EXISTS public.tbadministrador')
@@ -60,7 +63,17 @@ $checks = [
     'recarga_postgrest' => str_contains($migration, "NOTIFY pgrst, 'reload schema'"),
     'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=48 migration=v10'),
     'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
-    'arranque_vercel' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
+    'conexion_directa_primero' => str_contains($migration, "['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL']"),
+    'migracion_vercel_solo_php' => str_contains($phpConfiguration, 'auto_prepend_file = /var/www/html/services/supabase-database/migrate-request.php')
+        && str_contains($requestMigrator, "getenv('POSTGRES_URL')")
+        && str_contains($requestMigrator, "getenv('POSTGRES_URL_NON_POOLING')")
+        && str_contains($requestMigrator, "if (PHP_SAPI === 'cli')")
+        && str_contains($requestMigrator, 'tindercows-schema-v10.ready')
+        && str_contains($requestMigrator, 'tindercows-schema-v10.lock')
+        && str_contains($requestMigrator, 'flock($lock, LOCK_EX | LOCK_NB)')
+        && str_contains($requestMigrator, '10_000_000_000')
+        && str_contains($requestMigrator, "require __DIR__ . '/migrate.php'")
+        && !str_contains($entrypoint, 'services/supabase-database/migrate.php'),
 ];
 $score = (int) round(100 * count(array_filter($checks)) / count($checks));
 echo json_encode(['eval' => 'supabase_database_schema', 'score' => $score, 'threshold' => 100,

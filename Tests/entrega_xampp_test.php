@@ -74,10 +74,26 @@ foreach ($rastreados as $archivo) {
     }
 }
 
-// Un esquema degradado (exit 2) avisa pero no impide que producción arranque.
+// El migrador corre al procesar PHP, no al arrancar Apache ni al servir archivos estáticos.
 $entrada = (string) file_get_contents($raiz . '/docker/apache/container-entrypoint.sh');
-test_assert(str_contains($entrada, '|| estado=$?') && str_contains($entrada, '"$estado" -eq 2'),
-    'El arranque debe distinguir el esquema degradado de un fallo de migración');
+$configuracionPhp = (string) file_get_contents($raiz . '/docker/php-errores.ini');
+$migradorPorSolicitud = (string) file_get_contents($raiz . '/services/supabase-database/migrate-request.php');
+$migracion = (string) file_get_contents($raiz . '/services/supabase-database/migrate.php');
+test_assert(!str_contains($entrada, 'services/supabase-database/migrate.php')
+    && str_contains($configuracionPhp, 'auto_prepend_file = /var/www/html/services/supabase-database/migrate-request.php')
+    && str_contains($migradorPorSolicitud, "getenv('POSTGRES_URL')")
+    && str_contains($migradorPorSolicitud, "getenv('POSTGRES_URL_NON_POOLING')")
+    && str_contains($migradorPorSolicitud, "if (PHP_SAPI === 'cli')")
+    && str_contains($migradorPorSolicitud, 'tindercows-schema-v10.ready')
+    && str_contains($migradorPorSolicitud, 'tindercows-schema-v10.lock')
+    && str_contains($migradorPorSolicitud, 'flock($lock, LOCK_EX | LOCK_NB)')
+    && str_contains($migradorPorSolicitud, '10_000_000_000'),
+    'Los recursos estáticos no deben abrir conexiones PostgreSQL y cada contenedor debe validar el esquema una sola vez');
+test_assert(str_contains($migracion, "if (PHP_SAPI === 'cli') {")
+    && str_contains($migracion, 'exit(2);')
+    && str_contains($migracion, 'exit(1);')
+    && str_contains($migracion, 'http_response_code(503)'),
+    'El migrador debe conservar sus salidas CLI y responder 503 JSON cuando falle en una solicitud web');
 
 // El ZIP sale del commit, deja fuera memoria de agentes y respaldos, y trae su .env sin credenciales privilegiadas.
 $empaque = (string) file_get_contents($raiz . '/Tools/empaquetar-entrega.sh');

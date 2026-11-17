@@ -237,7 +237,7 @@ function postgresConnection(string $url): PDO
 function configuredConnection(): PDO
 {
     $errors = [];
-    foreach (['POSTGRES_URL', 'POSTGRES_URL_NON_POOLING'] as $name) {
+    foreach (['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL'] as $name) {
         $url = getenv($name);
         if ($url === false || $url === '' || $url === '[SENSITIVE]') {
             continue;
@@ -723,18 +723,42 @@ try {
     validateSchema($connection);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
+    unset($connection);
     if ($sinLlavePrimaria !== []) {
-        fwrite(STDOUT, 'supabase_schema_status=degraded tables=48 migration=v10 primary_key_pending='
-            . count($sinLlavePrimaria) . "\n");
-        fwrite(STDERR, 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
-            . " causa=llave_existente_incorrecta_o_identificadores_repetidos_o_nulos\n");
-        exit(2);
+        $estadoDegradado = 'supabase_schema_status=degraded tables=48 migration=v10 primary_key_pending='
+            . count($sinLlavePrimaria);
+        $detalleDegradado = 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
+            . ' causa=llave_existente_incorrecta_o_identificadores_repetidos_o_nulos';
+        if (PHP_SAPI === 'cli') {
+            fwrite(STDOUT, $estadoDegradado . "\n");
+            fwrite(STDERR, $detalleDegradado . "\n");
+            exit(2);
+        }
+        error_log($estadoDegradado);
+        error_log($detalleDegradado);
+        return false;
     }
-    fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
+    }
+    return true;
 } catch (Throwable $exception) {
     if (isset($connection) && $connection->inTransaction()) {
         $connection->rollBack();
     }
-    fwrite(STDERR, 'supabase_schema_status=error message=' . $exception->getMessage() . "\n");
-    exit(1);
+    unset($connection);
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDERR, 'supabase_schema_status=error message=' . $exception->getMessage() . "\n");
+        exit(1);
+    }
+    error_log('supabase_schema_status=error message=' . $exception->getMessage());
+    http_response_code(503);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false,
+        'message' => 'El servicio está temporalmente no disponible. Intente de nuevo.',
+        'data' => null,
+        'errors' => null,
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
 }

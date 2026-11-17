@@ -6,6 +6,8 @@ $root = dirname(__DIR__);
 $dockerfile = file_get_contents("{$root}/Dockerfile");
 $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
+$phpConfiguration = file_get_contents("{$root}/docker/php-errores.ini");
+$requestMigrator = file_get_contents("{$root}/services/supabase-database/migrate-request.php");
 $readme = file_get_contents("{$root}/README.md");
 $vercelConfigurationText = file_get_contents("{$root}/vercel.json");
 $vercelConfiguration = json_decode($vercelConfigurationText, true, 512, JSON_THROW_ON_ERROR);
@@ -21,7 +23,16 @@ $checks = [
     'apache_proceso_principal' => str_contains($entrypoint, 'exec apache2-foreground'),
     'apache_sin_warning_servername' => str_contains($dockerfile, 'a2enconf servername')
         && str_contains($vercelDockerfile, 'a2enconf servername'),
-    'migracion_supabase' => str_contains($entrypoint, 'services/supabase-database/migrate.php'),
+    'migracion_supabase_solo_php' => str_contains($phpConfiguration, 'auto_prepend_file = /var/www/html/services/supabase-database/migrate-request.php')
+        && str_contains($requestMigrator, "getenv('POSTGRES_URL')")
+        && str_contains($requestMigrator, "getenv('POSTGRES_URL_NON_POOLING')")
+        && str_contains($requestMigrator, "if (PHP_SAPI === 'cli')")
+        && str_contains($requestMigrator, 'tindercows-schema-v10.ready')
+        && str_contains($requestMigrator, 'tindercows-schema-v10.lock')
+        && str_contains($requestMigrator, 'flock($lock, LOCK_EX | LOCK_NB)')
+        && str_contains($requestMigrator, '10_000_000_000')
+        && str_contains($requestMigrator, "require __DIR__ . '/migrate.php'")
+        && !str_contains($entrypoint, 'services/supabase-database/migrate.php'),
     'servicio_vercel_explicito' => ($vercelConfiguration['services']['app']['entrypoint'] ?? null) === 'Dockerfile.vercel',
     'preview_solo_dev' => ($vercelConfiguration['git']['deploymentEnabled']['dev'] ?? null) === true
         && ($vercelConfiguration['git']['deploymentEnabled']['main'] ?? null) === true

@@ -11,16 +11,21 @@ defaults ni objetos programables. En una base existente `migrate.php` agrega la 
 tienen; si una tiene identificadores repetidos o nulos la deja igual y lo avisa en la salida de error
 (`supabase_primary_key_pendiente`).
 
-`migrate.php` se ejecuta antes de Apache cuando Vercel entrega `POSTGRES_URL` o
-`POSTGRES_URL_NON_POOLING`. La migración usa un bloqueo asesor transaccional,
+`docker/php-errores.ini` registra `migrate-request.php` como `auto_prepend_file`.
+Así, la migración corre al atender la primera solicitud PHP de cada contenedor
+cuando Vercel entrega `POSTGRES_URL` o `POSTGRES_URL_NON_POOLING`. Un archivo en
+`/tmp` y `flock` comparten el resultado entre workers; una espera dura hasta 10
+segundos y luego responde 503 JSON. El migrador prefiere la URL no agrupada para
+no consumir el pool de sesiones. Apache sirve CSS, JavaScript e imágenes sin
+abrir PostgreSQL. La migración usa un bloqueo asesor transaccional,
 crea las tablas de forma idempotente, habilita RLS sin políticas públicas y
 normaliza `tbproductordireccion` trasladando la ubicación a `tbdireccion`, migra
 las identidades heredadas tras rechazar duplicados o datos incompatibles, y
 valida todos los nombres de columna. Antes de confirmar la transacción notifica
-a PostgREST para recargar el esquema que publica la API REST. Un esquema incompatible detiene el
-contenedor sin borrar ni alterar datos existentes.
+a PostgREST para recargar el esquema que publica la API REST. Un esquema incompatible detiene la
+solicitud con 503 JSON sin borrar ni alterar datos existentes.
 
-Evidencia operativa esperada en los logs de Vercel:
+Al ejecutar `migrate.php` desde CLI, la salida de éxito es:
 
 ```text
 supabase_schema_status=ready tables=48 migration=v10

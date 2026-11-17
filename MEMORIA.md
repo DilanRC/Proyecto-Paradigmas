@@ -9,7 +9,7 @@
 
 ## 1. Estado actual
 
-- Rama de trabajo de esta revisión: `fix/session-persistence-participar-layout` (sale del `dev` verificado en `aa63e27`).
+- Rama de trabajo de esta revisión: `fix/session-persistence-participar-layout` (parte de `dev` en `aa63e27`; la corrección de sesión se publicó como `494b21d`).
 - Sprint actual: Jeferson Bustamante lleva el **frontend**; otro compañero
   continúa el **backend** en esta misma línea.
 - App local: `docker compose up --build -d` → http://localhost:8080
@@ -778,9 +778,10 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - En el dashboard de comprador se comprobó que “flete más barato” pedía una página de un resultado ordenada por distancia. Ahora
   considera todas las ofertas aplicables y una prueba de subastas compara una oferta cercana más cara con otra más lejana y barata.
 - En staging se vinculó la cuenta de evaluación a una Persona con capacidades Comprador, Productor y Transportista, y se añadieron
-  una finca y un vehículo ficticios. `/api/v1/identidad`, `/actividad`, `/mi-fincas`, `/mi-vehiculos` y `/admin/status` dieron 200.
-  Explorar registró respuestas 500 intermitentes en la primera carga; en cuatro rondas posteriores las APIs consultadas dieron 200.
-  Queda pendiente observar si el 500 reaparece para capturar el error de servidor.
+  una finca y un vehículo ficticios. El login real de Supabase funcionó, pero QA volvió a observar 500 intermitentes en Explorar.
+  Los logs de Vercel identificaron `EMAXCONNSESSION` con máximo de 15 conexiones: el entrypoint aplicaba la migración PostgreSQL
+  cada vez que el contenedor atendía solicitudes estáticas y PHP. El despliegue `494b21d` ya está en `origin/dev`; la corrección
+  para limitar la migración a PHP queda en esta rama y su nueva verificación de staging está pendiente.
 - Comprobado: frontend **475/475**, `frontend_contract_test`, `ui_test`, contraste AA **44/44** y `official_app_shell.eval` **13/13**;
   PHP `dashboard_service_test`, `subastas_test`, `validacion_entradas_test`, `api_requires_test`, `sql_alias_minuscula_test` y
   `runtime_compatibility_test` contra una base MySQL aislada que se eliminó al terminar. Navegador local: sesión simulada compartida
@@ -789,8 +790,22 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - La cadena de caché quedó verificada contra `dev`: los módulos JavaScript cambiados y sus entrypoints ya no comparten las
   URLs anteriores. `git diff --check` pasó. Thermos final de corrección/seguridad y mantenibilidad: **PASS**, sin hallazgos
   concretos pendientes. Se añadieron regresiones para las carreras de refresh, cierre de sesión, 401 atrasados y migración del perfil.
-- Sin commit, push ni despliegue. Las verificaciones de staging no prueban el código de esta rama porque staging sigue en su
-  despliegue existente.
+- La corrección de sesión, layout, caché y flete se registró en `494b21d` y se publicó a `origin/dev`. QA sobre ese despliegue
+  encontró el agotamiento del pool de PostgreSQL que se documenta en la entrada siguiente.
+
+### 2026-11-17 · fix/session-persistence-participar-layout · Evita conexiones PostgreSQL para archivos estáticos
+- Se retiró el migrador del entrypoint de Apache. `docker/php-errores.ini` lo carga con `auto_prepend_file` para solicitudes PHP;
+  `migrate-request.php` omite CLI y no hace nada si no existe URL PostgreSQL. Así CSS, JavaScript e imágenes no abren conexiones.
+  Una marca de versión en `/tmp`, protegida por `flock`, evita repetir la migración entre workers del mismo contenedor. Cada espera del bloqueo tiene un límite de 10 segundos y devuelve 503 JSON si vence. El migrador prefiere `POSTGRES_URL_NON_POOLING` para evitar el pool de sesiones.
+- El migrador libera PDO tras el commit, conserva salida y códigos CLI, registra errores de esquema y responde 503 en JSON durante
+  una solicitud web si falla la validación. Un esquema degradado permite que la solicitud continúe, como antes.
+- Los contratos de despliegue, el eval del esquema Supabase, la prueba XAMPP y ambos README describen ahora este flujo.
+- Comprobado localmente: lint PHP; `deployment_test`, `deployment_eval` (15/15), `entrega_xampp_test`, `schema_test` y
+  `schema_eval` (29/29); frontend 475/475, contrato UI/API, UI, contraste AA (44/44), shell (13/13) y capacidades (17/17).
+  Con URL PostgreSQL falsa, el contenedor sirvió JavaScript con 200 y respondió 503 JSON en PHP. Con PostgreSQL 16 desechable,
+  12 solicitudes API simultáneas dieron 401 por falta de sesión (esperado), `/explorar` dio 200, JavaScript 200, hubo una sola
+  línea `supabase_schema_status=ready` y se crearon 48 tablas. El contenedor, la red y la imagen de prueba se retiraron.
+- Pendiente: publicar a `dev` y repetir QA de sesión y navegación en el navegador contra staging.
 
 ### 2026-11-09 · feat/dashboards · Mi dashboard rediseñado (prompt de diseño de Jeferson)
 - Jeferson pidió rehacer la página con un prompt de diseño (estructura, medidas y colores propios). **Decidió usar los colores y

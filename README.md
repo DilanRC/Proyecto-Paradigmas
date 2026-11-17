@@ -241,12 +241,18 @@ desplegar `main`, se debe asociar `tindervacas.dpdns.org` al proyecto y comproba
 curl -fsS https://tindervacas.dpdns.org/ >/dev/null
 ```
 
-Cuando la integración Supabase entrega `POSTGRES_URL`, el contenedor aplica
-antes de iniciar Apache el esquema PostgreSQL de `services/supabase-database/`.
+Cuando Vercel entrega `POSTGRES_URL` o `POSTGRES_URL_NON_POOLING`,
+`auto_prepend_file` ejecuta el migrador antes de la primera solicitud PHP de cada
+contenedor y guarda el resultado en `/tmp` bajo un bloqueo compartido entre
+workers. Las solicitudes esperan como máximo 10 segundos por ese bloqueo.
+El migrador prefiere `POSTGRES_URL_NON_POOLING` para no ocupar el pool de
+sesiones. Apache sirve CSS, JavaScript e imágenes sin abrir conexiones PostgreSQL.
 El migrador crea y valida las 48 tablas, incluida la identidad compartida en
-`tbpersona`, habilita RLS sin políticas públicas y valida las columnas. La
-migración remota de persona no se ejecuta ni se activa mediante push hasta
-confirmar un snapshot y autorizar expresamente el cambio sobre Supabase.
+`tbpersona`, habilita RLS sin políticas públicas y valida las columnas. Si el
+esquema no se puede validar, la solicitud responde 503 en JSON y deja el detalle
+en el log.
+Los cambios futuros del esquema Supabase requieren un snapshot y autorización
+expresa antes de ejecutarse.
 
 ### Aplicar el esquema a una base existente
 
@@ -277,9 +283,11 @@ Si una instalación heredada rechazara personas sin alias, aplique después
 `Database/Migrations/010normalizapersonaalias.sql`; solo ajusta la nulabilidad
 de `tbpersonaalias` y conserva los valores existentes.
 
-En Vercel, el arranque ejecuta la migración v10 contra Supabase, recarga la caché
-de esquema de PostgREST y falla antes de iniciar Apache si alguna tabla existe
-con columnas incompatibles.
+En Vercel, la primera solicitud PHP de cada contenedor ejecuta la migración v10
+contra Supabase y recarga la caché de esquema de PostgREST. El resultado se
+comparte entre workers de ese contenedor; cada espera del bloqueo vence en 10
+segundos. Los archivos estáticos no ejecutan el migrador. Una tabla con columnas
+incompatibles detiene esa solicitud con 503.
 
 ### Aplicar el avance de direcciones, pagos y transporte a una base existente
 

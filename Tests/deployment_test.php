@@ -8,6 +8,9 @@ $root = dirname(__DIR__);
 $dockerfile = file_get_contents("{$root}/Dockerfile");
 $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
+$phpConfiguration = file_get_contents("{$root}/docker/php-errores.ini");
+$requestMigrator = file_get_contents("{$root}/services/supabase-database/migrate-request.php");
+$supabaseMigrator = file_get_contents("{$root}/services/supabase-database/migrate.php");
 $databaseSchema = file_get_contents("{$root}/Database/SqlScripts/000instalacioncompleta.sql");
 $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
@@ -34,8 +37,33 @@ foreach ([$dockerfile, $vercelDockerfile] as $definition) {
 
 test_assert(str_contains($entrypoint, '${PORT:-80}'), 'El contenedor debe respetar PORT y usar 80 localmente');
 test_assert(str_contains($entrypoint, 'exec apache2-foreground'), 'Apache debe quedar como proceso principal');
-test_assert(str_contains($entrypoint, 'services/supabase-database/migrate.php'),
-    'El arranque debe validar el esquema Supabase');
+test_assert(str_contains($phpConfiguration, 'auto_prepend_file = /var/www/html/services/supabase-database/migrate-request.php'),
+    'Solo las solicitudes PHP deben validar el esquema Supabase antes de atenderlas');
+test_assert(!str_contains($entrypoint, 'services/supabase-database/migrate.php'),
+    'El arranque no debe abrir conexiones PostgreSQL para servir archivos estáticos');
+test_assert(str_contains($requestMigrator, "getenv('POSTGRES_URL')")
+    && str_contains($requestMigrator, "getenv('POSTGRES_URL_NON_POOLING')")
+    && str_contains($requestMigrator, "if (PHP_SAPI === 'cli')")
+    && str_contains($requestMigrator, 'sys_get_temp_dir()')
+    && str_contains($requestMigrator, 'tindercows-schema-v10.ready')
+    && str_contains($requestMigrator, 'tindercows-schema-v10.lock')
+    && str_contains($requestMigrator, 'flock($lock, LOCK_EX | LOCK_NB)')
+    && str_contains($requestMigrator, '10_000_000_000')
+    && str_contains($requestMigrator, '$schemaIsChecked()')
+    && str_contains($requestMigrator, 'file_put_contents($readyMarker')
+    && str_contains($requestMigrator, "require __DIR__ . '/migrate.php'"),
+    'El migrador por solicitud debe ejecutarse solo cuando Vercel entregue una URL PostgreSQL');
+test_assert(strpos($requestMigrator, "require __DIR__ . '/migrate.php'")
+    < strpos($requestMigrator, 'file_put_contents($readyMarker'),
+    'La marca por contenedor solo se escribe después de terminar la migración');
+test_assert(str_contains($supabaseMigrator, 'return false;') && str_contains($supabaseMigrator, 'return true;'),
+    'La migración debe distinguir un esquema degradado de uno listo para compartir el resultado por contenedor');
+test_assert(strpos($supabaseMigrator, "['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL']") !== false,
+    'El migrador debe preferir la conexión directa para no ocupar el pool de sesiones');
+test_assert(str_contains($supabaseMigrator, "if (PHP_SAPI === 'cli') {")
+    && str_contains($supabaseMigrator, 'exit(1);')
+    && str_contains($supabaseMigrator, 'http_response_code(503)'),
+    'Una falla de esquema debe mantener el error CLI y responder 503 en solicitudes web');
 test_assert(str_contains($publicHtaccess, 'HTTP_AUTHORIZATION:%{HTTP:Authorization}'),
     'Apache debe conservar el Bearer para que PHP resuelva la sesión');
 test_assert(str_contains($databaseSchema, 'CREATE TABLE IF NOT EXISTS tbfinca'),
