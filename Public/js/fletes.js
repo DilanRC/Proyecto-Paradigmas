@@ -23,6 +23,7 @@ let editor = null;
 let disparador = null;
 let turnoCercanos = 0;
 let provinciaGuardada = { clave: '', valor: null };
+let modoBusqueda = 'manual'; // La ubicación solo se utiliza tras pulsar el botón.
 
 function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
@@ -54,7 +55,7 @@ function stateFromActivity(payload) {
 function filaCercana(oferta) {
     // Una oferta sin punto en el mapa se empareja por provincia: no tiene distancia.
     const distancia = oferta.distanciaKm == null
-        ? 'en tu provincia'
+        ? 'coincidencia por provincia (distancia sin verificar)'
         : `a ${Number(oferta.distanciaKm).toLocaleString('es-CR', { maximumFractionDigits: 1 })} km (cubre ${Number(oferta.radioKm)} km)`;
     const elegir = `<div class="panel-row__actions"><button class="activity-button activity-button--sm" type="button" data-flete-elegir="${Number(oferta.ofertaId)}"><i class="fa-solid fa-hand-pointer" aria-hidden="true"></i>Elegir este flete</button></div>`;
     return `<article class="panel-row panel-row--media">${miniatura(oferta.vehiculo?.fotoUrl)}<div><h3>${escapeHtml(oferta.vehiculo?.modelo || 'Flete')} · hasta ${Number(oferta.capacidad)} cabezas</h3><p>${escapeHtml(formatLocation(oferta.zona))} · ${distancia}</p><p>${escapeHtml(oferta.transportista || '')} · ${escapeHtml(formatPrice(oferta.precio))}</p>${oferta.descripcion ? `<p>${escapeHtml(oferta.descripcion)}</p>` : ''}</div>${elegir}</article>`;
@@ -118,55 +119,56 @@ async function elegirPublicacion(publicacionId) {
 }
 
 async function cargarCercanos() {
+    const turno = ++turnoCercanos; // También invalida respuestas anteriores cuando falta el filtro.
     const estado = $('#cercanos-estado');
     const lista = $('#cercanos-lista');
-    const boton = $('#cercanos-ubicacion');
     const cuenta = $('#cercanos-count');
-    const ubicacion = leerUbicacionUsuario();
-    if (!ubicacion) {
+    const provinciaManual = $('#cercanos-provincia').value.trim();
+    const ubicacion = modoBusqueda === 'gps' ? leerUbicacionUsuario() : null;
+    if (!ubicacion && !provinciaManual) {
         lista.replaceChildren();
         cuenta.textContent = '';
-        estado.textContent = 'Necesitamos tu ubicación para mostrarte los fletes que cubren tu zona.';
+        estado.textContent = 'Selecciona una provincia o pulsa Usar mi ubicación para buscar fletes.';
         estado.hidden = false;
-        boton.hidden = false;
         return;
     }
-    boton.hidden = true;
+
     estado.hidden = false;
-    estado.textContent = 'Buscando fletes cerca de ti…';
-    const turno = ++turnoCercanos;
+    estado.textContent = ubicacion ? 'Buscando fletes que cubren tu ubicación…'
+        : 'Buscando ofertas de tu provincia (cobertura aproximada)…';
+    lista.replaceChildren();
+    cuenta.textContent = '';
     const capacidad = Math.max(1, Math.trunc(Number($('#cercanos-capacidad').value)) || 1);
-    // Una oferta lleva como máximo 200 cabezas (MiOfertasController). Antes 300 se recortaba a 200 y salían fletes que no alcanzan.
     if (capacidad > 200) {
-        lista.replaceChildren();
-        cuenta.textContent = '';
         estado.textContent = 'Ningún flete lleva más de 200 cabezas. Para más animales, pide varios fletes.';
         return;
     }
-    const consulta = new URLSearchParams({
-        latitud: ubicacion.latitud, longitud: ubicacion.longitud, capacidadMinima: String(capacidad), tamanoPagina: '50',
-    });
-    // Con la provincia también salen las ofertas que no marcaron punto en el mapa. Se pide una vez por punto:
-    // Nominatim limita a 1 consulta por segundo y, si fallaba al cambiar las cabezas, esas ofertas desaparecían.
-    const clave = `${ubicacion.latitud},${ubicacion.longitud}`;
-    if (provinciaGuardada.clave !== clave || !provinciaGuardada.valor) {
-        provinciaGuardada = { clave, valor: await provinciaDePunto(ubicacion) };
-    }
-    const provincia = provinciaGuardada.valor;
-    if (turno !== turnoCercanos) return;
-    if (provincia) consulta.set('provincia', provincia);
+    const consulta = new URLSearchParams({ capacidadMinima: String(capacidad), tamanoPagina: '50' });
     try {
-        const respuesta = await request(`${FLETES_API}?${consulta}`);
+        if (ubicacion) {
+            consulta.set('latitud', ubicacion.latitud);
+            consulta.set('longitud', ubicacion.longitud);
+            const clave = ubicacion.latitud + ',' + ubicacion.longitud;
+            if (provinciaGuardada.clave !== clave || !provinciaGuardada.valor) {
+                provinciaGuardada = { clave, valor: await provinciaDePunto(ubicacion) };
+            }
+            if (turno !== turnoCercanos) return;
+            if (provinciaGuardada.valor) consulta.set('provincia', provinciaGuardada.valor);
+        } else {
+            consulta.set('provincia', provinciaManual);
+        }
+        const respuesta = await request(FLETES_API + '?' + consulta.toString());
         if (turno !== turnoCercanos) return;
         const encontradas = respuesta.data?.ofertas ?? [];
         cercanas = encontradas;
         lista.innerHTML = encontradas.map(filaCercana).join('');
         cuenta.textContent = encontradas.length ? String(respuesta.data.total ?? encontradas.length) : '';
         estado.hidden = encontradas.length > 0;
-        if (!encontradas.length) estado.textContent = 'Todavía no hay fletes que cubran tu zona con esa capacidad.';
+        if (!encontradas.length) estado.textContent = 'Todavía no hay ofertas que coincidan con tu búsqueda.';
     } catch (error) {
         if (turno !== turnoCercanos) return;
         if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
+        cercanas = [];
         lista.replaceChildren();
         estado.hidden = false;
         estado.textContent = error?.message || 'No pudimos cargar los fletes.';
@@ -175,14 +177,16 @@ async function cargarCercanos() {
 
 async function usarMiUbicacion() {
     const estado = $('#cercanos-estado');
+    estado.hidden = false;
     estado.textContent = 'Obteniendo tu ubicación…';
     try {
         await capturarUbicacionAutomatica({ forzar: true });
+        modoBusqueda = 'gps';
         await cargarCercanos();
     } catch (error) {
         estado.textContent = error?.kind === 'unsupported'
-            ? 'Este navegador no ofrece geolocalización.'
-            : 'No pudimos obtener tu ubicación. Revisa el permiso de ubicación del navegador e inténtalo de nuevo.';
+            ? 'Este navegador no ofrece geolocalización. Puedes seleccionar una provincia.'
+            : 'No pudimos obtener tu ubicación. Selecciona una provincia o revisa el permiso del navegador.';
     }
 }
 
@@ -339,6 +343,10 @@ function conectarEventos() {
     });
     $('#cercanos-filtro')?.addEventListener('submit', (event) => event.preventDefault());
     $('#cercanos-ubicacion')?.addEventListener('click', usarMiUbicacion);
+    $('#cercanos-provincia')?.addEventListener('change', () => {
+        modoBusqueda = 'manual';
+        void cargarCercanos();
+    });
     $('#cercanos-lista')?.addEventListener('click', (event) => {
         const boton = event.target.closest('[data-flete-elegir]');
         if (boton) abrirElegir(Number(boton.dataset.fleteElegir), boton);
@@ -350,7 +358,9 @@ function conectarEventos() {
     $('#elegir-close')?.addEventListener('click', cerrarElegir);
     $('#elegir-cancel')?.addEventListener('click', cerrarElegir);
     $('#elegir-modal')?.addEventListener('cancel', (event) => { event.preventDefault(); cerrarElegir(); });
-    window.addEventListener(UBICACION_USUARIO_EVENT, cargarCercanos);
+    window.addEventListener(UBICACION_USUARIO_EVENT, () => {
+        if (modoBusqueda === 'gps') void cargarCercanos();
+    });
 
     $('#oferta-nueva')?.addEventListener('click', (event) => abrirOferta(null, event.currentTarget));
     $('#ofertas-lista')?.addEventListener('click', (event) => {
@@ -379,6 +389,7 @@ async function initialize() {
         renderState(stateBox, 'fa-solid fa-circle-info', 'Inicia sesión o crea una cuenta para ofrecer fletes.');
         primary.href = 'entrar?next=fletes';
         primary.textContent = 'Entrar para continuar';
+        $('#ofertas-estado').textContent = 'Inicia sesión para consultar tus ofertas de transporte.';
         return;
     }
 
@@ -392,6 +403,7 @@ async function initialize() {
         renderState(stateBox, 'fa-solid fa-triangle-exclamation', 'No pudimos comprobar el estado de tu servicio. Revisa Mi panel e inténtalo nuevamente.');
         primary.href = 'mi-actividad';
         primary.textContent = 'Abrir Mi panel';
+        $('#ofertas-estado').textContent = 'No pudimos verificar tu actividad de transporte. Inténtalo de nuevo desde Mi panel.';
         return;
     }
 
@@ -407,12 +419,14 @@ async function initialize() {
         renderState(stateBox, 'fa-solid fa-pause', 'Tu servicio de fletes está inactivo. Tu identidad y datos se conservan para poder reactivarlo.');
         primary.href = 'ajustes';
         primary.textContent = 'Reactivar servicio';
+        $('#ofertas-estado').textContent = 'Tu servicio de transporte está pausado. Reactívalo en Ajustes.';
         return;
     }
 
     renderState(stateBox, 'fa-solid fa-circle-info', 'Aún no ofreces fletes. Activa Transportista en Ajustes → Cómo participo.');
     primary.href = 'ajustes';
     primary.textContent = 'Quiero ofrecer fletes';
+    $('#ofertas-estado').textContent = 'Activa Transportista para publicar y gestionar tus ofertas.';
 }
 
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', initialize);

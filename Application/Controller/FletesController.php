@@ -71,10 +71,36 @@ final class FletesController
             $longitud = $ubicacion['longitud'] ?? null;
             $provincia = $ubicacion['provincia'] ?? null;
         } else {
-            $latitud = $this->coordenada($consulta['latitud'] ?? null, 'latitud', 90, $errores);
-            $longitud = $this->coordenada($consulta['longitud'] ?? null, 'longitud', 180, $errores);
-            // Opcional: la provincia de quien consulta, para sumar las ofertas que no marcaron punto en el mapa.
-            $provincia = is_string($consulta['provincia'] ?? null) && mb_strlen($consulta['provincia']) <= 100 ? $consulta['provincia'] : null;
+            // Sin GPS se permite consultar por provincia: una coincidencia provincial no garantiza
+            // estar dentro del radio real de cobertura; la vista lo comunica explícitamente.
+            $tieneLatitud = array_key_exists('latitud', $consulta) && $consulta['latitud'] !== '';
+            $tieneLongitud = array_key_exists('longitud', $consulta) && $consulta['longitud'] !== '';
+            $tienePunto = $tieneLatitud && $tieneLongitud;
+            $provinciaRecibida = $consulta['provincia'] ?? null;
+            $provincia = null;
+            if ($provinciaRecibida !== null && $provinciaRecibida !== '') {
+                if (!is_string($provinciaRecibida) || mb_strlen(trim($provinciaRecibida)) > 100) {
+                    $errores['provincia'] = 'La provincia debe ser un texto válido.';
+                } else {
+                    $provincia = trim($provinciaRecibida);
+                    $provincias = ['San José', 'Alajuela', 'Cartago', 'Heredia', 'Guanacaste', 'Puntarenas', 'Limón'];
+                    if (!$tienePunto && !in_array($provincia, $provincias, true)) {
+                        $errores['provincia'] = 'Selecciona una provincia válida.';
+                    }
+                }
+            }
+            if ($tienePunto) {
+                $latitud = $this->coordenada($consulta['latitud'], 'latitud', 90, $errores);
+                $longitud = $this->coordenada($consulta['longitud'], 'longitud', 180, $errores);
+            } else {
+                $latitud = null;
+                $longitud = null;
+                if ($tieneLatitud || $tieneLongitud) {
+                    $errores['ubicacion'] = 'Indica ambas coordenadas o selecciona una provincia.';
+                } elseif ($provincia === null) {
+                    $errores['provincia'] = 'Selecciona una provincia o comparte tu ubicación.';
+                }
+            }
         }
         $capacidad = $this->entero($consulta['capacidadMinima'] ?? 1, 'capacidadMinima', 1, 200, $errores);
         $pagina = $this->entero($consulta['pagina'] ?? 1, 'pagina', 1, 2147483647, $errores);

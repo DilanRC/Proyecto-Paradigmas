@@ -56,8 +56,8 @@ test('la página, Explorar, el encabezado y Mis animales llevan a las subastas',
     }
     const explorar = read('Application/View/explorar/index.php');
     assert.match(explorar, /data-subastas-banda/);
-    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-5/);
-    assert.match(explorar, /css\/subastas\.css\?v=subastas-2/);
+    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-6/);
+    assert.match(explorar, /css\/subastas\.css\?v=subastas-3/);
     const ui = read('Public/js/public-ui.js');
     assert.match(ui, /PRIVATE_PAGES = Object\.freeze\(\[[^\]]*'subastas'/);
     assert.match(ui, /\['subastas', 'fa-gavel', 'Subastas'\]/);
@@ -71,4 +71,19 @@ test('los estilos usan solo variables del sitio', () => {
     const css = read('Public/css/subastas.css');
     assert.doesNotMatch(css, /#[0-9a-f]{3,6}\b/i, 'sin colores nuevos');
     assert.doesNotMatch(css, /var\(--tc-primary\)\s*;/, 'el coral queda para los botones principales');
+});
+
+test('Explorar reserva Subastas en vivo después de los filtros con estados reales', () => {
+    const html = read('Application/View/explorar/index.php');
+    const js = read('Public/js/subastas-vivo.js');
+    const css = read('Public/css/subastas.css');
+    assert.ok(html.indexOf('data-explore-filterbar') < html.indexOf('data-subastas-banda')
+        && html.indexOf('data-subastas-banda') < html.indexOf('data-explore-deck'));
+    assert.match(html, /data-subastas-banda-estado role="status"/);
+    assert.doesNotMatch(html, /data-subastas-banda aria-labelledby="subastas-banda-titulo" hidden/);
+    assert.match(js, /estadoConsulta === 'error'/);
+    assert.match(js, /secuencia/);
+    assert.match(js, /!hayActivas \? 'Sin subastas activas'/);
+    assert.match(css, /\.subastas-banda \{ min-height:230px;/);
+    assert.match(css, /@media\(max-width:620px\)/);
 });

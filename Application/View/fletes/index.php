@@ -15,11 +15,11 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-14">
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-7">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-24"></script>
-    <script type="module" src="js/fletes.js?v=fletes-12"></script>
+    <script type="module" src="js/fletes.js?v=fletes-13"></script>
 </head>
 <body class="public-home">
 <div class="public-shell">
@@ -56,14 +56,16 @@
                     <div class="panel-head"><h2 id="cercanos-title">Fletes disponibles<span class="panel-count" id="cercanos-count"></span></h2></div>
                     <form id="cercanos-filtro" class="vehicle-form-grid" novalidate>
                         <label class="field"><span>Capacidad mínima (cabezas)</span><input id="cercanos-capacidad" name="capacidadMinima" type="number" min="1" max="200" step="1" inputmode="numeric" value="1"></label>
+                        <label class="field"><span>Provincia (sin GPS)</span><select id="cercanos-provincia" name="provincia"><option value="">Selecciona una provincia</option><option>San José</option><option>Alajuela</option><option>Cartago</option><option>Heredia</option><option>Guanacaste</option><option>Puntarenas</option><option>Limón</option></select></label>
+                        <p class="fletes-filtro-ayuda">Por provincia verás coincidencias aproximadas; confirma la cobertura con el transportista. El GPS es opcional.</p>
                     </form>
-                    <div id="cercanos-estado" class="resource-state" role="status" aria-live="polite">Buscando fletes cerca de ti…</div>
-                    <button id="cercanos-ubicacion" class="activity-button" type="button" hidden><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>Usar mi ubicación</button>
+                    <div id="cercanos-estado" class="resource-state" role="status" aria-live="polite">Selecciona una provincia o usa tu ubicación para buscar fletes.</div>
+                    <button id="cercanos-ubicacion" class="activity-button" type="button"><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>Usar mi ubicación</button>
                     <div id="cercanos-lista" class="panel-rows" aria-live="polite"></div>
                 </section>
 
-                <section id="ofertas-panel" class="activity-panel" aria-labelledby="ofertas-title" hidden>
-                    <div class="panel-head"><h2 id="ofertas-title">Mis ofertas<span class="panel-count" id="ofertas-count"></span></h2><button id="oferta-nueva" class="activity-button activity-button--sm" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Publicar oferta</button></div>
+                <section id="ofertas-panel" class="activity-panel" aria-labelledby="ofertas-title">
+                    <div class="panel-head"><h2 id="ofertas-title">Mis ofertas<span class="panel-count" id="ofertas-count"></span></h2><button id="oferta-nueva" class="activity-button activity-button--sm" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i>Publicar oferta</button></div>
                     <div id="ofertas-estado" class="resource-state" role="status" aria-live="polite">Cargando tus ofertas…</div>
                     <div id="ofertas-lista" class="panel-rows" aria-live="polite"></div>
                     <div id="ofertas-sin-vehiculo" class="panel-todo" hidden>

@@ -484,3 +484,9 @@ body.settings-page[data-pagina="participar"] .settings-sections {
 .perfil-skeleton { display:flex; align-items:center; gap:16px; }
 .perfil-skeleton > div { display:grid; flex:1; gap:10px; min-width:0; }
 .perfil-skeleton__avatar { flex:0 0 64px; width:64px; height:64px; border-radius:50%; }
+
+/* Fletes: formulario y panel de ofertas estables desde el primer pintado, también sin GPS. */
+#cercanos-filtro .fletes-filtro-ayuda { grid-column:1/-1; margin:0; color:var(--tc-muted); font-size:.875rem; line-height:1.5; }
+#cercanos-ubicacion { margin-top:12px; }
+#cercanos-estado { min-height:3em; padding-top:12px; }
+#ofertas-panel { min-height:210px; box-sizing:border-box; }

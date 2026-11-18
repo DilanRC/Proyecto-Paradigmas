@@ -9,6 +9,10 @@ import { describirAnimal, tiempoRestante } from './subastas.js?v=subastas-8';
 const MAXIMO = 8;
 let desfase = 0;
 let recargaPedida = false;
+let conectado = false;
+let hayActivas = false;
+let estadoConsulta = 'loading';
+let secuencia = 0;
 
 function item(subasta) {
     const enlace = document.createElement('a');
@@ -27,18 +31,42 @@ function item(subasta) {
     return enlace;
 }
 
+function pintarEstadoBanda(banda) {
+    const indicador = banda.querySelector('[data-subastas-vivo]');
+    const aviso = banda.querySelector('[data-subastas-banda-estado]');
+    const lista = banda.querySelector('[data-subastas-banda-lista]');
+    indicador.dataset.conectado = String(hayActivas && conectado && estadoConsulta === 'ready');
+    indicador.textContent = estadoConsulta === 'error' ? 'Actualización pendiente'
+        : estadoConsulta === 'loading' ? 'Consultando…'
+            : !hayActivas ? 'Sin subastas activas'
+                : conectado ? 'En vivo' : 'Reconectando…';
+    aviso.hidden = hayActivas;
+    lista.hidden = !hayActivas;
+    if (!hayActivas) aviso.textContent = estadoConsulta === 'loading'
+        ? 'Consultando las subastas activas…'
+        : estadoConsulta === 'error' ? 'No pudimos actualizar las subastas. Puedes abrir la lista completa.'
+            : 'No hay subastas activas en este momento. Consulta las próximas.';
+}
+
 async function cargar(banda) {
+    const turno = ++secuencia;
     try {
         const respuesta = await request('api/v1/subastas?vista=ACTIVAS&tamanoPagina=' + MAXIMO);
+        if (turno !== secuencia) return;
         const servidor = Date.parse(respuesta.data?.ahora ?? '');
         if (Number.isFinite(servidor)) desfase = servidor - Date.now();
         const subastas = respuesta.data?.subastas ?? [];
         recargaPedida = false;
+        hayActivas = subastas.length > 0;
+        estadoConsulta = 'ready';
         banda.querySelector('[data-subastas-banda-lista]').replaceChildren(...subastas.map(item));
-        banda.hidden = subastas.length === 0;
+        pintarEstadoBanda(banda);
         relojes(banda);
     } catch {
-        // La banda es un extra de Explorar: si falla, Explorar sigue igual.
+        if (turno !== secuencia) return;
+        // Las publicaciones siguen disponibles y conservamos las subastas anteriores.
+        estadoConsulta = 'error';
+        pintarEstadoBanda(banda);
     }
 }
 
@@ -58,11 +86,10 @@ function relojes(banda) {
 function iniciar() {
     const banda = document.querySelector('[data-subastas-banda]');
     if (!banda) return;
-    alCambiarConexion((conectado) => {
-        banda.querySelectorAll('[data-subastas-vivo]').forEach((nodo) => {
-            nodo.dataset.conectado = String(conectado);
-            nodo.textContent = conectado ? 'En vivo' : 'Reconectando…';
-        });
+    pintarEstadoBanda(banda);
+    alCambiarConexion((disponible) => {
+        conectado = disponible;
+        pintarEstadoBanda(banda);
     });
     escuchar('subastas', agrupar(() => cargar(banda)));
     setInterval(() => relojes(banda), 1000);

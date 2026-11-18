@@ -28,11 +28,19 @@ test('la pantalla usa las API de ofertas y las versiona donde importa', () => {
     assert.match(js, /api\/v1\/mi-ofertas/);
     assert.match(js, /editor-direccion\.js\?v=oferta-1/);
     assert.match(read('Public/js/shared/editor-direccion.js'), /finca-mapa\.js\?v=oferta-1/);
-    assert.match(vista, /js\/fletes\.js\?v=fletes-12/);
+    assert.match(vista, /js\/fletes\.js\?v=fletes-13/);
 });
 
-test('solo manda fletes cercanos con ubicación y no pinta HTML sin escapar', () => {
-    assert.match(js, /if \(!ubicacion\) \{/);
+test('permite buscar por provincia sin GPS y no pinta HTML sin escapar', () => {
+    assert.match(vista, /id="cercanos-provincia"/);
+    assert.match(js, /if \(!ubicacion && !provinciaManual\)/);
+    assert.match(js, /consulta\.set\('provincia', provinciaManual\)/);
+    assert.match(js, /modoBusqueda = 'gps'/);
+    assert.match(js, /modoBusqueda = 'manual'/);
+    const php = read('Application/Controller/FletesController.php');
+    assert.match(php, /\$latitud = null;/);
+    assert.match(php, /\$errores\['provincia'\] = 'Selecciona una provincia o comparte tu ubicación\.'/);
+    assert.match(vista, /id="cercanos-ubicacion"[^>]*type="button"[^>]*>/);
     for (const campo of ['oferta.transportista', 'oferta.descripcion', 'oferta.vehiculo?.modelo', 'oferta.vehiculo?.placa']) {
         assert.ok(js.includes(`escapeHtml(${campo}`), `${campo} debe escaparse`);
     }

@@ -23,13 +23,13 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/public-product.css?v=product-14">
     <link rel="stylesheet" href="css/explore.css?v=explore-10">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
-    <link rel="stylesheet" href="css/subastas.css?v=subastas-2">
+    <link rel="stylesheet" href="css/subastas.css?v=subastas-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-24"></script>
     <script type="module" src="js/explore.js?v=explore-16"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-9"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
-    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-5"></script>
+    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-6"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
@@ -79,15 +79,6 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 </div>
             </section>
 
-            <section class="subastas-banda" data-subastas-banda aria-labelledby="subastas-banda-titulo" hidden>
-                <div class="subastas-banda__cabecera">
-                    <h2 id="subastas-banda-titulo"><i class="fa-solid fa-gavel" aria-hidden="true"></i> Subastas en vivo</h2>
-                    <span class="subastas-vivo" data-subastas-vivo data-conectado="false">Conectando…</span>
-                    <a class="subastas-banda__ver" href="subastas">Ver todas las subastas</a>
-                </div>
-                <div class="subastas-banda__lista" data-subastas-banda-lista aria-live="polite"></div>
-            </section>
-
             <div class="explore-filters" data-explore-filterbar>
                 <div class="explore-heading__controls" role="group" data-explore-filters aria-label="Tipo de ganado" hidden></div>
                 <div class="explore-filters__field">
@@ -107,6 +98,16 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                     <input id="explore-filtro-precio-max" type="number" min="0" step="1000" inputmode="numeric" placeholder="Sin límite" data-explore-precio-max>
                 </div>
             </div>
+
+            <section class="subastas-banda" data-subastas-banda aria-labelledby="subastas-banda-titulo">
+                <div class="subastas-banda__cabecera">
+                    <h2 id="subastas-banda-titulo"><i class="fa-solid fa-gavel" aria-hidden="true"></i> Subastas en vivo</h2>
+                    <span class="subastas-vivo" data-subastas-vivo data-conectado="false">Consultando…</span>
+                    <a class="subastas-banda__ver" href="subastas">Ver todas las subastas</a>
+                </div>
+                <p class="subastas-banda__estado" data-subastas-banda-estado role="status">Consultando las subastas activas…</p>
+                <div class="subastas-banda__lista" data-subastas-banda-lista hidden></div>
+            </section>
 
             <section class="explore-deck" aria-label="Publicaciones para explorar">
                 <p class="explore-state" data-explore-loading role="status" hidden>

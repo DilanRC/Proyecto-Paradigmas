@@ -309,3 +309,17 @@
 .skeleton-lista { display:grid; gap:10px; margin:4px 0 0; padding:0; list-style:none; }
 .subastas-grid.is-refreshing { opacity:.55; transition:opacity .2s ease; }
 @media (prefers-reduced-motion:reduce) { .subastas-grid.is-refreshing { transition:none; } }
+
+/* Espacio estable desde el primer pintado: estado vacío, error y tarjetas usan la misma franja. */
+.subastas-banda { min-height:230px; box-sizing:border-box; }
+.subastas-banda__estado { display:flex; align-items:center; min-height:138px; margin:0; color:var(--tc-text-soft); }
+.subastas-banda__lista { min-height:138px; }
+.subastas-banda__item { min-height:136px; box-sizing:border-box; }
+.subastas-banda__estado[hidden], .subastas-banda__lista[hidden] { display:none !important; }
+@media(max-width:620px) {
+    .subastas-banda { min-height:260px; padding:14px; }
+    .subastas-banda__cabecera { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+    .subastas-banda__cabecera h2 { font-size:1rem; }
+    .subastas-banda__ver { grid-column:1/-1; margin-left:0; font-size:.875rem; }
+    .subastas-banda__lista { grid-auto-columns:minmax(0, min(240px, 85vw)); }
+}
