@@ -277,7 +277,54 @@ try {
     test_assert(isset($sinPrecio['body']['errors']['precio']), 'El error apunta al precio');
     test_same('ACTIVO', sol_estado_publicacion($pubAConvenir), 'Un 422 no vende la publicación (transacción revertida)');
     test_same(422, $ventas->procesar('PATCH', ['solicitudId' => $solConvenir['solicitudId'], 'accion' => 'ACEPTAR', 'precio' => -5])['status'], 'Precio no válido');
-    $conPrecio = $ventas->procesar('PATCH', ['solicitudId' => $solConvenir['solicitudId'], 'accion' => 'ACEPTAR', 'precio' => 700000]);
+
+    // ───── Fallos intermedios y concurrencia al aceptar (ningún hecho a medias ni duplicado) ─────
+    $aceptarConvenir = ['solicitudId' => $solConvenir['solicitudId'], 'accion' => 'ACEPTAR', 'precio' => 700000];
+    $animalConvenir = (int) sol_contar('SELECT tbanimalid FROM tbanimalpublicacion WHERE tbanimalpublicacionid = :p', ['p' => $pubAConvenir]);
+    $huella = static fn (): array => [
+        sol_contar('SELECT COUNT(*) FROM tbcompra WHERE tbanimalid = :a', ['a' => $animalConvenir]),
+        sol_contar('SELECT COUNT(*) FROM tbventa WHERE tbanimalid = :a', ['a' => $animalConvenir]),
+        sol_estado_publicacion($pubAConvenir),
+        sol_contar("SELECT COUNT(*) FROM tbcomprasolicitud WHERE tbcomprasolicitudid = :id AND tbcomprasolicitudestado = 'PENDIENTE'", ['id' => $solConvenir['solicitudId']]),
+        sol_contar("SELECT COUNT(*) FROM tbbitacora WHERE tbbitacoraaccion = 'ACEPTAR' AND tbbitacoraregistroidentificacionnumero = :id", ['id' => (string) $solConvenir['solicitudId']]),
+    ];
+    $inicial = $huella();
+    test_same([0, 0, 'ACTIVO', 1, 0], $inicial, 'Punto de partida: sin compra, venta ni bitácora');
+    $falla = static function (callable $accion): ?string {
+        try { $accion(); } catch (Throwable $e) { return $e->getMessage(); }
+        return null;
+    };
+    // Otra conexión retiene el bloqueo de solicitudes: la petición espera, se rinde y no escribe nada.
+    $otra = test_new_db();
+    $otra->query("SELECT GET_LOCK('tindercows_compra_solicitud_alta', 0)")->fetchColumn();
+    try {
+        test_assert($falla(fn () => $ventas->procesar('PATCH', $aceptarConvenir)) !== null, 'Con el bloqueo ocupado la petición no se completa');
+    } finally {
+        $otra->query("SELECT RELEASE_LOCK('tindercows_compra_solicitud_alta')")->fetchColumn();
+    }
+    test_same($inicial, $huella(), 'Bloqueo ocupado: nada se escribió');
+    // Fallo ANTES de guardar: la bitácora no puede calcular su consecutivo.
+    $db->exec('RENAME TABLE tbbitacora TO tbbitacora_prueba_fallo');
+    try {
+        test_assert($falla(fn () => $ventas->procesar('PATCH', $aceptarConvenir)) !== null, 'Sin bitácora la venta no se registra');
+    } finally {
+        $db->exec('RENAME TABLE tbbitacora_prueba_fallo TO tbbitacora');
+    }
+    test_same($inicial, $huella(), 'Fallo de la bitácora: nada se escribió');
+    // Fallo DESPUÉS de la primera escritura: tbcompra ya se insertó cuando tbventa falla → rollback completo.
+    $db->exec('RENAME TABLE tbventa TO tbventa_prueba_fallo');
+    try {
+        test_assert($falla(fn () => $ventas->procesar('PATCH', $aceptarConvenir)) !== null, 'Si la venta falla, la aceptación falla');
+    } finally {
+        $db->exec('RENAME TABLE tbventa_prueba_fallo TO tbventa');
+    }
+    test_same($inicial, $huella(), 'Fallo a media transacción: la compra ya escrita se revierte, la publicación sigue activa');
+    // Reintento: éxito una sola vez; repetir la respuesta no duplica hechos.
+    $conPrecio = $ventas->procesar('PATCH', $aceptarConvenir);
+    test_same(200, $conPrecio['status'], 'El reintento se acepta');
+    test_same([1, 1, 'VENDIDO', 0, 1], $huella(), 'Un par compra/venta, publicación vendida y una bitácora');
+    test_same(409, $ventas->procesar('PATCH', $aceptarConvenir)['status'], 'Repetir después del éxito es 409');
+    test_same([1, 1, 'VENDIDO', 0, 1], $huella(), 'La repetición no duplica compra, venta ni bitácora');
     test_same(700000.0, $conPrecio['body']['data']['solicitud']['precio'], 'Se guarda el precio acordado');
     test_same(1, sol_contar('SELECT COUNT(*) FROM tbventa WHERE tbcomprasolicitudid = :id AND tbventaprecio = 700000', ['id' => $solConvenir['solicitudId']]), 'La venta usa el precio acordado');
 
