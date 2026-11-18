@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-23"></script>
+    <script type="module" src="js/public-ui.js?v=public-24"></script>
     <script type="module" src="js/fletes.js?v=fletes-12"></script>
 </head>
 <body class="public-home">

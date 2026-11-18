@@ -4,7 +4,8 @@ import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.
 import { ESTADO_CUENTA, estadoPublicado } from './shared/estado-cuenta.js?v=estado-cuenta-1';
 
 function ensureProductStyles() {
-    if (document.querySelector('link[data-tc-public-product]')) return;
+    // La vista ya la trae en el head (no se repite: inyectarla después vuelve a acomodar la página).
+    if (document.querySelector('link[data-tc-public-product], link[href*="css/public-product.css"]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'css/public-product.css?v=product-14';

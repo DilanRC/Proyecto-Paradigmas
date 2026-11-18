@@ -27,3 +27,10 @@ test('Explorar pinta la barra de filtros desde el HTML y la mantiene durante la 
     const js = read('Public/js/explore.js');
     assert.match(js, /filterBar\.hidden = !state\.cargando && state\.items\.length === 0 && !hasActiveFilters\(\);/);
 });
+
+test('toda vista con public-ui.js trae public-product.css en el head (inyectarlo después mueve la página)', () => {
+    const info = read('Application/View/public/info.php');
+    assert.match(info, /<link rel="stylesheet" href="css\/public-product\.css\?v=product-14" data-tc-public-product="true">/);
+    // public-ui.js no la vuelve a inyectar si ya está en el head.
+    assert.match(read('Public/js/public-ui.js'), /link\[href\*="css\/public-product\.css"\]/);
+});
