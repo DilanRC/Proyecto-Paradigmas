@@ -12,6 +12,12 @@ final class SupabaseActorResolver
 {
     private const DEFAULT_VERIFY_URL = 'http://supabase-server:3000/v1/auth/verify';
 
+    /**
+     * Código estable en data.codigo del 409 "sesión válida sin Persona". El navegador lo usa para
+     * ofrecer "Completar registro" en vez de un error; ningún otro 409 lo lleva.
+     */
+    public const CODIGO_REGISTRO_INCOMPLETO = 'REGISTRO_INCOMPLETO';
+
     /** @var callable(string, string): array{status:int, body:string} */
     private $transport;
 
@@ -112,7 +118,11 @@ final class SupabaseActorResolver
                 ?? $this->personaIdPorCorreo($conexion, $email);
         }
         if ($exigirPersona && $personaId === null) {
-            throw new HttpException('La sesión verificada no tiene vínculo con una persona.', 409);
+            throw new HttpException(
+                'Tu cuenta está verificada, pero todavía no terminaste el registro en Ganado Cerca.',
+                409,
+                ['codigo' => self::CODIGO_REGISTRO_INCOMPLETO],
+            );
         }
 
         return ActorContext::usuarioVerificado($personaId, $subject, $email, $role, $correoConfirmado);

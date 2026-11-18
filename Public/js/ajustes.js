@@ -2,16 +2,16 @@
 // y "Cómo participo" (activar/desactivar actividades). Usa los mismos
 // endpoints que antes vivían en Mi actividad; aquí solo cambió el lugar.
 
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession, refreshAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { TIPOS_NUMERICOS, aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { TITULO_TELEFONO, aplicarRestriccionTelefono, telefonoValido } from './shared/telefono.js?v=mascaras-1';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
 import { createToast } from './shared/toast.js';
-import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-3';
-import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-3';
-import { safeImageUrl } from './explore.js?v=explore-14';
+import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-4';
+import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-4';
+import { safeImageUrl } from './explore.js?v=explore-15';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 

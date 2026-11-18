@@ -8,6 +8,12 @@ Require all granted
 DirectoryIndex index.php
 Options -Indexes
 
+# Las imágenes del sitio se sirven en WebP; un XAMPP con mime.types viejo las
+# entregaría como application/octet-stream.
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+</IfModule>
+
 # Señal para PHP de que Apache sí aplica este archivo (AllowOverride).
 <IfModule mod_env.c>
     SetEnv TC_HTACCESS 1

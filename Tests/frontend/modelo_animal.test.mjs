@@ -112,11 +112,11 @@ test('la tarjeta muestra especie, tipo, edad calculada, partos y la marca de lot
 });
 
 test('versiones de caché subidas donde cambió el módulo', () => {
-    assert.match(read('Application/View/explorar/index.php'), /js\/explore\.js\?v=explore-14/);
-    assert.match(read('Application/View/publicar/index.php'), /js\/publicar\.js\?v=publish-7/);
-    assert.match(read('Application/View/home/index.php'), /js\/home\.js\?v=home-9/);
-    assert.ok(read('Public/js/home.js').includes("from './explore.js?v=explore-14'"));
-    assert.ok(script.includes("from './explore.js?v=explore-14'"));
+    assert.match(read('Application/View/explorar/index.php'), /js\/explore\.js\?v=explore-15/);
+    assert.match(read('Application/View/publicar/index.php'), /js\/publicar\.js\?v=publish-8/);
+    assert.match(read('Application/View/home/index.php'), /js\/home\.js\?v=home-10/);
+    assert.ok(read('Public/js/home.js').includes("from './explore.js?v=explore-15'"));
+    assert.ok(script.includes("from './explore.js?v=explore-15'"));
     assert.ok(script.includes("from './shared/arete.js'"));
 });
 

@@ -55,7 +55,7 @@ test('todas las vistas privadas incluyen el aviso clásico independiente del mó
         count += 1;
         assert.match(source, /<script defer src="js\/shared\/panel-runtime\.js\?v=runtime-1"><\/script>/);
         assert.match(source, /require dirname\(__DIR__\) \. '\/shared\/panel-runtime\.php'/);
-        assert.match(source, /css\/base\.css\?v=product-9/);
+        assert.match(source, /css\/base\.css\?v=product-10/);
     }
     assert.equal(count, 13);
 });

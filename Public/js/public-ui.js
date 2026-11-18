@@ -1,13 +1,13 @@
-import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
-import { readAuthSession, getAccessToken } from './shared/supabase-auth.js?v=session-4';
+import { endExpiredSession, readAuthSession, getAccessToken } from './shared/supabase-auth.js?v=session-4';
 import { publicProfileForSession } from './shared/public-profile.js?v=profile-2';
-import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-14';
+import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-15';
+import { ESTADO_CUENTA, estadoPublicado } from './shared/estado-cuenta.js?v=estado-cuenta-1';
 
 function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-10';
+    link.href = 'css/public-product.css?v=product-11';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -146,7 +146,7 @@ function paintBell(bell, datos) {
     }) : [Object.assign(document.createElement('div'), { className: 'public-account-menu__identity', textContent: 'No tienes avisos todavía.' })]));
 }
 
-function createBell(profile) {
+function createBell(profile, signal) {
     const bell = document.createElement('div');
     bell.className = 'public-account-menu public-bell';
     bell.dataset.publicBell = 'true';
@@ -175,50 +175,99 @@ function createBell(profile) {
     });
     document.addEventListener('click', (event) => {
         if (!bell.contains(event.target)) { button.setAttribute('aria-expanded', 'false'); panel.hidden = true; }
-    });
+    }, { signal });
     void cargar();
     const personaId = Number(profile?.persona?.personaId);
     if (Number.isInteger(personaId) && personaId > 0) {
         import('./shared/tiempo-real.js?v=tiempo-real-1')
-            .then(({ escuchar, agrupar }) => escuchar(`notificaciones-${personaId}`, agrupar(cargar)))
+            .then(({ escuchar, agrupar }) => {
+                if (signal.aborted) return;
+                const dejar = escuchar(`notificaciones-${personaId}`, agrupar(cargar));
+                signal.addEventListener('abort', dejar, { once: true });
+            })
             .catch(() => {});
     }
-    setInterval(cargar, 60000);
+    const intervalo = setInterval(cargar, 60000);
+    signal.addEventListener('abort', () => clearInterval(intervalo), { once: true });
     return bell;
 }
 
-function createAccountMenu(actions, session, profile) {
-    const login = actions.querySelector('.public-header__login');
-    if (!login || actions.querySelector('[data-public-account]')) return null;
-
-    const menu = document.createElement('div');
-    menu.className = 'public-account-menu';
-    menu.dataset.publicAccount = 'true';
-    const name = profile?.persona?.nombre || session.email || 'Mi cuenta';
-    const initial = String(name).trim().charAt(0).toUpperCase() || 'U';
-    const photo = safeHttpsUrl(profile?.persona?.fotoUrl);
-    menu.innerHTML = `
-        <button class="public-account-menu__trigger" type="button" aria-expanded="false" aria-controls="public-account-panel">
-            <span class="public-account-menu__avatar" aria-hidden="true">${photo ? `<img src="${escapeHtml(photo)}" alt="" referrerpolicy="no-referrer">` : initial}</span>
-            <span class="public-account-menu__label">Mi perfil</span>
-            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-        </button>
-        <div class="public-account-menu__panel" id="public-account-panel" hidden>
-            <div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Cuenta activa')}</strong><small>${escapeHtml(session.email)}</small></div>
+const ENLACES_PERSONA = `
             <a href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"></i><span>Mi panel</span></a>
             <a href="me-interesa"><i class="fa-solid fa-heart" aria-hidden="true"></i><span>Me interesa</span></a>
             <a href="mi-dashboard"><i class="fa-solid fa-chart-column" aria-hidden="true"></i><span>Mi dashboard</span></a>
             <a href="participar"><i class="fa-solid fa-route" aria-hidden="true"></i><span>Más formas de participar</span></a>
-            <a href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Ajustes de cuenta</span></a>
-            <a href="admin/dashboard" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>
-            <button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>
-        </div>`;
+            <a href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"></i><span>Ajustes de cuenta</span></a>`;
+const ENLACE_ADMIN = '<a href="admin/dashboard" data-admin-link hidden><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>Panel admin</span></a>';
+const BOTON_SALIR = '<button type="button" data-public-logout><i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span></button>';
 
-    login.replaceWith(menu);
-    const cart = createCartLink();
-    menu.before(cart);
-    cart.before(createBell(profile));
-    void loadCartCount(cart, session.email);
+/** Contenido del panel de cuenta: solo ofrece lo que el estado verificado permite. */
+export function accountPanelHtml(estado, email, profile = null, completarHref = 'registro') {
+    const correo = `<small>${escapeHtml(email)}</small>`;
+    if (estado === ESTADO_CUENTA.COMPLETA) {
+        return `<div class="public-account-menu__identity"><strong>${escapeHtml(profile?.persona?.nombre || 'Mi cuenta')}</strong>${correo}</div>${ENLACES_PERSONA}${ENLACE_ADMIN}${BOTON_SALIR}`;
+    }
+    if (estado === ESTADO_CUENTA.REGISTRO_INCOMPLETO) {
+        return `<div class="public-account-menu__identity"><strong>Cuenta verificada</strong>${correo}<p class="public-account-menu__note">Falta completar tu registro para usar Mi panel, publicar, pedir fletes o pujar.</p></div>
+            <a href="${escapeHtml(completarHref)}"><i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar registro</span></a>
+            <a href="explorar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Explorar ganado</span></a>${ENLACE_ADMIN}${BOTON_SALIR}`;
+    }
+    if (estado === ESTADO_CUENTA.CONFLICTO) {
+        // Inactiva o con el correo en dos Personas: reintentar no lo arregla y no hay funciones privadas que ofrecer.
+        return `<div class="public-account-menu__identity"><strong>No podemos abrir tu cuenta</strong>${correo}<p class="public-account-menu__note">Tu sesión es válida, pero la cuenta necesita revisión del equipo de Ganado Cerca.</p></div>
+            <a href="explorar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i><span>Explorar ganado</span></a>${ENLACE_ADMIN}${BOTON_SALIR}`;
+    }
+    if (estado === ESTADO_CUENTA.ERROR) {
+        return `<div class="public-account-menu__identity"><strong>No pudimos confirmar tu cuenta</strong>${correo}<p class="public-account-menu__note">Puede ser la conexión. Tus datos no se perdieron.</p></div>
+            <button type="button" data-cuenta-reintentar><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Reintentar</span></button>${ENLACES_PERSONA}${ENLACE_ADMIN}${BOTON_SALIR}`;
+    }
+    return `<div class="public-account-menu__identity"><strong>Verificando tu cuenta…</strong>${correo}</div>${BOTON_SALIR}`;
+}
+
+/**
+ * Pinta (o vuelve a pintar) la zona de cuenta del encabezado. Cada pintado
+ * aborta los listeners, intervalos y suscripciones del anterior.
+ */
+function paintAccount(actions, session, { estado, perfil = null }, { signal, completarHref, reintentar }) {
+    const login = actions.querySelector('.public-header__login:not([data-completar-registro])');
+    if (!login) return null;
+    login.hidden = true;
+    actions.querySelectorAll('[data-public-account], [data-public-cart], [data-public-bell], [data-completar-registro]')
+        .forEach((nodo) => nodo.remove());
+
+    const completa = estado === ESTADO_CUENTA.COMPLETA;
+    const name = perfil?.persona?.nombre || session.email || 'Mi cuenta';
+    const initial = String(name).trim().charAt(0).toUpperCase() || 'U';
+    const photo = completa ? safeHttpsUrl(perfil?.persona?.fotoUrl) : '';
+    const menu = document.createElement('div');
+    menu.className = 'public-account-menu';
+    menu.dataset.publicAccount = 'true';
+    menu.dataset.estadoCuenta = estado;
+    menu.innerHTML = `
+        <button class="public-account-menu__trigger" type="button" aria-expanded="false" aria-controls="public-account-panel"${estado === ESTADO_CUENTA.VERIFICANDO ? ' aria-busy="true"' : ''}>
+            <span class="public-account-menu__avatar" aria-hidden="true">${photo ? `<img src="${escapeHtml(photo)}" alt="" referrerpolicy="no-referrer">` : initial}</span>
+            <span class="public-account-menu__label">${completa ? 'Mi perfil' : 'Mi cuenta'}</span>
+            <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+        <div class="public-account-menu__panel" id="public-account-panel" hidden>${accountPanelHtml(estado, session.email, perfil, completarHref)}</div>`;
+    login.after(menu);
+
+    if (estado === ESTADO_CUENTA.REGISTRO_INCOMPLETO) {
+        // La acción principal del encabezado pasa a ser terminar el registro.
+        const completar = document.createElement('a');
+        completar.className = 'public-header__login';
+        completar.href = completarHref;
+        completar.dataset.completarRegistro = 'true';
+        completar.innerHTML = '<i class="fa-solid fa-user-pen" aria-hidden="true"></i><span>Completar registro</span>';
+        menu.before(completar);
+    }
+    if (completa) {
+        const cart = createCartLink();
+        menu.before(cart);
+        cart.before(createBell(perfil, signal));
+        void loadCartCount(cart, session.email);
+    }
+
     // Si la foto ya no existe, vuelve la inicial.
     const avatarImg = menu.querySelector('.public-account-menu__avatar img');
     avatarImg?.addEventListener('error', () => { avatarImg.parentElement.textContent = initial; }, { once: true });
@@ -234,8 +283,10 @@ function createAccountMenu(actions, session, profile) {
             trigger.setAttribute('aria-expanded', 'false');
             panel.hidden = true;
         }
-    });
+    }, { signal });
     menu.querySelector('[data-public-logout]')?.addEventListener('click', () => signOutEverywhere());
+    menu.querySelector('[data-cuenta-reintentar]')?.addEventListener('click', () => reintentar?.());
+    if (estado !== ESTADO_CUENTA.VERIFICANDO) void resolveAdminLink(menu);
     return menu;
 }
 
@@ -306,17 +357,100 @@ function hideAnonymousLinks() {
     // ya lleva a Inicio y buscar exige cuenta.
     const nav = document.querySelector('.public-nav--primary');
     nav?.querySelectorAll('a[href="./"], a[href="#inicio"]').forEach((link) => link.remove());
-    if (nav && !nav.querySelector('a')) nav.hidden = true;
+    // La barra vacía se queda en la rejilla (hidden la sacaría y el bloque de
+    // acciones saltaría de columna: CLS ~0,07); solo deja de anunciarse.
+    if (nav && !nav.querySelector('a')) nav.setAttribute('aria-hidden', 'true');
     document.querySelectorAll('.public-header [data-public-search]').forEach((buscar) => buscar.remove());
 }
 
+/** Sesión sin Persona: ir a una página que la necesita pasa por el registro y vuelve al mismo destino. */
+export function registroFor(href, base = 'http://localhost/') {
+    const url = new URL(href, base);
+    return `registro?next=${encodeURIComponent(`${pageName(url.href)}${url.search}`)}`;
+}
+
 /** El pie también debe reflejar la cuenta actual, igual que el menú del encabezado. */
-function synchronizeFooterAccountLink(session) {
-    if (session?.authenticated !== true) return;
-    document.querySelectorAll('.public-footer a[href="entrar"]').forEach((link) => {
-        link.href = 'mi-actividad';
-        link.textContent = 'Mi panel';
+function synchronizeFooterAccountLink(estado, completarHref) {
+    const incompleta = estado === ESTADO_CUENTA.REGISTRO_INCOMPLETO;
+    document.querySelectorAll('.public-footer a[href="entrar"], .public-footer a[data-footer-cuenta]').forEach((link) => {
+        link.dataset.footerCuenta = 'true';
+        link.href = incompleta ? completarHref : 'mi-actividad';
+        link.textContent = incompleta ? 'Completar registro' : 'Mi panel';
     });
+}
+
+const NAV_PERSONA = Object.freeze([['publicar', 'fa-circle-plus', 'Publicar'], ['fletes', 'fa-truck', 'Fletes'], ['subastas', 'fa-gavel', 'Subastas']]);
+
+/** Publicar, Fletes y Subastas solo aparecen cuando la cuenta puede usarlos (o si no se pudo confirmar). */
+function synchronizeBusinessNav(nav, estado) {
+    if (!nav) return;
+    if (estado === ESTADO_CUENTA.COMPLETA || estado === ESTADO_CUENTA.ERROR) {
+        NAV_PERSONA.forEach(([href, icono, etiqueta]) => addNavLink(nav, href, icono, etiqueta));
+    } else if (estado === ESTADO_CUENTA.REGISTRO_INCOMPLETO || estado === ESTADO_CUENTA.CONFLICTO) {
+        NAV_PERSONA.forEach(([href]) => nav.querySelectorAll(`a[href="${href}"]`).forEach((link) => link.remove()));
+    }
+}
+
+let incompleteGateReady = false;
+
+/** Con la cuenta sin Persona, los enlaces a páginas privadas llevan a terminar el registro. */
+function initializeIncompleteGate(paginas) {
+    if (incompleteGateReady) return;
+    incompleteGateReady = true;
+    document.addEventListener('click', (event) => {
+        if (estadoPublicado() !== ESTADO_CUENTA.REGISTRO_INCOMPLETO) return;
+        const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+        if (!link || !paginas.includes(pageName(link.href, document.baseURI))) return;
+        event.preventDefault();
+        window.location.assign(registroFor(link.href, document.baseURI));
+    }, true);
+}
+
+/**
+ * Encabezado con sesión. Se pinta al instante con el perfil en caché (o en
+ * "Verificando") y el servidor confirma el estado real con GET api/v1/actividad.
+ */
+function initializeAccountState(nav, actions, session) {
+    let controlador = null;
+    let cuenta = null;
+    const pintar = (resultado) => {
+        controlador?.abort();
+        controlador = new AbortController();
+        const completarHref = cuenta?.enlaceCompletarRegistro() ?? 'registro';
+        document.documentElement.dataset.tcCuenta = resultado.estado;
+        synchronizeBusinessNav(nav, resultado.estado);
+        synchronizeFooterAccountLink(resultado.estado, completarHref);
+        if (actions) paintAccount(actions, session, resultado, { signal: controlador.signal, completarHref, reintentar: () => verificar(true) });
+        if (resultado.estado === ESTADO_CUENTA.REGISTRO_INCOMPLETO && cuenta) {
+            initializeIncompleteGate(cuenta.PAGINAS_CON_PERSONA);
+            if (cuenta.PAGINAS_CON_PERSONA.includes(pageName(window.location.href))) cuenta.mostrarRegistroIncompleto();
+        }
+    };
+    const verificar = async (forzar = false) => {
+        if (forzar) pintar({ estado: ESTADO_CUENTA.VERIFICANDO });
+        try {
+            cuenta ??= await import('./shared/cuenta.js?v=cuenta-2');
+            const resultado = await cuenta.consultarCuenta({ forzar });
+            // Supabase ya no acepta la sesión: se cierra solo la que hizo la consulta.
+            if (resultado.error?.status === 401) {
+                void endExpiredSession(resultado.error.authSessionVersion);
+                return;
+            }
+            pintar(resultado);
+        } catch {
+            pintar({ estado: ESTADO_CUENTA.ERROR });
+        }
+    };
+
+    const enCache = publicProfileForSession(session);
+    pintar(enCache ? { estado: ESTADO_CUENTA.COMPLETA, perfil: enCache } : { estado: ESTADO_CUENTA.VERIFICANDO });
+    import('./shared/cuenta.js?v=cuenta-2')
+        .then((modulo) => {
+            cuenta = modulo;
+            // Confirmado hace menos de VIGENCIA_PERFIL_MS en esta pestaña: no hace falta otra consulta.
+            if (!modulo.perfilConfirmado(session)) void verificar();
+        })
+        .catch(() => pintar({ estado: ESTADO_CUENTA.ERROR }));
 }
 
 /** Enlaces y búsquedas hacia páginas privadas: sin sesión, primero Entrar. */
@@ -342,29 +476,20 @@ function initializeAnonymousGate() {
 function enhancePublicNavigation() {
     const nav = document.querySelector('.public-nav--primary');
     const session = readSession();
-    synchronizeFooterAccountLink(session);
+    const actions = document.querySelector('.public-header__actions');
     if (session?.authenticated === true) {
-        addNavLink(nav, 'publicar', 'fa-circle-plus', 'Publicar');
-        addNavLink(nav, 'fletes', 'fa-truck', 'Fletes');
-        addNavLink(nav, 'subastas', 'fa-gavel', 'Subastas');
-        // Con sesión no hay portada: Inicio es Explorar.
+        // Con sesión no hay portada: Inicio es Explorar, que es público aunque falte el registro.
         document.querySelectorAll('.public-nav--primary a[href="./"], .public-nav--primary a[href="#inicio"], .public-footer a[href="./"], .public-footer a[href^="./#"]')
             .forEach((link) => link.remove());
         document.querySelectorAll('.public-brand').forEach((logo) => { logo.href = 'explorar'; });
-    } else {
-        hideAnonymousLinks();
-        initializeAnonymousGate();
-    }
-
-    const actions = document.querySelector('.public-header__actions');
-    const login = actions?.querySelector('.public-header__login');
-    if (!actions || !login) return;
-
-    if (session?.authenticated === true) {
-        const menu = createAccountMenu(actions, session, publicProfileForSession(session));
-        void resolveAdminLink(menu);
+        initializeAccountState(nav, actions, session);
         return;
     }
+    hideAnonymousLinks();
+    initializeAnonymousGate();
+
+    const login = actions?.querySelector('.public-header__login');
+    if (!actions || !login) return;
 
     // Un solo botón principal: "Crear cuenta" relleno, "Entrar" con contorno.
     login.classList.add('public-header__login--secondary');
@@ -386,11 +511,15 @@ function initializeBusinessActionGate() {
         if (!['Me interesa', 'Contactar'].includes(action)) return;
 
         const session = readSession();
+        const id = Number(button.closest('.explore-card')?.dataset.publicacionId);
+        const origen = Number.isInteger(id) && id > 0 ? `explorar?publicacion=${id}` : 'explorar';
         let destination = null;
 
         if (!session?.authenticated) {
-            const id = Number(button.closest('.explore-card')?.dataset.publicacionId);
-            destination = `entrar?next=${encodeURIComponent(Number.isInteger(id) && id > 0 ? `explorar?publicacion=${id}` : 'explorar')}`;
+            destination = `entrar?next=${encodeURIComponent(origen)}`;
+        } else if (estadoPublicado() === ESTADO_CUENTA.REGISTRO_INCOMPLETO) {
+            // Marcar o contactar necesita la Persona: primero se termina el registro.
+            destination = registroFor(origen, document.baseURI);
         }
 
         if (!destination) return;
@@ -404,9 +533,6 @@ function initialize() {
     initializePublicSearch();
     enhancePublicNavigation();
     initializeBusinessActionGate();
-    // Explorar coordina su propia recarga al recibir la ubicación. El resto del
-    // sitio público inicia la captura aquí para que la sesión ya conozca la zona.
-    if (!document.body.classList.contains('explore-page')) inicializarUbicacionAutomatica();
 }
 
 if (typeof document !== 'undefined'

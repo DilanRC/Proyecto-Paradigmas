@@ -45,19 +45,19 @@ $page = $pages[$pageKey] ?? $pages['about'];
     <title><?= htmlspecialchars($page['title'], ENT_QUOTES, 'UTF-8') ?> | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
 </head>
 <body class="public-info-page">
     <div class="public-shell">
         <header class="public-header public-header--product">
             <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
-                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
-                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48">
                 </span>
                 <span>Ganado<strong>Cerca</strong></span>
             </a>
@@ -108,7 +108,7 @@ $page = $pages[$pageKey] ?? $pages['about'];
         </main>
 
         <footer class="public-footer public-footer--complete">
-            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
+            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
             <div class="public-footer__links"><div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="./#nosotros">Nosotros</a><a href="./#como-funciona">Cómo funciona</a></div><div><strong>Cuenta</strong><a href="entrar">Entrar</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div><div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div></div>
         </footer>
     </div>

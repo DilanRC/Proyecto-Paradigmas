@@ -1,18 +1,20 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
-import { safeImageUrl } from './explore.js?v=explore-14';
-import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-2';
+import { safeImageUrl } from './explore.js?v=explore-15';
+import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
-import { montarMisAnimales } from './mis-animales.js?v=animales-9';
+import { montarMisAnimales } from './mis-animales.js?v=animales-10';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
+import { consultarCuenta, esRegistroIncompleto, mostrarRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
+import { iniciarProgreso } from './shared/progreso.js?v=progreso-1';
 
 const ACTIVITY_API = 'api/v1/actividad';
 const VEHICLES_API = 'api/v1/mi-vehiculos';
@@ -152,12 +154,16 @@ async function loadFarms() {
         const response = await request(FARMS_API);
         renderFarms(response.data?.fincas ?? []);
         setFarmView('content');
-        await loadPublications();
-        await misAnimales?.cargar();
     } catch (error) {
-        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
-        else setFarmView('error', error?.message || 'No pudimos cargar tus fincas.');
+        if (error?.status === 401) {
+            endExpiredSession(error?.authSessionVersion);
+            return;
+        }
+        setFarmView('error', error?.message || 'No pudimos cargar tus fincas.');
     }
+    // Publicaciones (su vacío depende de las fincas) y animales cargan aunque las fincas fallen:
+    // cada sección tiene su propio error y ninguna se queda en "Cargando…".
+    await Promise.all([loadPublications(), misAnimales?.cargar()]);
 }
 
 function renderVehicles(vehiculos = []) {
@@ -210,20 +216,28 @@ async function loadVehicles() {
     }
 }
 
-async function loadActivity({ quiet = false } = {}) {
+async function loadActivity({ quiet = false, compartida = false } = {}) {
     if (!quiet) setActivityView('loading');
+    let data;
     try {
-        const response = await request(ACTIVITY_API);
-        renderPanel(response.data);
-        await loadFarms();
-        await loadVehicles();
-        await loadSolicitudes();
-        return response.data;
+        if (compartida) {
+            // La primera carga usa la misma consulta que confirmó la cuenta en el encabezado.
+            const cuenta = await consultarCuenta();
+            if (cuenta.error) throw cuenta.error;
+            data = cuenta.datos;
+        } else {
+            data = (await request(ACTIVITY_API)).data;
+        }
+        renderPanel(data);
     } catch (error) {
         if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
+        else if (esRegistroIncompleto(error)) mostrarRegistroIncompleto();
         else setActivityView('error', error?.message || 'No fue posible consultar tu actividad.');
         return null;
     }
+    // Secciones independientes en paralelo; cada una pinta su propio error.
+    await Promise.all([loadFarms(), loadVehicles(), loadSolicitudes()]);
+    return data;
 }
 
 function formatColones(precio) {
@@ -448,11 +462,14 @@ async function savePublication(event) {
     const invalidos = { ...erroresNativos(form), ...(!titulo && { titulo: 'Este campo es obligatorio.' }) };
     if (Object.keys(invalidos).length) { setPublicationErrors(invalidos); mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
     setPublicationErrors({});
-    save.disabled = true;
+    const etapa = publicationPhoto.necesitaSubir() ? 'Subiendo foto…' : 'Guardando publicación…';
+    const progreso = iniciarProgreso(save, etapa);
     form.setAttribute('aria-busy', 'true');
-    mostrarEstado(status, 'Guardando publicación…', 'info');
+    mostrarEstado(status, etapa, 'info');
     try {
         const imagenUrl = await publicationPhoto.resolver();
+        progreso.etapa('Guardando publicación…');
+        mostrarEstado(status, 'Guardando publicación…', 'info');
         const response = await patchPublication({
             publicacionId: editingPublicationId,
             titulo,
@@ -468,7 +485,7 @@ async function savePublication(event) {
         if (error?.errors?.imagenUrl) publicationPhoto.mostrarError(error.errors.imagenUrl);
         mostrarEstado(status, [error?.message || 'No fue posible guardar la publicación.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
     } finally {
-        save.disabled = false;
+        progreso.terminar();
         form.setAttribute('aria-busy', 'false');
     }
 }
@@ -608,9 +625,9 @@ async function saveFarm(event) {
     // El punto es opcional, pero si se marcó debe estar en la provincia escrita.
     const desajuste = await validarPuntoConDireccion(payload.direccion);
     if (desajuste) { setFarmErrors({ direccionFinca: desajuste }); return; }
-    const save = document.querySelector('#farm-save');
-    save.disabled = true;
+    const progreso = iniciarProgreso(document.querySelector('#farm-save'), 'Guardando finca…');
     form.setAttribute('aria-busy', 'true');
+    mostrarEstado(document.querySelector('#farm-form-status'), 'Guardando finca…', 'info');
     try {
         const body = { nombreFinca: payload.nombreFinca };
         if (payload.direccion) body.direccionFinca = payload.direccion;
@@ -625,7 +642,7 @@ async function saveFarm(event) {
         mostrarEstado(document.querySelector('#farm-form-status'), [error?.message || 'No fue posible guardar la finca.', ...erroresSinLugar(document.querySelector('#farm-form'), error?.errors)].join(' '), 'error');
         toast?.error(error?.message || 'No fue posible guardar la finca.');
     } finally {
-        save.disabled = false;
+        progreso.terminar();
         form.setAttribute('aria-busy', 'false');
     }
 }
@@ -688,12 +705,15 @@ async function saveVehicle(event) {
     const errors = { ...erroresNativos(form), ...Object.fromEntries(['placa', 'vin', 'modelo'].filter((field) => !String(datos[field] ?? '').trim()).map((field) => [field, 'Este campo es obligatorio.'])) };
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) { mostrarEstado(status, 'Revise los datos señalados.', 'error'); return; }
-    save.disabled = true;
+    const etapa = vehiclePhoto.necesitaSubir() ? 'Subiendo foto…' : 'Guardando vehículo…';
+    const progreso = iniciarProgreso(save, etapa);
     form.setAttribute('aria-busy', 'true');
-    mostrarEstado(status, 'Guardando vehículo…', 'info');
+    mostrarEstado(status, etapa, 'info');
     try {
         // Sin cambio no se envía fotoUrl: en PUT eso conserva la foto guardada.
         const fotoUrl = await vehiclePhoto.resolver();
+        progreso.etapa('Guardando vehículo…');
+        mostrarEstado(status, 'Guardando vehículo…', 'info');
         if (fotoUrl !== undefined) datos.fotoUrl = fotoUrl;
         const options = { method: editingVehicleId ? 'PUT' : 'POST', body: JSON.stringify(editingVehicleId ? { ...datos, vehiculoId: editingVehicleId } : datos) };
         const response = await request(VEHICLES_API, options);
@@ -707,7 +727,7 @@ async function saveVehicle(event) {
         mostrarEstado(status, [error?.message || 'No fue posible guardar el vehículo.', ...erroresSinLugar(document.querySelector('#vehicle-form'), error?.errors)].join(' '), 'error');
         toast?.error(error?.message || 'No fue posible guardar el vehículo.');
     } finally {
-        save.disabled = false;
+        progreso.terminar();
         form.setAttribute('aria-busy', 'false');
     }
 }
@@ -758,7 +778,7 @@ function initialize() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('bienvenida') === '1') document.querySelector('#welcome-banner').hidden = false;
     document.querySelector('#activity-retry')?.addEventListener('click', () => loadActivity());
-    loadActivity();
+    loadActivity({ compartida: true });
 }
 
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', initialize);

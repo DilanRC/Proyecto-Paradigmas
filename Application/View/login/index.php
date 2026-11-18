@@ -9,19 +9,19 @@
     <title>Entrar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/login.js?v=front-20"></script>
+    <script type="module" src="js/login.js?v=front-21"></script>
 </head>
 <body class="auth-page">
     <main class="auth-stage" aria-labelledby="login-title">
         <header class="auth-header">
             <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
-                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
-                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48">
                 </span>
                 <span>Ganado<strong>Cerca</strong></span>
             </a>
@@ -34,8 +34,8 @@
         <div class="auth-layout">
             <section class="auth-context" aria-label="Beneficios de la cuenta">
                 <span class="auth-context__logo" aria-hidden="true">
-                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="176" height="176">
-                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="176" height="176">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark-384.webp" alt="" width="176" height="176">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light-384.webp" alt="" width="176" height="176">
                 </span>
                 <p class="section-kicker">Tu red ganadera</p>
                 <h2>Vuelve a lo que te interesa.</h2>
@@ -45,8 +45,8 @@
             <section class="auth-card">
                 <div class="auth-card__brand">
                     <span class="public-brand__logo" aria-hidden="true">
-                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="54" height="54">
-                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="54" height="54">
+                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="54" height="54">
+                        <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="54" height="54">
                     </span>
                     <div><p class="section-kicker">Bienvenido de nuevo</p><h1 id="login-title">Entrar a Ganado Cerca</h1></div>
                 </div>

@@ -1,10 +1,11 @@
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js?v=session-4';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js?v=profile-2';
-import { safeNext } from './shared/next.js?v=next-3';
-import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js?v=pendiente-3';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-14';
+import { safeNext } from './shared/next.js?v=next-4';
+import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js?v=pendiente-4';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-15';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
+import { ESTADO_CUENTA, estadoPorError } from './shared/estado-cuenta.js?v=estado-cuenta-1';
 
 const ADMIN_DESTINATIONS = new Set(['admin/dashboard', 'admin/productores', 'admin/compradores', 'admin/transportistas', 'admin/vehiculos', 'admin/metodos-pago', 'admin/publicaciones', 'admin/administradores', 'admin/bitacora', 'admin/fletes', 'admin/documentos', 'admin/catalogos', 'admin/subastas']);
 
@@ -59,6 +60,25 @@ async function loadBusinessProfile() {
     return syncPublicProfile(response.data);
 }
 
+/**
+ * Termina el alta con el borrador de esta pestaña (correo recién confirmado).
+ * Si la Persona se guardó, nunca se vuelve a crear: un fallo al leer el perfil
+ * después solo se deja para el encabezado, que lo confirma al llegar.
+ */
+async function terminarRegistroPendiente(email, status) {
+    try {
+        if (!await completarRegistroPendiente(email)) return false;
+    } catch {
+        // El borrador sigue en la pestaña: el formulario de registro lo recupera.
+        return false;
+    }
+    marcarAvisoDocumento();
+    setStatus(status, 'Cuenta confirmada. Terminando tu registro…', 'success');
+    try { await loadBusinessProfile(); } catch { /* el registro ya quedó guardado */ }
+    window.location.assign(resolveNext(window.location.search));
+    return true;
+}
+
 async function isAdminAccount() {
     try {
         const token = await getAccessToken();
@@ -111,42 +131,37 @@ function initialize() {
             try {
                 profile = await loadBusinessProfile();
             } catch (error) {
-                if (error?.status === 401 || error?.status === 409) {
+                // Misma clasificación que el encabezado (shared/estado-cuenta.js).
+                const fallo = estadoPorError(error);
+                if (fallo === ESTADO_CUENTA.REGISTRO_INCOMPLETO) {
                     // Correo recién confirmado: se termina el registro con los
                     // datos que la persona ya llenó. Va antes que el acceso
                     // admin: si no, un administrador que se registra como
                     // usuario terminaría siempre en el panel, sin perfil.
-                    if (error?.status === 409 && !isAdminLogin(window.location)) {
-                        try {
-                            if (await completarRegistroPendiente(email)) {
-                                marcarAvisoDocumento();
-                                setStatus(status, 'Cuenta confirmada. Terminando tu registro…', 'success');
-                                await loadBusinessProfile();
-                                window.location.assign(resolveNext(window.location.search));
-                                return;
-                            }
-                        } catch {
-                            // Si falla, el formulario de registro conserva el borrador.
-                        }
-                    }
-                    if (error?.status === 409 && await isAdminAccount()) {
+                    if (!isAdminLogin(window.location) && await terminarRegistroPendiente(email, status)) return;
+                    if (await isAdminAccount()) {
                         writeAdminBrowserSession(email);
                         setStatus(status, 'Acceso administrativo confirmado. Abriendo TinderCows…', 'success');
                         window.location.assign(resolveAdminNext(window.location.search));
                         return;
                     }
-                    if (error?.status === 409) {
-                        setStatus(status, 'La cuenta está validada. Completa ahora tu registro guiado para crear tu perfil.', 'info');
-                        window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
-                        return;
-                    }
+                    setStatus(status, 'Tu cuenta está verificada. Completa ahora tu registro para crear tu perfil.', 'info');
+                    window.location.assign(`registro?next=${encodeURIComponent(resolveNext(window.location.search))}`);
+                    return;
+                }
+                if (fallo === ESTADO_CUENTA.ANONIMA || fallo === ESTADO_CUENTA.CONFLICTO) {
+                    // Una Persona inactiva o un correo ligado a dos Personas no se arregla
+                    // llenando el registro otra vez: se avisa y no queda la sesión abierta.
                     try { await signOut(); } catch { /* signOut limpia solo la sesión que intentó revocar */ }
-                    setStatus(status, 'La sesión no pudo verificarse. Vuelve a iniciar sesión.', 'error');
+                    setStatus(status, fallo === ESTADO_CUENTA.CONFLICTO
+                        ? `${error?.message || 'Tu cuenta tiene un conflicto.'} Escríbenos para revisarla.`
+                        : 'La sesión no pudo verificarse. Vuelve a iniciar sesión.', 'error');
                     return;
                 }
                 // Si MySQL/API está temporalmente indisponible conservamos la
                 // sesión válida de Supabase para que el usuario pueda reintentar
-                // sin crear otra sesión remota.
+                // sin crear otra sesión remota. Un fallo temporal nunca se
+                // interpreta como "no tiene Persona".
                 setStatus(status, error?.message || 'La sesión se inició, pero no pudimos cargar tu perfil. Intenta nuevamente.', 'error');
                 return;
             }

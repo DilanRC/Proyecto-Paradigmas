@@ -13,6 +13,7 @@ const farmsApi = readFileSync('Public/api/mi-fincas.php', 'utf8');
 const ajustesView = readFileSync('Application/View/ajustes/index.php', 'utf8');
 const ajustesJs = readFileSync('Public/js/ajustes.js', 'utf8');
 const htaccess = readFileSync('Public/.htaccess', 'utf8');
+const progresoJs = readFileSync('Public/js/shared/progreso.js', 'utf8');
 
 test('Mi panel usa el shell público y muestra solo lo operativo', () => {
     for (const value of ['public-header--product', 'Inicio', 'Explorar', 'Nosotros', 'Cómo funciona', 'public-ui.js', 'panel-hello', 'panel-roles', 'panel-actions', 'publications-list', 'farms-list', 'vehicles-list', 'vehicle-modal', 'href="ajustes"']) {
@@ -84,9 +85,11 @@ test('vehículos propios deriva ownership del actor y separa administración', (
 });
 
 test('modal propio tiene foco, errores por campo y evita doble envío', () => {
-    for (const value of ['aria-describedby', 'data-vehicle-error', 'aria-invalid', 'save.disabled = true', 'lastVehicleTrigger?.focus']) {
+    for (const value of ['aria-describedby', 'data-vehicle-error', 'aria-invalid', 'iniciarProgreso(save, etapa)', 'progreso.terminar()', 'lastVehicleTrigger?.focus']) {
         assert.ok(view.includes(value) || js.includes(value), `falta ${value}`);
     }
+    assert.ok(progresoJs.includes('boton.disabled = true'), 'el estado de progreso bloquea un segundo envío');
+    assert.ok(progresoJs.includes("boton.setAttribute('aria-busy', 'true')"), 'el estado de progreso se anuncia a tecnología asistiva');
     assert.ok(css.includes('min-height:44px'));
     assert.ok(js.includes("event.key === 'Escape'") || js.includes("addEventListener('cancel'"));
 });

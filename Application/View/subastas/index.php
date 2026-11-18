@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__) . '/shared/esqueletos.php'; ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
@@ -9,22 +10,22 @@
     <title>Subastas | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-10">
-    <link rel="stylesheet" href="css/components.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-5">
-    <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
+    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/components.css?v=official-shell-3">
+    <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
+    <link rel="stylesheet" href="css/subastas.css?v=subastas-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
-    <script type="module" src="js/subastas.js?v=subastas-6"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/subastas.js?v=subastas-7"></script>
 </head>
 <body class="public-home activity-page subastas-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
+            <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
                 <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
@@ -58,16 +59,16 @@
                     </div>
                     <label class="field subastas-buscar"><span class="screen-reader-only">Buscar subastas</span><input id="subastas-q" type="search" maxlength="100" autocomplete="off" placeholder="Buscar por título, raza o zona"></label>
                 </div>
-                <div id="subastas-loading" class="resource-state" role="status" aria-live="polite">Cargando subastas…</div>
+                <div id="subastas-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando subastas…</span><div class="subastas-grid" aria-hidden="true"><?= tc_esqueleto_tarjetas_subasta(3) ?></div></div>
                 <div id="subastas-error" class="resource-state resource-state--error" role="alert" hidden><p id="subastas-error-message">No pudimos cargar las subastas.</p><button id="subastas-retry" class="activity-button" type="button">Reintentar</button></div>
                 <div id="subastas-empty" class="panel-empty" hidden><strong id="subastas-empty-title">No hay subastas activas</strong><p id="subastas-empty-text">Cuando alguien abra una, aparecerá aquí al instante.</p></div>
-                <div id="subastas-grid" class="subastas-grid" aria-live="polite"></div>
+                <div id="subastas-grid" class="subastas-grid"></div>
             </section>
 
             <!-- Detalle de una subasta (subastas?id=N) -->
             <section id="subasta-detalle" class="subasta-detalle" aria-labelledby="subasta-titulo" hidden>
                 <a class="panel-link" href="subastas"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Todas las subastas</a>
-                <div id="subasta-loading" class="resource-state" role="status" aria-live="polite">Cargando la subasta…</div>
+                <div id="subasta-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando la subasta…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_detalle_subasta() ?></div></div>
                 <div id="subasta-error" class="resource-state resource-state--error" role="alert" hidden><p id="subasta-error-message">No pudimos cargar la subasta.</p><button id="subasta-retry" class="activity-button" type="button">Reintentar</button></div>
                 <div id="subasta-contenido" class="subasta-layout" hidden>
                     <div class="subasta-principal">
@@ -119,7 +120,7 @@
             </section>
         </main>
         <footer class="public-footer public-footer--complete">
-            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
+            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
             <div class="public-footer__links"><div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="subastas">Subastas</a><a href="sobre-nosotros">Nosotros</a></div><div><strong>Cuenta</strong><a href="mi-actividad">Mi panel</a><a href="ajustes">Ajustes</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div><div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div></div>
         </footer>
     </div>

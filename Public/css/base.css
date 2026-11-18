@@ -102,3 +102,27 @@ body.rural-panel .panel-runtime {
 .panel-runtime a { color:#2f3c2d; text-decoration:underline; }
 .panel-runtime button { padding:8px 16px; background:#2f3c2d; color:#fef7ec; border:1px solid #2f3c2d; border-radius:6px; }
 .panel-runtime a:focus-visible, .panel-runtime button:focus-visible { outline:3px solid #d24f28; outline-offset:3px; }
+
+/* --- Esqueleto de carga (compartido por el panel admin y las páginas públicas) ---
+   Skeleton = contenido que todavía no llegó; ocupa el sitio del contenido real
+   para que nada salte al llegar los datos. Siempre va dentro de un contenedor
+   aria-hidden: el anuncio lo hace el texto de estado que lo acompaña. */
+.skeleton__row {
+    display:block;
+    height:44px;
+    border-radius:var(--small-radius,10px);
+    background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%);
+    background-size:200% 100%;
+    animation:skeleton-sweep 1.2s ease-in-out infinite;
+}
+.skeleton__row--texto { height:14px; border-radius:7px; }
+.skeleton__row--titulo { width:72%; height:22px; border-radius:8px; }
+.skeleton__row--corta { width:42%; }
+.skeleton__row--media { width:64%; }
+.skeleton__row--cifra { width:55%; height:30px; border-radius:8px; }
+@keyframes skeleton-sweep { to { background-position:-200% 0; } }
+@media (prefers-reduced-motion:reduce) {
+    .skeleton__row { animation:none; }
+}
+.skeleton-estado[hidden] { display:none !important; }
+.skeleton-estado__huesos { display:grid; gap:10px; }

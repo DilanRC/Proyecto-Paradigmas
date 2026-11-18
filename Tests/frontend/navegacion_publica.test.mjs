@@ -27,8 +27,10 @@ test('cerrar sesión y una sesión vencida llevan a Inicio', () => {
 
 test('sin sesión solo queda Inicio y las páginas privadas piden cuenta', () => {
     assert.match(publicUi, /export const PRIVATE_PAGES = Object\.freeze\(\['explorar', 'publicar', 'fletes', 'subastas'\]\)/);
-    // Publicar y Fletes solo se agregan al menú con sesión.
-    assert.match(publicUi, /if \(session\?\.authenticated === true\) \{\n\s+addNavLink\(nav, 'publicar'/);
+    // Publicar, Fletes y Subastas solo se agregan con sesión y Persona confirmada (o si no se pudo confirmar).
+    assert.match(publicUi, /NAV_PERSONA = Object\.freeze\(\[\['publicar', 'fa-circle-plus', 'Publicar'\]/);
+    assert.match(publicUi, /if \(estado === ESTADO_CUENTA\.COMPLETA \|\| estado === ESTADO_CUENTA\.ERROR\) \{\n\s+NAV_PERSONA\.forEach\(\(\[href, icono, etiqueta\]\) => addNavLink\(nav, href, icono, etiqueta\)\);/);
+    assert.match(publicUi, /if \(session\?\.authenticated === true\) \{[\s\S]*?initializeAccountState\(nav, actions, session\);\n\s+return;\n\s+\}/);
     assert.match(publicUi, /hideAnonymousLinks\(\);\n\s+initializeAnonymousGate\(\);/);
     // Entrar por URL a /explorar, /fletes o /subastas sin sesión vuelve a Inicio.
     assert.match(publicUi, /\['explorar', 'fletes', 'subastas'\]\.includes\(pageName\(window\.location\.href\)\)\n\s+&& !readSession\(\)\) \{\n\s+window\.location\.replace\('\.\/'\);/);

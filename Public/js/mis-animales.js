@@ -1,13 +1,14 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Mis animales (P2-4): inventario del vendedor en Mi panel. Registrar un animal sin publicarlo,
 // llevar su historial de vacunas y publicarlo cuando quiera venderlo.
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { errorArete, formatearArete } from './shared/arete.js';
-import { formatDate } from './explore.js?v=explore-14';
-import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-2';
+import { formatDate } from './explore.js?v=explore-15';
+import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
+import { iniciarProgreso } from './shared/progreso.js?v=progreso-1';
 
 const API = 'api/v1/mi-animales';
 const VACUNAS_API = 'api/v1/mi-animales/vacunas';
@@ -214,19 +215,20 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
         return true;
     };
 
-    const enviar = async (form, estado, accion) => {
+    /** `etiqueta` dice qué se está haciendo ("Registrando animal…"); `accion` puede avanzar de etapa. */
+    const enviar = async (form, estado, accion, etiqueta = 'Guardando…') => {
         if (hayErroresNativos(form, estado)) return;
-        const boton = form.querySelector('[type="submit"]');
-        boton.disabled = true;
+        const progreso = iniciarProgreso(form.querySelector('[type="submit"]'), etiqueta);
         form.setAttribute('aria-busy', 'true');
-        mostrarEstado(estado, 'Guardando…', 'info');
+        mostrarEstado(estado, etiqueta, 'info');
+        const etapa = (texto) => { progreso.etapa(texto); mostrarEstado(estado, texto, 'info'); };
         try {
-            await accion();
+            await accion(etapa);
         } catch (error) {
             mostrarErrores(form, error?.errors ?? {});
             mostrarEstado(estado, [error?.message || 'No fue posible guardar.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
         } finally {
-            boton.disabled = false;
+            progreso.terminar();
             form.setAttribute('aria-busy', 'false');
         }
     };
@@ -256,7 +258,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
             render(respuesta.data?.animales);
             cerrar($('#animal-modal'), disparador);
             toast?.success(respuesta.message || 'Animal registrado.');
-        });
+        }, editando ? 'Guardando cambios…' : 'Registrando animal…');
     });
 
     const abrirPublicar = (animal, boton) => {
@@ -279,15 +281,16 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
     formPublicar.addEventListener('submit', (event) => {
         event.preventDefault();
         if (!formPublicar.elements.titulo.value.trim()) { mostrarErrores(formPublicar, { titulo: 'Este dato es obligatorio.' }); return; }
-        enviar(formPublicar, $('#animal-publish-status'), async () => {
+        enviar(formPublicar, $('#animal-publish-status'), async (etapa) => {
             const imagenUrl = await foto.resolver();
+            etapa('Publicando…');
             const cuerpo = { ...cuerpoDe(formPublicar, ['precio']), animalId: animalActual.animalId, accion: 'PUBLICAR', ...(imagenUrl && { imagenUrl }) };
             const respuesta = await request(API, { method: 'PATCH', body: JSON.stringify(cuerpo) });
             render(respuesta.data?.animales);
             cerrar($('#animal-publish-modal'), disparador);
             toast?.success(respuesta.message || 'Animal publicado.');
             await alPublicar?.();
-        });
+        }, foto.necesitaSubir() ? 'Subiendo foto…' : 'Publicando…');
     });
 
     const renderVacunas = (vacunas = []) => {
@@ -323,7 +326,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
             formVacuna.reset();
             mostrarEstado($('#animal-vaccine-status'), respuesta.message || 'Vacuna registrada.', 'success');
             await cargar();
-        });
+        }, 'Registrando vacuna…');
     });
 
     // Historial de pesos: cada observación con peso, de la más reciente a la más antigua.
@@ -361,7 +364,7 @@ export function montarMisAnimales({ toast, fincas, alPublicar }) {
             render(respuesta.data?.animales);
             formPeso.reset();
             mostrarEstado($('#animal-weight-status'), respuesta.message || 'Peso registrado.', 'success');
-        });
+        }, 'Registrando peso…');
     });
 
     $('#animal-add').addEventListener('click', (event) => abrirRegistro(event.currentTarget));

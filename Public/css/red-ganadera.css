@@ -81,7 +81,7 @@ body.rural {
     color:#fffaf3;
     background:
         linear-gradient(120deg,rgba(68,31,12,.92),rgba(138,46,0,.72)),
-        url("../assets/logo_dark.png") right 8% center / min(48vw,560px) no-repeat,
+        url("../assets/logo_dark-640.webp") right 8% center / min(48vw,560px) no-repeat,
         var(--rural-rust);
 }
 

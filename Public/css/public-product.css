@@ -595,3 +595,47 @@
 .public-bell__panel .public-bell__item { display:grid; align-items:start; gap:2px; min-height:0; padding:9px 10px; }
 .public-bell__item small { color:var(--tc-text-soft); }
 .public-bell__item.is-nueva strong::before { content:'● '; color:var(--tc-success); }
+
+/* Cuenta con sesión pero sin Persona: nota del menú y paso que falta en las páginas privadas. */
+.public-account-menu__note { margin:4px 0 0; color:var(--tc-text-soft); font-size:12px; line-height:1.45; }
+.public-account-menu__trigger[aria-busy='true'] .public-account-menu__avatar { opacity:.6; }
+
+.cuenta-pendiente {
+    display:grid;
+    justify-items:start;
+    gap:12px;
+    max-width:720px;
+    margin:56px auto 72px;
+    padding:clamp(22px, 4vw, 40px);
+    border:1px solid var(--tc-line-strong);
+    border-radius:28px;
+    background:var(--tc-bg-elevated);
+    box-shadow:var(--tc-shadow-soft);
+}
+.cuenta-pendiente__icono {
+    display:grid;
+    width:52px;
+    height:52px;
+    place-items:center;
+    border-radius:16px;
+    color:var(--tc-success);
+    background:var(--tc-success-bg);
+    font-size:22px;
+}
+.cuenta-pendiente h1 { margin:0; font-size:clamp(26px, 4vw, 36px); line-height:1.15; text-wrap:balance; }
+/* El foco llega al título por programa para anunciarlo; no es un control, así que no lleva anillo. */
+.cuenta-pendiente h1:focus { outline:none; }
+.cuenta-pendiente__texto,
+.cuenta-pendiente__nota { margin:0; color:var(--tc-text-soft); font-size:16px; line-height:1.55; }
+.cuenta-pendiente__texto strong { color:var(--tc-text); overflow-wrap:anywhere; }
+.cuenta-pendiente__lista { display:grid; gap:6px; margin:0; padding-left:20px; color:var(--tc-text); font-size:16px; }
+.cuenta-pendiente__acciones { display:flex; flex-wrap:wrap; gap:12px; margin-top:8px; }
+
+@media (max-width:620px) {
+    .cuenta-pendiente { margin:28px 16px 48px; }
+    .cuenta-pendiente__acciones { width:100%; }
+    .cuenta-pendiente__acciones > a { flex:1 1 100%; justify-content:center; }
+    /* En el encabezado angosto "Completar registro" queda como ícono con nombre accesible. */
+    .public-header [data-completar-registro] span { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .public-header [data-completar-registro] { padding-inline:12px; }
+}

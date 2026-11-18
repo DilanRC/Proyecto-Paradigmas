@@ -385,21 +385,8 @@
     padding:18px;
 }
 
-.skeleton__row {
-    height:44px;
-    border-radius:var(--small-radius);
-    background:linear-gradient(90deg,var(--skeleton-base) 25%,var(--skeleton-highlight) 50%,var(--skeleton-base) 75%);
-    background-size:200% 100%;
-    animation:skeleton-sweep 1.2s ease-in-out infinite;
-}
-
-@keyframes skeleton-sweep {
-    to { background-position:-200% 0; }
-}
-
-@media (prefers-reduced-motion:reduce) {
-    .skeleton__row { animation:none; }
-}
+/* La barra animada (.skeleton__row) vive en base.css: la comparten el panel
+   admin y las páginas públicas. Aquí solo queda su contenedor de tabla. */
 
 /* --- Estado de error, distinto del estado vacio -----------------------------
    Un fallo de red o de servidor no es "no hay resultados": tiene icono propio,

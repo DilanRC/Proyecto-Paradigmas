@@ -28,7 +28,7 @@ test('la pantalla usa las API de ofertas y las versiona donde importa', () => {
     assert.match(js, /api\/v1\/mi-ofertas/);
     assert.match(js, /editor-direccion\.js\?v=oferta-1/);
     assert.match(read('Public/js/shared/editor-direccion.js'), /finca-mapa\.js\?v=oferta-1/);
-    assert.match(vista, /js\/fletes\.js\?v=fletes-11/);
+    assert.match(vista, /js\/fletes\.js\?v=fletes-12/);
 });
 
 test('solo manda fletes cercanos con ubicación y no pinta HTML sin escapar', () => {
@@ -47,7 +47,7 @@ test('el selector de mapa conserva sus textos de finca por defecto', () => {
 test('cada flete disponible se puede elegir y abre la solicitud con ese flete marcado', () => {
     assert.match(js, /data-flete-elegir=/);
     assert.match(js, /api\/v1\/publicaciones\/interacciones\?tipo=ME_INTERESA/);
-    assert.match(js, /solicitud-compra\.js\?v=solicitud-5/);
+    assert.match(js, /solicitud-compra\.js\?v=solicitud-6/);
     assert.match(js, /ofertaId: Number\(ofertaElegida\.ofertaId\)/);
     assert.ok(js.includes('escapeHtml(publicacion.titulo'), 'el título de la publicación debe escaparse');
     assert.match(vista, /css\/solicitud\.css\?v=/);

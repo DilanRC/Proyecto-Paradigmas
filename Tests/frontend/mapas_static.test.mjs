@@ -10,10 +10,13 @@ const registration = fs.readFileSync('Public/js/registro.js', 'utf8');
 const explore = fs.readFileSync('Public/js/explore.js', 'utf8');
 const productoresView = fs.readFileSync('Application/View/productores/index.php', 'utf8');
 
-test('la ubicacion del usuario se intenta automaticamente pero no se persiste como productor', () => {
-    assert.ok(auth.includes('inicializarUbicacionAutomatica()'));
+test('la ubicación solo se solicita tras una acción y no se persiste como productor', () => {
+    assert.equal(auth.includes('inicializarUbicacionAutomatica()'), false);
+    assert.equal(registration.includes('inicializarUbicacionAutomatica()'), false);
     assert.equal(auth.includes('api/productores-ubicacion.php'), false);
     assert.equal(auth.includes('REGISTRAR_UBICACION'), false);
+    assert.ok(explore.includes("geolocationButton?.addEventListener('click'"));
+    assert.ok(explore.includes('await inicializarUbicacionAutomatica()'));
     assert.ok(explore.includes('leerUbicacionUsuario()'));
     assert.ok(explore.includes("parametros.set('latitud'"));
     assert.ok(explore.includes("parametros.set('longitud'"));

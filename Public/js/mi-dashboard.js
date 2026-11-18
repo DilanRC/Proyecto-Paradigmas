@@ -3,10 +3,11 @@
 // tarjetas, dos gráficos, actividad y una tabla única de ejemplares con foto y chips de filtro. Todo se pinta con DOM
 // (textContent). La ubicación del navegador solo vive en memoria (no se guarda).
 
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { formatPrice, safeImageUrl } from './explore.js?v=explore-14';
+import { formatPrice, safeImageUrl } from './explore.js?v=explore-15';
 import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-2';
+import { esRegistroIncompleto, mostrarRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
 
 const API = 'api/v1/mi-dashboard';
 const NIVELES = { TIPO_RAZA: 'misma categoría y raza', TIPO: 'misma categoría', ESPECIE: 'mismo tipo de ganado' };
@@ -521,6 +522,8 @@ async function cargar() {
     } catch (error) {
         if (pedido !== estado.pedido) return;
         if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
+        // Sin Persona no hay roles que elegir: el paso que falta es el registro, no "activar un rol".
+        if (esRegistroIncompleto(error)) { mostrarRegistroIncompleto(); return; }
         if (error?.status === 409) {
             const roles = error.data?.roles ?? {};
             const otro = rolDisponible(estado.rol, roles);
@@ -538,7 +541,8 @@ async function cargar() {
         }
         vista('error', error?.message || 'No pudimos cargar tus indicadores.');
     } finally {
-        if (pedido === estado.pedido) $('#dashboard-contenido').classList.remove('dash-contenido--cargando');
+        // Con la cuenta sin Persona el contenido ya se reemplazó por el paso pendiente.
+        if (pedido === estado.pedido) $('#dashboard-contenido')?.classList.remove('dash-contenido--cargando');
     }
 }
 

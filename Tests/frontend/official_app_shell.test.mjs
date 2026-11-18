@@ -5,20 +5,20 @@ import test from 'node:test';
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 const PANEL_VIEWS = ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos'];
 
-test('la marca usa los PNG oficiales en sitio público, login y paneles', () => {
+test('la marca usa los logos oficiales WebP en sitio público, login y paneles', () => {
     const home = read('Application/View/home/index.php');
     const login = read('Application/View/login/index.php');
     const explore = read('Application/View/explorar/index.php');
 
     for (const html of [home, login, explore]) {
-        assert.match(html, /assets\/logo_light\.png/);
-        assert.match(html, /assets\/logo_dark\.png/);
+        assert.match(html, /assets\/logo_light-128\.webp/);
+        assert.match(html, /assets\/logo_dark-128\.webp/);
         assert.match(html, /favicon\.svg/);
     }
 
     for (const view of PANEL_VIEWS) {
         const html = read(`Application/View/${view}/index.php`);
-        assert.match(html, /assets\/logo_light\.png/, `${view}: falta logo oficial`);
+        assert.match(html, /assets\/logo_light-128\.webp/, `${view}: falta logo oficial`);
         assert.doesNotMatch(html, /<svg viewBox="0 0 48 48">/, `${view}: no debe volver el icono SVG viejo`);
     }
 });

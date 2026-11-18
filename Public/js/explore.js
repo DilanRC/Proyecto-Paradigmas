@@ -4,7 +4,7 @@
 // hay recomendación ni ranking: este módulo formatea lo que llega y lo pinta.
 // Las funciones de formato se exportan puras para poder probarlas sin DOM.
 
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import {
     inicializarUbicacionAutomatica,
     leerUbicacionUsuario,
@@ -384,30 +384,64 @@ function renderPurposeFilters() {
     }
 }
 
+/**
+ * Qué se ve en Explorar. Esqueleto = no hay nada que mostrar todavía; al
+ * cambiar filtros con tarjetas en pantalla se conservan atenuadas hasta que
+ * llega la respuesta (la página no se vacía en cada búsqueda). Un error nunca
+ * se presenta como "sin resultados".
+ */
+export function vistaExplorar({ cargando, error, visibles, filtros }) {
+    const hay = visibles > 0;
+    const sinResultados = !cargando && error === null && !hay;
+    return {
+        esqueleto: cargando && !hay,
+        aviso: cargando,
+        textoAviso: hay ? 'Actualizando resultados…' : 'Cargando publicaciones…',
+        error: !cargando && error !== null,
+        vacio: sinResultados && filtros,
+        catalogoVacio: sinResultados && !filtros,
+        tarjetas: hay && error === null,
+        atenuar: cargando && hay,
+    };
+}
+
+const pintado = { items: null, proposito: null };
+
 function render() {
     const deck = document.querySelector('[data-explore-deck]');
     const empty = document.querySelector('[data-explore-empty]');
     const emptyCatalog = document.querySelector('[data-explore-empty-catalog]');
     const filterBar = document.querySelector('[data-explore-filterbar]');
     const loading = document.querySelector('[data-explore-loading]');
+    const loadingText = document.querySelector('[data-explore-loading-text]');
+    const skeleton = document.querySelector('[data-explore-skeleton]');
     const errorBox = document.querySelector('[data-explore-error]');
     const errorMessage = document.querySelector('[data-explore-error-message]');
     if (!deck) return;
 
     const items = visibleItems();
+    const vista = vistaExplorar({ cargando: state.cargando, error: state.error, visibles: items.length, filtros: hasActiveFilters() });
 
-    if (loading) loading.hidden = !state.cargando;
-    if (errorBox) errorBox.hidden = state.error === null;
+    if (loading) loading.hidden = !vista.aviso;
+    if (loadingText) loadingText.textContent = vista.textoAviso;
+    if (skeleton) skeleton.hidden = !vista.esqueleto;
+    if (errorBox) errorBox.hidden = !vista.error;
     if (errorMessage && state.error) errorMessage.textContent = state.error;
     // "Prueba otra búsqueda" solo tiene sentido si la persona buscó o filtró;
     // con el catálogo vacío se invita a publicar.
-    const sinResultados = !state.cargando && state.error === null && items.length === 0;
-    if (empty) empty.hidden = !(sinResultados && hasActiveFilters());
-    if (emptyCatalog) emptyCatalog.hidden = !(sinResultados && !hasActiveFilters());
+    if (empty) empty.hidden = !vista.vacio;
+    if (emptyCatalog) emptyCatalog.hidden = !vista.catalogoVacio;
     if (filterBar) filterBar.hidden = state.items.length === 0 && !hasActiveFilters();
-    deck.hidden = state.cargando || state.error !== null || items.length === 0;
+    deck.hidden = !vista.tarjetas;
+    deck.classList.toggle('is-refreshing', vista.atenuar);
+    deck.setAttribute('aria-busy', String(vista.atenuar));
 
-    deck.replaceChildren(...items.map(buildCard));
+    // Las tarjetas solo se reconstruyen si cambió lo que hay que mostrar.
+    if (pintado.items !== state.items || pintado.proposito !== state.proposito) {
+        deck.replaceChildren(...items.map((item) => buildCard(item)));
+        pintado.items = state.items;
+        pintado.proposito = state.proposito;
+    }
 }
 
 let turnoCarga = 0;
@@ -477,6 +511,7 @@ function initializeFilterBar() {
     const ubicacion = document.querySelector('[data-explore-ubicacion]');
     const minimo = document.querySelector('[data-explore-precio-min]');
     const maximo = document.querySelector('[data-explore-precio-max]');
+    const geolocationButton = document.querySelector('[data-explore-use-location]');
     if (ubicacion) ubicacion.value = state.ubicacion;
     let temporizador = null;
     const aplicar = () => {
@@ -489,6 +524,18 @@ function initializeFilterBar() {
         }, 400);
     };
     for (const campo of [ubicacion, minimo, maximo]) campo?.addEventListener('input', aplicar);
+    geolocationButton?.addEventListener('click', async () => {
+        const label = geolocationButton.querySelector('span');
+        const textoOriginal = label?.textContent ?? 'Usar mi ubicación';
+        geolocationButton.disabled = true;
+        if (label) label.textContent = 'Obteniendo ubicación…';
+        try {
+            await inicializarUbicacionAutomatica();
+        } finally {
+            geolocationButton.disabled = false;
+            if (label) label.textContent = textoOriginal;
+        }
+    });
 }
 
 function initialize() {
@@ -537,13 +584,13 @@ function initialize() {
     });
     window.addEventListener(UBICACION_USUARIO_ERROR_EVENT, (event) => {
         const kind = event.detail?.kind;
-        if (kind === 'denied') showToast('Ubicación denegada: mostramos publicaciones recientes en lugar de cercanas.');
-        else if (kind !== 'unsupported') showToast('No pudimos actualizar tu ubicación; Explorar sigue disponible.');
+        if (kind === 'denied') showToast('No pudimos acceder a tu ubicación. Puedes escribir una zona para filtrar.');
+        else if (kind === 'unsupported') showToast('Este navegador no ofrece geolocalización. Escribe una zona para filtrar.');
+        else showToast('No pudimos actualizar tu ubicación. Escribe una zona para filtrar.');
     });
 
 
     load();
-    inicializarUbicacionAutomatica();
 }
 
 if (typeof document !== 'undefined') {

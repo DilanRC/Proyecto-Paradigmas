@@ -362,3 +362,26 @@
     .grafico-barras__fila { grid-template-columns:minmax(0, 7rem) minmax(0, 1fr) 4rem; gap:8px; }
     .grafico-divergente__guia { margin:0 calc(4rem + 8px) 0 calc(7rem + 8px); }
 }
+
+/* ───── Esqueleto: 4 KPI, barra de estados, dos gráficos, actividad y tabla ───── */
+.dash-skeleton { display:grid; gap:16px; }
+.dash-skeleton__titulo { display:block; width:220px; margin-top:6px; }
+.dash-skeleton__kpis > .dash-skeleton__kpi { min-height:150px; }
+.dash-skeleton__estados .dash-skeleton__kpi { min-height:112px; }
+.dash-skeleton__kpis { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:16px; }
+.dash-skeleton__graficos { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:16px; }
+.dash-skeleton__kpi,
+.dash-skeleton__estados,
+.dash-skeleton__grafico,
+.dash-skeleton__bloque { display:grid; align-content:start; gap:10px; min-width:0; padding:18px; border:1px solid var(--tc-line); border-radius:16px; background:var(--tc-surface); }
+.dash-skeleton__barras { display:flex; align-items:flex-end; gap:10px; height:150px; }
+.dash-skeleton__barras .skeleton__row { flex:1; }
+.dash-skeleton__barras .skeleton__row:nth-child(1) { height:45%; }
+.dash-skeleton__barras .skeleton__row:nth-child(2) { height:70%; }
+.dash-skeleton__barras .skeleton__row:nth-child(3) { height:35%; }
+.dash-skeleton__barras .skeleton__row:nth-child(4) { height:90%; }
+.dash-skeleton__barras .skeleton__row:nth-child(5) { height:60%; }
+.dash-skeleton__barras .skeleton__row:nth-child(6) { height:50%; }
+.dash-skeleton__fila { display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px; padding:8px 0; border-top:1px solid var(--tc-line); }
+@media (max-width:1024px) { .dash-skeleton__kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:720px) { .dash-skeleton__kpis, .dash-skeleton__graficos { grid-template-columns:1fr; } }

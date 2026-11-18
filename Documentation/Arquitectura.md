@@ -74,3 +74,18 @@ PHP en Vercel no mantiene conexiones abiertas, así que no hay un servidor WebSo
 Tópicos: `subastas` (la lista), `subasta-<id>` (una subasta) y `notificaciones-<personaId>` (la campana). El aviso
 no lleva datos: quien escucha vuelve a pedir el estado a la API. Para usarlo en otra pantalla:
 `escuchar('<tópico>', agrupar(recargar))` en el navegador y `$tiempoReal->avisar(['<tópico>'])` en PHP.
+
+## Estado de la cuenta y estados de carga
+
+Tener sesión de Supabase no significa tener cuenta en Ganado Cerca: el servidor decide si existe la Persona.
+
+| Pieza | Dónde |
+|---|---|
+| 409 sin Persona con `data.codigo = REGISTRO_INCOMPLETO` | `Application/Auth/SupabaseActorResolver.php` (`CODIGO_REGISTRO_INCOMPLETO`) |
+| Estados `ANONIMA`, `VERIFICANDO`, `REGISTRO_INCOMPLETO`, `CUENTA_COMPLETA`, `CONFLICTO_CUENTA`, `ERROR_VERIFICACION` y clasificación de errores | `Public/js/shared/estado-cuenta.js` |
+| Consulta compartida por página y cuenta; caché de perfil y paso pendiente en páginas privadas | `Public/js/shared/cuenta.js` |
+| Encabezado, menú de cuenta, pie y navegación según el estado | `Public/js/public-ui.js` (`initializeAccountState`, `paintAccount`) |
+| Esqueletos de carga (misma geometría que el componente real, ocultos a lectores de pantalla) | `Application/View/shared/esqueletos.php`; estilos `.skeleton__row*` en `Public/css/base.css` |
+| Spinner con la etapa real dentro del botón que inició la acción | `Public/js/shared/progreso.js` (`iniciarProgreso` → `etapa`, `terminar`) |
+
+Skeleton = contenido que todavía no llegó; spinner = operación que la persona inició; toast = resultado global.

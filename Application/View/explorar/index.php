@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/shared/esqueletos.php';
+
 $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
 ?>
 <!DOCTYPE html>
@@ -15,27 +17,27 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <title>Explorar | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-10">
-    <link rel="stylesheet" href="css/explore.css?v=explore-9">
+    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/explore.css?v=explore-10">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
-    <link rel="stylesheet" href="css/subastas.css?v=subastas-1">
+    <link rel="stylesheet" href="css/subastas.css?v=subastas-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
-    <script type="module" src="js/explore.js?v=explore-14"></script>
-    <script type="module" src="js/explore-interactions.js?v=interactions-8"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/explore.js?v=explore-15"></script>
+    <script type="module" src="js/explore-interactions.js?v=interactions-9"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
-    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-3"></script>
+    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-4"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
             <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
-                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
-                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48">
                 </span>
                 <span>Ganado<strong>Cerca</strong></span>
             </a>
@@ -91,6 +93,10 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <div class="explore-filters__field">
                     <label for="explore-filtro-ubicacion">Ubicación</label>
                     <input id="explore-filtro-ubicacion" type="text" autocomplete="address-level2" placeholder="Provincia, cantón o pueblo" data-explore-ubicacion>
+                    <button class="public-secondary" type="button" data-explore-use-location>
+                        <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+                        <span>Usar mi ubicación</span>
+                    </button>
                 </div>
                 <div class="explore-filters__field">
                     <label for="explore-filtro-precio-min">Precio mínimo (₡)</label>
@@ -103,9 +109,10 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
             </div>
 
             <section class="explore-deck" aria-label="Publicaciones para explorar">
-                <p class="explore-state" data-explore-loading hidden>
-                    <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Cargando publicaciones…</span>
+                <p class="explore-state" data-explore-loading role="status" hidden>
+                    <i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span data-explore-loading-text>Cargando publicaciones…</span>
                 </p>
+                <div class="explore-deck__viewport explore-deck__viewport--skeleton" data-explore-skeleton aria-hidden="true"><?= tc_esqueleto_tarjetas_publicacion(4) ?></div>
 
                 <div class="explore-empty" data-explore-error hidden>
                     <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
@@ -139,8 +146,8 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
             <div class="public-footer__brand">
                 <a class="public-brand public-brand--footer" href="./">
                     <span class="public-brand__logo" aria-hidden="true">
-                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40">
-                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40">
+                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="40" height="40">
+                        <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="40" height="40">
                     </span>
                     <span>Ganado<strong>Cerca</strong></span>
                 </a>

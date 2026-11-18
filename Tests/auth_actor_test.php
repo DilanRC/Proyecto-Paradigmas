@@ -128,7 +128,14 @@ try {
         throw new RuntimeException('Token sin vínculo debe fallar.');
     } catch (HttpException $error) {
         test_same(409, $error->estadoHttp, 'Token válido sin persona vinculada debe responder 409');
+        // El navegador distingue "falta terminar el registro" de cualquier otro 409 por este código.
+        test_same(['codigo' => 'REGISTRO_INCOMPLETO'], $error->datos, 'El 409 sin Persona debe llevar data.codigo REGISTRO_INCOMPLETO');
     }
+
+    // El registro y el panel admin sí admiten la sesión sin Persona: no deben recibir el 409.
+    $permitido = $sinVinculo->resolvePermitiendoPersonaNoVinculada($db, ['HTTP_AUTHORIZATION' => 'Bearer token-valido']);
+    test_assert($permitido->estaAutenticado() && $permitido->personaId === null,
+        'La sesión sin Persona sigue autenticada en los endpoints que la permiten');
 
     $sinCorreoConfirmado = new SupabaseActorResolver(fn (): array => [
         'status' => 200,

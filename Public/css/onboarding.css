@@ -381,3 +381,4 @@
 @media (prefers-reduced-motion:reduce) {
     .publish-dropzone { transition:none; }
 }
+.registro-verificacion{display:grid;gap:16px;justify-items:start;padding:34px}.registro-verificacion p{margin:0;font-size:16px;line-height:1.55}

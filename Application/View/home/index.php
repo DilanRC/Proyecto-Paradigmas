@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__) . '/shared/esqueletos.php'; ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
@@ -9,22 +10,22 @@
     <title>Ganado Cerca — Compra y vende ganado cerca de ti</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-10">
-    <link rel="stylesheet" href="css/explore.css?v=explore-9">
+    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/explore.css?v=explore-10">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
-    <script type="module" src="js/home.js?v=home-9"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/home.js?v=home-10"></script>
 </head>
 <body class="public-home" data-portada>
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
             <a class="public-brand" href="#inicio">
                 <span class="public-brand__logo" aria-hidden="true">
-                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
-                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48">
                 </span>
                 <span>Ganado<strong>Cerca</strong></span>
             </a>
@@ -67,7 +68,7 @@
                 </div>
 
                 <div class="public-visual public-visual--hero-photo">
-                    <img class="public-hero-photo" src="assets/hero-ganado-cerca.png" alt="Ganado recorriendo un camino empedrado entre potreros de Costa Rica">
+                    <img class="public-hero-photo" src="assets/hero-ganado-cerca-1536.webp" srcset="assets/hero-ganado-cerca-768.webp 768w, assets/hero-ganado-cerca-1536.webp 1536w" sizes="100vw" width="1536" height="1024" fetchpriority="high" decoding="async" alt="Ganado recorriendo un camino empedrado entre potreros de Costa Rica">
                 </div>
 
                 <form class="hero-search" action="explorar" method="get" role="search" aria-labelledby="hero-search-title">
@@ -90,7 +91,13 @@
                     <div><p class="section-kicker">Publicaciones destacadas</p><h2 id="featured-title">Ganado publicado cerca de ti</h2></div>
                     <a class="public-secondary" href="explorar" data-featured-more hidden><span>Ver todas</span><i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
                 </div>
-                <p class="featured__loading" data-featured-loading><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Cargando publicaciones…</p>
+                <div class="featured__loading" data-featured-loading role="status"><span class="screen-reader-only">Cargando publicaciones…</span><div class="featured__skeleton" aria-hidden="true"><?= tc_esqueleto_tarjetas_publicacion(4, true) ?></div></div>
+                <div class="featured__empty featured__error" data-featured-error role="alert" hidden>
+                    <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                    <h3>No pudimos cargar las publicaciones</h3>
+                    <p data-featured-error-message>Revisa tu conexión e inténtalo de nuevo.</p>
+                    <button class="public-secondary" type="button" data-featured-retry><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Reintentar</span></button>
+                </div>
                 <div class="public-carousel featured-carousel" data-featured-carousel role="region" aria-roledescription="carrusel" aria-label="Publicaciones destacadas" hidden>
                     <div class="public-carousel__viewport">
                         <button class="public-carousel__arrow public-carousel__arrow--prev" type="button" data-carousel-prev aria-label="Publicaciones anteriores"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
@@ -125,8 +132,8 @@
             <div class="public-footer__brand">
                 <a class="public-brand public-brand--footer" href="#inicio">
                     <span class="public-brand__logo" aria-hidden="true">
-                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40">
-                        <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40">
+                        <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="40" height="40">
+                        <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="40" height="40">
                     </span>
                     <span>Ganado<strong>Cerca</strong></span>
                 </a>

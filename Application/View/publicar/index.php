@@ -9,22 +9,22 @@
     <title>Publicar ganado | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-10">
-    <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
+    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
-    <script type="module" src="js/publicar.js?v=publish-7"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/publicar.js?v=publish-8"></script>
 </head>
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
             <a class="public-brand" href="./">
                 <span class="public-brand__logo" aria-hidden="true">
-                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48">
-                    <img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48">
+                    <img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48">
                 </span>
                 <span>Ganado<strong>Cerca</strong></span>
             </a>

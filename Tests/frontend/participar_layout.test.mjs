@@ -12,5 +12,5 @@ test('Más formas de participar usa todo el ancho útil al ocultar el menú late
     assert.match(view, /class="settings-nav"[^>]*hidden/);
     assert.match(css, /body\.settings-page\[data-pagina="participar"\] \.settings-layout\s*\{\s*grid-template-columns:minmax\(0,1fr\);/);
     assert.match(css, /body\.settings-page\[data-pagina="participar"\] \.settings-sections\s*\{\s*width:min\(100%,960px\);\s*margin-inline:auto;/);
-    assert.match(view, /mi-actividad\.css\?v=panel-5/);
+    assert.match(view, /mi-actividad\.css\?v=panel-6/);
 });

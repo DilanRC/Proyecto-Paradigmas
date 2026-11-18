@@ -1,9 +1,10 @@
 import { getAccessToken, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { request } from './shared/api.js?v=auth-gate-14';
-import { subirImagenPublicacion, validarImagen } from './shared/storage.js?v=documento-3';
-import { safeImageUrl } from './explore.js?v=explore-14';
+import { request } from './shared/api.js?v=auth-gate-15';
+import { subirImagenPublicacion, validarImagen } from './shared/storage.js?v=documento-4';
+import { safeImageUrl } from './explore.js?v=explore-15';
 import { digitosArete, errorArete, formatearArete } from './shared/arete.js';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
+import { iniciarProgreso } from './shared/progreso.js?v=progreso-1';
 
 const DRAFT_KEY = 'tindercows:publish-draft';
 // La foto elegida no viaja en el borrador: un File no se puede guardar.
@@ -282,6 +283,8 @@ function montarFoto(form) {
     sincronizarModo();
 
     return {
+        /** true si al publicar hay que subir un archivo (y no solo usar un enlace). */
+        necesitaSubir: () => modo() === 'archivo' && archivo !== null,
         /** URL final de la foto (subiendo el archivo si hace falta) o null. */
         async resolver() {
             if (modo() === 'archivo') return archivo ? subirImagenPublicacion(archivo) : null;
@@ -497,7 +500,8 @@ async function initialize() {
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!validate(form) || submit.disabled) return;
-        submit.disabled = true;
+        // Etapas reales: subir la foto (si hay archivo), guardar y confirmar. Sin porcentaje inventado.
+        const progreso = iniciarProgreso(submit, foto.necesitaSubir() ? 'Subiendo imagen…' : 'Guardando publicación…');
         form.setAttribute('aria-busy', 'true');
         const draft = serialize(form);
         sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
@@ -510,6 +514,7 @@ async function initialize() {
                 foto.mostrarError(error.message);
                 throw error;
             }
+            progreso.etapa('Guardando publicación…');
             await crearPublicacion(cuerpoPublicacion(draft, imagenUrl));
             sessionStorage.removeItem(DRAFT_KEY);
             form.reset();
@@ -528,7 +533,7 @@ async function initialize() {
             form.querySelector('[aria-invalid="true"]')?.focus();
         } finally {
             form.setAttribute('aria-busy', 'false');
-            submit.disabled = false;
+            progreso.terminar();
         }
     });
 }

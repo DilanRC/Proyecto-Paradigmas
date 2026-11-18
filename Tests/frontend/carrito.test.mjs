@@ -46,10 +46,10 @@ test('la insignia usa solo tokens del sitio y el CSS y el JS suben de versión e
     assert.match(css, /\.public-cart:focus-visible \{\s*outline:/);
     for (const vista of VISTAS_PUBLICAS) {
         const html = read(`Application/View/${vista}/index.php`);
-        assert.match(html, /js\/public-ui\.js\?v=public-21/, `${vista} sin public-21`);
-        assert.match(html, /css\/public-product\.css\?v=product-10/, `${vista} sin product-10`);
+        assert.match(html, /js\/public-ui\.js\?v=public-22/, `${vista} sin public-22`);
+        assert.match(html, /css\/public-product\.css\?v=product-11/, `${vista} sin product-11`);
     }
-    assert.match(read('Application/View/public/info.php'), /js\/public-ui\.js\?v=public-21/);
+    assert.match(read('Application/View/public/info.php'), /js\/public-ui\.js\?v=public-22/);
 });
 
 test('la API devuelve solo el contador y el cliente no usa tablas de carrito', () => {

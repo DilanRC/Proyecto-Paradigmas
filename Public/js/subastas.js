@@ -4,15 +4,17 @@ import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Tiempo real: Supabase Realtime avisa "cambió" (shared/tiempo-real.js) y esta página vuelve a pedir el estado a la
 // API. Además consulta cada pocos segundos por si el WebSocket no está. La hora sale del servidor (`ahora`).
 
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { formatPrice, safeImageUrl } from './explore.js?v=explore-14';
+import { formatPrice, safeImageUrl } from './explore.js?v=explore-15';
 import { createToast } from './shared/toast.js';
-import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-2';
+import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 import { agrupar, alCambiarConexion, escuchar } from './shared/tiempo-real.js?v=tiempo-real-1';
+import { ESTADO_CUENTA, esRegistroIncompleto, estadoPublicado, mostrarRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
+import { iniciarProgreso } from './shared/progreso.js?v=progreso-1';
 
 const API = 'api/v1/subastas';
 const ESTADOS = { ACTIVA: 'En vivo', FINALIZADA: 'Finalizada', DESIERTA: 'Sin pujas', CANCELADA: 'Cancelada' };
@@ -97,7 +99,14 @@ function fila(dl, etiqueta, valor) {
 
 function manejarSesion(error) {
     if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return true; }
+    if (esRegistroIncompleto(error)) { mostrarRegistroIncompleto(); return true; }
     return false;
+}
+
+/** Sin Persona las subastas no se pueden consultar: se deja de preguntar cada 15-30 s. */
+function cuentaIncompleta() {
+    // La página puede haber recibido el 409 antes de que el encabezado publique el estado.
+    return estadoPublicado() === ESTADO_CUENTA.REGISTRO_INCOMPLETO || Boolean(document.querySelector('[data-cuenta-pendiente]'));
 }
 
 function pintarConexion() {
@@ -110,7 +119,7 @@ function pintarConexion() {
 }
 
 // ───────────────────────────── Lista ─────────────────────────────
-const lista = { vista: 'ACTIVAS', q: '', items: [], recargaPedida: false };
+const lista = { vista: 'ACTIVAS', q: '', items: [], recargaPedida: false, pedido: 0 };
 
 function tarjeta(subasta) {
     const card = el('article', 'subasta-card');
@@ -153,24 +162,46 @@ function vistaLista(estado, mensaje = '') {
     if (mensaje) $('#subastas-error-message').textContent = mensaje;
 }
 
-async function cargarLista({ silencioso = false } = {}) {
-    if (!silencioso) vistaLista('loading');
+/**
+ * Pide la lista. `silencioso` (tiempo real y consulta periódica) no cambia lo que
+ * se ve hasta que llega la respuesta; `conservar` (buscar dentro de la misma
+ * pestaña) deja las tarjetas atenuadas en vez de volver al esqueleto. Solo vale
+ * la respuesta del último pedido.
+ */
+async function cargarLista({ silencioso = false, conservar = false } = {}) {
+    if (cuentaIncompleta()) return;
+    const pedido = ++lista.pedido;
+    const grid = $('#subastas-grid');
+    const atenuar = conservar && !grid.hidden;
+    if (atenuar) {
+        grid.classList.add('is-refreshing');
+        grid.setAttribute('aria-busy', 'true');
+    } else if (!silencioso) {
+        vistaLista('loading');
+    }
     try {
         const parametros = new URLSearchParams({ vista: lista.vista });
         if (lista.q) parametros.set('q', lista.q);
         const respuesta = await request(`${API}?${parametros}`);
+        if (pedido !== lista.pedido) return;
         sincronizarHora(respuesta);
         lista.items = respuesta.data?.subastas ?? [];
         lista.recargaPedida = false;
-        $('#subastas-grid').replaceChildren(...lista.items.map(tarjeta));
+        grid.replaceChildren(...lista.items.map(tarjeta));
         const [titulo, texto] = VACIOS[lista.vista];
         $('#subastas-empty-title').textContent = lista.q ? 'Ninguna subasta coincide con la búsqueda' : titulo;
         $('#subastas-empty-text').textContent = lista.q ? 'Prueba con otra palabra.' : texto;
         vistaLista(lista.items.length ? 'content' : 'empty');
         relojes();
     } catch (error) {
+        if (pedido !== lista.pedido) return;
         if (manejarSesion(error)) return;
         if (!silencioso) vistaLista('error', error?.message || 'No pudimos cargar las subastas.');
+    } finally {
+        if (pedido === lista.pedido) {
+            grid.classList.remove('is-refreshing');
+            grid.setAttribute('aria-busy', 'false');
+        }
     }
 }
 
@@ -203,7 +234,7 @@ function iniciarLista() {
     let temporizador = null;
     $('#subastas-q').addEventListener('input', (evento) => {
         clearTimeout(temporizador);
-        temporizador = setTimeout(() => { lista.q = evento.target.value.trim(); cargarLista(); }, 350);
+        temporizador = setTimeout(() => { lista.q = evento.target.value.trim(); cargarLista({ conservar: true }); }, 350);
     });
     $('#subastas-retry').addEventListener('click', () => cargarLista());
     escuchar('subastas', agrupar(() => cargarLista({ silencioso: true })));
@@ -213,7 +244,7 @@ function iniciarLista() {
 }
 
 // ──────────────────────────── Detalle ────────────────────────────
-const detalle = { id: 0, subasta: null, recargaPedida: false, avisadoGanador: false };
+const detalle = { id: 0, subasta: null, recargaPedida: false, avisadoGanador: false, pedido: 0 };
 
 function vistaDetalle(estado, mensaje = '') {
     $('#subasta-loading').hidden = estado !== 'loading';
@@ -371,14 +402,19 @@ function relojDetalle() {
 }
 
 async function cargarDetalle({ silencioso = false } = {}) {
+    if (cuentaIncompleta()) return;
+    // Una consulta periódica lenta no puede pisar el estado que trajo una puja más reciente.
+    const pedido = ++detalle.pedido;
     if (!silencioso) vistaDetalle('loading');
     try {
         const respuesta = await request(`${API}?id=${detalle.id}`);
+        if (pedido !== detalle.pedido) return;
         sincronizarHora(respuesta);
         detalle.recargaPedida = false;
         pintarDetalle(respuesta.data.subasta);
         vistaDetalle('content');
     } catch (error) {
+        if (pedido !== detalle.pedido) return;
         if (manejarSesion(error)) return;
         if (!silencioso) vistaDetalle('error', error?.status === 404 ? 'Esta subasta no existe.' : (error?.message || 'No pudimos cargar la subasta.'));
     }
@@ -403,7 +439,7 @@ function iniciarDetalle(id) {
             error.textContent = `La puja mínima es ${formatPrice(detalle.subasta?.minimoSiguiente)}.`;
             return;
         }
-        boton.disabled = true;
+        const progreso = iniciarProgreso(boton, 'Registrando puja…');
         try {
             const respuesta = await request(API, { method: 'PATCH', body: JSON.stringify({ subastaId: detalle.id, accion: 'PUJAR', monto }) });
             sincronizarHora(respuesta);
@@ -415,7 +451,7 @@ function iniciarDetalle(id) {
             error.textContent = fallo?.errors?.monto ?? fallo?.message ?? 'No pudimos registrar la puja.';
             void cargarDetalle({ silencioso: true });
         } finally {
-            boton.disabled = false;
+            progreso.terminar();
         }
     });
 
@@ -426,8 +462,7 @@ function iniciarDetalle(id) {
         const error = $('#subasta-comentar-error');
         error.textContent = '';
         if (!texto) { error.textContent = 'Escribe algo antes de enviar.'; return; }
-        const boton = comentar.querySelector('[type="submit"]');
-        boton.disabled = true;
+        const progreso = iniciarProgreso(comentar.querySelector('[type="submit"]'), 'Enviando comentario…');
         try {
             await request(API, { method: 'PATCH', body: JSON.stringify({ subastaId: detalle.id, accion: 'COMENTAR', texto }) });
             comentar.reset();
@@ -436,13 +471,14 @@ function iniciarDetalle(id) {
             if (manejarSesion(fallo)) return;
             error.textContent = fallo?.errors?.texto ?? fallo?.message ?? 'No pudimos publicar el comentario.';
         } finally {
-            boton.disabled = false;
+            progreso.terminar();
         }
     });
 
     $('#subasta-cancelar').addEventListener('click', async (evento) => {
         if (!window.confirm('¿Cancelar la subasta? El animal vuelve a tu inventario.')) return;
-        evento.currentTarget.disabled = true;
+        // currentTarget es null después del primer await: el botón se guarda antes.
+        const progreso = iniciarProgreso(evento.currentTarget, 'Cancelando…');
         try {
             const respuesta = await request(API, { method: 'PATCH', body: JSON.stringify({ subastaId: detalle.id, accion: 'CANCELAR' }) });
             pintarDetalle(respuesta.data.subasta);
@@ -450,7 +486,7 @@ function iniciarDetalle(id) {
         } catch (fallo) {
             toast?.error(fallo?.message || 'No pudimos cancelar la subasta.');
         } finally {
-            evento.currentTarget.disabled = false;
+            progreso.terminar();
         }
     });
 
@@ -525,12 +561,15 @@ function iniciarCrear(animalPreseleccionado) {
             form.querySelector('[aria-invalid="true"]')?.focus();
             return;
         }
-        const boton = form.querySelector('[type="submit"]');
-        boton.disabled = true;
-        mostrarEstado(estado, 'Abriendo la subasta…', 'info');
+        const etapaInicial = campoFoto.necesitaSubir() ? 'Subiendo foto…' : 'Abriendo la subasta…';
+        const progreso = iniciarProgreso(form.querySelector('[type="submit"]'), etapaInicial);
+        mostrarEstado(estado, etapaInicial, 'info');
+        let abierta = false;
         try {
             const datos = Object.fromEntries(new FormData(form));
             const imagenUrl = await campoFoto.resolver();
+            progreso.etapa('Abriendo la subasta…');
+            mostrarEstado(estado, 'Abriendo la subasta…', 'info');
             const cuerpo = {
                 animalId: Number(datos.animalId), fincaNombre: datos.fincaNombre, titulo: String(datos.titulo ?? '').trim(),
                 precioBase: Number(datos.precioBase), incrementoMinimo: Number(datos.incrementoMinimo), duracionMinutos: Number(datos.duracionMinutos),
@@ -538,12 +577,14 @@ function iniciarCrear(animalPreseleccionado) {
                 ...(imagenUrl && { imagenUrl }),
             };
             const respuesta = await request(API, { method: 'POST', body: JSON.stringify(cuerpo) });
+            abierta = true;
             window.location.assign(`subastas?id=${respuesta.data.subasta.subastaId}`);
         } catch (error) {
             errores(error?.errors);
             mostrarEstado(estado, [error?.message || 'No pudimos abrir la subasta.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
         } finally {
-            boton.disabled = false;
+            // Abierta: el botón sigue ocupado mientras se navega (no se puede abrir dos veces).
+            if (!abierta) progreso.terminar();
         }
     });
     if (animalPreseleccionado) void abrir(animalPreseleccionado);

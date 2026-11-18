@@ -20,7 +20,7 @@
     border-radius:28px;
     background:
         linear-gradient(90deg,rgba(10,16,14,.94) 0%,rgba(10,16,14,.78) 38%,rgba(10,16,14,.34) 72%,rgba(10,16,14,.2) 100%),
-        url('../assets/fondo-para-publicaciones.jpg') center 40% / cover no-repeat;
+        url('../assets/fondo-para-publicaciones-1600.webp') center 40% / cover no-repeat;
 }
 
 /* Sobre la foto el texto siempre es claro, también en tema claro. */
@@ -767,4 +767,29 @@
     width:100%;
     height:100%;
     object-fit:cover;
+}
+
+/* ---------------------------------------------------------------------------
+ * Esqueletos de tarjeta (Explorar, Inicio, Me interesa): misma rejilla que
+ * .explore-card (foto de 180px y cuerpo), así nada salta al llegar los datos.
+ * ------------------------------------------------------------------------- */
+.explore-card--skeleton { box-shadow:none; pointer-events:none; }
+.explore-card--skeleton:hover { border-color:var(--tc-line-strong); transform:none; }
+.explore-card--skeleton .explore-card__visual { height:auto; border-radius:0; }
+.explore-card--skeleton .explore-card__body { display:grid; align-content:start; gap:12px; }
+.explore-card__skeleton-acciones { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px; }
+.explore-deck__viewport--skeleton { overflow:hidden; }
+
+/* Al cambiar filtros se conserva lo anterior, atenuado, hasta que llega la respuesta. */
+.explore-deck__viewport.is-refreshing { opacity:.55; transition:opacity .2s ease; }
+
+/* Inicio: cuatro tarjetas compactas con el mismo ancho que el carrusel. */
+.featured__skeleton { --por-vista:4; display:flex; gap:20px; margin-top:0; padding:8px 4px 16px; overflow:hidden; }
+.featured__skeleton > .explore-card { flex:0 0 calc((100% - (var(--por-vista) - 1) * 20px) / var(--por-vista)); min-width:0; }
+.featured__loading[hidden] { display:none; }
+@media (max-width:1050px) { .featured__skeleton { --por-vista:2; } }
+@media (max-width:620px) { .featured__skeleton { --por-vista:1; gap:14px; } }
+
+@media (prefers-reduced-motion:reduce) {
+    .explore-deck__viewport.is-refreshing { transition:none; }
 }

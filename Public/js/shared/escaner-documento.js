@@ -8,7 +8,7 @@
 // encuentra el número, el documento se sube igual, sin lectura.
 
 import { REGLAS_SERVIDOR, TIPOS_NUMERICOS } from './identificacion.js?v=mascaras-1';
-import { subirDocumentoIdentidad } from './storage.js?v=documento-3';
+import { subirDocumentoIdentidad } from './storage.js?v=documento-4';
 
 const TESSERACT_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
 const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];

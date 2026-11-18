@@ -1,9 +1,9 @@
 // Me interesa: las publicaciones que la persona marcó, con la tarjeta compacta de la
 // portada (buildCard con compacta) y un botón "Quitar" (acción RETIRAR, idempotente).
 
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { buildCard } from './explore.js?v=explore-14';
+import { buildCard } from './explore.js?v=explore-15';
 import { createToast } from './shared/toast.js';
 
 const API = 'api/v1/publicaciones/interacciones';
@@ -52,7 +52,7 @@ export function savedCard(publicacion) {
     const actions = document.createElement('div');
     actions.className = 'explore-card__actions';
     if (publicacion.estado === 'ACTIVO') {
-        const abrir = (conFlete) => import('./shared/solicitud-compra.js?v=solicitud-5').then(({ abrirSolicitudCompra }) => abrirSolicitudCompra({
+        const abrir = (conFlete) => import('./shared/solicitud-compra.js?v=solicitud-6').then(({ abrirSolicitudCompra }) => abrirSolicitudCompra({
             publicacionId: Number(publicacion.publicacionId),
             titulo: publicacion.titulo || 'Publicación',
             precio: card.querySelector('.explore-card__price strong')?.textContent ?? '',

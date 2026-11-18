@@ -149,7 +149,8 @@ $evaluate('funnel_y_transporte_preparados', str_contains($schema, 'CREATE TABLE 
     'Funnel y transporte quedan modelados sin guardar derivados');
 $evaluate('t3_actor_autenticado', str_contains($actorResolver, '/v1/auth/verify')
     && str_contains($actorResolver, 'tbpersonacorreoelectronico')
-    && str_contains($actorResolver, 'new HttpException(\'La sesión verificada no tiene vínculo con una persona.\', 409)')
+    && str_contains($actorResolver, "['codigo' => self::CODIGO_REGISTRO_INCOMPLETO]")
+    && str_contains($actorResolver, "public const CODIGO_REGISTRO_INCOMPLETO = 'REGISTRO_INCOMPLETO';")
     && str_contains($actorResolver, 'new HttpException(\'No fue posible validar la sesión.\', 503)')
     && str_contains($actorContext, 'PERSONA_AUTENTICADA')
     && str_contains($bitacora, "'usuarioId' => \$this->actor->personaId")

@@ -4,7 +4,7 @@
 // la lista y solo parámetros conocidos. Así next no puede llevar a otro sitio
 // y aun así devuelve a la persona a la publicación o búsqueda de donde venía.
 
-export const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'fletes', 'publicar', 'ajustes', 'participar']);
+export const PUBLIC_DESTINATIONS = new Set(['explorar', 'mi-actividad', 'mi-dashboard', 'me-interesa', 'fletes', 'subastas', 'publicar', 'ajustes', 'participar']);
 
 const NEXT_PARAMS = Object.freeze({
     publicacion: (valor) => /^\d{1,9}$/.test(valor),
@@ -21,6 +21,7 @@ export function safeNext(search = '') {
     if (!PUBLIC_DESTINATIONS.has(ruta)) return null;
     const limpia = new URLSearchParams();
     for (const [clave, valor] of new URLSearchParams(consulta)) {
+        if (ruta === 'subastas' && clave === 'id' && /^\d{1,9}$/.test(valor)) limpia.set(clave, valor);
         if (Object.prototype.hasOwnProperty.call(NEXT_PARAMS, clave) && NEXT_PARAMS[clave](valor)) limpia.set(clave, valor);
     }
     const texto = limpia.toString();

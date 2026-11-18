@@ -298,3 +298,14 @@
     .subasta-layout { grid-template-columns:minmax(0, 1fr); }
     .subasta-lateral { position:static; order:-1; }
 }
+
+/* Esqueletos: misma tarjeta (foto 4:3) y mismo detalle (dos columnas) que el contenido real. */
+.subasta-card--skeleton { pointer-events:none; }
+.subasta-card--skeleton .subasta-card__foto,
+.subasta-layout--skeleton .subasta-foto { height:auto; border-radius:0; }
+.subasta-layout--skeleton .subasta-foto { border-radius:18px; }
+.subasta-card--skeleton .subasta-card__cuerpo { gap:10px; }
+.subasta-layout--skeleton .activity-panel { display:grid; gap:12px; }
+.skeleton-lista { display:grid; gap:10px; margin:4px 0 0; padding:0; list-style:none; }
+.subastas-grid.is-refreshing { opacity:.55; transition:opacity .2s ease; }
+@media (prefers-reduced-motion:reduce) { .subastas-grid.is-refreshing { transition:none; } }

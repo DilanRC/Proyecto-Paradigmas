@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__) . '/shared/esqueletos.php'; ?>
 <?php $soloParticipacion = $soloParticipacion ?? false; ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
@@ -10,21 +11,21 @@
     <title><?= $soloParticipacion ? 'Más formas de participar' : 'Ajustes de cuenta' ?> | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-10">
-    <link rel="stylesheet" href="css/components.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-5">
+    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/components.css?v=official-shell-3">
+    <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-15"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-16"></script>
 </head>
 <body class="public-home activity-page settings-page"<?= $soloParticipacion ? ' data-pagina="participar"' : '' ?>>
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
+            <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
                 <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
@@ -37,7 +38,7 @@
         </header>
 
         <main class="activity-main">
-            <section id="activity-loading" class="activity-panel" role="status" aria-live="polite"><div class="purchase-loader"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Cargando tus ajustes…</span></div></section>
+            <section id="activity-loading" class="activity-panel skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando tus ajustes…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_perfil() ?></div></section>
             <section id="activity-error" class="activity-panel" hidden role="alert"><div class="purchase-result"><h2>No pudimos cargar tus ajustes</h2><p id="activity-error-message">Intenta nuevamente.</p><button id="activity-retry" class="activity-button activity-button--primary" type="button">Reintentar</button></div></section>
 
             <div id="activity-content" class="settings-layout" hidden>
@@ -96,7 +97,7 @@
             <p id="activity-status" class="auth-status" role="status" aria-live="polite"></p>
         </main>
         <footer class="public-footer public-footer--complete">
-            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
+            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
             <div class="public-footer__links"><div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="sobre-nosotros">Nosotros</a><a href="./#como-funciona">Cómo funciona</a></div><div><strong>Cuenta</strong><a href="mi-actividad">Mi panel</a><a href="ajustes">Ajustes</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div><div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div></div>
         </footer>
     </div>

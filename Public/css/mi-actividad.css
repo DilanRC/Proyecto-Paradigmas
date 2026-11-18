@@ -475,3 +475,12 @@ body.settings-page[data-pagina="participar"] .settings-sections {
     .profile-form__actions { flex-direction:column-reverse; }
     .profile-form__actions .activity-button { width:100%; }
 }
+
+/* Esqueletos de Mi panel y Ajustes: misma fila (miniatura de 56px) y mismo encabezado de perfil. */
+.panel-row--skeleton { pointer-events:none; }
+.panel-row--skeleton > div { display:grid; flex:1; gap:8px; min-width:0; }
+.panel-row--skeleton .panel-thumb { height:56px; }
+.panel-row__skeleton-estado { flex:0 0 84px; width:84px; }
+.perfil-skeleton { display:flex; align-items:center; gap:16px; }
+.perfil-skeleton > div { display:grid; flex:1; gap:10px; min-width:0; }
+.perfil-skeleton__avatar { flex:0 0 64px; width:64px; height:64px; border-radius:50%; }

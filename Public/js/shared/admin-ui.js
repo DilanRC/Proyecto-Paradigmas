@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-14';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-15';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-15';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-16';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 function browserStorage(target = globalThis) {

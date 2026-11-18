@@ -95,5 +95,5 @@ test('formularios y modales reutilizan una URL completa para cada módulo compar
         }
         assert.equal(urls.size, 1, `${module} se instancia desde una única URL versionada`);
     }
-    assert.match(read('Public/js/mi-actividad.js'), /mis-animales\.js\?v=animales-9/);
+    assert.match(read('Public/js/mi-actividad.js'), /mis-animales\.js\?v=animales-10/);
 });

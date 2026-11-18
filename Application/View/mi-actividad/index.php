@@ -1,3 +1,4 @@
+<?php require_once dirname(__DIR__) . '/shared/esqueletos.php'; ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
@@ -9,21 +10,21 @@
     <title>Mi panel | Ganado Cerca</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/base.css?v=product-9">
+    <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-10">
-    <link rel="stylesheet" href="css/components.css?v=official-shell-2">
-    <link rel="stylesheet" href="css/onboarding.css?v=publish-3">
-    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-5">
+    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/components.css?v=official-shell-3">
+    <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
+    <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-21"></script>
-    <script type="module" src="js/mi-actividad.js?v=panel-21"></script>
+    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/mi-actividad.js?v=panel-22"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">
         <header class="public-header public-header--product">
-            <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
+            <a class="public-brand" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="48" height="48"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="48" height="48"></span><span>Ganado<strong>Cerca</strong></span></a>
             <nav class="public-nav public-nav--primary" aria-label="Navegación principal">
                 <a href="./"><i class="fa-solid fa-house" aria-hidden="true"></i><span>Inicio</span></a>
                 <a href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i><span>Explorar</span></a>
@@ -36,7 +37,7 @@
         </header>
 
         <main class="activity-main">
-            <section id="activity-loading" class="activity-panel" role="status" aria-live="polite"><div class="purchase-loader"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i><span>Cargando tu panel…</span></div></section>
+            <section id="activity-loading" class="activity-panel skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando tu panel…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_perfil() ?></div></section>
             <section id="activity-error" class="activity-panel" hidden role="alert"><div class="purchase-result"><h2>No pudimos cargar tu panel</h2><p id="activity-error-message">Intenta nuevamente.</p><button id="activity-retry" class="activity-button activity-button--primary" type="button">Reintentar</button></div></section>
 
             <div id="activity-content" hidden>
@@ -75,7 +76,7 @@
 
                         <section id="publications-panel" class="activity-panel" aria-labelledby="publications-title" hidden>
                             <div class="panel-head"><h2 id="publications-title">Mis publicaciones<span class="panel-count" id="publications-count"></span></h2></div>
-                            <div id="publications-loading" class="resource-state" role="status" aria-live="polite">Cargando publicaciones…</div>
+                            <div id="publications-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando publicaciones…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_filas(3, true) ?></div></div>
                             <div id="publications-error" class="resource-state resource-state--error" role="alert" hidden><p id="publications-error-message">No pudimos cargar tus publicaciones.</p><button id="publications-retry" class="activity-button" type="button">Reintentar</button></div>
                             <div id="publications-list" class="panel-rows" aria-live="polite"></div>
                             <div id="publications-empty" class="panel-empty" hidden></div>
@@ -83,7 +84,7 @@
 
                         <section id="animals-panel" class="activity-panel" aria-labelledby="animals-title" hidden>
                             <div class="panel-head"><h2 id="animals-title">Mis animales<span class="panel-count" id="animals-count"></span></h2><button id="animal-add" class="activity-button activity-button--sm" type="button"><i class="fa-solid fa-plus" aria-hidden="true"></i>Registrar animal</button></div>
-                            <div id="animals-loading" class="resource-state" role="status" aria-live="polite">Cargando animales…</div>
+                            <div id="animals-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando animales…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_filas(3, true) ?></div></div>
                             <div id="animals-error" class="resource-state resource-state--error" role="alert" hidden><p id="animals-error-message">No pudimos cargar tus animales.</p><button id="animals-retry" class="activity-button" type="button">Reintentar</button></div>
                             <div id="animals-list" class="panel-rows" aria-live="polite"></div>
                             <p id="animals-empty" class="resource-empty" hidden>Registra aquí tus animales aunque no los vendas todavía: llevas su historial de vacunas y los publicas cuando quieras.</p>
@@ -91,7 +92,7 @@
 
                         <section id="farms-panel" class="activity-panel" aria-labelledby="farms-title" hidden>
                             <div class="panel-head"><h2 id="farms-title">Mis fincas<span class="panel-count" id="farms-count"></span></h2><button id="farm-add" class="activity-button activity-button--sm" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i>Agregar finca</button></div>
-                            <div id="farms-loading" class="resource-state" role="status" aria-live="polite">Cargando fincas…</div>
+                            <div id="farms-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando fincas…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_filas(2) ?></div></div>
                             <div id="farms-error" class="resource-state resource-state--error" role="alert" hidden><p id="farms-error-message">No pudimos cargar tus fincas.</p><button id="farms-retry" class="activity-button" type="button">Reintentar</button></div>
                             <div id="farms-content" hidden><div id="farms-list" class="panel-rows" aria-live="polite"></div><p id="farms-empty" class="resource-empty" hidden>Aún no tienes fincas registradas.</p></div>
                         </section>
@@ -100,7 +101,7 @@
                     <div class="panel-col">
                         <section id="vehicles-panel" class="activity-panel" aria-labelledby="vehicles-title" hidden>
                             <div class="panel-head"><h2 id="vehicles-title">Mis vehículos<span class="panel-count" id="vehicles-count"></span></h2><button id="vehicle-add" class="activity-button activity-button--sm" type="button" hidden><i class="fa-solid fa-plus" aria-hidden="true"></i>Agregar</button></div>
-                            <div id="vehicles-loading" class="resource-state" role="status" aria-live="polite">Cargando vehículos…</div>
+                            <div id="vehicles-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando vehículos…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_filas(2, true) ?></div></div>
                             <div id="vehicles-error" class="resource-state resource-state--error" role="alert" hidden><p id="vehicles-error-message">No pudimos cargar tus vehículos.</p><button id="vehicles-retry" class="activity-button" type="button">Reintentar</button></div>
                             <div id="vehicles-content" hidden>
                                 <div id="vehicles-list" class="panel-rows" aria-live="polite"></div>
@@ -125,7 +126,7 @@
             <p id="activity-status" class="auth-status" role="status" aria-live="polite"></p>
         </main>
         <footer class="public-footer public-footer--complete">
-            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark.png" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light.png" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
+            <div class="public-footer__brand"><a class="public-brand public-brand--footer" href="./"><span class="public-brand__logo" aria-hidden="true"><img class="brand-logo brand-logo--dark" src="assets/logo_dark-128.webp" alt="" width="40" height="40"><img class="brand-logo brand-logo--light" src="assets/logo_light-128.webp" alt="" width="40" height="40"></span><span>Ganado<strong>Cerca</strong></span></a><p>Descubre ganado y oportunidades cerca de ti.</p></div>
             <div class="public-footer__links"><div><strong>Explorar</strong><a href="./">Inicio</a><a href="explorar">Explorar</a><a href="sobre-nosotros">Nosotros</a><a href="./#como-funciona">Cómo funciona</a></div><div><strong>Cuenta</strong><a href="mi-actividad">Mi panel</a><a href="ajustes">Ajustes</a><a href="como-usar">Ayuda de uso</a><a href="sobre-nosotros">Sobre Ganado Cerca</a></div><div class="public-footer__legal"><strong>Legal</strong><a href="privacidad">Privacidad</a><a href="terminos">Términos</a><a href="legal">Información legal</a></div></div>
         </footer>
     </div>

@@ -53,13 +53,19 @@ const PUBLIC_ROUTES = [
 ];
 
 test('la portada usa identidad Ganado Cerca y habla como producto', () => {
-    assert.ok(home.includes('assets/logo_dark.png'));
-    assert.ok(home.includes('assets/logo_light.png'));
+    assert.ok(home.includes('assets/logo_dark-128.webp'));
+    assert.ok(home.includes('assets/logo_light-128.webp'));
     assert.ok(home.includes('rel="icon" href="favicon.svg"'));
     assert.ok(home.includes('Compra y vende ganado cerca de ti.'));
     assert.ok(home.includes('Ganado<strong>Cerca</strong>'));
-    assert.ok(home.includes('assets/hero-ganado-cerca.png'));
-    assert.ok(statSync(new URL('../../Public/assets/hero-ganado-cerca.png', import.meta.url)).size > 10000);
+    // La foto principal es el LCP de Inicio: WebP con srcset, prioridad alta y sin lazy.
+    assert.match(home, /<img class="public-hero-photo" src="assets\/hero-ganado-cerca-1536\.webp" srcset="assets\/hero-ganado-cerca-768\.webp 768w, assets\/hero-ganado-cerca-1536\.webp 1536w" sizes="100vw" width="1536" height="1024" fetchpriority="high"/);
+    assert.doesNotMatch(home.slice(home.indexOf('public-hero-photo'), home.indexOf('public-hero-photo') + 400), /loading="lazy"/);
+    for (const [archivo, maximo] of [['hero-ganado-cerca-1536.webp', 400000], ['hero-ganado-cerca-768.webp', 150000],
+        ['fondo-para-publicaciones-1600.webp', 450000], ['logo_dark-128.webp', 20000], ['logo_light-128.webp', 20000]]) {
+        const bytes = statSync(new URL(`../../Public/assets/${archivo}`, import.meta.url)).size;
+        assert.ok(bytes > 1000 && bytes < maximo, `${archivo} pesa ${bytes} bytes`);
+    }
     assert.ok(home.includes('href="explorar"'));
     assert.equal(/EIF400|acad[eé]mic/i.test(home), false, 'la experiencia pública no debe hablar del curso ni de evaluación');
     assert.equal(home.includes('Productores</h3>'), false, 'la landing no debe explicar módulos administrativos');
@@ -270,11 +276,11 @@ test('el estado de autenticación tiene contraste y tamaño legibles', () => {
 
 test('la cuenta autenticada muestra perfil y no vuelve a ofrecer Entrar', () => {
     assert.match(publicUi, /readAuthSession/);
-    assert.match(publicUi, /createAccountMenu/);
+    assert.match(publicUi, /function paintAccount\(actions, session, \{ estado, perfil = null \}/);
     assert.match(publicUi, /href="mi-actividad"><i class="fa-solid fa-table-columns" aria-hidden="true"><\/i><span>Mi panel<\/span>/);
     // Ajustes de cuenta vive en el menú del avatar.
     assert.match(publicUi, /href="ajustes"><i class="fa-solid fa-gear" aria-hidden="true"><\/i><span>Ajustes de cuenta<\/span>/);
-    assert.match(publicUi, /function synchronizeFooterAccountLink\(session\)[\s\S]*?a\[href="entrar"\][\s\S]*?link\.href = 'mi-actividad'[\s\S]*?link\.textContent = 'Mi panel'/,
+    assert.match(publicUi, /function synchronizeFooterAccountLink\(estado, completarHref\)[\s\S]*?a\[href="entrar"\][\s\S]*?link\.href = incompleta \? completarHref : 'mi-actividad'[\s\S]*?link\.textContent = incompleta \? 'Completar registro' : 'Mi panel'/,
         'el pie de página no debe seguir diciendo Entrar con una sesión activa');
     assert.match(publicUi, /api\/v1\/admin\/status/);
     const actionGate = publicUi.slice(publicUi.indexOf('function initializeBusinessActionGate'), publicUi.indexOf('function initialize()'));
@@ -292,7 +298,8 @@ test('el registro guiado persiste mediante Supabase y la API, no mediante una se
 
 test('el registro autenticado no reutiliza un perfil cacheado de otro correo', () => {
     assert.match(registroJs, /const existingProfile = authSession[\s\S]*authEmail === profileEmail \? cachedProfile : null/);
-    assert.ok(registroJs.indexOf('restoreDraft(form, existingProfile)') < registroJs.indexOf('email.value = authSession.email'));
+    const restaura = registroJs.indexOf('restoreDraft(form, existingProfile, authEmail, Boolean(authSession))');
+    assert.ok(restaura > -1 && restaura < registroJs.indexOf('email.value = authSession.email'));
 });
 
 test('el registro verifica la identificación antes de avanzar y de crear la cuenta', () => {

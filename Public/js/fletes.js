@@ -1,10 +1,10 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Página Fletes: ofertas de flete cercanas (cualquier persona con sesión) y
 // "Mis ofertas" para quien tiene Transportista activo. API: api/v1/fletes y api/v1/mi-ofertas.
-import { request } from './shared/api.js?v=auth-gate-14';
+import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { UBICACION_USUARIO_EVENT, capturarUbicacionAutomatica, leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
-import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=explore-14';
+import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=explore-15';
 import { montarEditorDireccion } from './shared/editor-direccion.js?v=oferta-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';
@@ -103,7 +103,7 @@ async function elegirPublicacion(publicacionId) {
     const publicacion = publicacionesInteres.find((item) => Number(item.publicacionId) === publicacionId);
     if (!publicacion || !ofertaElegida) return;
     closeDialog($('#elegir-modal'));
-    const { abrirSolicitudCompra } = await import('./shared/solicitud-compra.js?v=solicitud-5');
+    const { abrirSolicitudCompra } = await import('./shared/solicitud-compra.js?v=solicitud-6');
     abrirSolicitudCompra({
         publicacionId,
         titulo: publicacion.titulo || 'Publicación',

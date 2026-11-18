@@ -9,17 +9,18 @@ import {
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
-import { inicializarUbicacionAutomatica } from './shared/ubicacion-sesion.js';
-import { request } from './shared/api.js?v=auth-gate-14';
-import { readAuthSession, signUpWithPassword } from './shared/supabase-auth.js?v=session-4';
+import { request } from './shared/api.js?v=auth-gate-15';
+import { endExpiredSession, readAuthSession, signUpWithPassword } from './shared/supabase-auth.js?v=session-4';
+import { signOutEverywhere } from './shared/auth-gate.js?v=auth-gate-15';
+import { ESTADO_CUENTA, consultarCuenta } from './shared/cuenta.js?v=cuenta-2';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
-import { safeNext } from './shared/next.js?v=next-3';
-import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js?v=pendiente-3';
+import { safeNext } from './shared/next.js?v=next-4';
+import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js?v=pendiente-4';
 import { aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';
 import { PATRON_TELEFONO, TITULO_TELEFONO, aplicarRestriccionTelefono } from './shared/telefono.js?v=mascaras-1';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
-import { validarDocumento } from './shared/storage.js?v=documento-3';
-import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-3';
+import { validarDocumento } from './shared/storage.js?v=documento-4';
+import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-4';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 
 const DRAFT_KEY = REGISTRATION_DRAFT_KEY;
@@ -319,8 +320,20 @@ export function requestedCapability(location) {
         ?? null;
 }
 
-function restoreDraft(form, existingProfile) {
-    const draft = readStored(DRAFT_KEY);
+/**
+ * Con sesión, solo vale el borrador del mismo correo: el de otra cuenta que usó
+ * esta pestaña no debe rellenar cédula, nombre ni teléfono ajenos.
+ */
+export function borradorDeLaCuenta(draft, sessionEmail = '', sessionAuthenticated = false) {
+    if (!draft) return null;
+    const correoSesion = String(sessionEmail ?? '').trim().toLowerCase();
+    if (correoSesion === '') return sessionAuthenticated ? null : draft;
+    const correoBorrador = String(draft?.persona?.correoElectronico ?? '').trim().toLowerCase();
+    return correoBorrador === correoSesion ? draft : null;
+}
+
+function restoreDraft(form, existingProfile, sessionEmail = '', sessionAuthenticated = false) {
+    const draft = borradorDeLaCuenta(readStored(DRAFT_KEY), sessionEmail, sessionAuthenticated);
     if (existingProfile?.persona) fillPersona(form, existingProfile.persona);
     if (draft && !existingProfile) fillPersona(form, draft.persona ?? {});
 
@@ -380,22 +393,68 @@ function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 }
 
+/**
+ * Con sesión, el servidor dice si ya existe la Persona. Solo el 409
+ * REGISTRO_INCOMPLETO habilita la primera alta; un fallo de red o del servidor
+ * no se confunde con "no tiene Persona" (crearía un alta sobre una cuenta que ya
+ * podría existir).
+ */
 async function resolveAuthenticatedActivity(authSession) {
-    if (!authSession) return null;
-    try {
-        const response = await request('api/v1/actividad', { timeoutMs: 10000 });
-        const activity = response.data;
-        syncPublicProfile(activity);
-        const allConfigured = Object.values(activity?.capacidades ?? {})
-            .every((detail) => detail?.estado !== 'NO_CONFIGURADO');
-        if (allConfigured) {
-            window.location.assign('mi-actividad');
-            return { redirected: true };
-        }
-        return activity;
-    } catch {
-        // Un usuario autenticado sin Persona aún puede completar la primera alta.
-        return null;
+    if (!authSession) return { estado: ESTADO_CUENTA.ANONIMA };
+    const cuenta = await consultarCuenta();
+    if (cuenta.estado !== ESTADO_CUENTA.COMPLETA) return cuenta;
+    const allConfigured = Object.values(cuenta.datos?.capacidades ?? {})
+        .every((detail) => detail?.estado !== 'NO_CONFIGURADO');
+    if (allConfigured) {
+        window.location.assign('mi-actividad');
+        return { ...cuenta, redirected: true };
+    }
+    return cuenta;
+}
+
+/** No se pudo saber si la cuenta ya tiene Persona: se ofrece reintentar en vez del formulario. */
+function mostrarErrorVerificacion(form, error, conflicto = false) {
+    const tarjeta = form.closest('.onboarding-card');
+    if (tarjeta) tarjeta.hidden = true;
+    const aviso = document.createElement('div');
+    aviso.className = 'onboarding-card registro-verificacion';
+    aviso.setAttribute('role', 'alert');
+    const texto = document.createElement('p');
+    const accion = document.createElement('button');
+    accion.type = 'button';
+    accion.className = 'onboarding-next';
+    if (conflicto) {
+        // Cuenta inactiva o correo en dos Personas: otra alta no lo arregla y reintentar tampoco.
+        texto.textContent = `${error?.message ?? 'Tu cuenta tiene un conflicto.'} Escríbenos para revisarla.`;
+        accion.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>Cerrar sesión</span>';
+        accion.addEventListener('click', () => signOutEverywhere());
+    } else {
+        texto.textContent = `No pudimos comprobar si tu cuenta ya tiene registro. ${error?.message ?? ''} Tus datos no se perdieron.`.trim();
+        accion.innerHTML = '<i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Reintentar</span>';
+        accion.addEventListener('click', () => window.location.reload());
+    }
+    aviso.append(texto, accion);
+    (tarjeta ?? form).before(aviso);
+    accion.focus();
+}
+
+/** Sesión válida sin Persona: el alta es "terminar de configurar", no "crear cuenta". */
+function presentarCuentaVerificada(email) {
+    const title = document.querySelector('#registro-title');
+    const kicker = title?.previousElementSibling;
+    const intro = title?.nextElementSibling;
+    if (kicker) kicker.textContent = 'Cuenta verificada';
+    if (title) title.textContent = 'Tu cuenta está verificada. Termina de configurar tu perfil.';
+    if (intro) intro.textContent = `Entraste como ${email}. Faltan tus datos personales y cómo quieres participar; no necesitas otra contraseña.`;
+    // "Ya tengo cuenta" no aplica: ya entró. Si no es su cuenta, puede salir.
+    const volver = document.querySelector('.auth-header__actions .auth-back');
+    if (volver instanceof HTMLAnchorElement) {
+        const salir = document.createElement('button');
+        salir.type = 'button';
+        salir.className = 'auth-back';
+        salir.innerHTML = '<i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i><span>No soy yo · Cerrar sesión</span>';
+        salir.addEventListener('click', () => signOutEverywhere());
+        volver.replaceWith(salir);
     }
 }
 
@@ -411,11 +470,27 @@ async function initialize() {
     const emailStatus = form.querySelector('[data-correo-status]');
     const correoElectronico = form.elements.namedItem('correoElectronico');
 
-    inicializarUbicacionAutomatica();
-
     const authSession = readAuthSession();
-    const activityProfile = await resolveAuthenticatedActivity(authSession);
-    if (activityProfile?.redirected) return;
+    if (authSession) {
+        form.inert = true;
+        form.setAttribute('aria-busy', 'true');
+        setStatus(status, 'Comprobando tu cuenta…');
+    }
+    const cuenta = await resolveAuthenticatedActivity(authSession);
+    if (cuenta.redirected) return;
+    if (cuenta.error?.status === 401) {
+        await endExpiredSession(cuenta.error.authSessionVersion);
+        return;
+    }
+    if (cuenta.estado === ESTADO_CUENTA.ERROR || cuenta.estado === ESTADO_CUENTA.CONFLICTO) {
+        form.setAttribute('aria-busy', 'false');
+        setStatus(status, '');
+        mostrarErrorVerificacion(form, cuenta.error, cuenta.estado === ESTADO_CUENTA.CONFLICTO);
+        return;
+    }
+    form.inert = false;
+    form.setAttribute('aria-busy', 'false');
+    setStatus(status, '');
     const cachedProfile = readStored(PROFILE_KEY);
     const authEmail = authSession?.email?.trim().toLowerCase();
     const profileEmail = cachedProfile?.persona?.correoElectronico?.trim().toLowerCase();
@@ -424,8 +499,9 @@ async function initialize() {
         : cachedProfile;
     const extending = Boolean(existingProfile?.persona && authSession);
     const solicitada = extending ? (normalizeCapabilities([requestedCapability(window.location) ?? ''])[0] ?? null) : null;
-    restoreDraft(form, existingProfile);
+    restoreDraft(form, existingProfile, authEmail, Boolean(authSession));
     if (authSession && !existingProfile?.persona) {
+        presentarCuentaVerificada(authSession.email);
         const email = form.elements.namedItem('correoElectronico');
         const password = form.elements.namedItem('password');
         const confirmation = form.elements.namedItem('passwordConfirmacion');

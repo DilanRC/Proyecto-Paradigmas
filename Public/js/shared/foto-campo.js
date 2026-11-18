@@ -1,6 +1,6 @@
 // Campo de foto de los diálogos de Mi panel (publicación y vehículo): elegir un
 // archivo, ver la vista previa y quitarla. La subida usa el mismo bucket que Publicar.
-import { subirImagenPublicacion, validarImagen } from './storage.js?v=documento-3';
+import { subirImagenPublicacion, validarImagen } from './storage.js?v=documento-4';
 
 /**
  * `raiz` trae `input[type=file]`, `[data-foto-preview]` (con un `img`),
@@ -54,6 +54,8 @@ export function montarCampoFoto(raiz) {
             mostrar(urlActual);
         },
         mostrarError,
+        /** true si guardar implica subir un archivo nuevo (para anunciar "Subiendo foto…"). */
+        necesitaSubir: () => archivo !== null,
         async resolver() {
             if (archivo) return subirImagenPublicacion(archivo);
             return quitar ? null : undefined;

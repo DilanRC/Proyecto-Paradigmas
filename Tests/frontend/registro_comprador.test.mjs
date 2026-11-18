@@ -104,9 +104,10 @@ test('al entrar tras confirmar, el registro se termina con el borrador y sin con
 
 test('un administrador que se registra como usuario termina su registro antes de ir al panel', () => {
     const login = readFileSync(new URL('../../Public/js/login.js', import.meta.url), 'utf8');
-    const pendiente = login.indexOf('await completarRegistroPendiente(email)');
-    const admin = login.indexOf('error?.status === 409 && await isAdminAccount()');
+    const rama = login.slice(login.indexOf("if (fallo === ESTADO_CUENTA.REGISTRO_INCOMPLETO)"));
+    const pendiente = rama.indexOf('await terminarRegistroPendiente(email, status)');
+    const admin = rama.indexOf('await isAdminAccount()');
     assert.ok(pendiente > -1 && admin > -1 && pendiente < admin, 'el borrador pendiente se completa antes del acceso admin');
     // Por /admin/entrar se sigue priorizando el panel.
-    assert.match(login, /error\?\.status === 409 && !isAdminLogin\(window\.location\)/);
+    assert.match(rama, /!isAdminLogin\(window\.location\) && await terminarRegistroPendiente\(email, status\)/);
 });

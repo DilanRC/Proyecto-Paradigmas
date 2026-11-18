@@ -34,7 +34,7 @@ test('Ajustes → Perfil edita nombre, identificación y correo con las reglas c
     assert.match(js, /errorIdentificacion/, 'la identificación usa las reglas del servidor');
     assert.match(js, /telefonoValido/, 'el teléfono usa telefono.js');
     assert.match(js, /refreshAuthSession\(\)/, 'con el correo nuevo se renueva la sesión');
-    assert.match(view, /js\/ajustes\.js\?v=ajustes-15/);
+    assert.match(view, /js\/ajustes\.js\?v=ajustes-16/);
 });
 
 test('Ajustes → Perfil permite cambiar y quitar la foto y editar alias y teléfono', () => {
@@ -51,7 +51,7 @@ test('Ajustes → Perfil permite cambiar y quitar la foto y editar alias y telé
 test('la API y el encabezado usan la foto solo si es https', () => {
     assert.match(read('Public/.htaccess'), /RewriteRule \^api\/v1\/mi-perfil\/\?\$ api\/mi-perfil\.php \[END\]/);
     const ui = read('Public/js/public-ui.js');
-    assert.ok(ui.includes('safeHttpsUrl(profile?.persona?.fotoUrl)'));
+    assert.ok(ui.includes('safeHttpsUrl(perfil?.persona?.fotoUrl)'));
     assert.ok(ui.includes("url.protocol === 'https:'"));
     assert.ok(read('Application/Controller/MiPerfilController.php').includes("imagenUrl($cuerpo['fotoUrl'], 'fotoUrl')"));
 });

@@ -5,7 +5,6 @@
 // pública y administrativa; mientras la política admin no esté aprobada, este
 // gate usa denegación por defecto en vez de reutilizar el viejo booleano local.
 
-import { inicializarUbicacionAutomatica } from './ubicacion-sesion.js';
 import { authSessionIdentity, readAuthSession, SESSION_KEY as AUTH_SESSION_KEY, signOut } from './supabase-auth.js?v=session-4';
 import { PROFILE_KEY } from './public-profile.js?v=profile-2';
 
@@ -188,11 +187,9 @@ if (typeof window !== 'undefined') {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => {
                     wirePrivateShell(storage);
-                    inicializarUbicacionAutomatica();
                 }, { once: true });
             } else {
                 wirePrivateShell(storage);
-                inicializarUbicacionAutomatica();
             }
         }
     }

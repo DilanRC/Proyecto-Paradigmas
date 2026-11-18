@@ -21,7 +21,7 @@ const checks = [
     ['explorar_lee_catalogo_real', read('Public/js/explore.js').includes('api/v1/publicaciones')
         && !explore.includes('contenido de muestra')],
     ['login_navegable', home.includes('href="entrar"') && login.includes('id="formulario-login"')],
-    ['logos_oficiales', home.includes('assets/logo_dark.png') && explore.includes('assets/logo_light.png')],
+    ['logos_oficiales', home.includes('assets/logo_dark-128.webp') && explore.includes('assets/logo_light-128.webp')],
     ['busqueda_expandible', home.includes('data-public-search-toggle') && productCss.includes("data-open='true'" )],
     ['sidebar_colapsable', collapseCss.includes('--admin-sidebar-collapsed-width:82px')],
     ['cuenta_dropdown', adminJs.includes("admin-account-menu__trigger") && adminJs.includes("admin-account-menu__panel")],

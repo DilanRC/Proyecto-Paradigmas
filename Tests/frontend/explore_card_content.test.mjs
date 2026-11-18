@@ -149,5 +149,35 @@ test('Explorar solo dice "prueba otra búsqueda" si la persona buscó o filtró'
     assert.match(vista, /data-explore-empty-catalog/);
     assert.match(vista, /Sé el primero en publicar ganado en tu zona/);
     assert.doesNotMatch(vista, /data-explore-filter="todos"/, 'el chip "Todo" no se escribe a mano');
-    assert.match(exploreSource, /empty\.hidden = !\(sinResultados && hasActiveFilters\(\)\)/);
+    assert.match(exploreSource, /if \(empty\) empty\.hidden = !vista\.vacio;/);
+});
+
+test('Explorar: esqueleto en la primera carga, tarjetas atenuadas al filtrar y error distinto de vacío', async () => {
+    const { vistaExplorar } = await import('../../Public/js/explore.js');
+    const primera = vistaExplorar({ cargando: true, error: null, visibles: 0, filtros: false });
+    assert.equal(primera.esqueleto, true);
+    assert.equal(primera.tarjetas, false);
+    assert.equal(primera.textoAviso, 'Cargando publicaciones…');
+    assert.equal(primera.vacio || primera.catalogoVacio, false, 'mientras carga no se afirma que no hay nada');
+
+    const refresco = vistaExplorar({ cargando: true, error: null, visibles: 6, filtros: true });
+    assert.equal(refresco.esqueleto, false, 'con tarjetas en pantalla no vuelve el esqueleto');
+    assert.equal(refresco.tarjetas, true, 'la página no se vacía al cambiar un filtro');
+    assert.equal(refresco.atenuar, true);
+    assert.equal(refresco.textoAviso, 'Actualizando resultados…');
+
+    const fallo = vistaExplorar({ cargando: false, error: 'Sin conexión', visibles: 0, filtros: true });
+    assert.equal(fallo.error, true);
+    assert.equal(fallo.vacio || fallo.catalogoVacio, false, 'un fallo no es "sin resultados"');
+
+    assert.equal(vistaExplorar({ cargando: false, error: null, visibles: 0, filtros: true }).vacio, true);
+    assert.equal(vistaExplorar({ cargando: false, error: null, visibles: 0, filtros: false }).catalogoVacio, true);
+    const listo = vistaExplorar({ cargando: false, error: null, visibles: 3, filtros: false });
+    assert.deepEqual([listo.esqueleto, listo.aviso, listo.atenuar, listo.tarjetas], [false, false, false, true], 'al terminar no queda ningún indicador');
+
+    // Solo la última respuesta cuenta y el DOM no se rehace si nada cambió.
+    assert.match(exploreSource, /if \(turno !== turnoCarga\) return;/);
+    assert.match(exploreSource, /if \(pintado\.items !== state\.items \|\| pintado\.proposito !== state\.proposito\) \{/);
+    const vista = read('Application/View/explorar/index.php');
+    assert.match(vista, /data-explore-skeleton aria-hidden="true"><\?= tc_esqueleto_tarjetas_publicacion\(4\) \?>/);
 });
