@@ -664,6 +664,6 @@
     .public-header [data-completar-registro] { padding-inline:12px; }
 }
 
-/* El contenido principal de las páginas de la app reserva casi una pantalla: mientras llegan los datos
+/* El contenido principal de las páginas de la app reserva una pantalla: mientras llegan los datos
    el pie de página queda debajo del pliegue y no salta al pintarse (CLS 0,10-0,19 medido en staging). */
-.public-shell > :is(.activity-main, .activity-shell, .explore-main, .publish-main) { min-height:75vh; }
+.public-shell > :is(.activity-main, .activity-shell, .explore-main, .publish-main) { min-height:100vh; }

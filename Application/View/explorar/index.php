@@ -20,7 +20,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-13">
+    <link rel="stylesheet" href="css/public-product.css?v=product-14">
     <link rel="stylesheet" href="css/explore.css?v=explore-10">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-2">

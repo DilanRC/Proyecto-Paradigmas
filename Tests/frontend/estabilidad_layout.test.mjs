@@ -16,7 +16,7 @@ test('el contenido principal de la app reserva casi una pantalla para que el pie
     assert.match(css, /\.public-shell > :is\(\.activity-main, \.activity-shell, \.explore-main, \.publish-main\) \{ min-height:75vh; \}/);
     for (const vista of ['mi-actividad', 'ajustes', 'me-interesa', 'subastas', 'fletes', 'explorar', 'publicar', 'mi-dashboard']) {
         const html = read(`Application/View/${vista}/index.php`);
-        assert.match(html, /css\/public-product\.css\?v=product-13/, `${vista} carga la regla nueva`);
+        assert.match(html, /css\/public-product\.css\?v=product-14/, `${vista} carga la regla nueva`);
         assert.match(html, /<main class="(activity-main|activity-shell|explore-main|publish-main)[" ]/, `${vista} usa un main cubierto`);
     }
 });

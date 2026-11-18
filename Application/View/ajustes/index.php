@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-13">
+    <link rel="stylesheet" href="css/public-product.css?v=product-14">
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
