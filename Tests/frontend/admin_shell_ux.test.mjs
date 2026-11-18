@@ -35,7 +35,18 @@ test('el shell existente se mejora desde un bootstrap compartido, no con cinco i
     for (const view of views) {
         const html = read(`../../Application/View/${view}/index.php`);
         assert.equal(html.includes('admin-v3.css'), false, `${view} no debe duplicar imports del shell`);
+        const parcial = html.indexOf("shared/admin-estilos.php");
+        assert.ok(parcial > 0 && parcial < html.indexOf('</head>'), `${view} carga los estilos del shell en el head (sin CLS)`);
+        assert.ok(html.lastIndexOf('rel="stylesheet"', parcial) < parcial && html.indexOf('rel="stylesheet"', parcial) === -1,
+            `${view}: los estilos del shell van después de los de la página (mismo orden que cuando los inyectaba JS)`);
     }
+    const estilos = read('../../Application/View/shared/admin-estilos.php');
+    for (const constante of ['ADMIN_CSS', 'ADMIN_SIDEBAR_CSS', 'ADMIN_REFINEMENTS_CSS']) {
+        const url = adminJs.match(new RegExp(`const ${constante} = '([^']+)'`))[1];
+        assert.ok(estilos.includes(`href="${url}"`), `admin-estilos.php y admin-ui.js usan la misma URL de ${constante}`);
+    }
+    assert.ok(estilos.includes("'tindercows:admin-sidebar-collapsed'") && adminJs.includes("ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed'"),
+        'el estado del sidebar se aplica antes de pintar con la misma clave');
 });
 
 test('los botones secundarios del admin conservan contraste en ambos temas y al cargar', () => {

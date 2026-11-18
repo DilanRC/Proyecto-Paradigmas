@@ -249,7 +249,7 @@ body.rural-panel {
     font-family:var(--font-sans);
 }
 
-@media (min-width:768px) {
+@media (min-width:901px) {
     body.rural-panel {
         flex-direction:row;
     }
@@ -265,7 +265,7 @@ body.rural-panel {
     background:var(--rural-rust);
 }
 
-@media (min-width:768px) {
+@media (min-width:901px) {
     .rural-panel__sidebar {
         width:318px;
         min-height:100vh;
@@ -371,7 +371,7 @@ body.rural-panel {
     text-transform:uppercase;
 }
 
-@media (max-width:767px) {
+@media (max-width:900px) {
     .rural-panel__sidebar-footer {
         display:none;
     }
