@@ -405,7 +405,7 @@ async function cargarTransportistas(pagina = 1) {
             b.type = 'button';
             b.addEventListener('click', () => abrirExpediente(f.personaId));
             nombre.append(b, el('small', 'intel-tabla__sub', f.activo ? 'Activo' : 'Inactivo'));
-            tr.append(nombre, el('td', 'intel-num', `${f.ofertasActivas}/${f.ofertas}`), el('td', 'intel-num', formatoNumero(f.capacidadOfertada)),
+            tr.append(nombre, el('td', 'intel-num', formatoNumero(f.ofertasActivas)), el('td', 'intel-num', formatoNumero(f.capacidadOfertada)),
                 el('td', 'intel-num', f.vehiculos), el('td', 'intel-num', f.solicitudesRecibidas), el('td', 'intel-num', f.solicitudesAceptadas),
                 el('td', 'intel-num', f.solicitudesRechazadas));
             t.tBodies[0].append(tr);
@@ -428,6 +428,15 @@ async function cargarTransportistas(pagina = 1) {
     }
 }
 
+/** «Nombre (alias)» solo si el alias dice algo distinto del nombre. Puro. */
+export function conAlias({ nombre, alias }) {
+    return alias && alias.trim().toLowerCase() !== String(nombre).trim().toLowerCase() ? `${nombre} (${alias})` : nombre;
+}
+
+function cantidadYMonto(cantidad, monto) {
+    return cantidad ? `${formatoNumero(cantidad)} · ${formatoColones(monto)}` : '0';
+}
+
 async function buscarPersonas(q) {
     const destino = $('#intel-persona');
     const pedido = ++estado.busqueda; // al escribir rápido solo vale la última búsqueda
@@ -439,7 +448,7 @@ async function buscarPersonas(q) {
         const ul = el('ul', 'intel-resultados');
         data.personas.forEach((p) => {
             const li = el('li');
-            const b = el('button', 'intel-enlace', p.alias ? `${p.nombre} (${p.alias})` : p.nombre);
+            const b = el('button', 'intel-enlace', conAlias(p));
             b.type = 'button';
             b.addEventListener('click', () => abrirExpediente(p.personaId));
             li.append(b, el('small', 'intel-tabla__sub', p.actividades.map((a) => etiquetaEstado(a)).join(' · ') || 'Sin actividades'));
@@ -460,7 +469,7 @@ async function abrirExpediente(personaId) {
         const { data } = await request(`${API}?vista=PERSONA&personaId=${Number(personaId)}`);
         const x = data.expediente;
         const card = el('article', 'intel-expediente');
-        card.append(el('h3', 'intel-panel__titulo', x.alias ? `${x.nombre} (${x.alias})` : x.nombre),
+        card.append(el('h3', 'intel-panel__titulo', conAlias(x)),
             el('p', 'intel-nota', `${x.activa ? 'Cuenta activa' : 'Cuenta inactiva'} · documento ${DOCUMENTO[x.documento] ?? 'sin enviar'}`));
         const bloque = (titulo, filas) => {
             const sec = el('section', 'intel-expediente__bloque');
@@ -472,11 +481,11 @@ async function abrirExpediente(personaId) {
         };
         const conteo = (o) => Object.entries(o ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${v}`).join(' · ') || '—';
         if (x.comprador) card.append(bloque('Como comprador', [['Pujas', formatoNumero(x.comprador.pujas)], ['Subastas ganadas', formatoNumero(x.comprador.subastasGanadas)],
-            ['Solicitudes', conteo(x.comprador.solicitudes)], ['Compras registradas', `${formatoNumero(x.comprador.compras)} · ${formatoColones(x.comprador.montoComprado)}`],
+            ['Solicitudes', conteo(x.comprador.solicitudes)], ['Compras', cantidadYMonto(x.comprador.compras, x.comprador.montoComprado)],
             ['Me interesa', formatoNumero(x.comprador.meInteresa)]]));
         if (x.vendedor) card.append(bloque('Como vendedor', [['Fincas', formatoNumero(x.vendedor.fincas)], ['Animales', formatoNumero(x.vendedor.animales)],
             ['Publicaciones', formatoNumero(x.vendedor.publicaciones)], ['Subastas', conteo(x.vendedor.subastas)],
-            ['Ventas registradas', `${formatoNumero(x.vendedor.ventas)} · ${formatoColones(x.vendedor.montoVendido)}`]]));
+            ['Ventas', cantidadYMonto(x.vendedor.ventas, x.vendedor.montoVendido)]]));
         if (x.transportista) card.append(bloque('Como transportista', [['Estado', x.transportista.activo ? 'Activo' : 'Inactivo'], ['Ofertas', conteo(x.transportista.ofertas)],
             ['Capacidad ofertada', formatoNumero(x.transportista.capacidadOfertada)], ['Vehículos', formatoNumero(x.transportista.vehiculos)],
             ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)]]));

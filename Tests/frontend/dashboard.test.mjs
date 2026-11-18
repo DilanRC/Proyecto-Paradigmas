@@ -28,7 +28,7 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-5/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-6/);
     assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-7/);
 });
 
@@ -68,4 +68,11 @@ test('montos grandes en tarjeta: compactos desde un millón, exactos por debajo'
     assert.match(formatoColonesCorto(4320000), /^₡4,3\s?M$/);
     assert.match(formatoColonesCorto(20000000198), /^₡20\smil\sM$/);
     assert.equal(formatoColonesCorto(null), '—');
+});
+
+test('el alias se muestra solo si es distinto del nombre', async () => {
+    const { conAlias } = await import('../../Public/js/dashboard.js');
+    assert.equal(conAlias({ nombre: 'Lechería Demo', alias: 'lechería demo' }), 'Lechería Demo');
+    assert.equal(conAlias({ nombre: 'Jeremi Castillo', alias: 'Abuelo' }), 'Jeremi Castillo (Abuelo)');
+    assert.equal(conAlias({ nombre: 'Ana', alias: null }), 'Ana');
 });
