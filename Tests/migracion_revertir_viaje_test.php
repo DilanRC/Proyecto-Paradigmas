@@ -6,7 +6,8 @@ declare(strict_types=1);
  * Reversión de la 027 en MySQL (Database/Migrations/028revertirviajerealizado.sql), sobre bases desechables:
  *  - sin datos que dependan de la 027: la tabla queda idéntica a la del instalador 000, y repetirla no cambia nada;
  *  - con un viaje enlazado a su solicitud: la columna se conserva (no se pierde el hecho) y lo avisa;
- *  - con un viaje sin método de pago: tbpagometodoid sigue admitiendo NULL (no se inventa un método) y lo avisa;
+ *  - con un viaje sin método de pago: no cambia ninguna columna (no se inventa un método) y lo avisa;
+ *  - con ambos bloqueos: no cambia ninguna columna y notifica las dos condiciones;
  *  - una base que nunca corrió la 027 no cambia.
  * Necesita permiso para crear bases (root, como en Tools/php-test.sh).
  */
@@ -94,19 +95,32 @@ try {
     // Caso B: un viaje guarda el enlace → no se borra la columna (se perdería el hecho).
     $b = $con027('b');
     $fila($b, 1, 77, 1);
+    $antesB = $columnas($b);
     test_same('028 PENDIENTE: 1 viajes guardan tbcomprasolicitudid; la columna se conservó.', $ejecutar('Database/Migrations/028revertirviajerealizado.sql', $b), 'la 028 avisa el bloqueo');
     test_same(77, (int) $servidor->query("SELECT tbcomprasolicitudid FROM `{$b}`.tbtransportistaflete")->fetchColumn(), 'el enlace histórico no se pierde');
+    test_same($antesB, $columnas($b), 'con enlace histórico no se modifica tampoco la nulabilidad del pago');
 
     // Caso C: un viaje sin método de pago → no se exige NOT NULL ni se inventa un método.
     $c = $con027('c');
     $fila($c, 1, null, null);
+    $antesC = $columnas($c);
     test_same('028 PENDIENTE: 1 viajes sin método de pago; tbpagometodoid sigue admitiendo NULL.', $ejecutar('Database/Migrations/028revertirviajerealizado.sql', $c), 'la 028 avisa el pago vacío');
     test_same(1, (int) $servidor->query("SELECT COUNT(*) FROM `{$c}`.tbtransportistaflete WHERE tbpagometodoid IS NULL")->fetchColumn(), 'no se asigna un método ficticio');
-    test_assert(!in_array('tbcomprasolicitudid', array_column($columnas($c), 'COLUMN_NAME'), true), 'la columna sin datos sí se retira');
+    test_same($antesC, $columnas($c), 'con pago NULL la columna de solicitud también debe conservarse');
     // Corregido el dato por quien corresponde, repetir la 028 termina la reversión.
     $servidor->exec("UPDATE `{$c}`.tbtransportistaflete SET tbpagometodoid = 1");
     $ejecutar('Database/Migrations/028revertirviajerealizado.sql', $c);
     test_same($esperado, $columnas($c), 'al repetirla con el dato corregido queda el esquema anterior');
+
+    // Ambos bloqueos a la vez: no se pierde el enlace ni se altera la nulabilidad.
+    $ambos = $con027('ambos');
+    $fila($ambos, 1, 77, null);
+    $antesAmbos = $columnas($ambos);
+    test_same('028 PENDIENTE: 1 viajes enlazados y 1 viajes sin método de pago; no se modificó la tabla.',
+        $ejecutar('Database/Migrations/028revertirviajerealizado.sql', $ambos), 'la 028 informa ambos bloqueos');
+    test_same($antesAmbos, $columnas($ambos), 'con ambos bloqueos no se modifica ninguna columna');
+    test_same(77, (int) $servidor->query("SELECT tbcomprasolicitudid FROM `{$ambos}`.tbtransportistaflete")->fetchColumn(),
+        'el enlace histórico se conserva cuando falta el pago');
 
     // Base que nunca corrió la 027: la 028 no cambia nada.
     $d = $crear('d');
