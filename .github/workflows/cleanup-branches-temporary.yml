@@ -60,7 +60,7 @@ jobs:
               'QA') tag='archive/branches/QA-2026-11-18' ;;
               'test/Validaciones') tag='archive/branches/test-Validaciones-2026-11-18' ;;
             esac
-            existing="$(gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
+            existing="$(gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha // empty' 2>/dev/null || true)"
             if [[ -n "$existing" ]]; then
               [[ "$existing" == "${expected[$name]}" ]] || { echo "Tag $tag points elsewhere"; exit 1; }
             else
