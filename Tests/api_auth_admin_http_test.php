@@ -45,6 +45,7 @@ $admins = [
     'admin-fletes.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
     'admin-administradores.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
     'admin-bitacora.php' => ['verbos' => ['GET', 'POST'], 'prohibido' => 'PATCH'],
+    'admin-dashboard.php' => ['verbos' => ['GET', 'POST'], 'prohibido' => 'PATCH'],
     'admin-documentos.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
     'admin-subastas.php' => ['verbos' => ['GET', 'POST'], 'prohibido' => 'PATCH'],
     'subastas.php' => ['verbos' => ['GET', 'POST', 'PATCH'], 'prohibido' => 'DELETE'],
