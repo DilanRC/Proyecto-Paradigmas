@@ -5,6 +5,8 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $schema = file_get_contents("{$root}/schema.sql");
 $migration = file_get_contents("{$root}/migrate.php");
+$contract = file_get_contents("{$root}/schema-contract.php");
+$migration = ($migration ?: '') . "\n" . ($contract ?: '');
 $repoRoot = dirname(__DIR__, 3);
 $entrypoint = file_get_contents("{$repoRoot}/docker/apache/container-entrypoint.sh");
 $phpConfiguration = file_get_contents("{$repoRoot}/docker/php-errores.ini");
@@ -57,13 +59,32 @@ $checks = [
     'rest_bloqueado_por_rls' => substr_count($schema, 'ENABLE ROW LEVEL SECURITY') === 48,
     'migracion_serializada' => str_contains($migration, "SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))")
         && str_contains($migration, "SET LOCAL lock_timeout = '30s'"),
-    'validacion_posterior' => str_contains($migration, 'validateSchema($connection)'),
+    'validacion_posterior' => str_contains($migration, 'validateSchema($connection, $schema)'),
     'diagnostico_columnas' => str_contains($migration, 'esperado=[%s] actual=[%s]'),
-    'orden_columnas_neutro' => substr_count($migration, 'sort($columns)') === 2,
+    'orden_columnas_neutro' => substr_count($migration, 'sort($columns)') === 3,
     'recarga_postgrest' => str_contains($migration, "NOTIFY pgrst, 'reload schema'"),
     'traza_operativa' => str_contains($migration, 'supabase_schema_status=ready tables=48 migration=v10'),
     'tls_desde_url' => str_contains($migration, "\$query['sslmode']") && str_contains($migration, "'require'"),
     'conexion_directa_primero' => str_contains($migration, "['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL']"),
+    'esquema_listo_evitar_ddl_repetido' => strpos($migration, 'if (schemaIsReady($connection, $schema))') !== false
+        && strpos($migration, '$connection->exec($schema);') !== false
+        && strpos($migration, 'if (schemaIsReady($connection, $schema))')
+            < strpos($migration, '$connection->exec($schema);')
+        && str_contains($migration, 'schemaHasExpectedPrimaryKeys')
+        && str_contains($migration, 'schemaHasRequiredRowSecurity')
+        && str_contains($migration, 'schemaHasExpectedNullability')
+        && str_contains($migration, 'ensureExpectedNullability($connection, $schema)')
+        && str_contains($migration, 'if (!schemaHasRequiredRowSecurity($connection))')
+        && str_contains($migration, 'if (!schemaHasExpectedNullability($connection, $schema))')
+        && !str_contains(substr($migration, strpos($migration, 'if (schemaIsReady($connection, $schema))'),
+            strpos($migration, '$connection->exec($schema);')
+                - strpos($migration, 'if (schemaIsReady($connection, $schema))')),
+            "NOTIFY pgrst, 'reload schema'"),
+    'degradado_pk_evitar_ddl_repetido' => strpos($migration, '$llavesPendientes = unrepairablePrimaryKeyDifferences($connection, $schema)') !== false
+        && strpos($migration, '$llavesPendientes = unrepairablePrimaryKeyDifferences($connection, $schema)')
+            < strpos($migration, '$connection->exec($schema);')
+        && str_contains($migration, 'function schemaPrimaryKeyDifferences(PDO $connection): array')
+        && str_contains($migration, 'function reportPendingPrimaryKeys(array $tables): void'),
     'migracion_vercel_solo_php' => str_contains($phpConfiguration, 'auto_prepend_file = /var/www/html/services/supabase-database/migrate-request.php')
         && str_contains($requestMigrator, "getenv('POSTGRES_URL')")
         && str_contains($requestMigrator, "getenv('POSTGRES_URL_NON_POOLING')")

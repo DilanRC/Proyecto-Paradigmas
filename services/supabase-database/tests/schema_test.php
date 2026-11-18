@@ -5,9 +5,11 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $schema = file_get_contents("{$root}/schema.sql");
 $migration = file_get_contents("{$root}/migrate.php");
-if ($schema === false || $migration === false) {
+$contract = file_get_contents("{$root}/schema-contract.php");
+if ($schema === false || $migration === false || $contract === false) {
     throw new RuntimeException('Faltan archivos del servicio Supabase.');
 }
+$migration .= "\n" . $contract;
 
 $tables = ['tbadministrador', 'tbpersona', 'tbproductor', 'tbproductordireccion', 'tbdireccion', 'tbfinca', 'tbfincadireccion',
     'tbpagometodo', 'tbtransportista', 'tbvehiculo', 'tbtransportistavehiculo', 'tbbitacora',
@@ -63,7 +65,19 @@ $check(str_contains($migration, "SELECT pg_advisory_xact_lock(hashtext('tinderco
     && str_contains($migration, "SET LOCAL lock_timeout = '30s'")
     && strpos($migration, 'SET LOCAL lock_timeout') < strpos($migration, 'SELECT pg_advisory_xact_lock'),
     'La migración debe esperar el advisory lock con un tope (lock_timeout), no fallar de inmediato ni esperar sin límite');
-$check(str_contains($migration, 'validateSchema($connection)'), 'Falta validación posterior');
+$check(str_contains($migration, 'validateSchema($connection, $schema)'), 'Falta validación posterior');
+$check(str_contains($migration, 'schemaHasRequiredRowSecurity($connection)')
+    && str_contains($migration, 'schemaNullabilityDifferences(PDO $connection, string $schema)')
+    && str_contains($migration, 'ensureExpectedNullability($connection, $schema)')
+    && str_contains($migration, 'hay valores NULL'),
+    'La ruta completa debe comparar schema.sql y reparar nulabilidad sin aceptar NULL en campos obligatorios');
+$degradedPathStart = strpos($migration, '$llavesPendientes = unrepairablePrimaryKeyDifferences($connection, $schema)');
+$degradedPathEnd = strpos($migration, '$connection->exec($schema);', $degradedPathStart);
+$check($degradedPathStart !== false && $degradedPathEnd !== false
+    && $degradedPathStart < $degradedPathEnd
+    && str_contains(substr($migration, $degradedPathStart, $degradedPathEnd - $degradedPathStart), 'reportPendingPrimaryKeys')
+    && str_contains($migration, 'function schemaPrimaryKeyDifferences(PDO $connection): array'),
+    'Una diferencia de PK no reparable no debe repetir DDL si el resto del esquema coincide');
 $check(str_contains($migration, "NOTIFY pgrst, 'reload schema'"), 'Falta recargar el esquema REST de PostgREST');
 $check(str_contains($migration, 'supabase_schema_status=ready tables=48 migration=v10'), 'Falta traza operativa');
 $check(!str_contains($schema, 'tbproductorestado SMALLINT'),
@@ -74,7 +88,7 @@ $check(strpos($migration, 'INSERT INTO public.tbproductorestadoperiodo')
     < strpos($migration, 'DROP COLUMN IF EXISTS tbproductorestado'),
     'El estado heredado debe respaldarse antes de retirar la columna');
 $check(str_contains($migration, 'esperado=[%s] actual=[%s]'), 'La validación debe identificar columnas divergentes');
-$check(substr_count($migration, 'sort($columns)') === 2, 'La comparación debe ignorar el orden físico de columnas');
+$check(substr_count($migration, 'sort($columns)') === 3, 'La comparación debe ignorar el orden físico de columnas y schema.sql');
 $check(str_contains($migration, "'tbcomprador' => ["), 'Falta validar las columnas de tbcomprador');
 $check(str_contains($migration, "'tbproductorpersonatelefonohistorico' => [")
     && str_contains($migration, "'tbcompradorpersonatelefonohistorico' => ["),

@@ -10,7 +10,8 @@ $vercelDockerfile = file_get_contents("{$root}/Dockerfile.vercel");
 $entrypoint = file_get_contents("{$root}/docker/apache/container-entrypoint.sh");
 $phpConfiguration = file_get_contents("{$root}/docker/php-errores.ini");
 $requestMigrator = file_get_contents("{$root}/services/supabase-database/migrate-request.php");
-$supabaseMigrator = file_get_contents("{$root}/services/supabase-database/migrate.php");
+$supabaseContract = file_get_contents("{$root}/services/supabase-database/schema-contract.php");
+$supabaseMigrator = ($supabaseContract ?: '') . "\n" . file_get_contents("{$root}/services/supabase-database/migrate.php");
 $databaseSchema = file_get_contents("{$root}/Database/SqlScripts/000instalacioncompleta.sql");
 $compose = file_get_contents("{$root}/compose.yaml");
 $environmentExample = file_get_contents("{$root}/.env.example");
@@ -60,6 +61,31 @@ test_assert(str_contains($supabaseMigrator, 'return false;') && str_contains($su
     'La migración debe distinguir un esquema degradado de uno listo para compartir el resultado por contenedor');
 test_assert(strpos($supabaseMigrator, "['POSTGRES_URL_NON_POOLING', 'POSTGRES_URL']") !== false,
     'El migrador debe preferir la conexión directa para no ocupar el pool de sesiones');
+test_assert(str_contains($supabaseMigrator, "require_once __DIR__ . '/schema-contract.php';"),
+    'El migrador debe cargar el contrato e introspección de esquema separados');
+test_assert(strpos($supabaseMigrator, 'if (schemaIsReady($connection, $schema))') !== false
+    && strpos($supabaseMigrator, '$connection->exec($schema);') !== false
+    && strpos($supabaseMigrator, 'if (schemaIsReady($connection, $schema))')
+        < strpos($supabaseMigrator, '$connection->exec($schema);'),
+    'La migración debe evitar repetir DDL si el esquema compartido ya está listo');
+$degradedPathStart = strpos($supabaseMigrator, '$llavesPendientes = unrepairablePrimaryKeyDifferences($connection, $schema)');
+$degradedPathEnd = strpos($supabaseMigrator, '$connection->exec($schema);', $degradedPathStart);
+test_assert($degradedPathStart !== false && $degradedPathEnd !== false
+    && $degradedPathStart < $degradedPathEnd
+    && str_contains(substr($supabaseMigrator, $degradedPathStart, $degradedPathEnd - $degradedPathStart), 'reportPendingPrimaryKeys')
+    && str_contains($supabaseMigrator, 'function unrepairablePrimaryKeyDifferences(PDO $connection, string $schema)')
+    && str_contains($supabaseMigrator, 'function reportPendingPrimaryKeys(array $tables): void'),
+    'Las réplicas con solo llaves primarias no reparables deben informar degraded sin repetir DDL');
+test_assert(str_contains($supabaseMigrator, '&& schemaHasExpectedNullability($connection, $schema)')
+    && str_contains($supabaseMigrator, 'if (!schemaHasRequiredRowSecurity($connection))')
+    && str_contains($supabaseMigrator, 'if (!schemaHasExpectedNullability($connection, $schema))')
+    && str_contains($supabaseMigrator, 'ensureExpectedNullability($connection, $schema)'),
+    'La migración rápida debe revisar la nulabilidad de schema.sql y la completa repararla antes de confirmar');
+$fastPathStart = strpos($supabaseMigrator, 'if (schemaIsReady($connection, $schema))');
+$fastPathEnd = strpos($supabaseMigrator, '$connection->exec($schema);', $fastPathStart);
+$fastPath = substr($supabaseMigrator, $fastPathStart, $fastPathEnd - $fastPathStart);
+test_assert(!str_contains($fastPath, "NOTIFY pgrst, 'reload schema'"),
+    'El fast path no debe recargar PostgREST si no ejecuta DDL');
 test_assert(str_contains($supabaseMigrator, "if (PHP_SAPI === 'cli') {")
     && str_contains($supabaseMigrator, 'exit(1);')
     && str_contains($supabaseMigrator, 'http_response_code(503)'),

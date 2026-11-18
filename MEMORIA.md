@@ -797,15 +797,26 @@ Agrega entradas nuevas **arriba**. Formato: fecha · rama · resumen · archivos
 - Se retiró el migrador del entrypoint de Apache. `docker/php-errores.ini` lo carga con `auto_prepend_file` para solicitudes PHP;
   `migrate-request.php` omite CLI y no hace nada si no existe URL PostgreSQL. Así CSS, JavaScript e imágenes no abren conexiones.
   Una marca de versión en `/tmp`, protegida por `flock`, evita repetir la migración entre workers del mismo contenedor. Cada espera del bloqueo tiene un límite de 10 segundos y devuelve 503 JSON si vence. El migrador prefiere `POSTGRES_URL_NON_POOLING` para evitar el pool de sesiones.
+- En la primera pasada de staging, `/subastas` y el contador del carrito tuvieron 500 por deadlock `SQLSTATE[40P01]` entre una consulta y DDL de otra réplica fría. Se añadió una comprobación bajo bloqueo asesor global: las réplicas omiten DDL si coinciden columnas, llaves primarias, RLS sin políticas y la nulabilidad de `schema.sql`; si solo quedan PK no reparables (incompatibles o con IDs duplicados/nulos), omiten DDL y conservan el estado degradado. Ambas rutas siguen asegurando las semillas. La ruta completa repara diferencias de nulabilidad; si una columna obligatoria tiene filas con `NULL` o persisten políticas RLS, revierte la transacción y responde 503. Al corregir IDs que impiden crear una PK ausente, una instancia posterior vuelve a intentarlo; una PK existente incompatible requiere corregirse manualmente.
 - El migrador libera PDO tras el commit, conserva salida y códigos CLI, registra errores de esquema y responde 503 en JSON durante
   una solicitud web si falla la validación. Un esquema degradado permite que la solicitud continúe, como antes.
-- Los contratos de despliegue, el eval del esquema Supabase, la prueba XAMPP y ambos README describen ahora este flujo.
-- Comprobado localmente: lint PHP; `deployment_test`, `deployment_eval` (15/15), `entrega_xampp_test`, `schema_test` y
-  `schema_eval` (29/29); frontend 475/475, contrato UI/API, UI, contraste AA (44/44), shell (13/13) y capacidades (17/17).
-  Con URL PostgreSQL falsa, el contenedor sirvió JavaScript con 200 y respondió 503 JSON en PHP. Con PostgreSQL 16 desechable,
-  12 solicitudes API simultáneas dieron 401 por falta de sesión (esperado), `/explorar` dio 200, JavaScript 200, hubo una sola
-  línea `supabase_schema_status=ready` y se crearon 48 tablas. El contenedor, la red y la imagen de prueba se retiraron.
-- Pendiente: publicar a `dev` y repetir QA de sesión y navegación en el navegador contra staging.
+- `schema-contract.php` separa el contrato de columnas e introspección del orquestador. Los contratos de despliegue, el eval del esquema Supabase, la prueba XAMPP y ambos README describen ahora este flujo.
+- Comprobado localmente: lint PHP; suites PHP documentadas (26/26), `entrega_xampp_test`, `schema_test`, `schema_eval` (100%),
+  `deployment_test`, `deployment_eval` (100%), compatibilidad PostgreSQL y frontend 475/475; contraste AA (44/44), shell (13/13)
+  y capacidades (17/17).
+- PostgreSQL 16 desechable: cinco réplicas iniciales crearon 48 tablas con RLS; cinco réplicas warm no emitieron DDL según un
+  event trigger de auditoría. El migrador reparó ambos sentidos de nulabilidad; rechazó con rollback una columna obligatoria con
+  `NULL` conservando la fila; rechazó una policy RLS. Para una PK ausente bloqueada por un ID duplicado, cinco réplicas entraron
+  en degraded sin DDL; al quitar el duplicado, el siguiente arranque creó la PK. Para una PK compuesta incompatible, cinco réplicas
+  entraron en degraded sin DDL; tras restaurar manualmente la PK correcta, el esquema volvió a ready. Recursos retirados por
+  `--rm`/`docker stop`.
+- QA de navegador en staging `e4b2f73`: login correcto; sesión visible en segunda pestaña y después de recargar; `/mi-actividad`
+  mostró Comprador/Vendedor/Transportista, finca y vehículo ficticios. `/participar`, `/explorar` (3 publicaciones), `/subastas`
+  (9 activas), `/fletes`, `/publicar` y `/ajustes` cargaron; en `/participar` el ancho/jerarquía ya no colapsa en una columna
+  estrecha. El listado de fletes requirió ubicación para filtrar; no se concedió GPS. Las capturas de consola revisadas no mostraron
+  errores. No se enviaron formularios de publicación/puja ni se alteraron capacidades.
+- Pendiente: push a `dev`, con QA final y revisión de logs de la nueva versión. El respaldo de la base activa no se verificó;
+  Dilan autorizó continuar sin esa evidencia, por lo que el deploy ejecutará la migración sobre esa base al recibir tráfico.
 
 ### 2026-11-09 · feat/dashboards · Mi dashboard rediseñado (prompt de diseño de Jeferson)
 - Jeferson pidió rehacer la página con un prompt de diseño (estructura, medidas y colores propios). **Decidió usar los colores y

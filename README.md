@@ -246,11 +246,21 @@ Cuando Vercel entrega `POSTGRES_URL` o `POSTGRES_URL_NON_POOLING`,
 contenedor y guarda el resultado en `/tmp` bajo un bloqueo compartido entre
 workers. Las solicitudes esperan como máximo 10 segundos por ese bloqueo.
 El migrador prefiere `POSTGRES_URL_NON_POOLING` para no ocupar el pool de
-sesiones. Apache sirve CSS, JavaScript e imágenes sin abrir conexiones PostgreSQL.
+sesiones. Un bloqueo asesor de PostgreSQL serializa réplicas frías; después de
+la primera aplicación, cada réplica comprueba el esquema y omite DDL repetido.
+Apache sirve CSS, JavaScript e imágenes sin abrir conexiones PostgreSQL.
 El migrador crea y valida las 48 tablas, incluida la identidad compartida en
-`tbpersona`, habilita RLS sin políticas públicas y valida las columnas. Si el
-esquema no se puede validar, la solicitud responde 503 en JSON y deja el detalle
-en el log.
+`tbpersona`, habilita RLS sin políticas públicas y comprueba columnas, llaves
+primarias y la nulabilidad declarada en `schema.sql`; la llave primaria hace
+obligatorio el ID. Si no puede exigir `NOT NULL` en otra columna porque ya
+contiene valores `NULL`, revierte la transacción y responde 503 JSON. Si no se
+puede crear una llave primaria por una llave existente incompatible, IDs nulos o repetidos, registra
+`supabase_primary_key_pendiente`, completa la solicitud en modo degradado y
+vuelve a intentarlo en una instancia futura.
+Si el resto del esquema ya coincide, las instancias siguientes informan el modo
+degradado sin repetir DDL. Si falta una PK, tras corregir sus IDs duplicados o
+nulos una instancia nueva reintenta crearla; una PK existente incompatible
+requiere corregir la propia llave en la base.
 Los cambios futuros del esquema Supabase requieren un snapshot y autorización
 expresa antes de ejecutarse.
 

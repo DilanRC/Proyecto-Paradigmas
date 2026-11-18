@@ -2,206 +2,7 @@
 
 declare(strict_types=1);
 
-const EXPECTED_COLUMNS = [
-    'tbadministrador' => [
-        'tbadministradorid', 'tbadministradorcorreoelectronico', 'tbadministradorestado',
-    ],
-    'tbpersona' => [
-        'tbpersonaid', 'tbpersonaidentificacionnumero', 'tbpersonaidentificaciontipo',
-        'tbpersonanombre', 'tbpersonaalias', 'tbpersonatelefono', 'tbpersonacorreoelectronico', 'tbpersonaestado',
-        'tbpersonafotourl', 'tbpersonadocumentoruta', 'tbpersonadocumentoestado', 'tbpersonadocumentofecha',
-        'tbpersonadocumentomotivo', 'tbpersonadocumentonumeroleido', 'tbpersonadocumentolectura',
-    ],
-    'tbproductor' => [
-        'tbproductorid', 'tbpersonaid',
-    ],
-    'tbproductordireccion' => [
-        'tbproductordireccionid', 'tbproductorid', 'tbdireccionid',
-        'tbproductordireccionfechainicio', 'tbproductordireccionfechafin',
-    ],
-    'tbdireccion' => [
-        'tbdireccionid', 'tbdireccionprovincia', 'tbdireccioncanton', 'tbdirecciondistrito',
-        'tbdireccionpueblo', 'tbdireccionsenas', 'tbdireccionlatitud', 'tbdireccionlongitud',
-    ],
-    'tbproductorestadoperiodo' => [
-        'tbproductorestadoperiodoid', 'tbproductorid', 'tbproductorestadoperiodoestado',
-        'tbproductorestadoperiodofechainicio', 'tbproductorestadoperiodofechafin',
-        'tbproductorestadoperiodomotivo',
-    ],
-    'tbproductorubicacion' => [
-        'tbproductorubicacionid', 'tbproductorid', 'tbproductorubicacionlatitud',
-        'tbproductorubicacionlongitud', 'tbproductorubicacionprecision',
-        'tbproductorubicacionfecha', 'tbproductorubicacionorigen',
-    ],
-    'tbproductoractividad' => [
-        'tbproductoractividadid', 'tbproductorid', 'tbproductoractividadtipo',
-        'tbproductoractividadfecha', 'tbproductoractividadorigen',
-    ],
-    'tbfinca' => ['tbfincaid', 'tbproductorid', 'tbfincanombre', 'tbfincaestado'],
-    'tbfincadireccion' => ['tbfincadireccionid', 'tbfincaid', 'tbdireccionid'],
-    'tbpagometodo' => [
-        'tbpagometodoid', 'tbpagometodonombre', 'tbpagometododescripcion', 'tbpagometodoactivo',
-    ],
-    'tbtransportista' => [
-        'tbtransportistaid', 'tbpersonaid', 'tbtransportistaestado',
-    ],
-    'tbvehiculo' => [
-        'tbvehiculoid', 'tbvehiculoplaca', 'tbvehiculovin', 'tbvehiculomodelo', 'tbvehiculoestado',
-        'tbvehiculofotourl',
-    ],
-    'tbtransportistavehiculo' => [
-        'tbtransportistavehiculoid', 'tbtransportistaid', 'tbvehiculoid',
-    ],
-    'tbbitacora' => [
-        'tbbitacoraid', 'tbbitacoraentidad', 'tbbitacoraregistroidentificacionnumero',
-        'tbbitacoraaccion', 'tbbitacorafecha', 'tbbitacoradatosanteriores', 'tbbitacoradatosnuevos',
-        'tbbitacoraactortipo', 'tbbitacorausuarioid', 'tbbitacoraorigen', 'tbbitacorasolicitudid',
-    ],
-    'tbcomprador' => [
-        'tbcompradorid', 'tbpersonaid', 'tbcompradorestado',
-    ],
-    'tbproductorpersonatelefonohistorico' => [
-        'tbproductorpersonatelefonohistoricoid', 'tbproductorid',
-        'tbproductorpersonatelefonohistoriconuevo', 'tbproductorpersonatelefonohistoricofecha',
-    ],
-    'tbcompradorpersonatelefonohistorico' => [
-        'tbcompradorpersonatelefonohistoricoid', 'tbcompradorid',
-        'tbcompradorpersonatelefonohistoriconuevo', 'tbcompradorpersonatelefonohistoricofecha',
-    ],
-    'tbproductorclasificacionperiodo' => [
-        'tbproductorclasificacionperiodoid', 'tbproductorid', 'tbproductorclasificacionperiodotipo',
-        'tbproductorclasificacionperiodofechainicio', 'tbproductorclasificacionperiodofechafin',
-        'tbproductorclasificacionperiodomotivo',
-    ],
-    'tbanimal' => [
-        'tbanimalid', 'tbanimalidentificacion', 'tbanimalsexo', 'tbanimalraza',
-        'tbanimalcaracteristicas', 'tbanimalfecharegistroensistema', 'tbanimalorigenregistro',
-        'tbespecieid', 'tbanimaltipoid', 'tbrazaid', 'tbanimalfechanacimiento',
-        'tbanimalfechanacimientoestimada', 'tbanimalpartos', 'tbanimalestado', 'tbproductorid',
-    ],
-    'tbanimalproduccionsalud' => [
-        'tbanimalproduccionsaludid', 'tbanimalid', 'tbanimalproduccionsaludfecha',
-        'tbanimalproduccionsaludorigen', 'tbanimalproduccionsaludcontexto',
-        'tbanimalproduccionsaludedadmeses', 'tbanimalproduccionsaludpeso',
-        'tbanimalproduccionsaludproposito', 'tbanimalproduccionsaludestadoreproductivo',
-        'tbanimalproduccionsaludpartos', 'tbanimalproduccionsaludlitrosleche',
-        'tbanimalproduccionsaludproduccion', 'tbanimalproduccionsaludsalud',
-    ],
-    'tbanimalpublicacion' => [
-        'tbanimalpublicacionid', 'tbanimalid', 'tbproductorvendedorid', 'tbfincaid',
-        'tbanimalpublicacionfecha', 'tbanimalpublicacionprecio', 'tbanimalpublicaciontitulo',
-        'tbanimalpublicaciondescripcion', 'tbanimalpublicacionimagenurl', 'tbanimalpublicacionorigen',
-    ],
-    'tbanimalpublicacionestadoperiodo' => [
-        'tbanimalpublicacionestadoperiodoid', 'tbanimalpublicacionid',
-        'tbanimalpublicacionestadoperiodoestado', 'tbanimalpublicacionestadoperiodofechainicio',
-        'tbanimalpublicacionestadoperiodofechafin', 'tbanimalpublicacionestadoperiodomotivo',
-        'tbanimalpublicacionestadoperiodoorigen',
-    ],
-    'tbcompra' => [
-        'tbcompraid', 'tbanimalid', 'tbproductorcompradorid', 'tbcompradorid', 'tbfincaorigenid',
-        'tbcomprafecha', 'tbcomprahora', 'tbcompralugar', 'tbcompraprecio',
-        'tbpagometodoid', 'tbcompraorigen',
-    ],
-    'tbventa' => [
-        'tbventaid', 'tbanimalid', 'tbproductorvendedorid', 'tbproductorcompradorid', 'tbcompradorid',
-        'tbfincaid', 'tbcompraid', 'tbcomprasolicitudid', 'tbventafecha', 'tbventahora', 'tbventalugar',
-        'tbventadireccionid', 'tbventaproposito', 'tbventaprecio', 'tbpagometodoid',
-        'tbventaedadmeses', 'tbventapeso', 'tbventarazasnapshot', 'tbventaorigen',
-    ],
-    'tbanimalinteraccion' => [
-        'tbanimalinteraccionid', 'tbproductorid', 'tbanimalid',
-        'tbanimalinteracciontipo', 'tbanimalinteraccionaccion',
-        'tbanimalinteraccionfecha', 'tbanimalinteraccionorigen',
-    ],
-    'tbanimalpublicacioninteraccion' => [
-        'tbanimalpublicacioninteraccionid', 'tbpersonaid', 'tbanimalpublicacionid',
-        'tbanimalpublicacioninteracciontipo', 'tbanimalpublicacioninteraccionaccion',
-        'tbanimalpublicacioninteraccionfecha', 'tbanimalpublicacioninteraccionorigen',
-    ],
-    'tbcarrito' => [
-        'tbcarritoid', 'tbproductorid', 'tbcarritofechacreacion',
-    ],
-    'tbcarritoestadoperiodo' => [
-        'tbcarritoestadoperiodoid', 'tbcarritoid', 'tbcarritoestadoperiodoestado',
-        'tbcarritoestadoperiodofechainicio', 'tbcarritoestadoperiodofechafin',
-        'tbcarritoestadoperiodomotivo', 'tbcarritoestadoperiodoorigen',
-    ],
-    'tbcarritoanimal' => [
-        'tbcarritoanimalid', 'tbcarritoid', 'tbanimalid', 'tbcarritoanimalaccion',
-        'tbcarritoanimalfecha', 'tbcarritoanimalorigen',
-    ],
-    'tbtransportistaestadoperiodo' => [
-        'tbtransportistaestadoperiodoid', 'tbtransportistaid',
-        'tbtransportistaestadoperiodoestado', 'tbtransportistaestadoperiodofechainicio',
-        'tbtransportistaestadoperiodofechafin', 'tbtransportistaestadoperiodomotivo',
-        'tbtransportistaestadoperiodofecharegistroensistema',
-    ],
-    'tbtransportistaflete' => [
-        'tbtransportistafleteid', 'tbtransportistaid', 'tbproductororigenid',
-        'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid', 'tbvehiculoid',
-        'tbtransportistafletefecha', 'tbtransportistafletehora',
-        'tbtransportistafletedescripcion', 'tbtransportistafletecantidadcabezas',
-        'tbtransportistafletedistanciakm', 'tbtransportistafleteprecio',
-        'tbpagometodoid', 'tbtransportistafleteorigen',
-    ],
-    'tbtransportistahorario' => [
-        'tbtransportistahorarioid', 'tbtransportistaid', 'tbtransportistahorariodiasemana',
-        'tbtransportistahorariohorainicio', 'tbtransportistahorariohorafin',
-        'tbtransportistahorariofechainicio', 'tbtransportistahorariofechafin',
-        'tbtransportistahorarioorigen',
-    ],
-    'tbtransportistaresena' => [
-        'tbtransportistaresenaid', 'tbtransportistaid', 'tbpersonaid',
-        'tbtransportistafleteid', 'tbtransportistaresenafecha',
-        'tbtransportistaresenacalificacion', 'tbtransportistaresenacomentario',
-        'tbtransportistaresenaorigen',
-    ],
-    'tbregistroconsulta' => [
-        'tbregistroconsultaid', 'tbregistroconsultaclave', 'tbregistroconsultafecha',
-    ],
-    'tbcomprasolicitud' => [
-        'tbcomprasolicitudid', 'tbanimalpublicacionid', 'tbcompradorid', 'tbtransportistaofertaid',
-        'tbpagometodoid', 'tbcomprasolicitudprecio', 'tbcomprasolicitudmensaje', 'tbcomprasolicitudestado',
-        'tbcomprasolicitudfleteestado', 'tbcomprasolicitudfecha', 'tbcomprasolicitudrespuestafecha',
-        'tbcomprasolicitudrespuestamotivo', 'tbcomprasolicitudfleterespuestafecha',
-    ],
-    'tbtransportistaoferta' => [
-        'tbtransportistaofertaid', 'tbtransportistaid', 'tbvehiculoid', 'tbdireccionid',
-        'tbtransportistaofertaradiokm', 'tbtransportistaofertacapacidad', 'tbtransportistaofertaprecio',
-        'tbtransportistaofertadescripcion', 'tbtransportistaofertaestado', 'tbtransportistaofertafecha',
-    ],
-    'tbespecie' => ['tbespecieid', 'tbespecienombre', 'tbespecieactivo'],
-    'tbanimaltipo' => [
-        'tbanimaltipoid', 'tbespecieid', 'tbanimaltiponombre', 'tbanimaltiposexo', 'tbanimaltipoactivo',
-    ],
-    'tbraza' => ['tbrazaid', 'tbespecieid', 'tbrazanombre', 'tbrazaactivo'],
-    'tbanimalpublicacionanimal' => ['tbanimalpublicacionanimalid', 'tbanimalpublicacionid', 'tbanimalid'],
-    'tbvacuna' => ['tbvacunaid', 'tbvacunanombre', 'tbvacunaactivo'],
-    'tbanimalvacunacion' => [
-        'tbanimalvacunacionid', 'tbanimalid', 'tbvacunaid', 'tbanimalvacunacionfecha', 'tbanimalvacunaciondosis',
-        'tbanimalvacunacionlote', 'tbanimalvacunacionaplicadapor', 'tbanimalvacunacionproximadosis',
-        'tbanimalvacunacionobservaciones', 'tbanimalvacunacionfecharegistro',
-    ],
-    'tbsubasta' => [
-        'tbsubastaid', 'tbproductorid', 'tbanimalid', 'tbfincaid', 'tbsubastatitulo', 'tbsubastadescripcion',
-        'tbsubastaimagenurl', 'tbsubastapreciobase', 'tbsubastaincrementominimo', 'tbsubastafechainicio',
-        'tbsubastafechafin', 'tbsubastaestado', 'tbsubastapujaganadoraid', 'tbsubastafechacierre',
-    ],
-    'tbsubastapuja' => ['tbsubastapujaid', 'tbsubastaid', 'tbpersonaid', 'tbsubastapujamonto', 'tbsubastapujafecha'],
-    'tbsubastacomentario' => [
-        'tbsubastacomentarioid', 'tbsubastaid', 'tbpersonaid', 'tbsubastacomentariotexto', 'tbsubastacomentariofecha',
-    ],
-    'tbnotificacion' => [
-        'tbnotificacionid', 'tbpersonaid', 'tbnotificaciontipo', 'tbnotificaciontitulo', 'tbnotificacionmensaje',
-        'tbnotificacionenlace', 'tbnotificacionfecha', 'tbnotificacionleida',
-    ],
-    'tbpersonacorreocambio' => [
-        'tbpersonacorreocambioid', 'tbpersonaid', 'tbpersonacorreocambiosujeto', 'tbpersonacorreocambioanterior',
-        'tbpersonacorreocambionuevo', 'tbpersonacorreocambioestado', 'tbpersonacorreocambiofecha',
-        'tbpersonacorreocambiofecharesolucion',
-    ],
-];
+require_once __DIR__ . '/schema-contract.php';
 
 function postgresConnection(string $url): PDO
 {
@@ -253,45 +54,65 @@ function configuredConnection(): PDO
         : 'No fue posible conectar con las URLs PostgreSQL configuradas: ' . implode('; ', $errors));
 }
 
-function validateSchema(PDO $connection): void
+function ensureExpectedNullability(PDO $connection, string $schema): void
 {
-    $statement = $connection->prepare(
-        "SELECT table_name, column_name
-         FROM information_schema.columns
-         WHERE table_schema = 'public' AND table_name = ANY(CAST(:tables AS text[]))
-         ORDER BY table_name, ordinal_position"
-    );
-    $tableLiteral = '{' . implode(',', array_keys(EXPECTED_COLUMNS)) . '}';
-    $statement->execute(['tables' => $tableLiteral]);
-    $actual = [];
-    foreach ($statement->fetchAll() as $column) {
-        $actual[$column['table_name']][] = $column['column_name'];
-    }
-    foreach ($actual as &$columns) {
-        sort($columns);
-    }
-    unset($columns);
-    ksort($actual);
-    $expected = EXPECTED_COLUMNS;
-    foreach ($expected as &$columns) {
-        sort($columns);
-    }
-    unset($columns);
-    ksort($expected);
-    if ($actual !== $expected) {
-        $differences = [];
-        foreach (array_unique(array_merge(array_keys($expected), array_keys($actual))) as $table) {
-            $expectedColumns = $expected[$table] ?? [];
-            $actualColumns = $actual[$table] ?? [];
-            if ($expectedColumns !== $actualColumns) {
-                $differences[] = sprintf('%s esperado=[%s] actual=[%s]', $table,
-                    implode(',', $expectedColumns), implode(',', $actualColumns));
+    foreach (schemaNullabilityDifferences($connection, $schema) as $difference) {
+        $table = $difference['table'];
+        $column = $difference['column'];
+        if (!$difference['nullable']) {
+            $hasNull = $connection->query(sprintf(
+                'SELECT EXISTS (SELECT 1 FROM public.%s WHERE %s IS NULL)',
+                $table,
+                $column,
+            ))->fetchColumn();
+            if (in_array($hasNull, [true, 1, '1', 't'], true)) {
+                throw new RuntimeException("No se puede exigir NOT NULL en public.{$table}.{$column}: hay valores NULL.");
             }
         }
-        throw new RuntimeException(
-            'El esquema Supabase no coincide con el contrato de 48 tablas: ' . implode('; ', $differences)
-        );
+        $action = $difference['nullable'] ? 'DROP' : 'SET';
+        $connection->exec("ALTER TABLE public.{$table} ALTER COLUMN {$column} {$action} NOT NULL");
     }
+}
+
+function schemaIsReady(PDO $connection, string $schema): bool
+{
+    return schemaColumnDifferences($connection) === []
+        && schemaHasExpectedPrimaryKeys($connection)
+        && schemaHasRequiredRowSecurity($connection)
+        && schemaHasExpectedNullability($connection, $schema);
+}
+
+/** Evita repetir DDL si solo quedan llaves que requieren corregir datos o esquema a mano. */
+function unrepairablePrimaryKeyDifferences(PDO $connection, string $schema): array
+{
+    $differences = schemaPrimaryKeyDifferences($connection);
+    if ($differences === []
+        || schemaColumnDifferences($connection) !== []
+        || !schemaHasRequiredRowSecurity($connection)
+        || !schemaHasExpectedNullability($connection, $schema)) {
+        return [];
+    }
+
+    $unrepairable = [];
+    foreach ($differences as $table => $columns) {
+        if ($columns !== []) {
+            $unrepairable[] = $table;
+            continue;
+        }
+
+        $id = $table . 'id';
+        $invalidos = (int) $connection->query(
+            "SELECT (SELECT COUNT(*) FROM public.{$table} WHERE {$id} IS NULL)
+                  + (SELECT COUNT(*) FROM (SELECT 1 FROM public.{$table} GROUP BY {$id} HAVING COUNT(*) > 1) repetidos)"
+        )->fetchColumn();
+        if ($invalidos > 0) {
+            $unrepairable[] = $table;
+        } else {
+            return [];
+        }
+    }
+
+    return $unrepairable;
 }
 
 /** Migra los tres perfiles heredados a una identidad compartida. Todo el DDL
@@ -559,6 +380,25 @@ function ensurePrimaryKeys(PDO $connection): array
     return $pendientes;
 }
 
+/** Informa que el esquema puede servir, pero queda degradado por llaves primarias. */
+function reportPendingPrimaryKeys(array $tables): void
+{
+    if ($tables === []) {
+        return;
+    }
+
+    $status = 'supabase_schema_status=degraded tables=48 migration=v10 primary_key_pending=' . count($tables);
+    $detail = 'supabase_primary_key_pendiente tablas=' . implode(',', $tables)
+        . ' causa=llave_existente_incorrecta_o_identificadores_repetidos_o_nulos';
+    if (PHP_SAPI === 'cli') {
+        fwrite(STDOUT, $status . "\n");
+        fwrite(STDERR, $detail . "\n");
+        exit(2);
+    }
+    error_log($status);
+    error_log($detail);
+}
+
 /**
  * Catálogos del animal (P2-2) y vacunas (P2-3). Solo se siembra una tabla VACÍA: lo que un administrador haya cambiado,
  * agregado o desactivado no se reinserta al redesplegar. Mismos datos que Database/SeedData/104catalogosanimal.sql.
@@ -711,31 +551,43 @@ try {
     $connection->exec("SET LOCAL lock_timeout = '30s'");
     $connection->exec("SET LOCAL statement_timeout = '120s'");
     $connection->exec("SELECT pg_advisory_xact_lock(hashtext('tindercows_supabase_schema_v10'))");
+    if (schemaIsReady($connection, $schema)) {
+        seedInitialData($connection);
+        seedCatalogs($connection);
+        $connection->commit();
+        unset($connection);
+        if (PHP_SAPI === 'cli') {
+            fwrite(STDOUT, "supabase_schema_status=ready tables=48 migration=v10\n");
+        }
+        return true;
+    }
+
+    $llavesPendientes = unrepairablePrimaryKeyDifferences($connection, $schema);
+    if ($llavesPendientes !== []) {
+        seedInitialData($connection);
+        seedCatalogs($connection);
+        $connection->commit();
+        unset($connection);
+        reportPendingPrimaryKeys($llavesPendientes);
+        return false;
+    }
+
     $connection->exec($schema);
     ensureCurrentColumns($connection);
     normalizePersonCapabilities($connection);
     normalizeProductorAddress($connection);
     agregarHistoricoDireccion($connection);
     eliminarEstadoProductor($connection);
+    ensureExpectedNullability($connection, $schema);
     seedInitialData($connection);
     seedCatalogs($connection);
     $sinLlavePrimaria = ensurePrimaryKeys($connection);
-    validateSchema($connection);
+    validateSchema($connection, $schema);
     $connection->exec("NOTIFY pgrst, 'reload schema'");
     $connection->commit();
     unset($connection);
     if ($sinLlavePrimaria !== []) {
-        $estadoDegradado = 'supabase_schema_status=degraded tables=48 migration=v10 primary_key_pending='
-            . count($sinLlavePrimaria);
-        $detalleDegradado = 'supabase_primary_key_pendiente tablas=' . implode(',', $sinLlavePrimaria)
-            . ' causa=llave_existente_incorrecta_o_identificadores_repetidos_o_nulos';
-        if (PHP_SAPI === 'cli') {
-            fwrite(STDOUT, $estadoDegradado . "\n");
-            fwrite(STDERR, $detalleDegradado . "\n");
-            exit(2);
-        }
-        error_log($estadoDegradado);
-        error_log($detalleDegradado);
+        reportPendingPrimaryKeys($sinLlavePrimaria);
         return false;
     }
     if (PHP_SAPI === 'cli') {
