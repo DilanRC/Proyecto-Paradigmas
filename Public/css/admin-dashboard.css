@@ -1,4 +1,4 @@
-/* Centro de inteligencia (/admin/dashboard, dashboard-4). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
+/* Centro de inteligencia (/admin/dashboard, dashboard-5). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
    semánticos propios, con los mismos significados que Mi dashboard: info = activo / en curso, data = montos. Verde,
    ámbar y gris salen de --admin-success / --admin-warning / --admin-muted. Sin banner ni imágenes decorativas. */
 body.admin-dashboard { --admin-info:#8ec5f2; --admin-data:#bdb6ea; }
@@ -17,7 +17,7 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 .intel-campo select,
 .intel-campo input { min-height:40px; padding:0 10px; border:1px solid var(--admin-line-strong); border-radius:10px; color:var(--admin-text); background:var(--admin-surface); font:inherit; }
 .intel-periodo .button { display:inline-flex; gap:8px; align-items:center; min-height:40px; }
-.dashboard-status { flex-basis:100%; min-height:1.4em; margin:0; color:var(--admin-text-soft); font-size:.84rem; }
+.dashboard-status { flex-basis:100%; min-height:1.4em; contain:inline-size; /* su texto llega tarde: no ensancha el formulario ni lo baja de línea (CLS) */ margin:0; color:var(--admin-text-soft); font-size:.84rem; }
 
 /* ───── Zonas ───── */
 .intel-zona { margin-top:32px; }
@@ -37,7 +37,7 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 .intel-kpi--aviso::before { background:var(--admin-warning); }
 .intel-kpi--dato::before { background:var(--admin-data); }
 .intel-kpi__etiqueta { color:var(--admin-text-soft); font-size:.84rem; font-weight:700; }
-.intel-kpi__valor { color:var(--admin-text); font-size:clamp(1.4rem, 2vw, 1.8rem); line-height:1.1; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.intel-kpi__valor { color:var(--admin-text); font-size:clamp(1.4rem, 2vw, 1.8rem); line-height:1.1; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .intel-kpi__detalle { color:var(--admin-text-soft); font-size:.8rem; line-height:1.4; }
 .intel-kpi--cargando span { display:block; width:60%; height:12px; border-radius:20px; background:var(--admin-surface-2); }
 .intel-kpi--cargando span:nth-child(2) { width:40%; height:26px; }

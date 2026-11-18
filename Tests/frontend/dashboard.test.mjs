@@ -28,8 +28,8 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-1/);
-    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-4/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-2/);
+    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-5/);
 });
 
 test('el árbol marca lo no instrumentado en vez de mostrar un cero', async () => {
@@ -57,4 +57,12 @@ test('los assets ganaderos pueden seguir siendo usados por el sitio público, pe
     const path = 'Public/assets/dashboard/subasta-pasarela-costa-rica.png';
     assert.ok(statSync(new URL(`../../${path}`, import.meta.url)).size > 10000, path);
     assert.doesNotMatch(read('Application/View/dashboard/index.php'), /subasta-pasarela-costa-rica\.png/);
+});
+
+test('montos grandes en tarjeta: compactos desde un millón, exactos por debajo', async () => {
+    const { formatoColonesCorto } = await import('../../Public/js/dashboard.js');
+    assert.equal(formatoColonesCorto(950000), '₡950 000');
+    assert.match(formatoColonesCorto(4320000), /^₡4,3\s?M$/);
+    assert.match(formatoColonesCorto(20000000198), /^₡20\smil\sM$/);
+    assert.equal(formatoColonesCorto(null), '—');
 });

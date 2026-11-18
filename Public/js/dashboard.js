@@ -23,6 +23,12 @@ export function formatoColones(valor) {
     return `₡${new Intl.NumberFormat('es-CR', { maximumFractionDigits: 0 }).format(valor)}`;
 }
 
+/** Colones para una tarjeta angosta: desde un millón en notación compacta («₡4,3 M», «₡20 mil M»). Puro. */
+export function formatoColonesCorto(valor) {
+    if (typeof valor !== 'number' || !Number.isFinite(valor) || Math.abs(valor) < 1e6) return formatoColones(valor);
+    return `₡${new Intl.NumberFormat('es-CR', { notation: 'compact', maximumFractionDigits: 1 }).format(valor)}`;
+}
+
 export function formatoPorcentaje(valor) {
     return typeof valor === 'number' && Number.isFinite(valor) ? `${valor.toLocaleString('es-CR', { maximumFractionDigits: 1 })} %` : '—';
 }
@@ -168,9 +174,12 @@ function consulta(extra = {}) {
     return new URLSearchParams({ ...estado.periodo, ...extra }).toString();
 }
 
-function kpi({ etiqueta, valor, detalle, tono }) {
+function kpi({ etiqueta, valor, completo, detalle, tono }) {
     const t = el('article', `intel-kpi intel-kpi--${tono}`);
-    t.append(el('span', 'intel-kpi__etiqueta', etiqueta), el('strong', 'intel-kpi__valor', valor), el('span', 'intel-kpi__detalle', detalle));
+    const cifra = el('strong', 'intel-kpi__valor', valor);
+    // El valor compacto se ve; el exacto queda en el título y lo lee el lector de pantalla.
+    if (completo && completo !== valor) { cifra.title = completo; cifra.setAttribute('aria-label', completo); }
+    t.append(el('span', 'intel-kpi__etiqueta', etiqueta), cifra, el('span', 'intel-kpi__detalle', detalle));
     return t;
 }
 
@@ -182,7 +191,7 @@ function pintarKpis(d) {
     $('#intel-kpis').replaceChildren(
         kpi({ etiqueta: 'Personas únicas', valor: formatoNumero(d.personas.personas), tono: 'neutro',
             detalle: `${formatoNumero((d.personas.porNumeroDeActividades?.[2] ?? 0) + (d.personas.porNumeroDeActividades?.[3] ?? 0))} con más de una actividad` }),
-        kpi({ etiqueta: 'Ventas registradas', valor: formatoColones(monto), tono: 'dato',
+        kpi({ etiqueta: 'Ventas registradas', valor: formatoColonesCorto(monto), completo: formatoColones(monto), tono: 'dato',
             detalle: `${formatoNumero(animales)} animales en el periodo (subasta y solicitud, sin la compra espejo)` }),
         kpi({ etiqueta: 'Subastas adjudicadas', valor: formatoNumero(d.subastas.estados.adjudicadas.total), tono: 'exito',
             detalle: `Éxito ${formatoPorcentaje(d.subastas.exito.porcentaje)} de ${formatoNumero(d.subastas.exito.finalizadas)} cerradas` }),
