@@ -19,7 +19,7 @@ test('/mi-dashboard es una ruta con sesión y su API existe', () => {
 
 test('la vista invalida el JS del dashboard y mantiene su hoja de estilos', () => {
     assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-5/);
-    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-6/);
+    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-7/);
     assert.match(vista, /data-dashboard-rol="VENDEDOR"/);
     assert.match(vista, /data-dashboard-rol="COMPRADOR"/);
 });
@@ -142,4 +142,24 @@ test('montos cortos sobre columnas angostas', async () => {
     assert.equal(montoCorto(720000), '₡720 mil');
     assert.equal(montoCorto(8500), '₡8.500');
     assert.equal(nombreMes('2026-10'), 'Oct 2026');
+});
+
+test('el rol inicial sale del perfil en caché para que pestañas y filtros no salten', async () => {
+    const { rolesDesdePerfil } = await import('../../Public/js/mi-dashboard.js');
+    assert.equal(rolesDesdePerfil(null), null, 'sin perfil decide el servidor');
+    assert.equal(rolesDesdePerfil({ persona: {} }), null);
+    assert.deepEqual(rolesDesdePerfil({ capacidades: ['COMPRADOR'] }), { vendedor: false, comprador: true });
+    assert.deepEqual(rolesDesdePerfil({ capacidades: ['PRODUCTOR', 'COMPRADOR', 'TRANSPORTISTA'] }), { vendedor: true, comprador: true });
+    const js = readFileSync('Public/js/mi-dashboard.js', 'utf8');
+    assert.match(js, /const rolesPrevios = rolesDesdePerfil\(publicProfileForSession\(readAuthSession\(\)\)\);[\s\S]*?pintarRoles\(rolesPrevios\);[\s\S]*?cargar\(\);/);
+});
+
+test('la vista aplica los roles en caché antes del primer pintado con la misma regla que el módulo', () => {
+    const vista = readFileSync('Application/View/mi-dashboard/index.php', 'utf8');
+    const script = vista.slice(vista.indexOf('</form>'), vista.indexOf('<section id="dashboard-panel"'));
+    assert.match(script, /<script>[\s\S]*sessionStorage\.getItem\('tindercows:profile'\)/, 'script clásico en línea, antes del panel');
+    assert.match(script, /indexOf\('PRODUCTOR'\)[\s\S]*indexOf\('COMPRADOR'\)/);
+    // Vendedor es el rol inicial cuando tiene los dos: los filtros de comprador quedan ocultos.
+    assert.match(script, /campo\.hidden = vendedor \|\| !comprador;/);
+    assert.match(script, /catch \(error\)/, 'sin caché o con datos dañados no rompe la página');
 });

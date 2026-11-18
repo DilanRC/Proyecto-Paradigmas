@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/mi-dashboard.css?v=dashboard-5">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-23"></script>
-    <script type="module" src="js/mi-dashboard.js?v=dashboard-6"></script>
+    <script type="module" src="js/mi-dashboard.js?v=dashboard-7"></script>
 </head>
 <body class="public-home activity-page dashboard-page">
     <div class="public-shell" id="inicio">
@@ -79,6 +79,24 @@
                 <small id="dashboard-ubicacion-estado" class="dash-filtros__nota" role="status" data-solo-comprador hidden></small>
                 <small id="dashboard-filtros-error" class="field-error dash-filtros__nota" role="alert"></small>
             </form>
+            <script>
+                // Antes del primer pintado: las pestañas y los filtros del rol que dice el perfil en caché
+                // (misma regla que rolesDesdePerfil en mi-dashboard.js). Sin esto aparecen al cargar el
+                // módulo y empujan el panel. Solo es presentación: el servidor confirma los roles.
+                (function () {
+                    try {
+                        var perfil = JSON.parse(sessionStorage.getItem('tindercows:profile') || 'null');
+                        var capacidades = perfil && Array.isArray(perfil.capacidades) ? perfil.capacidades : null;
+                        if (!capacidades) return;
+                        var vendedor = capacidades.indexOf('PRODUCTOR') > -1;
+                        var comprador = capacidades.indexOf('COMPRADOR') > -1;
+                        document.getElementById('tab-vendedor').hidden = !vendedor;
+                        document.getElementById('tab-comprador').hidden = !comprador;
+                        document.querySelector('.dash-segmento').hidden = !(vendedor || comprador);
+                        document.querySelectorAll('[data-solo-comprador]').forEach(function (campo) { campo.hidden = vendedor || !comprador; });
+                    } catch (error) { /* sin caché decide la respuesta del servidor */ }
+                })();
+            </script>
 
             <section id="dashboard-panel" role="tabpanel" aria-labelledby="tab-vendedor" aria-busy="true">
                 <div id="dashboard-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando tus indicadores…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_dashboard() ?></div></div>

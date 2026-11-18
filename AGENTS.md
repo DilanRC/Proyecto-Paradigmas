@@ -20,7 +20,7 @@ completo antes de hacer cualquier cosa. `CLAUDE.md` solo redirige aquí.
   decisión anterior deja de ser válida, corrígela en su sección (no dejes
   información contradictoria).
 - Si el cambio agrega un pendiente o resuelve uno, actualiza "Pendientes".
-- El cambio de `MEMORIA.md` va en el mismo commit que el código.
+- `MEMORIA.md` es **local** (está en `.gitignore`): actualízalo en tu copia, pero no lo agregues a los commits. Si no lo tienes, pide la copia a Dilan o parte de `git show e059ce0:MEMORIA.md`.
 
 ## 3. Proyecto en una línea
 

@@ -15,3 +15,6 @@ graphify-out/
 .env.local
 .env.production.local
 outputs/
+
+# Memoria del proyecto para agentes: archivo local, no se versiona (decisión de Dilan, 17/11/2026)
+MEMORIA.md
