@@ -4,7 +4,7 @@
     <base href="<?= tc_public_base_attribute() ?>">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Resumen administrativo de TinderCows">
+    <meta name="description" content="Centro de inteligencia y trazabilidad de Ganado Cerca">
     <title>Dashboard | TinderCows</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-3">
-    <script type="module" src="js/dashboard.js?v=admin-menu-8"></script>
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-4">
+    <script type="module" src="js/dashboard.js?v=intel-1"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel admin-dashboard">
@@ -55,32 +55,68 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Sitio público</a><a class="rural-panel__admin-link" href="admin/entrar">Cerrar sesión</a></div>
 
-            <section class="dashboard-hero" aria-labelledby="page-title">
-                <div class="dashboard-hero__copy">
-                    <span class="label">Centro de control</span>
-                    <h1 id="page-title">La red ganadera, en una sola vista.</h1>
-                    <p>Revise el pulso de TinderCows, encuentre accesos rápidos y mantenga la operación cerca de lo importante.</p>
-                    <div class="dashboard-hero__actions"><a class="button button--primary" href="admin/productores"><i class="fa-solid fa-users" aria-hidden="true"></i>Revisar productores</a><a class="button button--secondary" href="explorar"><i class="fa-solid fa-compass" aria-hidden="true"></i>Ver sitio público</a></div>
+            <header class="intel-cabecera">
+                <div>
+                    <span class="label">Centro de inteligencia</span>
+                    <h1 id="page-title">Actividad de Ganado Cerca</h1>
+                    <p class="intel-cabecera__texto">Cada número sale de un hecho guardado. Abre un proceso para ver su definición, su fuente y las filas que lo forman.</p>
+                </div>
+                <form class="intel-periodo" id="intel-periodo" aria-label="Periodo del análisis" novalidate>
+                    <label class="intel-campo"><span>Periodo</span><select name="periodo">
+                        <option value="30" selected>Últimos 30 días</option>
+                        <option value="90">Últimos 90 días</option>
+                        <option value="365">Últimos 12 meses</option>
+                        <option value="todo">Todo el tiempo</option>
+                        <option value="rango">Elegir fechas</option>
+                    </select></label>
+                    <label class="intel-campo" data-rango hidden><span>Desde</span><input name="desde" type="date"></label>
+                    <label class="intel-campo" data-rango hidden><span>Hasta</span><input name="hasta" type="date"></label>
+                    <button class="button button--secondary button--small" id="dashboard-refresh" type="submit"><i class="fa-solid fa-rotate" aria-hidden="true"></i>Actualizar</button>
+                    <p class="dashboard-status" id="dashboard-status" role="status"></p>
+                </form>
+            </header>
+
+            <section class="intel-zona" aria-labelledby="intel-global-titulo">
+                <h2 class="intel-zona__titulo" id="intel-global-titulo">Visión global</h2>
+                <div class="intel-kpis" id="intel-kpis" aria-busy="true">
+                    <?= str_repeat('<article class="intel-kpi intel-kpi--cargando"><span></span><span></span><span></span></article>', 6) ?>
+                </div>
+                <h3 class="intel-subtitulo">Red ganadera (foto actual)</h3>
+                <div class="dashboard-metrics" id="dashboard-metrics" aria-busy="true">
+                    <?= str_repeat('<article class="dashboard-metric dashboard-metric--loading"><span></span><span></span><span></span></article>', 4) ?>
                 </div>
             </section>
 
-            <section class="dashboard-section" aria-labelledby="summary-title">
-                <div class="dashboard-section__heading"><div><span class="label">Resumen vivo</span><h2 id="summary-title">Lo que está pasando ahora</h2></div><button class="button button--secondary button--small" id="dashboard-refresh" type="button"><i class="fa-solid fa-rotate" aria-hidden="true"></i>Actualizar</button></div>
-                <div class="dashboard-metrics" id="dashboard-metrics" aria-busy="true" aria-live="polite">
-                    <article class="dashboard-metric dashboard-metric--loading"><span></span><span></span><span></span></article>
-                    <article class="dashboard-metric dashboard-metric--loading"><span></span><span></span><span></span></article>
-                    <article class="dashboard-metric dashboard-metric--loading"><span></span><span></span><span></span></article>
-                    <article class="dashboard-metric dashboard-metric--loading"><span></span><span></span><span></span></article>
+            <section class="intel-zona" aria-labelledby="intel-arbol-titulo">
+                <div class="intel-zona__cabeza">
+                    <h2 class="intel-zona__titulo" id="intel-arbol-titulo">Procesos de la plataforma</h2>
+                    <p class="intel-zona__ayuda">Persona → actividad → acción → hecho → estado → indicador → evidencia. Lo marcado «sin instrumentar» no tiene un flujo que lo registre: no es un cero.</p>
                 </div>
-                <p class="dashboard-status" id="dashboard-status" role="status"></p>
+                <div class="intel-arbol" id="intel-arbol"><p class="intel-vacio">Cargando procesos…</p></div>
             </section>
 
-            <section class="dashboard-grid">
-                <article class="dashboard-card dashboard-card--feature"><div class="dashboard-card__body"><span class="label">Contexto ganadero</span><h2>Preparados para conectar oportunidades reales.</h2><p>La administración reúne personas, fincas, transporte y publicaciones para que cada operación tenga un lugar claro.</p><a class="text-link" href="admin/transportistas">Revisar logística <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div></article>
-                <article class="dashboard-card dashboard-card--links"><span class="label">Accesos rápidos</span><h2>Ir directo al trabajo</h2><div class="dashboard-quick-links"><a href="admin/compradores"><i class="fa-solid fa-handshake" aria-hidden="true"></i><span><strong>Compradores</strong><small>Consultar actividad</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><a href="admin/vehiculos"><i class="fa-solid fa-truck-pickup" aria-hidden="true"></i><span><strong>Vehículos</strong><small>Revisar disponibilidad</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a><a href="admin/metodos-pago"><i class="fa-solid fa-wallet" aria-hidden="true"></i><span><strong>Métodos de pago</strong><small>Gestionar catálogo</small></span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></div></article>
+            <section class="intel-zona" aria-labelledby="intel-actividad-titulo">
+                <h2 class="intel-zona__titulo" id="intel-actividad-titulo">Análisis por actividad</h2>
+                <div class="intel-dos">
+                    <details class="intel-panel" id="intel-transportistas">
+                        <summary><span><strong>Transportistas</strong><small>Ofertas, capacidad, solicitudes y viajes registrados de cada uno</small></span></summary>
+                        <div class="intel-panel__cuerpo" data-contenido></div>
+                    </details>
+                    <div class="intel-panel intel-panel--abierto">
+                        <form class="intel-busqueda" id="intel-busqueda" role="search">
+                            <label for="intel-q"><strong>Expediente de una persona</strong><small>Comprador, vendedor y transportista en una sola identidad</small></label>
+                            <div class="intel-busqueda__fila"><input id="intel-q" name="q" type="search" minlength="2" maxlength="80" autocomplete="off" placeholder="Nombre o alias"><button class="button button--secondary button--small" type="submit">Buscar</button></div>
+                        </form>
+                        <div id="intel-persona" class="intel-panel__cuerpo" aria-live="polite"></div>
+                    </div>
+                </div>
             </section>
 
-            <p class="rural-panel__footnote">Dashboard administrativo · Los indicadores provienen de las APIs de TinderCows</p>
+            <section class="intel-zona" aria-labelledby="intel-control-titulo">
+                <h2 class="intel-zona__titulo" id="intel-control-titulo">Calidad de datos y control</h2>
+                <div class="intel-dos" id="intel-control"></div>
+            </section>
+            <p class="rural-panel__footnote">Centro de inteligencia · Fuente: api/v1/admin/dashboard (solo lectura, autorizado en el servidor)</p>
         </div>
     </main>
 </body>
