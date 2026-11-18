@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-5">
-    <script type="module" src="js/dashboard.js?v=intel-2"></script>
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-6">
+    <script type="module" src="js/dashboard.js?v=intel-3"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel admin-dashboard">
@@ -92,7 +92,7 @@
                     <h2 class="intel-zona__titulo" id="intel-arbol-titulo">Procesos de la plataforma</h2>
                     <p class="intel-zona__ayuda">Persona → actividad → acción → hecho → estado → indicador → evidencia. Lo marcado «sin instrumentar» no tiene un flujo que lo registre: no es un cero.</p>
                 </div>
-                <div class="intel-arbol" id="intel-arbol"><p class="intel-vacio">Cargando procesos…</p></div>
+                <div class="intel-arbol" id="intel-arbol" aria-busy="true"><p class="screen-reader-only" role="status">Cargando procesos…</p><?= str_repeat('<div class="intel-proceso intel-proceso--cargando" aria-hidden="true"><span></span><span></span></div>', 4) ?></div>
             </section>
 
             <section class="intel-zona" aria-labelledby="intel-actividad-titulo">

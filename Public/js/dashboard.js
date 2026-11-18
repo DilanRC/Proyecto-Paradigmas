@@ -332,10 +332,12 @@ function pintarNodo(n) {
 
 function pintarArbol(d) {
     const abiertos = new Set([...document.querySelectorAll('.intel-proceso[open]')].map((p) => p.dataset.clave));
-    $('#intel-arbol').replaceChildren(...procesos(d).map((p, i) => {
+    $('#intel-arbol').setAttribute('aria-busy', 'false');
+    $('#intel-arbol').replaceChildren(...procesos(d).map((p) => {
         const det = el('details', 'intel-proceso');
         det.dataset.clave = p.clave;
-        det.open = abiertos.size ? abiertos.has(p.clave) : i === 0;
+        // Cerrados al llegar (misma altura que el esqueleto): la persona abre el proceso que le interesa.
+        det.open = abiertos.has(p.clave);
         const sum = el('summary');
         const titulos = el('span', 'intel-proceso__titulos');
         titulos.append(el('strong', null, p.titulo), el('small', null, p.ruta));
@@ -513,6 +515,7 @@ async function cargar() {
     } catch (error) {
         if (pedido !== estado.pedido) return;
         status.textContent = error?.message || 'No se pudieron cargar los indicadores.';
+        $('#intel-arbol').setAttribute('aria-busy', 'false');
         $('#intel-arbol').replaceChildren(el('p', 'intel-error', 'No se pudieron cargar los procesos. Usa «Actualizar» para reintentar.'));
     } finally {
         if (pedido === estado.pedido) boton.disabled = false;

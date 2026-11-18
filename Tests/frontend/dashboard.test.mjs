@@ -28,8 +28,8 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-2/);
-    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-5/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-3/);
+    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-6/);
 });
 
 test('el árbol marca lo no instrumentado en vez de mostrar un cero', async () => {

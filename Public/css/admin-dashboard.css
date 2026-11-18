@@ -1,4 +1,4 @@
-/* Centro de inteligencia (/admin/dashboard, dashboard-5). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
+/* Centro de inteligencia (/admin/dashboard, dashboard-6). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
    semánticos propios, con los mismos significados que Mi dashboard: info = activo / en curso, data = montos. Verde,
    ámbar y gris salen de --admin-success / --admin-warning / --admin-muted. Sin banner ni imágenes decorativas. */
 body.admin-dashboard { --admin-info:#8ec5f2; --admin-data:#bdb6ea; }
@@ -56,6 +56,10 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 
 /* ───── Árbol de procesos (details: accesible y legible en móvil) ───── */
 .intel-arbol { display:grid; gap:12px; }
+/* Esqueleto: cuatro procesos cerrados con la altura del summary real (64px + borde). */
+.intel-proceso--cargando { display:grid; align-content:center; gap:8px; min-height:76px; padding:14px 18px; }
+.intel-proceso--cargando span { display:block; width:30%; height:14px; border-radius:20px; background:var(--admin-surface-2); }
+.intel-proceso--cargando span + span { width:45%; height:10px; }
 .intel-proceso { border:1px solid var(--admin-line); border-radius:16px; background:var(--admin-surface); }
 .intel-proceso > summary { display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between; min-height:64px; padding:14px 18px; cursor:pointer; list-style:none; }
 .intel-proceso > summary::-webkit-details-marker { display:none; }
@@ -130,6 +134,7 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 
 .admin-dashboard :is(button, a, select, input, summary, [tabindex]):focus-visible { outline:3px solid color-mix(in srgb, var(--admin-primary) 65%, transparent); outline-offset:2px; }
 
+@media (min-width:1281px) { .intel-kpi { min-height:154px; } }
 @media (max-width:1280px) { .intel-kpis { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
 @media (max-width:1000px) { .dashboard-metrics { grid-template-columns:repeat(2, minmax(0, 1fr)); } .intel-dos { grid-template-columns:1fr; } }
 @media (max-width:700px) {
