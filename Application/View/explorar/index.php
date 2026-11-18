@@ -20,13 +20,13 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-12">
+    <link rel="stylesheet" href="css/public-product.css?v=product-13">
     <link rel="stylesheet" href="css/explore.css?v=explore-10">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-23"></script>
-    <script type="module" src="js/explore.js?v=explore-15"></script>
+    <script type="module" src="js/explore.js?v=explore-16"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-9"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
     <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-5"></script>
@@ -88,7 +88,7 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
                 <div class="subastas-banda__lista" data-subastas-banda-lista aria-live="polite"></div>
             </section>
 
-            <div class="explore-filters" data-explore-filterbar hidden>
+            <div class="explore-filters" data-explore-filterbar>
                 <div class="explore-heading__controls" role="group" data-explore-filters aria-label="Tipo de ganado" hidden></div>
                 <div class="explore-filters__field">
                     <label for="explore-filtro-ubicacion">Ubicación</label>

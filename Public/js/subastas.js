@@ -6,7 +6,7 @@ import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 
 import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { formatPrice, safeImageUrl } from './explore.js?v=explore-15';
+import { formatPrice, safeImageUrl } from './explore.js?v=explore-16';
 import { createToast } from './shared/toast.js';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';

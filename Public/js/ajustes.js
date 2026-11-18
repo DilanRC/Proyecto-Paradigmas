@@ -11,7 +11,7 @@ import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
 import { createToast } from './shared/toast.js';
 import { subirImagenPublicacion, validarDocumento, validarImagen } from './shared/storage.js?v=documento-4';
 import { esCelular, mensajeLectura, prepararEnvioDocumento } from './shared/escaner-documento.js?v=escaner-4';
-import { safeImageUrl } from './explore.js?v=explore-15';
+import { safeImageUrl } from './explore.js?v=explore-16';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';
 

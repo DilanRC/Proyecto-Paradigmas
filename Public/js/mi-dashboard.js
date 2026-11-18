@@ -5,7 +5,7 @@
 
 import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { formatPrice, safeImageUrl } from './explore.js?v=explore-15';
+import { formatPrice, safeImageUrl } from './explore.js?v=explore-16';
 import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-2';
 import { esRegistroIncompleto, mostrarRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
 

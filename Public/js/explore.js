@@ -431,7 +431,8 @@ function render() {
     // con el catálogo vacío se invita a publicar.
     if (empty) empty.hidden = !vista.vacio;
     if (emptyCatalog) emptyCatalog.hidden = !vista.catalogoVacio;
-    if (filterBar) filterBar.hidden = state.items.length === 0 && !hasActiveFilters();
+    // Durante la primera carga la barra ya ocupa su lugar: si apareciera con los datos empujaría las tarjetas.
+    if (filterBar) filterBar.hidden = !state.cargando && state.items.length === 0 && !hasActiveFilters();
     deck.hidden = !vista.tarjetas;
     deck.classList.toggle('is-refreshing', vista.atenuar);
     deck.setAttribute('aria-busy', String(vista.atenuar));

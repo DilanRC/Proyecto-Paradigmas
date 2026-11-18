@@ -3,7 +3,7 @@ import { request } from './shared/api.js?v=auth-gate-15';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
-import { safeImageUrl } from './explore.js?v=explore-15';
+import { safeImageUrl } from './explore.js?v=explore-16';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';
 import { createToast } from './shared/toast.js';
 import { conectarDireccion } from './shared/direccion.js';

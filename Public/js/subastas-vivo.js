@@ -2,7 +2,7 @@
 // Se actualiza sola por Supabase Realtime (tópico `subastas`) y cada 30 s por si el WebSocket no está.
 
 import { request } from './shared/api.js?v=auth-gate-15';
-import { formatPrice } from './explore.js?v=explore-15';
+import { formatPrice } from './explore.js?v=explore-16';
 import { agrupar, alCambiarConexion, escuchar } from './shared/tiempo-real.js?v=tiempo-real-1';
 import { describirAnimal, tiempoRestante } from './subastas.js?v=subastas-8';
 
