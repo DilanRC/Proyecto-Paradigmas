@@ -74,8 +74,9 @@ Corrección del 17/11: antes el flete desconocido valía 0 y el total se mostrab
 ## 4. Centro de inteligencia (admin)
 
 `GET|POST api/v1/admin/dashboard` (`AdminAuthorization::require`, el administrador puede no tener Persona).
-Vistas: `RESUMEN` (secciones A-F), `EVIDENCIA` (nodo + estado, paginada, máx. 50), `TRANSPORTISTAS` (paginada),
-`PERSONA` (expediente o búsqueda por nombre). Nada devuelve correo, teléfono, identificación ni ruta de documentos.
+Vistas: `RESUMEN` (secciones A-F), `EVIDENCIA` (nodo + estado, paginada, máx. 50), `TRANSPORTISTAS` (paginada, con
+`q`, `estado` ACTIVO|INACTIVO y `orden` de una lista cerrada), `PERSONA` (expediente o búsqueda por nombre) y
+`DIAGNOSTICO` (calidad de datos; ver §4.1). Nada devuelve correo, teléfono, identificación ni ruta de documentos.
 
 | Sección | Indicador | Fuente | Periodo |
 |---|---|---|---|
@@ -92,11 +93,34 @@ escribe una venta por animal: «operaciones» cuenta solicitudes distintas y «a
 El embudo `Publicación → Me interesa → Solicitud → Venta` **no es una cohorte**: cada etapa cuenta su propio hecho en
 el periodo. No afirma que todo comprador pasó por «Me interesa».
 
+### 4.1 Calidad de datos (`vista=DIAGNOSTICO`, `AdminDiagnostico`)
+
+Sin `tipo` devuelve el resumen de los seis; con `tipo` (lista cerrada `AdminDiagnostico::TIPOS`) sus filas paginadas.
+La clasificación se calcula en SQL con la misma condición en el resumen y en la lista; `control.incompletos` del
+resumen usa el mismo conteo. Las marcas de demostración salen de las cargas (`[demo-dashboard]`, `MUESTRA ACAD…`,
+identificaciones `DMDASH*`/`DEMO-*`), nunca de parecido de nombres. La identificación no se devuelve.
+
+| Diagnóstico | Condición | Dato | Clasificación por fila |
+|---|---|---|---|
+| Subastas adjudicadas sin venta | `FINALIZADA` sin `tbventa` del mismo animal, origen `API_SUBASTAS` y fecha ≥ inicio de la subasta | obligatorio | siempre inconsistencia; la causa dice si el cierre consta en la bitácora |
+| Ventas sin comprador identificado | `tbcompradorid` y `tbproductorcompradorid` nulos | opcional | inconsistencia si la compra de la misma operación lo identifica; sin evidencia si la persona ganadora ya no existe; si no, opcional |
+| Fincas sin dirección | sin `tbfincadireccion` | opcional | inconsistencia si el dueño no existe; revisión si está activa; opcional si está inactiva |
+| Animales sin especie | `tbespecieid` nulo (antes se rotulaba «sin tipo de ganado»: la consulta mide especie) | obligatorio | revisión si tiene dueño; sin evidencia si no |
+| Publicaciones sin foto | URL vacía (no se descargan archivos) | opcional | opcional |
+| Ofertas de flete sin precio | `ACTIVA` y precio nulo («a convenir» es válido) | opcional | opcional |
+
+Estado en staging (18/11/2026, consultas de solo lectura): 8 adjudicadas sin venta (24, 25, 26, 29, 32, 33, 34, 35),
+todas con `[demo-dashboard]`, sin ningún movimiento en la bitácora y con fechas de microsegundos idénticos
+(`…05:14:22.483972`): se escribieron por SQL fuera de la aplicación (el script actual cierra con
+`SubastaCierreService`, que sí registra la venta). 2 ventas sin comprador (2 y 3, subastas 2 y 18 de la muestra
+académica): la persona ganadora (pujas de ₡9.999.999.999) ya no existía cuando se procesó el cierre; queda un
+`tbcomprador` huérfano que no se usa para reparar. Finca 1 («f1») y animal 1 pertenecen a registros sin Persona.
+
 ## 5. Política de datos nulos
 
 - Porcentaje sin denominador → `null` → «—» o «Sin datos suficientes».
 - Monto sin hechos → 0 solo cuando la suma está bien definida (no hubo ventas); promedio sin hechos → `null`.
-- Hecho sin flujo que lo escriba → «Sin instrumentar» con su motivo, nunca 0.
+- Hecho sin flujo que lo escriba → «Información todavía no disponible» con su motivo, nunca 0.
 - Clave de agrupación vacía → `SIN_DATO`.
 
 ## 6. Pruebas de comprobación
@@ -108,6 +132,8 @@ el periodo. No afirma que todo comprador pasó por «Me interesa».
   el mismo total que el indicador, expediente sin datos sensibles, 404.
 - `Tests/frontend/mi_dashboard.test.mjs` y `dashboard.test.mjs`: tokens AA en ambos temas, color por significado,
   segunda señal, evidencia conectada por ids, viajes sin instrumentar.
+- `Tests/admin_diagnostico_test.php`: cada diagnóstico separa obligatorio, opcional, desconocido, recuperable y demo
+  (casos en una transacción que se deshace); lista cerrada, máx. 50 filas, sin identificación en las filas.
 - `Tests/api_auth_admin_http_test.php`: el endpoint nuevo exige sesión en todos sus verbos.
 
 ## 7. Pendientes de aprobación de Calidad
@@ -118,4 +144,5 @@ el periodo. No afirma que todo comprador pasó por «Me interesa».
 | Fecha de alta de personas | `tbpersona` sin fecha | la bitácora no es la fuente de hechos | «nuevas altas» sin dato | aprobar columna `tbpersonafecharegistro` (4 lugares + diccionario) |
 | Pago efectivo | estado de pago | adjudicar no es pagar | confundir monto adjudicado con dinero cobrado | mantener el texto «monto acordado/adjudicado» |
 | Índice de confiabilidad | política de cálculo | no aprobada | puntaje arbitrario | no mostrar |
+| Limpiar datos de demostración en staging | autorización del equipo | son hechos compartidos | borrar algo real | limpieza transaccional de las 8 subastas demo (pujas, animal, notificaciones) |
 | Cierre programado de subastas | tarea periódica | hoy el cierre es perezoso | `tbventafecha` puede caer días después del fin | usar `fechaFin` para el hecho «subasta cerrada» (ya aplicado) |

@@ -10,7 +10,7 @@ declare(strict_types=1);
  */
 
 require __DIR__ . '/bootstrap.php';
-foreach (['Notificacion', 'Subasta', 'AdminDashboard'] as $modelo) require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
+foreach (['Notificacion', 'Subasta', 'AdminDiagnostico', 'AdminDashboard'] as $modelo) require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
 require_once dirname(__DIR__) . '/Application/Controller/AdminDashboardController.php';
 
 use Application\Controller\AdminDashboardController;
@@ -112,7 +112,30 @@ foreach (array_keys(AdminDashboardController::NODOS) as $nodo) {
     $ok($controlador->procesar('GET', ['vista' => 'EVIDENCIA', 'nodo' => $nodo]));
 }
 $tr = $ok($controlador->procesar('GET', ['vista' => 'TRANSPORTISTAS', 'tamanoPagina' => '5']));
-test_assert($tr['total'] === (int) $uno('SELECT COUNT(*) FROM tbtransportista'), 'transportistas paginados');
+test_assert($tr['total'] === (int) $uno('SELECT COUNT(*) FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid = t.tbpersonaid'),
+    'transportistas paginados (el total cuenta las mismas filas que la lista)');
+foreach (['orden' => 'id; DROP TABLE tbpersona', 'estado' => 'TODOS', 'q' => 'a'] as $campo => $malo) {
+    $r = $controlador->procesar('GET', ['vista' => 'TRANSPORTISTAS', $campo => $malo]);
+    test_assert($r['status'] === 422 && isset($r['body']['errors'][$campo]), "transportistas: {$campo} inválido es 422");
+}
+foreach (array_keys(Application\Model\AdminDashboard::ORDEN_TRANSPORTISTAS) as $orden) {
+    $filas = $ok($controlador->procesar('GET', ['vista' => 'TRANSPORTISTAS', 'orden' => $orden, 'tamanoPagina' => '50']))['items'];
+    $clave = ['nombre' => null, 'ofertasActivas' => 'ofertasActivas', 'capacidad' => 'capacidadOfertada', 'solicitudes' => 'solicitudesRecibidas',
+        'aceptadas' => 'solicitudesAceptadas', 'pendientes' => 'solicitudesPendientes'][$orden];
+    if ($clave === null) continue;
+    $valores = array_map(static fn (array $f): int => (int) ($f[$clave] ?? 0), $filas);
+    $ordenados = $valores;
+    rsort($ordenados);
+    test_assert($valores === $ordenados, "transportistas ordenados por {$orden} de mayor a menor");
+}
+$activos = $ok($controlador->procesar('GET', ['vista' => 'TRANSPORTISTAS', 'estado' => 'ACTIVO', 'tamanoPagina' => '50']));
+test_assert($activos['total'] === (int) $uno('SELECT COUNT(*) FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid = t.tbpersonaid WHERE t.tbtransportistaestado = 1'),
+    'filtro de transportistas activos');
+if ($tr['items'] !== []) {
+    $nombre = $tr['items'][0]['nombre'];
+    $encontrados = $ok($controlador->procesar('GET', ['vista' => 'TRANSPORTISTAS', 'q' => mb_substr($nombre, 0, 3)]))['items'];
+    test_assert(in_array($nombre, array_column($encontrados, 'nombre'), true), 'la búsqueda de transportistas encuentra por nombre');
+}
 foreach ($tr['items'] as $fila) {
     test_assert($fila['viajesRegistrados'] === 0 || $fila['promedioPorViaje'] !== null, 'promedio por viaje solo con viajes registrados');
     test_assert($fila['viajesRegistrados'] > 0 || $fila['promedioPorViaje'] === null, 'sin viajes no hay promedio inventado');

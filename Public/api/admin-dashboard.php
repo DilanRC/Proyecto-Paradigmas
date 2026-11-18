@@ -16,7 +16,7 @@ require_once $raiz . '/Application/HttpException.php';
 require_once $raiz . '/Application/Auth/ActorContext.php';
 require_once $raiz . '/Application/Auth/AdminAuthorization.php';
 require_once $raiz . '/Application/Auth/SupabaseActorResolver.php';
-foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'Comprador', 'AnimalComercial', 'Notificacion', 'Bitacora', 'Subasta', 'AdminDashboard'] as $modelo) {
+foreach (['NamedLock', 'PersonaTelefonoHistorico', 'Persona', 'Comprador', 'AnimalComercial', 'Notificacion', 'Bitacora', 'Subasta', 'AdminDiagnostico', 'AdminDashboard'] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }
 require_once $raiz . '/Application/Service/AuthGuard.php';

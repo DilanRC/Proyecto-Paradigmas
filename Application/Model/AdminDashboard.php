@@ -200,10 +200,29 @@ final class AdminDashboard
         ];
     }
 
-    /** Métricas por transportista (paginadas). Viajes = tbtransportistaflete; solicitudes = flete pedido en una compra. */
-    public function transportistas(int $pagina, int $tamano): array
+    /** Orden de la tabla de transportistas: clave pública → alias del SELECT (lista cerrada; nunca texto del cliente). */
+    public const ORDEN_TRANSPORTISTAS = ['nombre' => 'nombre ASC', 'ofertasActivas' => 'ofertasactivas DESC',
+        'capacidad' => 'capacidadorden DESC', 'solicitudes' => 'recibidas DESC', 'aceptadas' => 'aceptadas DESC', 'pendientes' => 'pendientes DESC'];
+
+    /**
+     * Métricas por transportista (paginadas). Viajes = tbtransportistaflete; solicitudes = flete pedido en una compra.
+     * $q filtra por nombre o alias (sin tildes ni mayúsculas), $activo por estado y $orden es una clave de ORDEN_TRANSPORTISTAS.
+     */
+    public function transportistas(int $pagina, int $tamano, ?string $q = null, ?bool $activo = null, string $orden = 'nombre'): array
     {
-        $total = (int) $this->valor('SELECT COUNT(*) FROM tbtransportista');
+        $condiciones = ['1 = 1'];
+        $parametros = [];
+        if ($q !== null && $q !== '') {
+            $limpio = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], AnimalComercial::sinTildesTexto($q)) . '%';
+            $condiciones[] = '(' . AnimalComercial::sinTildesSql('p.tbpersonanombre') . " LIKE :q ESCAPE '!' OR "
+                . AnimalComercial::sinTildesSql("COALESCE(p.tbpersonaalias, '')") . " LIKE :q2 ESCAPE '!')";
+            $parametros['q'] = $limpio;
+            $parametros['q2'] = $limpio;
+        }
+        if ($activo !== null) $condiciones[] = $activo ? 't.tbtransportistaestado = 1' : 't.tbtransportistaestado <> 1';
+        $where = 'WHERE ' . implode(' AND ', $condiciones);
+        $ordenSql = self::ORDEN_TRANSPORTISTAS[$orden] ?? self::ORDEN_TRANSPORTISTAS['nombre'];
+        $total = (int) $this->valor("SELECT COUNT(*) FROM tbtransportista t INNER JOIN tbpersona p ON p.tbpersonaid = t.tbpersonaid {$where}", $parametros);
         $sentencia = $this->conexion->prepare(
             "SELECT t.tbtransportistaid AS transportistaid, t.tbtransportistaestado AS estado, p.tbpersonaid AS personaid,
                     COALESCE(NULLIF(p.tbpersonaalias, ''), p.tbpersonanombre) AS nombre,
@@ -212,6 +231,8 @@ final class AdminDashboard
                          AND o.tbtransportistaofertaestado = 'ACTIVA') AS ofertasactivas,
                     (SELECT SUM(o.tbtransportistaofertacapacidad) FROM tbtransportistaoferta o WHERE o.tbtransportistaid = t.tbtransportistaid
                          AND o.tbtransportistaofertaestado = 'ACTIVA') AS capacidad,
+                    COALESCE((SELECT SUM(o.tbtransportistaofertacapacidad) FROM tbtransportistaoferta o WHERE o.tbtransportistaid = t.tbtransportistaid
+                         AND o.tbtransportistaofertaestado = 'ACTIVA'), 0) AS capacidadorden,
                     (SELECT COUNT(*) FROM tbtransportistavehiculo tv WHERE tv.tbtransportistaid = t.tbtransportistaid) AS vehiculos,
                     (SELECT COUNT(*) FROM tbcomprasolicitud s INNER JOIN tbtransportistaoferta o ON o.tbtransportistaofertaid = s.tbtransportistaofertaid
                          WHERE o.tbtransportistaid = t.tbtransportistaid AND s.tbcomprasolicitudfleteestado IS NOT NULL) AS recibidas,
@@ -219,15 +240,19 @@ final class AdminDashboard
                          WHERE o.tbtransportistaid = t.tbtransportistaid AND s.tbcomprasolicitudfleteestado = 'ACEPTADA') AS aceptadas,
                     (SELECT COUNT(*) FROM tbcomprasolicitud s INNER JOIN tbtransportistaoferta o ON o.tbtransportistaofertaid = s.tbtransportistaofertaid
                          WHERE o.tbtransportistaid = t.tbtransportistaid AND s.tbcomprasolicitudfleteestado = 'RECHAZADA') AS rechazadas,
+                    (SELECT COUNT(*) FROM tbcomprasolicitud s INNER JOIN tbtransportistaoferta o ON o.tbtransportistaofertaid = s.tbtransportistaofertaid
+                         WHERE o.tbtransportistaid = t.tbtransportistaid AND s.tbcomprasolicitudfleteestado = 'PENDIENTE') AS pendientes,
                     (SELECT COUNT(*) FROM tbtransportistaflete f WHERE f.tbtransportistaid = t.tbtransportistaid) AS viajes,
                     (SELECT SUM(f.tbtransportistafletecantidadcabezas) FROM tbtransportistaflete f WHERE f.tbtransportistaid = t.tbtransportistaid) AS cabezas,
                     (SELECT SUM(f.tbtransportistafletedistanciakm) FROM tbtransportistaflete f WHERE f.tbtransportistaid = t.tbtransportistaid) AS km,
                     (SELECT SUM(f.tbtransportistafleteprecio) FROM tbtransportistaflete f WHERE f.tbtransportistaid = t.tbtransportistaid) AS ingresos
              FROM tbtransportista t
              INNER JOIN tbpersona p ON p.tbpersonaid = t.tbpersonaid
-             ORDER BY t.tbtransportistaid
+             {$where}
+             ORDER BY {$ordenSql}, nombre ASC, transportistaid ASC
              LIMIT :limite OFFSET :desplazamiento"
         );
+        foreach ($parametros as $nombre => $valor) $sentencia->bindValue($nombre, $valor);
         $sentencia->bindValue('limite', $tamano, PDO::PARAM_INT);
         $sentencia->bindValue('desplazamiento', ($pagina - 1) * $tamano, PDO::PARAM_INT);
         $sentencia->execute();
@@ -238,7 +263,7 @@ final class AdminDashboard
             'activo' => (int) $f['estado'] === 1, 'ofertas' => (int) $f['ofertas'], 'ofertasActivas' => (int) $f['ofertasactivas'],
             'capacidadOfertada' => $f['capacidad'] === null ? null : (int) $f['capacidad'], 'vehiculos' => (int) $f['vehiculos'],
             'solicitudesRecibidas' => (int) $f['recibidas'], 'solicitudesAceptadas' => (int) $f['aceptadas'],
-            'solicitudesRechazadas' => (int) $f['rechazadas'], 'viajesRegistrados' => (int) $f['viajes'],
+            'solicitudesRechazadas' => (int) $f['rechazadas'], 'solicitudesPendientes' => (int) $f['pendientes'], 'viajesRegistrados' => (int) $f['viajes'],
             'cabezas' => $f['cabezas'] === null ? null : (int) $f['cabezas'], 'km' => $numero($f['km']),
             'ingresosRegistrados' => $numero($f['ingresos']),
             'promedioPorViaje' => (int) $f['viajes'] > 0 && $f['ingresos'] !== null ? round((float) $f['ingresos'] / (int) $f['viajes'], 2) : null,
@@ -261,21 +286,9 @@ final class AdminDashboard
                 "SELECT b.tbbitacoraaccion AS clave, COUNT(*) AS total FROM tbbitacora b WHERE 1 = 1{$fBitacora}
                  GROUP BY b.tbbitacoraaccion", $pBitacora),
             'correosPendientes' => (int) $this->valor("SELECT COUNT(*) FROM tbpersonacorreocambio WHERE tbpersonacorreocambioestado = 'PENDIENTE'"),
-            // Datos incompletos que debilitan un indicador (no son errores: se muestran para saber qué tan completa es la base).
-            'incompletos' => [
-                'publicacionesSinFoto' => (int) $this->valor(
-                    "SELECT COUNT(*) FROM tbanimalpublicacion WHERE tbanimalpublicacionimagenurl IS NULL OR tbanimalpublicacionimagenurl = ''"),
-                'animalesSinEspecie' => (int) $this->valor('SELECT COUNT(*) FROM tbanimal WHERE tbespecieid IS NULL'),
-                'fincasSinDireccion' => (int) $this->valor(
-                    'SELECT COUNT(*) FROM tbfinca f WHERE NOT EXISTS (SELECT 1 FROM tbfincadireccion fd WHERE fd.tbfincaid = f.tbfincaid)'),
-                'ofertasActivasSinPrecio' => (int) $this->valor(
-                    "SELECT COUNT(*) FROM tbtransportistaoferta WHERE tbtransportistaofertaestado = 'ACTIVA' AND tbtransportistaofertaprecio IS NULL"),
-                'ventasSinComprador' => (int) $this->valor('SELECT COUNT(*) FROM tbventa WHERE tbcompradorid IS NULL AND tbproductorcompradorid IS NULL'),
-                // El cierre escribe la venta en la misma transacción: una adjudicada sin venta vino de otro camino (datos cargados a mano).
-                'adjudicadasSinVenta' => (int) $this->valor(
-                    "SELECT COUNT(*) FROM tbsubasta s WHERE s.tbsubastaestado = 'FINALIZADA' AND NOT EXISTS (
-                        SELECT 1 FROM tbventa v WHERE v.tbanimalid = s.tbanimalid AND v.tbventaorigen = 'API_SUBASTAS')"),
-            ],
+            // Datos incompletos: no todos son errores (un dato opcional no lo es); la clasificación está en la vista DIAGNOSTICO.
+            // Mismo conteo que la vista DIAGNOSTICO (una sola definición); el detalle y la clasificación están allí.
+            'incompletos' => array_map(static fn (array $d): int => $d['total'], (new AdminDiagnostico($this->conexion))->resumen()),
         ];
     }
 
