@@ -20,7 +20,9 @@ function dash_subasta(int $id, string $estado, float $base, ?float $adjudicado =
 {
     return [
         'subastaId' => $id, 'estado' => $estado, 'precioBase' => $base, 'montoAdjudicado' => $adjudicado,
-        'fechaInicio' => $inicio, 'fechaFin' => $cierre ?? '2026-11-02T10:00:00Z', 'fechaCierre' => $cierre,
+        // fechaCierre (procesamiento) llega 3 h tarde a propósito: el tiempo de adjudicación usa el fin programado.
+        'fechaInicio' => $inicio, 'fechaFin' => $cierre ?? '2026-11-02T10:00:00Z',
+        'fechaCierre' => $cierre === null ? null : gmdate('Y-m-d\TH:i:s\Z', strtotime($cierre) + 3 * 3600),
     ];
 }
 
@@ -58,6 +60,8 @@ $r = DashboardService::indicadoresVendedor($subastas, $postores);
 dash_igual(['total' => 1, 'ids' => [1]], $r['estados']['activas'], 'activas');
 dash_igual(['total' => 3, 'ids' => [2, 3, 4]], $r['estados']['cerradas'], 'cerradas = finalizadas + desiertas');
 dash_igual(['total' => 1, 'ids' => [5]], $r['estados']['canceladas'], 'canceladas');
+dash_igual(['total' => 2, 'ids' => [2, 3]], $r['estados']['adjudicadas'], 'adjudicadas: la cancelada nunca cuenta como venta');
+dash_igual(['total' => 1, 'ids' => [4]], $r['estados']['desiertas'], 'desiertas aparte de canceladas');
 // 2 adjudicadas de 3 finalizadas (la cancelada no cuenta como finalizada).
 dash_igual(66.7, $r['exito']['porcentaje'], 'porcentaje de éxito');
 dash_igual(2, $r['exito']['adjudicadas'], 'adjudicadas');
@@ -114,8 +118,19 @@ dash_igual(950000.0, $c['montoAdjudicado']['valor'], 'monto adjudicado = 700 000
 dash_igual(['total' => 1, 'radioKm' => 50, 'requiereUbicacion' => false, 'ids' => [9]], $c['oportunidades'], 'oportunidades');
 dash_igual(5.0, $c['comparacion']['porcentaje'], 'comparación = (−10 + 20 + 5) / 3');
 dash_igual([1, 2, 9], $c['comparacion']['ids'], 'activas y oportunidades comparadas');
-dash_igual(850000.0, $c['costoAdquisicion']['total'], 'costo = 500 000 + 50 000 + 300 000 (sin flete)');
+// Regresión: antes el flete desconocido valía 0 y el total salía 850 000 como si estuviera completo.
+dash_igual(null, $c['costoAdquisicion']['total'], 'con un flete sin precio no hay total completo');
+dash_igual(false, $c['costoAdquisicion']['completo'], 'el costo queda marcado como incompleto');
+dash_igual(800000.0, $c['costoAdquisicion']['pujas'], 'pujas conocidas = 500 000 + 300 000');
+dash_igual(50000.0, $c['costoAdquisicion']['fletesConocidos'], 'solo el flete con precio');
 dash_igual(1, $c['costoAdquisicion']['sinFlete'], 'una sin precio de flete');
+dash_igual([2], $c['costoAdquisicion']['idsSinFlete'], 'cuál no tiene flete');
+dash_igual(['total' => 1, 'ids' => [1]], $c['vasGanando'], 'va ganando la 1');
+dash_igual(['total' => 1, 'ids' => [4]], $c['perdidas'], 'perdió la 4');
+dash_igual(['total' => 2, 'ids' => [3, 5]], $c['ganadas'], 'ganó la 3 y la 5');
+$completo = DashboardService::indicadoresComprador([$participaciones[0]], $yo, null, 50);
+dash_igual(550000.0, $completo['costoAdquisicion']['total'], 'con todos los fletes el total sí se calcula');
+dash_igual(true, $completo['costoAdquisicion']['completo'], 'total completo');
 
 $sinUbicacion = DashboardService::indicadoresComprador([], $yo, null, 50);
 dash_igual(true, $sinUbicacion['oportunidades']['requiereUbicacion'], 'sin ubicación se pide compartirla');

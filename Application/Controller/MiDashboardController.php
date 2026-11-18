@@ -21,8 +21,6 @@ use Application\Service\DashboardService;
 use Application\Service\PublicacionCercaniaService;
 use Application\Service\SubastaCierreService;
 use Application\Service\TiempoReal;
-use DateTimeImmutable;
-use DateTimeZone;
 use PDO;
 
 /**
@@ -32,14 +30,13 @@ use PDO;
  *      (COMPRADOR además: latitud, longitud y radioKm para las oportunidades cercanas)
  * Responde `roles` (qué dashboards puede ver: vendedor si tiene Productor, comprador si tiene Comprador) y, para el rol
  * pedido, `indicadores` y `subastas` (con foto). Las fechas del filtro son días de Costa Rica, ambos inclusive, sobre
- * la fecha en que empezó la subasta. Un rol que la persona no tiene responde 409. Las coordenadas de las fincas nunca
+ * la fecha del hecho (Subasta::SQL_FECHA_HECHO: fin programado si cerró, cancelación, o inicio si sigue activa). Un rol que la persona no tiene responde 409. Las coordenadas de las fincas nunca
  * salen en la respuesta: solo la distancia.
  */
 final class MiDashboardController
 {
     public const ROLES = ['VENDEDOR', 'COMPRADOR'];
     public const RADIO_POR_DEFECTO = 50;
-    private const ZONA = 'America/Costa_Rica';
 
     public function __construct(
         private PDO $conexion,
@@ -96,8 +93,9 @@ final class MiDashboardController
             $s['postores'] = $porSubasta[$s['subastaId']] ?? 0;
             $s['incrementoPorcentaje'] = $s['montoAdjudicado'] !== null && $s['precioBase'] > 0
                 ? round(($s['montoAdjudicado'] - $s['precioBase']) / $s['precioBase'] * 100, 1) : null;
+            // Adjudicación = fin programado (ahí queda fija la ganadora), no la hora en que se procesó el cierre.
             $s['minutosAdjudicacion'] = $s['estado'] === 'FINALIZADA'
-                ? DashboardService::minutosEntre($s['fechaInicio'], $s['fechaCierre'] ?? $s['fechaFin']) : null;
+                ? DashboardService::minutosEntre($s['fechaInicio'], $s['fechaFin']) : null;
         }
         unset($s);
 
@@ -125,30 +123,38 @@ final class MiDashboardController
             if ($s['estado'] === 'ACTIVA') {
                 $s['comparacion'] = $comparar($s);
                 $s['costoFlete'] = $this->fleteMasBarato($ofertas, $s, $personaId);
-                $s['costoEstimado'] = $s['miPuja'] === null ? null : round($s['miPuja'] + ($s['costoFlete'] ?? 0), 2);
+                // Sin precio de flete el costo es desconocido: nunca se suma el flete como 0.
+                $s['costoEstimado'] = $s['miPuja'] === null || $s['costoFlete'] === null ? null : round($s['miPuja'] + $s['costoFlete'], 2);
             }
         }
         unset($s);
 
-        // Oportunidades: activas de otros vendedores, sin las que ya puja, dentro del radio desde la ubicación compartida.
+        // Oportunidades: activas de otros vendedores, sin las que ya puja. Con ubicación compartida, dentro del radio;
+        // sin ella, la alternativa manual es elegir una provincia (el filtro SQL ya la aplica y no hay distancia).
         $oportunidades = null;
         $punto = $filtros['punto'];
-        if ($punto !== null) {
+        $modo = $punto !== null ? 'RADIO' : ($filtros['sql']['provincia'] !== '' ? 'PROVINCIA' : null);
+        if ($modo !== null) {
             $participa = array_flip(array_column($participaciones, 'subastaId'));
             $oportunidades = [];
             foreach ($subastas->activasDeOtros($personaId, $filtros['sql']) as $s) {
-                if (isset($participa[$s['subastaId']]) || $s['punto'] === null) continue;
-                $distancia = PublicacionCercaniaService::calcularDistanciaKm(
-                    $punto['latitud'], $punto['longitud'], $s['punto']['latitud'], $s['punto']['longitud']);
-                if ($distancia > $filtros['radioKm']) continue;
-                $s['distanciaKm'] = round($distancia, 1);
+                if (isset($participa[$s['subastaId']])) continue;
+                $s['distanciaKm'] = null;
+                if ($modo === 'RADIO') {
+                    if ($s['punto'] === null) continue;
+                    $distancia = PublicacionCercaniaService::calcularDistanciaKm(
+                        $punto['latitud'], $punto['longitud'], $s['punto']['latitud'], $s['punto']['longitud']);
+                    if ($distancia > $filtros['radioKm']) continue;
+                    $s['distanciaKm'] = round($distancia, 1);
+                }
                 $s['comparacion'] = $comparar($s);
                 $oportunidades[] = $s;
             }
-            usort($oportunidades, static fn (array $a, array $b): int => $a['distanciaKm'] <=> $b['distanciaKm']);
+            usort($oportunidades, static fn (array $a, array $b): int => ($a['distanciaKm'] ?? 0) <=> ($b['distanciaKm'] ?? 0));
         }
 
         $indicadores = DashboardService::indicadoresComprador($participaciones, $personaId, $oportunidades, $filtros['radioKm']);
+        $indicadores['oportunidades']['modo'] = $modo;
         $lista = array_merge($participaciones, $oportunidades ?? []);
         foreach ($lista as &$s) $s['oportunidad'] = !isset($s['soyGanador']);
         unset($s);
@@ -186,28 +192,13 @@ final class MiDashboardController
         $rol = is_string($rol) ? mb_strtoupper(trim($rol), 'UTF-8') : '';
         if (!in_array($rol, self::ROLES, true)) $errores['rol'] = 'Use ' . implode(' o ', self::ROLES) . '.';
 
-        $zona = new DateTimeZone(self::ZONA);
-        $fechas = [];
-        foreach (['desde', 'hasta'] as $campo) {
-            $valor = $consulta[$campo] ?? '';
-            if ($valor === '' || $valor === null) { $fechas[$campo] = null; continue; }
-            $dia = is_string($valor) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor)
-                ? DateTimeImmutable::createFromFormat('!Y-m-d', $valor, $zona) : false;
-            if ($dia === false || $dia->format('Y-m-d') !== $valor) {
-                $errores[$campo] = 'Use una fecha AAAA-MM-DD.';
-                continue;
-            }
-            $fechas[$campo] = $dia;
-        }
-        if (($fechas['desde'] ?? null) && ($fechas['hasta'] ?? null) && $fechas['desde'] > $fechas['hasta']) {
-            $errores['hasta'] = 'La fecha final no puede ser anterior a la inicial.';
-        }
+        $periodo = DashboardService::periodo($consulta, $errores);
 
         $ids = [];
         foreach (['especieId', 'tipoId', 'razaId'] as $campo) {
-            $ids[$campo] = $this->entero($consulta[$campo] ?? '', $campo, 1, 2147483647, $errores);
+            $ids[$campo] = DashboardService::entero($consulta[$campo] ?? '', $campo, 1, 2147483647, $errores);
         }
-        $radio = $this->entero($consulta['radioKm'] ?? '', 'radioKm', 1, 500, $errores) ?? self::RADIO_POR_DEFECTO;
+        $radio = DashboardService::entero($consulta['radioKm'] ?? '', 'radioKm', 1, 500, $errores) ?? self::RADIO_POR_DEFECTO;
 
         $provincia = $consulta['provincia'] ?? '';
         if (!is_string($provincia) || mb_strlen(trim($provincia)) > 50) $errores['provincia'] = 'La provincia es texto de hasta 50 caracteres.';
@@ -230,38 +221,23 @@ final class MiDashboardController
 
         if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
 
-        $utc = new DateTimeZone('UTC');
         return [
             'rol' => $rol,
             'sql' => $ids + [
-                'desde' => $fechas['desde']?->setTimezone($utc)->format('Y-m-d H:i:s'),
-                // "hasta" es inclusive: se busca antes del inicio del día siguiente.
-                'hasta' => $fechas['hasta']?->modify('+1 day')->setTimezone($utc)->format('Y-m-d H:i:s'),
+                'desde' => $periodo['desde'],
+                'hasta' => $periodo['hasta'],
                 'provincia' => $provincia,
             ],
             'punto' => $punto,
             'radioKm' => $radio,
             'publicos' => $ids + [
-                'desde' => $fechas['desde']?->format('Y-m-d'),
-                'hasta' => $fechas['hasta']?->format('Y-m-d'),
+                'desde' => $periodo['publico']['desde'],
+                'hasta' => $periodo['publico']['hasta'],
                 'provincia' => $provincia === '' ? null : $provincia,
                 'radioKm' => $radio,
                 'conUbicacion' => $punto !== null,
             ],
         ];
-    }
-
-    /** Entero opcional: vacío → null; fuera de rango, booleano o lista → error del campo. */
-    private function entero(mixed $valor, string $campo, int $minimo, int $maximo, array &$errores): ?int
-    {
-        if ($valor === '' || $valor === null) return null;
-        $entero = is_string($valor) || is_int($valor)
-            ? filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]) : false;
-        if ($entero === false) {
-            $errores[$campo] = "Debe ser un número entero entre {$minimo} y " . number_format($maximo, 0, ',', '.') . '.';
-            return null;
-        }
-        return $entero;
     }
 
     private function respuesta(bool $exito, string $mensaje, ?array $datos, int $estado = 200, array $errores = []): array

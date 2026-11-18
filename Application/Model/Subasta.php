@@ -255,7 +255,7 @@ final class Subasta
 
     /**
      * Dashboard del vendedor: todas sus subastas que cumplen los filtros (DashboardService calcula los indicadores).
-     * $filtros: desde/hasta ('Y-m-d H:i:s' UTC, sobre la fecha de inicio), especieId, tipoId, razaId y provincia (texto).
+     * $filtros: desde/hasta ('Y-m-d H:i:s' UTC, sobre la fecha del hecho: cierre efectivo o, si sigue activa, inicio), especieId, tipoId, razaId y provincia (texto).
      * Sin paginar: un vendedor tiene pocas subastas.
      *
      * @return array<int,array<string,mixed>>
@@ -263,6 +263,24 @@ final class Subasta
     public function paraDashboardVendedor(int $productorId, array $filtros): array
     {
         return $this->filasDashboard(['s.tbproductorid = :productorId'], ['productorId' => $productorId], $filtros, null);
+    }
+
+    /**
+     * Fecha del hecho de una subasta (alias s), para filtrar por periodo. Cuatro fechas distintas:
+     *  - fechainicio: publicación / apertura;  - fechafin: cierre programado = cierre efectivo de FINALIZADA y DESIERTA
+     *    (las pujas se aceptan hasta ese instante y la ganadora queda fija ahí);
+     *  - fechacierre: procesamiento técnico (el cierre es perezoso: lo hace la siguiente petición, puede ser horas
+     *    después), salvo en CANCELADA, donde sí es el momento en que la persona canceló.
+     * ACTIVA cuenta por su inicio.
+     */
+    public const SQL_FECHA_HECHO = "CASE WHEN s.tbsubastaestado IN ('FINALIZADA', 'DESIERTA') THEN s.tbsubastafechafin
+        WHEN s.tbsubastaestado = 'CANCELADA' THEN COALESCE(s.tbsubastafechacierre, s.tbsubastafechafin)
+        ELSE s.tbsubastafechainicio END";
+
+    /** Dashboard administrativo: todas las subastas que cumplen los filtros (mismas filas que el del vendedor). */
+    public function paraDashboardAdmin(array $filtros): array
+    {
+        return $this->filasDashboard(['1 = 1'], [], $filtros, null);
     }
 
     /** Dashboard del comprador: las subastas donde la persona pujó, con su puja más alta (`miPuja`). */
@@ -393,12 +411,13 @@ final class Subasta
     /** Agrega a la consulta los filtros comunes de los dashboards (alias s = subasta, a = animal, d = dirección de la finca). */
     private function filtrosDashboard(array $filtros, array &$condiciones, array &$parametros): void
     {
+        $fechaHecho = self::SQL_FECHA_HECHO;
         if (($filtros['desde'] ?? null) !== null) {
-            $condiciones[] = 's.tbsubastafechainicio >= :desde';
+            $condiciones[] = "{$fechaHecho} >= :desde";
             $parametros['desde'] = $filtros['desde'];
         }
         if (($filtros['hasta'] ?? null) !== null) {
-            $condiciones[] = 's.tbsubastafechainicio < :hasta';
+            $condiciones[] = "{$fechaHecho} < :hasta";
             $parametros['hasta'] = $filtros['hasta'];
         }
         foreach (['especieId' => 'a.tbespecieid', 'tipoId' => 'a.tbanimaltipoid', 'razaId' => 'a.tbrazaid'] as $clave => $columna) {

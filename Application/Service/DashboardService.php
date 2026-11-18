@@ -16,8 +16,12 @@ namespace Application\Service;
  *  - Precio promedio de venta = suma de montos adjudicados / animales adjudicados (una subasta = un animal).
  *  - Incremento promedio = promedio de (precio final − precio base) / precio base × 100 de las adjudicadas.
  *  - Compradores participantes = personas distintas que pujaron (toda puja guardada ya pasó las reglas).
- *  - Tiempo promedio de adjudicación = promedio de (cierre − inicio) de las adjudicadas, en minutos.
+ *  - Tiempo promedio de adjudicación = promedio de (fin programado − inicio) de las adjudicadas, en minutos. El fin
+ *    programado es cuando queda fija la ganadora; fechaCierre es el procesamiento técnico (cierre perezoso).
  *  - Animales sin ofertas = DESIERTA.
+ *  - Una subasta es siempre de un animal (tbsubasta.tbanimalid; los lotes no se subastan), así que "subastas
+ *    adjudicadas" y "animales adjudicados" son el mismo número. Las ventas directas por lote están en tbventa, no aquí.
+ *  - Periodo: el modelo filtra por la fecha del hecho (Subasta::SQL_FECHA_HECHO).
  */
 final class DashboardService
 {
@@ -60,7 +64,7 @@ final class DashboardService
 
         $duraciones = [];
         foreach ($adjudicadas as $s) {
-            $minutos = self::minutosEntre($s['fechaInicio'] ?? null, $s['fechaCierre'] ?? $s['fechaFin'] ?? null);
+            $minutos = self::minutosEntre($s['fechaInicio'] ?? null, $s['fechaFin'] ?? null);
             if ($minutos !== null) $duraciones[] = $minutos;
         }
 
@@ -74,6 +78,8 @@ final class DashboardService
         return [
             'estados' => [
                 'activas' => ['total' => count($activas), 'ids' => $ids($activas)],
+                'adjudicadas' => ['total' => count($adjudicadas), 'ids' => $ids($adjudicadas)],
+                'desiertas' => ['total' => count($desiertas), 'ids' => $ids($desiertas)],
                 'cerradas' => ['total' => count($cerradas), 'ids' => $ids($cerradas)],
                 'canceladas' => ['total' => count($canceladas), 'ids' => $ids($canceladas)],
             ],
@@ -116,7 +122,10 @@ final class DashboardService
      *  - Monto adjudicado = suma de lo que pagó en las ganadas.
      *  - Comparación = promedio de (precio actual − promedio histórico comparable) / promedio histórico, en las activas
      *    donde puja y en las oportunidades. Negativo = está más barato que lo que se ha pagado antes.
-     *  - Costo estimado = su puja + el flete más barato con precio que cubre la finca, en las activas donde puja.
+     *  - Costo estimado = su puja + el flete más barato con precio que cubre la finca, en las activas donde puja. Si a
+ *    alguna le falta el precio del flete, el total queda null (incompleto) y se informan por separado la suma de
+ *    pujas, la de fletes conocidos y cuántas subastas no tienen flete con precio.
+ *  - Vas ganando = activas donde su puja es la más alta; perdidas = finalizadas que ganó otra persona.
      */
     public static function indicadoresComprador(array $participaciones, int $personaId, ?array $oportunidades, int $radioKm): array
     {
@@ -126,8 +135,11 @@ final class DashboardService
         $activas = $filtrar($participaciones, static fn (array $s): bool => $s['estado'] === 'ACTIVA');
         $superadas = $filtrar($activas, static fn (array $s): bool => $s['miPuja'] !== null && $s['precioActual'] !== null
             && (float) $s['precioActual'] > (float) $s['miPuja']);
+        $ganando = $filtrar($activas, static fn (array $s): bool => $s['miPuja'] !== null && $s['precioActual'] !== null
+            && (float) $s['miPuja'] >= (float) $s['precioActual']);
         $finalizadas = $filtrar($participaciones, static fn (array $s): bool => $s['estado'] === 'FINALIZADA');
         $ganadas = $filtrar($finalizadas, static fn (array $s): bool => $s['ganadorPersonaId'] === $personaId);
+        $perdidas = $filtrar($finalizadas, static fn (array $s): bool => $s['ganadorPersonaId'] !== $personaId);
         $monto = array_sum(array_map(static fn (array $s): float => (float) $s['montoAdjudicado'], $ganadas));
 
         // Comparación de precios: activas donde puja + oportunidades, sin repetir.
@@ -137,17 +149,20 @@ final class DashboardService
         }
         $diferencias = array_map(static fn (array $s): float => (float) $s['comparacion']['diferenciaPorcentaje'], $comparables);
 
+        // Costo: un flete sin precio NO vale 0. Se separa lo que sí se conoce de lo que falta.
         $costos = $filtrar($activas, static fn (array $s): bool => $s['miPuja'] !== null);
-        $total = 0.0;
-        $sinFlete = 0;
-        foreach ($costos as $s) {
-            $total += (float) $s['miPuja'] + (float) ($s['costoFlete'] ?? 0);
-            if (($s['costoFlete'] ?? null) === null) $sinFlete++;
-        }
+        $conFlete = $filtrar($costos, static fn (array $s): bool => ($s['costoFlete'] ?? null) !== null);
+        $sinFlete = $filtrar($costos, static fn (array $s): bool => ($s['costoFlete'] ?? null) === null);
+        $sumaPujas = array_sum(array_map(static fn (array $s): float => (float) $s['miPuja'], $costos));
+        $sumaFletes = array_sum(array_map(static fn (array $s): float => (float) $s['costoFlete'], $conFlete));
+        $completo = $costos !== [] && $sinFlete === [];
 
         return [
             'pujasActivas' => ['total' => count($activas), 'ids' => $ids($activas)],
             'pujasSuperadas' => ['total' => count($superadas), 'ids' => $ids($superadas)],
+            'vasGanando' => ['total' => count($ganando), 'ids' => $ids($ganando)],
+            'ganadas' => ['total' => count($ganadas), 'ids' => $ids($ganadas)],
+            'perdidas' => ['total' => count($perdidas), 'ids' => $ids($perdidas)],
             'adjudicacion' => [
                 'porcentaje' => self::porcentaje(count($ganadas), count($finalizadas)),
                 'ganadas' => count($ganadas),
@@ -166,10 +181,16 @@ final class DashboardService
                 'ids' => array_map('intval', array_keys($comparables)),
             ],
             'costoAdquisicion' => [
-                'total' => $costos === [] ? null : round($total, 2),
+                // total solo existe si a ninguna subasta le falta el flete; si no, null ("incompleto"), nunca un total corto.
+                'total' => $completo ? round($sumaPujas + $sumaFletes, 2) : null,
+                'completo' => $completo,
+                'pujas' => $costos === [] ? null : round($sumaPujas, 2),
+                'fletesConocidos' => $conFlete === [] ? null : round($sumaFletes, 2),
                 'subastas' => count($costos),
-                'sinFlete' => $sinFlete,
+                'conFlete' => count($conFlete),
+                'sinFlete' => count($sinFlete),
                 'ids' => $ids($costos),
+                'idsSinFlete' => $ids($sinFlete),
             ],
         ];
     }
@@ -202,6 +223,54 @@ final class DashboardService
             ];
         }
         return ['promedio' => null, 'muestras' => 0, 'nivel' => null, 'diferenciaPorcentaje' => null];
+    }
+
+    public const ZONA = 'America/Costa_Rica';
+
+    /**
+     * Periodo de los dashboards: `desde`/`hasta` AAAA-MM-DD en días de Costa Rica, ambos inclusive. Devuelve los límites
+     * en UTC ('Y-m-d H:i:s'; `hasta` exclusivo = inicio del día siguiente) y lo público. Los errores van a $errores.
+     *
+     * @return array{desde:?string,hasta:?string,publico:array{desde:?string,hasta:?string}}
+     */
+    public static function periodo(array $consulta, array &$errores): array
+    {
+        $zona = new \DateTimeZone(self::ZONA);
+        $fechas = [];
+        foreach (['desde', 'hasta'] as $campo) {
+            $valor = $consulta[$campo] ?? '';
+            $fechas[$campo] = null;
+            if ($valor === '' || $valor === null) continue;
+            $dia = is_string($valor) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $valor)
+                ? \DateTimeImmutable::createFromFormat('!Y-m-d', $valor, $zona) : false;
+            if ($dia === false || $dia->format('Y-m-d') !== $valor) {
+                $errores[$campo] = 'Use una fecha AAAA-MM-DD.';
+                continue;
+            }
+            $fechas[$campo] = $dia;
+        }
+        if ($fechas['desde'] !== null && $fechas['hasta'] !== null && $fechas['desde'] > $fechas['hasta']) {
+            $errores['hasta'] = 'La fecha final no puede ser anterior a la inicial.';
+        }
+        $utc = new \DateTimeZone('UTC');
+        return [
+            'desde' => $fechas['desde']?->setTimezone($utc)->format('Y-m-d H:i:s'),
+            'hasta' => $fechas['hasta']?->modify('+1 day')->setTimezone($utc)->format('Y-m-d H:i:s'),
+            'publico' => ['desde' => $fechas['desde']?->format('Y-m-d'), 'hasta' => $fechas['hasta']?->format('Y-m-d')],
+        ];
+    }
+
+    /** Entero opcional de una consulta: vacío → null; fuera de rango, booleano o lista → error del campo (Cuidado #14). */
+    public static function entero(mixed $valor, string $campo, int $minimo, int $maximo, array &$errores): ?int
+    {
+        if ($valor === '' || $valor === null) return null;
+        $entero = is_string($valor) || is_int($valor)
+            ? filter_var($valor, FILTER_VALIDATE_INT, ['options' => ['min_range' => $minimo, 'max_range' => $maximo]]) : false;
+        if ($entero === false) {
+            $errores[$campo] = "Debe ser un número entero entre {$minimo} y " . number_format($maximo, 0, ',', '.') . '.';
+            return null;
+        }
+        return $entero;
     }
 
     /** Porcentaje con un decimal, o null si no hay base (no se inventa un 0 %). */
