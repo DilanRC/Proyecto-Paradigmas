@@ -11,9 +11,9 @@ import { readFileSync } from 'node:fs';
 
 const read = (path) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 
-test('el contenido principal de la app reserva casi una pantalla para que el pie no salte', () => {
+test('el contenido principal de la app reserva una pantalla para que el pie no salte', () => {
     const css = read('Public/css/public-product.css');
-    assert.match(css, /\.public-shell > :is\(\.activity-main, \.activity-shell, \.explore-main, \.publish-main\) \{ min-height:75vh; \}/);
+    assert.match(css, /\.public-shell > :is\(\.activity-main, \.activity-shell, \.explore-main, \.publish-main\) \{ min-height:100vh; \}/);
     for (const vista of ['mi-actividad', 'ajustes', 'me-interesa', 'subastas', 'fletes', 'explorar', 'publicar', 'mi-dashboard']) {
         const html = read(`Application/View/${vista}/index.php`);
         assert.match(html, /css\/public-product\.css\?v=product-14/, `${vista} carga la regla nueva`);
