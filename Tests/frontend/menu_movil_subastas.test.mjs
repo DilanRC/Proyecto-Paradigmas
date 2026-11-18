@@ -89,3 +89,28 @@ test('tiempo restante legible y tarjeta con su etiqueta de precio', async () => 
     assert.match(js, /safeImageUrl\(subasta\.imagenUrl\)/, 'solo fotos https propias de la subasta');
     assert.match(js, /titulo\.title = subasta\.titulo/, 'el título completo sigue accesible');
 });
+
+test('responder una solicitud usa un modal propio con resumen, campos y bloqueo de doble envío', async () => {
+    const js = read('Public/js/mi-actividad.js');
+    const inicio = js.indexOf('export function respuestaSolicitud');
+    const fin = js.indexOf('function setPublicationsView');
+    const bloque = js.slice(inicio, fin);
+    assert.doesNotMatch(bloque, /window\.(confirm|prompt)/, 'sin diálogos del navegador');
+    assert.match(bloque, /form\.getAttribute\('aria-busy'\) === 'true'\) return/, 'un segundo envío no sale');
+    assert.match(bloque, /iniciarProgreso\(/);
+    assert.match(bloque, /progreso\.terminar\(\)/, 'el botón nunca queda bloqueado');
+    assert.match(bloque, /Los datos escritos se conservan/);
+    // La función de textos es pura: se evalúa aquí sin DOM.
+    const respuestaSolicitud = new Function(`${bloque.slice(0, bloque.indexOf('let solicitudEnCurso')).replace('export ', '')}; return respuestaSolicitud;`)();
+    const aConvenir = respuestaSolicitud('ACEPTAR', { titulo: 'Vaca', precio: null });
+    assert.equal(aConvenir.precio, true, 'a convenir pide precio');
+    assert.equal(respuestaSolicitud('ACEPTAR', { titulo: 'Vaca', precio: 500 }).precio, false);
+    assert.equal(respuestaSolicitud('RECHAZAR', {}).motivo, true);
+    assert.match(respuestaSolicitud('ACEPTAR_FLETE', {}).resumen, /no registra el viaje/);
+    assert.equal(respuestaSolicitud('REGISTRAR_VIAJE', {}), null, 'la acción retirada no tiene modal');
+    const vista = read('Application/View/mi-actividad/index.php');
+    for (const id of ['solicitud-modal', 'solicitud-form', 'solicitud-form-status', 'solicitud-confirmar', 'solicitud-precio-error', 'solicitud-motivo-error']) {
+        assert.match(vista, new RegExp(`id="${id}"`));
+    }
+    assert.match(vista, /aria-describedby="solicitud-modal-resumen"/);
+});

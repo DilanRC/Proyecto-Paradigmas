@@ -24,9 +24,9 @@ test('las acciones de las bandejas coinciden con las de la API', () => {
         assert.match(read('Application/Controller/SolicitudesCompraController.php'), new RegExp(`'${accion}'`));
     }
     // Una publicación "a convenir" pide el precio al aceptar; el rechazo pide un motivo opcional.
-    assert.match(panel, /solicitud\.precio === null/);
+    assert.match(panel, /solicitud\?\.precio === null/);
     assert.match(panel, /cuerpo\.precio = precio/);
-    assert.match(panel, /cuerpo\.motivo = motivo\.trim\(\)/);
+    assert.match(panel, /cuerpo\.motivo = form\.elements\.motivo\.value\.trim\(\)/);
 });
 
 test('todo texto de la base se escapa en las filas de solicitudes', () => {

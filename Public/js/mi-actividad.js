@@ -322,35 +322,104 @@ async function loadSolicitudes() {
     }
 }
 
-async function responderSolicitud(id, accion) {
+/** Texto de cada respuesta: lo que pasará, dicho antes de confirmar (antes era window.confirm/prompt). Puro. */
+export function respuestaSolicitud(accion, solicitud) {
+    const nombre = solicitud?.publicacion?.titulo ?? solicitud?.titulo;
+    const titulo = nombre ? `«${nombre}»` : 'esta publicación';
+    const aConvenir = solicitud?.precio === null || solicitud?.precio === undefined;
+    switch (accion) {
+        case 'ACEPTAR': return { kicker: 'Solicitud recibida', titulo: 'Aceptar solicitud', boton: 'Aceptar y registrar la venta', precio: aConvenir, motivo: false,
+            resumen: `Se registra la venta de ${titulo}, la publicación pasa a vendida y las demás solicitudes pendientes se rechazan.${aConvenir ? ' La publicación es «a convenir»: indica el precio acordado.' : ''}` };
+        case 'RECHAZAR': return { kicker: 'Solicitud recibida', titulo: 'Rechazar solicitud', boton: 'Rechazar solicitud', precio: false, motivo: true,
+            resumen: `El comprador verá que rechazaste su solicitud sobre ${titulo}. La publicación sigue disponible.` };
+        case 'CANCELAR': return { kicker: 'Mi solicitud', titulo: 'Cancelar solicitud', boton: 'Cancelar mi solicitud', precio: false, motivo: false,
+            resumen: `Retiras tu solicitud de compra sobre ${titulo}. El vendedor ya no podrá aceptarla.` };
+        case 'ACEPTAR_FLETE': return { kicker: 'Flete', titulo: 'Aceptar flete', boton: 'Aceptar flete', precio: false, motivo: false,
+            resumen: `Te comprometes a transportar ${titulo}. Comprador y vendedor verán tu teléfono. Aceptar no registra el viaje como realizado.` };
+        case 'RECHAZAR_FLETE': return { kicker: 'Flete', titulo: 'Rechazar flete', boton: 'Rechazar flete', precio: false, motivo: false,
+            resumen: `El comprador sabrá que no harás el transporte de ${titulo}.` };
+        default: return null;
+    }
+}
+
+let solicitudEnCurso = null;
+let solicitudTrigger = null;
+
+function setSolicitudErrors(errores) {
+    document.querySelectorAll('[data-solicitud-error]').forEach((nodo) => {
+        const texto = errores?.[nodo.dataset.solicitudError] ?? '';
+        nodo.textContent = texto;
+        nodo.closest('label')?.querySelector('input, textarea')?.setAttribute('aria-invalid', String(Boolean(texto)));
+    });
+}
+
+function responderSolicitud(id, accion, trigger = document.activeElement) {
     const solicitud = [...solicitudesData.hechas, ...solicitudesData.recibidas, ...solicitudesData.fletes].find((s) => s.solicitudId === id);
-    if (!solicitud) return;
+    const textos = respuestaSolicitud(accion, solicitud);
+    const dialog = document.querySelector('#solicitud-modal');
+    if (!solicitud || !textos || !dialog) return;
+    const form = dialog.querySelector('form');
+    solicitudEnCurso = { id, accion, textos };
+    solicitudTrigger = trigger;
+    dialog.querySelector('#solicitud-modal-kicker').textContent = textos.kicker;
+    dialog.querySelector('#solicitud-modal-title').textContent = textos.titulo;
+    dialog.querySelector('#solicitud-modal-resumen').textContent = textos.resumen;
+    dialog.querySelector('#solicitud-confirmar').textContent = textos.boton;
+    dialog.querySelector('[data-solicitud-campo="precio"]').hidden = !textos.precio;
+    dialog.querySelector('[data-solicitud-campo="motivo"]').hidden = !textos.motivo;
+    form.reset();
+    setSolicitudErrors({});
+    mostrarEstado(dialog.querySelector('#solicitud-form-status'), '', 'info');
+    openDialog(dialog, { isBusy: () => form.getAttribute('aria-busy') === 'true' });
+    (textos.precio ? form.elements.precio : textos.motivo ? form.elements.motivo : dialog.querySelector('#solicitud-confirmar')).focus();
+}
+
+function cerrarSolicitudModal() {
+    const dialog = document.querySelector('#solicitud-modal');
+    if (!dialog || dialog.querySelector('form').getAttribute('aria-busy') === 'true') return;
+    closeDialog(dialog);
+    solicitudTrigger?.isConnected ? solicitudTrigger.focus() : document.querySelector('#solicitudes-titulo, main h1')?.focus?.();
+    solicitudEnCurso = null;
+}
+
+async function enviarRespuestaSolicitud(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (!solicitudEnCurso || form.getAttribute('aria-busy') === 'true') return;
+    const { id, accion, textos } = solicitudEnCurso;
+    const status = form.querySelector('#solicitud-form-status');
     const cuerpo = { solicitudId: id, accion };
-    if (accion === 'ACEPTAR') {
-        if (!window.confirm('¿Aceptar esta solicitud? La publicación se marcará como vendida y las demás solicitudes se rechazarán.')) return;
-        if (solicitud.precio === null) {
-            const texto = window.prompt('La publicación no tiene precio. Indica el precio acordado en colones:');
-            if (texto === null) return;
-            const precio = Number(String(texto).replace(/\D/g, ''));
-            if (!(precio > 0)) { toast?.error('Indica un precio válido.'); return; }
-            cuerpo.precio = precio;
-        }
-    } else if (accion === 'RECHAZAR') {
-        const motivo = window.prompt('Motivo del rechazo (opcional):');
-        if (motivo === null) return;
-        if (motivo.trim()) cuerpo.motivo = motivo.trim();
-    } else if (!window.confirm(accion === 'CANCELAR' ? '¿Cancelar esta solicitud?' : '¿Confirmas tu respuesta sobre el flete?')) {
-        return;
+    const errores = {};
+    if (textos.precio) {
+        const precio = Number(form.elements.precio.value);
+        if (!(Number.isInteger(precio) && precio >= 1 && precio <= 9999999999)) errores.precio = 'Indica un precio entero entre ₡1 y ₡9.999.999.999.';
+        else cuerpo.precio = precio;
     }
+    if (textos.motivo && form.elements.motivo.value.trim()) cuerpo.motivo = form.elements.motivo.value.trim();
+    if (Object.keys(errores).length) { setSolicitudErrors(errores); mostrarEstado(status, 'Revisa el dato señalado.', 'error'); form.elements.precio.focus(); return; }
+    setSolicitudErrors({});
+    const progreso = iniciarProgreso(form.querySelector('#solicitud-confirmar'), 'Enviando respuesta…');
+    form.setAttribute('aria-busy', 'true');
+    mostrarEstado(status, 'Enviando respuesta…', 'info');
+    let listo = false;
     try {
+        // El servidor repite todas las validaciones (estado, dueño, precio, motivo) dentro de su transacción.
         const response = await request(SOLICITUDES_API, { method: 'PATCH', body: JSON.stringify(cuerpo) });
+        listo = true;
         toast?.success(response.message || 'Listo.');
-        await loadSolicitudes();
-        if (accion === 'ACEPTAR' && isActive('PRODUCTOR')) await loadPublications();
     } catch (error) {
-        if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
-        else toast?.error(error?.errors?.precio || error?.message || 'No pudimos responder la solicitud.');
+        if (error?.status === 401) { endExpiredSession(error?.authSessionVersion); return; }
+        // Los datos escritos se conservan para reintentar.
+        setSolicitudErrors(error?.errors ?? {});
+        mostrarEstado(status, [error?.message || 'No pudimos responder la solicitud.', ...erroresSinLugar(form, error?.errors)].join(' '), 'error');
+    } finally {
+        progreso.terminar();
+        form.setAttribute('aria-busy', 'false');
     }
+    if (!listo) return;
+    cerrarSolicitudModal();
+    await loadSolicitudes();
+    if (accion === 'ACEPTAR' && isActive('PRODUCTOR')) await loadPublications();
 }
 
 function setPublicationsView(view, message = '') {
@@ -494,9 +563,13 @@ function initializeSolicitudesUi() {
     for (const clave of ['hechas', 'recibidas', 'fletes']) {
         document.querySelector(`#sol-${clave}-list`)?.addEventListener('click', (event) => {
             const boton = event.target.closest('[data-solicitud-accion]');
-            if (boton) responderSolicitud(Number(boton.dataset.solicitudId), boton.dataset.solicitudAccion);
+            if (boton) responderSolicitud(Number(boton.dataset.solicitudId), boton.dataset.solicitudAccion, boton);
         });
     }
+    const dialog = document.querySelector('#solicitud-modal');
+    dialog?.querySelector('form')?.addEventListener('submit', enviarRespuestaSolicitud);
+    dialog?.querySelectorAll('[data-solicitud-cerrar]').forEach((b) => b.addEventListener('click', cerrarSolicitudModal));
+    dialog?.addEventListener('cancel', (event) => { event.preventDefault(); cerrarSolicitudModal(); });
 }
 
 function initializePublicationUi() {
