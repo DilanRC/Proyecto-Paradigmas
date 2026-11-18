@@ -28,8 +28,8 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-7/);
-    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-9/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-8/);
+    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-10/);
 });
 
 test('el panel no expone tablas ni lo que la plataforma no registra', async () => {
@@ -106,7 +106,7 @@ test('calidad de datos: lo opcional no es error y lo sano no compite con las inc
     assert.equal(a.datos.find((x) => x.tipo === 'fincas').tono, 'aviso');
     assert.equal(a.datos.some((x) => x.tipo === 'fotos'), false, 'un dato opcional no pide atención');
     assert.match(textoDetalle({ etiqueta: 'Monto ganador', valor: 1500000 }), /^₡1\s?500\s?000$/);
-    assert.equal(textoDetalle({ etiqueta: 'Estado del animal', valor: 'VENDIDO' }), 'Vendidas');
+    assert.equal(textoDetalle({ etiqueta: 'Estado del animal', valor: 'VENDIDO' }), 'Vendido');
     assert.equal(textoDetalle({ etiqueta: 'Ganador', valor: null }), '—');
 });
 

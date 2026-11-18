@@ -294,7 +294,7 @@ function tabla(etiquetaRegion, columnas, filas) {
         const tr = el('tr');
         celdas.forEach((contenido, i) => {
             const td = el('td', columnas[i][1] ?? null);
-            td.dataset.etiqueta = columnas[i][0];
+            td.dataset.label = columnas[i][0];
             if (contenido instanceof Node) td.append(contenido); else td.textContent = contenido ?? '—';
             tr.append(td);
         });
@@ -608,6 +608,8 @@ export function textoDetalle({ etiqueta: rotulo, valor }) {
     if (valor === null || valor === undefined) return '—';
     if (typeof valor === 'number') return rotulo.startsWith('Monto') ? formatoColones(valor) : formatoNumero(valor);
     if (/^\d{4}-\d{2}-\d{2}T/.test(valor)) return fecha(valor);
+    // Estado de un registro suelto (animal, publicación): en singular, no la etiqueta plural de los conteos.
+    if (rotulo.startsWith('Estado') && /^[A-Z_]+$/.test(valor)) return valor[0] + valor.slice(1).toLowerCase().replaceAll('_', ' ');
     return ESTADOS[valor] ? etiquetaEstado(valor) : valor;
 }
 
@@ -753,7 +755,7 @@ async function buscarPersonas(q) {
             li.append(b);
             ul.append(li);
         });
-        destino.replaceChildren(el('p', 'screen-reader-only', `${data.personas.length} personas encontradas`), ul);
+        destino.replaceChildren(el('p', 'screen-reader-only', data.personas.length === 1 ? '1 persona encontrada' : `${data.personas.length} personas encontradas`), ul);
     } catch (error) {
         if (pedido !== estado.busqueda) return;
         destino.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudo buscar.'));

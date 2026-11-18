@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="css/tokens.css?v=official-shell-2">
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/panel.css?v=official-shell-6">
+    <link rel="stylesheet" href="css/panel.css?v=official-shell-7">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
     <?php require dirname(__DIR__) . '/shared/admin-estilos.php'; ?>
     <script type="module" src="js/transportistas.js?v=admin-menu-8"></script>

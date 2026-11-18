@@ -703,3 +703,4 @@ body.rural-panel {
 html { scrollbar-gutter:stable; }
 /* Estado en vivo del encabezado («Conectando…», «En vivo», «Reconectando…»): ancho del texto más largo, sin saltos. */
 .rural-panel .page-header > [role="status"] { min-width:14ch; white-space:nowrap; text-align:right; }
+@media (max-width:620px) { .rural-panel .page-header > [role="status"] { text-align:left; } }
