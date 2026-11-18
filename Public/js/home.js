@@ -8,7 +8,7 @@
 // publicaciones, catálogo realmente vacío (bienvenida) y fallo de la consulta
 // (aviso con Reintentar). Un fallo de red no es "no hay ganado".
 
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
 import { montarCarrusel } from './shared/carousel.js';

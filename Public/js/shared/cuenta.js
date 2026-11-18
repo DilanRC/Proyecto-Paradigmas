@@ -10,7 +10,7 @@
 // el encabezado sin esperar, y se vuelve a confirmar con el servidor cuando tiene
 // más de VIGENCIA_PERFIL_MS. Las operaciones privadas las protege siempre PHP.
 
-import { request } from './api.js?v=auth-gate-17';
+import { request } from './api.js?v=auth-gate-18';
 import { readAuthSession } from './supabase-auth.js?v=session-4';
 import { clearPublicProfile, publicProfileForSession, syncPublicProfile } from './public-profile.js?v=profile-2';
 import { PUBLIC_DESTINATIONS } from './next.js?v=next-4';

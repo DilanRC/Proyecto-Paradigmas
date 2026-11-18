@@ -356,7 +356,11 @@ final class CompraSolicitud
                        pc.tbpersonatelefono AS compradortelefono,
                        o.tbtransportistaid AS transportistaid, ov.tbvehiculomodelo AS fletemodelo,
                        ptr.tbpersonaid AS transportistapersonaid, ptr.tbpersonanombre AS transportistanombre,
-                       ptr.tbpersonatelefono AS transportistatelefono
+                       ptr.tbpersonatelefono AS transportistatelefono,
+                       o.tbvehiculoid AS fletevehiculoid, o.tbtransportistaofertaprecio AS fleteprecio, p.tbfincaid AS fincaid,
+                       (SELECT MIN(f.tbtransportistafleteid) FROM tbtransportistaflete f WHERE f.tbcomprasolicitudid = s.tbcomprasolicitudid) AS viajeid,
+                       (SELECT MIN(f.tbtransportistafletefecha) FROM tbtransportistaflete f WHERE f.tbcomprasolicitudid = s.tbcomprasolicitudid) AS viajefecha,
+                       (SELECT COUNT(*) FROM tbanimalpublicacionanimal pa WHERE pa.tbanimalpublicacionid = s.tbanimalpublicacionid) AS animaleslote
                 FROM tbcomprasolicitud s
                 INNER JOIN tbanimalpublicacion p ON p.tbanimalpublicacionid = s.tbanimalpublicacionid
                 INNER JOIN tbproductor pr ON pr.tbproductorid = p.tbproductorvendedorid

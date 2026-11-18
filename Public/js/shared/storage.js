@@ -5,7 +5,7 @@
 // Cada persona escribe dentro de su propia carpeta (<id de usuario>/...), que
 // es lo que exige la política del bucket.
 
-import { request } from './api.js?v=auth-gate-17';
+import { request } from './api.js?v=auth-gate-18';
 import { getAccessToken } from './supabase-auth.js?v=session-4';
 
 export const BUCKET_PUBLICACIONES = 'publicaciones';

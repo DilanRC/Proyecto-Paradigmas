@@ -191,6 +191,10 @@ final class AdminDashboard
                 "SELECT s.tbcomprasolicitudfleteestado AS clave, COUNT(*) AS total FROM tbcomprasolicitud s
                  WHERE s.tbtransportistaofertaid IS NOT NULL AND s.tbcomprasolicitudfleteestado IS NOT NULL{$fSolicitud}
                  GROUP BY s.tbcomprasolicitudfleteestado", $pSolicitud),
+            // Fletes aceptados que todavía no tienen su viaje marcado como realizado (sin periodo: es un pendiente vigente).
+            'fletesSinViaje' => (int) $this->valor("SELECT COUNT(*) FROM tbcomprasolicitud s WHERE s.tbcomprasolicitudestado = 'ACEPTADA'
+                AND s.tbcomprasolicitudfleteestado = 'ACEPTADA'
+                AND NOT EXISTS (SELECT 1 FROM tbtransportistaflete f WHERE f.tbcomprasolicitudid = s.tbcomprasolicitudid)"),
             'viajesRegistrados' => [
                 'total' => (int) $viajes['total'],
                 'cabezas' => $viajes['cabezas'] === null ? null : (int) $viajes['cabezas'],
@@ -272,23 +276,14 @@ final class AdminDashboard
 
     // ───────────────────────────── F. Control ─────────────────────────────
 
-    public function control(array $periodo): array
+    /** Pendientes de administración: documentos de identidad por estado y cambios de correo sin conciliar. */
+    public function control(): array
     {
-        [$fBitacora, $pBitacora] = $this->rango('b.tbbitacorafecha', $periodo);
         return [
             'documentosPorEstado' => $this->conteoPor(
                 'SELECT tbpersonadocumentoestado AS clave, COUNT(*) AS total FROM tbpersona
                  WHERE tbpersonadocumentoruta IS NOT NULL GROUP BY tbpersonadocumentoestado'),
-            'bitacoraPorEntidad' => $this->conteoPor(
-                "SELECT b.tbbitacoraentidad AS clave, COUNT(*) AS total FROM tbbitacora b WHERE 1 = 1{$fBitacora}
-                 GROUP BY b.tbbitacoraentidad", $pBitacora),
-            'bitacoraPorAccion' => $this->conteoPor(
-                "SELECT b.tbbitacoraaccion AS clave, COUNT(*) AS total FROM tbbitacora b WHERE 1 = 1{$fBitacora}
-                 GROUP BY b.tbbitacoraaccion", $pBitacora),
             'correosPendientes' => (int) $this->valor("SELECT COUNT(*) FROM tbpersonacorreocambio WHERE tbpersonacorreocambioestado = 'PENDIENTE'"),
-            // Datos incompletos: no todos son errores (un dato opcional no lo es); la clasificación está en la vista DIAGNOSTICO.
-            // Mismo conteo que la vista DIAGNOSTICO (una sola definición); el detalle y la clasificación están allí.
-            'incompletos' => array_map(static fn (array $d): int => $d['total'], (new AdminDiagnostico($this->conexion))->resumen()),
         ];
     }
 

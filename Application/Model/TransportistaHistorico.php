@@ -139,13 +139,13 @@ final class TransportistaHistorico
         $fleteId = $this->siguienteId('tbtransportistaflete', 'tbtransportistafleteid');
         $sentencia = $this->conexion->prepare(
             'INSERT INTO tbtransportistaflete
-             (tbtransportistafleteid, tbtransportistaid, tbproductororigenid,
+             (tbtransportistafleteid, tbtransportistaid, tbcomprasolicitudid, tbproductororigenid,
               tbfincaorigenid, tbdireccionorigenid, tbdirecciondestinoid,
               tbvehiculoid, tbtransportistafletefecha, tbtransportistafletehora,
               tbtransportistafletedescripcion, tbtransportistafletecantidadcabezas,
               tbtransportistafletedistanciakm, tbtransportistafleteprecio,
               tbpagometodoid, tbtransportistafleteorigen)
-             VALUES (:id, :transportistaId, :productorOrigenId, :fincaOrigenId,
+             VALUES (:id, :transportistaId, :solicitudId, :productorOrigenId, :fincaOrigenId,
               :direccionOrigenId, :direccionDestinoId, :vehiculoId, :fecha, :hora,
               :descripcion, :cantidadCabezas, :distanciaKm, :precio,
               :pagoMetodoId, :origen)'
@@ -153,6 +153,7 @@ final class TransportistaHistorico
         $sentencia->execute([
             'id' => $fleteId,
             'transportistaId' => $transportistaId,
+            'solicitudId' => $datos['solicitudId'] ?? null,
             'productorOrigenId' => $datos['productorOrigenId'] ?? null,
             'fincaOrigenId' => $datos['fincaOrigenId'] ?? null,
             'direccionOrigenId' => $datos['direccionOrigenId'] ?? null,
@@ -164,7 +165,7 @@ final class TransportistaHistorico
             'cantidadCabezas' => $datos['cantidadCabezas'] ?? null,
             'distanciaKm' => $datos['distanciaKm'] ?? null,
             'precio' => $datos['precio'] ?? null,
-            'pagoMetodoId' => $datos['pagoMetodoId'],
+            'pagoMetodoId' => $datos['pagoMetodoId'] ?? null,
             'origen' => $datos['origen'],
         ]);
 

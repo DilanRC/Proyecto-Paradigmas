@@ -1,6 +1,6 @@
 // Subastas en el panel admin (DEC-SUBASTA-001): solo lectura, en vivo. api.js se versiona por la cadena de caché de
 // las rutas admin (MEMORIA.md, Cuidados #11). El tiempo real llega por Supabase Realtime (shared/tiempo-real.js).
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { createDialogController } from './shared/dialog.js?v=dialog-2';
 import { createToast } from './shared/toast.js';
 import { agrupar, alCambiarConexion, escuchar } from './shared/tiempo-real.js?v=tiempo-real-1';
@@ -69,7 +69,7 @@ function initialize() {
         acciones.className = 'row-actions';
         const ver = document.createElement('button');
         ver.type = 'button';
-        ver.className = 'action action--editar';
+        ver.className = 'action action--ver';
         ver.textContent = 'Ver';
         ver.addEventListener('click', () => abrirDetalle(s.subastaId));
         acciones.append(ver);

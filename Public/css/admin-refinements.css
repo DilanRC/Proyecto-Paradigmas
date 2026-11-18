@@ -235,3 +235,22 @@ html[data-theme='light'] .rural-panel .filter input[type='date'] {
   outline: 3px solid color-mix(in srgb, var(--admin-primary) 42%, transparent);
   outline-offset: 2px;
 }
+
+/* Detalle de la bitácora legible: etiqueta y valor en la misma fila, y los cambios en una tabla «campo, antes, después». */
+#detalle-contenido { grid-template-columns:minmax(96px, max-content) minmax(0, 1fr); gap:10px 20px; align-items:baseline; }
+#detalle-contenido dt { margin:0; }
+#detalle-contenido dd { color:var(--admin-text); overflow-wrap:anywhere; }
+.bitacora-cambios { display:grid; gap:10px; margin-top:6px; padding-top:14px; border-top:1px solid var(--admin-line); }
+.bitacora-cambios h3 { margin:0; color:var(--admin-text); font-size:14px; }
+.bitacora-cambios p { margin:0; color:var(--admin-text-soft); }
+.bitacora-cambios table { width:100%; min-width:0 !important; border-collapse:collapse; font-size:13px !important; }
+.bitacora-cambios th,
+.bitacora-cambios td { padding:7px 10px; border-bottom:1px solid var(--admin-line); color:var(--admin-text); text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+.bitacora-cambios thead th { color:var(--admin-text-soft); font-size:11px; font-weight:750; letter-spacing:.04em; text-transform:uppercase; }
+.bitacora-cambios tbody th { width:34%; color:var(--admin-text-soft); font-weight:700; }
+.bitacora-cambios details summary { min-height:32px; color:var(--admin-text-soft); font-size:12px; font-weight:700; cursor:pointer; }
+.rural-panel .bitacora-cambios tbody tr { display:table-row !important; }
+.rural-panel .bitacora-cambios tbody td,
+.rural-panel .bitacora-cambios tbody th { display:table-cell !important; }
+.rural-panel .bitacora-cambios tbody td::before { display:none !important; content:none !important; }
+@media (max-width:620px) { #detalle-contenido { grid-template-columns:1fr; gap:2px 0; } #detalle-contenido dd { margin-bottom:8px; } }

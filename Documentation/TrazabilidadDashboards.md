@@ -75,8 +75,7 @@ Corrección del 17/11: antes el flete desconocido valía 0 y el total se mostrab
 
 `GET|POST api/v1/admin/dashboard` (`AdminAuthorization::require`, el administrador puede no tener Persona).
 Vistas: `RESUMEN` (secciones A-F), `EVIDENCIA` (nodo + estado, paginada, máx. 50), `TRANSPORTISTAS` (paginada, con
-`q`, `estado` ACTIVO|INACTIVO y `orden` de una lista cerrada), `PERSONA` (expediente o búsqueda por nombre) y
-`DIAGNOSTICO` (calidad de datos; ver §4.1). Nada devuelve correo, teléfono, identificación ni ruta de documentos.
+`q`, `estado` ACTIVO|INACTIVO y `orden` de una lista cerrada), y `PERSONA` (expediente o búsqueda por nombre). Nada devuelve correo, teléfono, identificación ni ruta de documentos.
 
 | Sección | Indicador | Fuente | Periodo |
 |---|---|---|---|
@@ -84,8 +83,8 @@ Vistas: `RESUMEN` (secciones A-F), `EVIDENCIA` (nodo + estado, paginada, máx. 5
 | B. Inventario | animales por estado; publicaciones por estado **vigente** (periodo abierto del histórico); nuevas; cambios de estado; activas por especie y provincia; con solicitudes pendientes | `tbanimal`, `tbanimalpublicacion`, `tbanimalpublicacionestadoperiodo` | alta y cambios: periodo; estado: actual |
 | C. Comercialización | Me interesa (registros, personas, publicaciones); solicitudes creadas y respondidas; ventas por canal (animales, operaciones, monto) | `tbanimalpublicacioninteraccion`, `tbcomprasolicitud`, `tbventa` | fecha de cada hecho |
 | D. Subastas | mismas fórmulas que el vendedor sobre todas las subastas + pujas, por especie y provincia | `tbsubasta`, `tbsubastapuja` | fecha del hecho |
-| E. Transporte | ofertas por estado y capacidad; solicitudes de flete por estado; viajes registrados (marcado sin instrumentar); por transportista: ofertas, capacidad, vehículos, solicitudes recibidas/aceptadas/rechazadas, viajes, cabezas, km, ingresos registrados, promedio por viaje | `tbtransportistaoferta`, `tbcomprasolicitud`, `tbtransportistaflete` | solicitudes y viajes: periodo |
-| F. Control | documentos por estado, bitácora por entidad y acción, correos pendientes, datos incompletos (incluye subastas adjudicadas sin `tbventa`: el cierre siempre la escribe, así que solo aparece con datos cargados por otro camino) | `tbpersona`, `tbbitacora`, `tbpersonacorreocambio` | bitácora: periodo |
+| E. Transporte | ofertas por estado y capacidad; solicitudes de flete por estado; viajes realizados (`REGISTRAR_VIAJE`, §4.1) y fletes aceptados sin viaje; por transportista: ofertas, capacidad, vehículos, solicitudes recibidas/aceptadas/rechazadas, viajes, cabezas, km, ingresos registrados, promedio por viaje | `tbtransportistaoferta`, `tbcomprasolicitud`, `tbtransportistaflete` | solicitudes y viajes: periodo |
+| F. Control | documentos de identidad por estado y cambios de correo pendientes | `tbpersona`, `tbpersonacorreocambio` | foto actual |
 
 Sin doble conteo: una adjudicación escribe `tbcompra` y `tbventa`; solo se suma `tbventa`. Una solicitud de un lote
 escribe una venta por animal: «operaciones» cuenta solicitudes distintas y «animales» las filas.
@@ -93,28 +92,18 @@ escribe una venta por animal: «operaciones» cuenta solicitudes distintas y «a
 El embudo `Publicación → Me interesa → Solicitud → Venta` **no es una cohorte**: cada etapa cuenta su propio hecho en
 el periodo. No afirma que todo comprador pasó por «Me interesa».
 
-### 4.1 Calidad de datos (`vista=DIAGNOSTICO`, `AdminDiagnostico`)
+### 4.1 Viajes realizados (DEC-VIAJE-001)
 
-Sin `tipo` devuelve el resumen de los seis; con `tipo` (lista cerrada `AdminDiagnostico::TIPOS`) sus filas paginadas.
-La clasificación se calcula en SQL con la misma condición en el resumen y en la lista; `control.incompletos` del
-resumen usa el mismo conteo. Las marcas de demostración salen de las cargas (`[demo-dashboard]`, `MUESTRA ACAD…`,
-identificaciones `DMDASH*`/`DEMO-*`), nunca de parecido de nombres. La identificación no se devuelve.
+Aceptar un flete no es hacer el viaje. En Mi panel → Fletes el transportista pulsa «Marcar viaje realizado» sobre un
+flete aceptado (`PATCH api/v1/solicitudes-compra`, `accion = REGISTRAR_VIAJE`, `distanciaKm` y `cantidadCabezas`
+opcionales). PHP escribe `tbtransportistaflete` con `tbcomprasolicitudid` (uno por solicitud: 409 si ya existe), el
+vehículo de la oferta, la finca y el vendedor de origen, las cabezas (por defecto, los animales de la publicación) y el
+precio de la oferta si lo tiene (si no, queda desconocido). Fecha: hoy en Costa Rica, nunca futura ni anterior a la
+aceptación del flete. Locks: solicitud → viaje → bitácora → transacción; bitácora `REGISTRAR_VIAJE`.
+El panel admin muestra la etapa «Viaje realizado» y el pendiente «Fletes aceptados sin viaje registrado».
 
-| Diagnóstico | Condición | Dato | Clasificación por fila |
-|---|---|---|---|
-| Subastas adjudicadas sin venta | `FINALIZADA` sin `tbventa` del mismo animal, origen `API_SUBASTAS` y fecha ≥ inicio de la subasta | obligatorio | siempre inconsistencia; la causa dice si el cierre consta en la bitácora |
-| Ventas sin comprador identificado | `tbcompradorid` y `tbproductorcompradorid` nulos | opcional | inconsistencia si la compra de la misma operación lo identifica; sin evidencia si la persona ganadora ya no existe; si no, opcional |
-| Fincas sin dirección | sin `tbfincadireccion` | opcional | inconsistencia si el dueño no existe; revisión si está activa; opcional si está inactiva |
-| Animales sin especie | `tbespecieid` nulo (antes se rotulaba «sin tipo de ganado»: la consulta mide especie) | obligatorio | revisión si tiene dueño; sin evidencia si no |
-| Publicaciones sin foto | URL vacía (no se descargan archivos) | opcional | opcional |
-| Ofertas de flete sin precio | `ACTIVA` y precio nulo («a convenir» es válido) | opcional | opcional |
-
-Estado en staging (18/11/2026, consultas de solo lectura): 8 adjudicadas sin venta (24, 25, 26, 29, 32, 33, 34, 35),
-todas con `[demo-dashboard]`, sin ningún movimiento en la bitácora y con fechas de microsegundos idénticos
-(`…05:14:22.483972`): se escribieron por SQL fuera de la aplicación (el script actual cierra con
-`SubastaCierreService`, que sí registra la venta). 2 ventas sin comprador (2 y 3, subastas 2 y 18 de la muestra
-académica): la persona ganadora (pujas de ₡9.999.999.999) ya no existía cuando se procesó el cierre; queda un
-`tbcomprador` huérfano que no se usa para reparar. Finca 1 («f1») y animal 1 pertenecen a registros sin Persona.
+La revisión de calidad de datos y la sección de bitácora se quitaron del panel (decisión de Dilan, 18/11): los datos de
+demostración de staging se conservan. La investigación de esos registros quedó en el registro de cambios.
 
 ## 5. Política de datos nulos
 
@@ -131,18 +120,16 @@ académica): la persona ganadora (pujas de ₡9.999.999.999) ya no existía cuan
   ventas por canal sin la compra espejo, fletes ≠ viajes), periodo vacío → null, 422 por campo, evidencia paginada con
   el mismo total que el indicador, expediente sin datos sensibles, 404.
 - `Tests/frontend/mi_dashboard.test.mjs` y `dashboard.test.mjs`: tokens AA en ambos temas, color por significado,
-  segunda señal, evidencia conectada por ids, viajes sin instrumentar.
-- `Tests/admin_diagnostico_test.php`: cada diagnóstico separa obligatorio, opcional, desconocido, recuperable y demo
-  (casos en una transacción que se deshace); lista cerrada, máx. 50 filas, sin identificación en las filas.
+  segunda señal, evidencia conectada por ids, viajes como etapa propia (nunca un flete aceptado).
+- `Tests/solicitudes_compra_test.php`: el viaje solo lo registra el transportista del flete aceptado, una vez, sin fecha
+  futura ni anterior a la aceptación, sin pago inventado y con bitácora.
 - `Tests/api_auth_admin_http_test.php`: el endpoint nuevo exige sesión en todos sus verbos.
 
 ## 7. Pendientes de aprobación de Calidad
 
 | Decisión | Dato necesario | Por qué no se infiere | Riesgo | Alternativa sin cambiar el esquema |
 |---|---|---|---|---|
-| Registrar viajes realizados | flujo que escriba `tbtransportistaflete` al terminar un flete, con su `tbcomprasolicitudid` | un flete aceptado no garantiza el viaje; no hay asociación segura solicitud → viaje | mostrar fletes aceptados como viajes infla km, cabezas e ingresos | botón «Marcar viaje realizado» en la bandeja del transportista que use `TransportistaHistorico` (la tabla no tiene `tbcomprasolicitudid`: el vínculo iría en la descripción o necesita aprobar una columna) |
 | Fecha de alta de personas | `tbpersona` sin fecha | la bitácora no es la fuente de hechos | «nuevas altas» sin dato | aprobar columna `tbpersonafecharegistro` (4 lugares + diccionario) |
 | Pago efectivo | estado de pago | adjudicar no es pagar | confundir monto adjudicado con dinero cobrado | mantener el texto «monto acordado/adjudicado» |
 | Índice de confiabilidad | política de cálculo | no aprobada | puntaje arbitrario | no mostrar |
-| Limpiar datos de demostración en staging | autorización del equipo | son hechos compartidos | borrar algo real | limpieza transaccional de las 8 subastas demo (pujas, animal, notificaciones) |
 | Cierre programado de subastas | tarea periódica | hoy el cierre es perezoso | `tbventafecha` puede caer días después del fin | usar `fechaFin` para el hecho «subasta cerrada» (ya aplicado) |

@@ -724,6 +724,8 @@ html[data-theme='light'] .rural-panel th {
 .rural-panel .row-actions .action--editar::before { color:#e6a06f !important; }
 .rural-panel .row-actions .action--desactivar::before { color:var(--admin-danger) !important; }
 .rural-panel .row-actions .action--reactivar::before { color:var(--admin-success) !important; }
+/* Retirar (publicaciones, ofertas de flete): ícono «prohibido», además del texto. */
+.rural-panel .row-actions .action--retirar::before { content:'\f05e' !important; color:var(--admin-danger) !important; }
 
 .rural-panel .empty-state,
 .rural-panel .error-state {

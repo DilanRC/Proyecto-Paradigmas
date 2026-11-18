@@ -38,6 +38,25 @@ test('fechas en hora local, actor legible y solo los filtros con valor', async (
 });
 
 test('el detalle muestra los datos con textContent, nunca como HTML', () => {
-    assert.match(js, /pre\.textContent = value == null \? '—' : JSON\.stringify\(value, null, 2\)/);
+    assert.match(js, /pre\.textContent = JSON\.stringify\(\{ antes: item\.datosAnteriores \?\? null, despues: item\.datosNuevos \?\? null \}, null, 2\)/);
     assert.doesNotMatch(js, /innerHTML/);
+});
+
+test('el detalle de la bitácora se lee sin JSON: acción, área, campos y solo lo que cambió', async () => {
+    const { cambiosEvento, nombreAccion, nombreAreaBitacora, nombreCampo, nombreOrigen } = await import('../../Public/js/bitacora.js');
+    assert.equal(`${nombreAccion('REGISTRO_PUBLICO')} · ${nombreAreaBitacora('PERSONA')}`, 'Registro público · Persona');
+    assert.equal(nombreAccion('ALGO_NUEVO'), 'Algo nuevo');
+    assert.equal(nombreOrigen('API_REGISTRO_PUBLICO'), 'Registro público');
+    assert.equal(nombreOrigen('API_SUBASTAS'), 'Subastas');
+    assert.equal(nombreCampo('capacidadesCreadas'), 'Capacidades creadas');
+    assert.equal(nombreCampo('personaId'), 'Persona (id)');
+    assert.deepEqual(cambiosEvento(null, { fincasProductor: ['Finca DRC'], capacidadesCreadas: ['COMPRADOR', 'TRANSPORTISTA'], realizadoPor: 'x@y.cr' }), [
+        { campo: 'Fincas productor', antes: null, despues: 'Finca DRC' },
+        { campo: 'Capacidades creadas', antes: null, despues: 'Comprador, Transportista' },
+    ], 'una creación lista sus datos; el correo de quien lo hizo ya está en «Hecho por»');
+    assert.deepEqual(cambiosEvento({ estado: 'ACTIVA', titulo: 'Vaca' }, { estado: 'FINALIZADA', titulo: 'Vaca' }),
+        [{ campo: 'Estado', antes: 'Activa', despues: 'Finalizada' }], 'un cambio muestra solo los campos que cambiaron');
+    const js = read('Public/js/bitacora.js');
+    assert.match(js, /Ver datos técnicos/, 'el JSON original sigue disponible, plegado');
+    assert.doesNotMatch(js, /\.innerHTML\s*=/);
 });

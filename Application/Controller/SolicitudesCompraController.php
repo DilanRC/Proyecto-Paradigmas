@@ -14,6 +14,7 @@ use Application\Model\PagoMetodo;
 use Application\Model\Productor;
 use Application\Model\ProductorFinca;
 use Application\Model\Transportista;
+use Application\Model\TransportistaHistorico;
 use Application\Model\TransportistaOferta;
 use Application\Model\TransportistaVehiculo;
 use Application\Model\Direccion;
@@ -28,7 +29,7 @@ use Throwable;
  */
 final class SolicitudesCompraController
 {
-    private const ACCIONES = ['CANCELAR', 'ACEPTAR', 'RECHAZAR', 'ACEPTAR_FLETE', 'RECHAZAR_FLETE'];
+    private const ACCIONES = ['CANCELAR', 'ACEPTAR', 'RECHAZAR', 'ACEPTAR_FLETE', 'RECHAZAR_FLETE', 'REGISTRAR_VIAJE'];
     private const ORIGEN = 'API_SOLICITUDES_COMPRA';
 
     private CompraSolicitud $solicitudes;
@@ -39,6 +40,7 @@ final class SolicitudesCompraController
     private TransportistaOferta $ofertas;
     private PagoMetodo $pagos;
     private Bitacora $bitacora;
+    private TransportistaHistorico $viajes;
     private string $solicitudId;
 
     public function __construct(
@@ -54,6 +56,7 @@ final class SolicitudesCompraController
         $this->ofertas = new TransportistaOferta($conexion, new Direccion($conexion));
         $this->pagos = new PagoMetodo($conexion);
         $this->bitacora = new Bitacora($conexion, $actor);
+        $this->viajes = new TransportistaHistorico($conexion);
         $this->solicitudId = $this->normalizarSolicitudId($solicitudId);
     }
 
@@ -170,10 +173,11 @@ final class SolicitudesCompraController
 
     private function responder(array $cuerpo): array
     {
+        $accion = is_string($cuerpo['accion'] ?? null) ? mb_strtoupper(trim($cuerpo['accion']), 'UTF-8') : '';
+        if ($accion === 'REGISTRAR_VIAJE') return $this->registrarViaje($cuerpo);
         $this->rechazarCamposDesconocidos($cuerpo, ['solicitudId', 'accion', 'motivo', 'precio']);
         $errores = [];
         $id = $this->entero($cuerpo['solicitudId'] ?? null, 'solicitudId', $errores, true);
-        $accion = is_string($cuerpo['accion'] ?? null) ? mb_strtoupper(trim($cuerpo['accion']), 'UTF-8') : '';
         if (!in_array($accion, self::ACCIONES, true)) $errores['accion'] = 'Use ' . implode(', ', self::ACCIONES) . '.';
         $motivo = $this->texto($cuerpo['motivo'] ?? null, 'motivo', 250, $errores);
         $precio = $this->precio($cuerpo['precio'] ?? null, $errores);
@@ -209,6 +213,79 @@ final class SolicitudesCompraController
             'RECHAZAR' => 'Solicitud rechazada.', 'ACEPTAR_FLETE' => 'Flete aceptado.', 'RECHAZAR_FLETE' => 'Flete rechazado.',
         ];
         return $this->respuesta(true, $mensajes[$accion], ['solicitud' => $solicitud]);
+    }
+
+    /**
+     * Viaje realizado (DEC-VIAJE-001): el transportista del flete aceptado lo marca como hecho y queda un registro en
+     * tbtransportistaflete enlazado a la solicitud. Uno por solicitud (409 si ya existe). Cabezas por defecto = animales
+     * de la publicación; precio por defecto = el de la oferta (puede quedar desconocido); fecha = hoy en Costa Rica,
+     * nunca futura ni anterior a la aceptación del flete. Locks: solicitud → viaje → bitácora → transacción.
+     */
+    private function registrarViaje(array $cuerpo): array
+    {
+        $this->rechazarCamposDesconocidos($cuerpo, ['solicitudId', 'accion', 'fecha', 'cantidadCabezas', 'distanciaKm', 'precio']);
+        $errores = [];
+        $id = $this->entero($cuerpo['solicitudId'] ?? null, 'solicitudId', $errores, true);
+        $hoy = (new \DateTimeImmutable('now', new \DateTimeZone('America/Costa_Rica')))->format('Y-m-d');
+        $fecha = $cuerpo['fecha'] ?? null;
+        if ($fecha === null || $fecha === '') {
+            $fecha = $hoy;
+        } elseif (!is_string($fecha) || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $fecha, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            $errores['fecha'] = 'Use una fecha AAAA-MM-DD.';
+        } elseif ($fecha > $hoy) {
+            $errores['fecha'] = 'El viaje no puede tener una fecha futura.';
+        }
+        $cabezas = null;
+        if (($cuerpo['cantidadCabezas'] ?? null) !== null && $cuerpo['cantidadCabezas'] !== '') {
+            $cabezas = filter_var(is_bool($cuerpo['cantidadCabezas']) ? false : $cuerpo['cantidadCabezas'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000]]);
+            if ($cabezas === false) { $errores['cantidadCabezas'] = 'Debe ser un entero entre 1 y 1000.'; $cabezas = null; }
+        }
+        $distancia = null;
+        if (($cuerpo['distanciaKm'] ?? null) !== null && $cuerpo['distanciaKm'] !== '') {
+            $valor = $cuerpo['distanciaKm'];
+            if (is_bool($valor) || !is_numeric($valor) || (float) $valor <= 0 || (float) $valor > 5000) $errores['distanciaKm'] = 'Debe ser un número entre 0 y 5000.';
+            else $distancia = round((float) $valor, 2);
+        }
+        $precio = $this->precio($cuerpo['precio'] ?? null, $errores);
+        if ($errores !== []) throw new HttpException('Revise los campos indicados.', 422, null, $errores);
+
+        $solicitud = $this->solicitudes->ejecutarConBloqueoAlta(
+            fn (): array => $this->viajes->ejecutarConBloqueoFlete(
+                fn (): array => $this->bitacora->ejecutarConBloqueoAlta(
+                    fn (): array => $this->transaccion(function () use ($id, $fecha, $cabezas, $distancia, $precio): array {
+                        $fila = $this->solicitudes->buscar($id, true);
+                        if ($fila === null || (int) ($fila['transportistapersonaid'] ?? 0) !== (int) $this->actor->personaId) {
+                            throw new HttpException('La solicitud no existe.', 404);
+                        }
+                        if ($fila['estado'] !== 'ACEPTADA' || $fila['fleteestado'] !== 'ACEPTADA') {
+                            throw new HttpException('Solo se registra el viaje de un flete aceptado.', 409);
+                        }
+                        if ($fila['viajeid'] !== null) throw new HttpException('El viaje de esta solicitud ya está registrado.', 409);
+                        // La respuesta se guarda en UTC; se compara en el día de Costa Rica, como la fecha del viaje.
+                        $aceptado = $fila['fleterespuestafecha'] === null ? '' : (new \DateTimeImmutable((string) $fila['fleterespuestafecha'], new \DateTimeZone('UTC')))
+                            ->setTimezone(new \DateTimeZone('America/Costa_Rica'))->format('Y-m-d');
+                        if ($aceptado !== '' && $fecha < $aceptado) {
+                            throw new HttpException('Revise los campos indicados.', 422, null, ['fecha' => 'El viaje no puede ser anterior a la aceptación del flete.']);
+                        }
+                        $anterior = $this->presentar($fila, 'TRANSPORTISTA');
+                        $viajeId = $this->viajes->registrarFlete((int) $fila['transportistaid'], [
+                            'solicitudId' => (int) $fila['solicitudid'], 'productorOrigenId' => (int) $fila['vendedorid'],
+                            'fincaOrigenId' => $fila['fincaid'] === null ? null : (int) $fila['fincaid'],
+                            'vehiculoId' => $fila['fletevehiculoid'] === null ? null : (int) $fila['fletevehiculoid'],
+                            'fecha' => $fecha, 'descripcion' => mb_substr('Viaje de la solicitud de compra · ' . $fila['titulo'], 0, 500),
+                            'cantidadCabezas' => $cabezas ?? max(1, (int) $fila['animaleslote']),
+                            'distanciaKm' => $distancia, 'precio' => $precio ?? ($fila['fleteprecio'] === null ? null : (float) $fila['fleteprecio']),
+                            'pagoMetodoId' => $fila['pagometodoid'] === null ? null : (int) $fila['pagometodoid'], 'origen' => self::ORIGEN,
+                        ]);
+                        $nueva = $this->presentar($this->solicitudes->buscar($id), 'TRANSPORTISTA');
+                        $this->bitacora->registrar('REGISTRAR_VIAJE', (string) $id, $anterior, $nueva + ['viajeId' => $viajeId], $this->solicitudId,
+                            entidad: 'COMPRA_SOLICITUD', origen: self::ORIGEN);
+                        return $nueva;
+                    }),
+                ),
+            ),
+        );
+        return $this->respuesta(true, 'Viaje registrado.', ['solicitud' => $solicitud]);
     }
 
     private function exigirPendiente(array $fila): void
@@ -319,6 +396,8 @@ final class SolicitudesCompraController
             'flete' => $f['ofertaid'] === null ? null : [
                 'ofertaId' => (int) $f['ofertaid'],
                 'estado' => $f['fleteestado'],
+                'viajeRegistrado' => $f['viajeid'] !== null,
+                'viajeFecha' => $f['viajefecha'],
                 'vehiculo' => $f['fletemodelo'],
                 'transportista' => $contacto((string) $f['transportistanombre'], $f['transportistatelefono'], $fleteAceptado),
             ],

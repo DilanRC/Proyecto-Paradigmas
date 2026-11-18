@@ -6,11 +6,11 @@ declare(strict_types=1);
  * Dashboard administrativo (DEC-DASHBOARD-002): cada número del resumen se concilia contra una consulta SQL
  * independiente sobre los hechos guardados, sin importar qué datos tenga la base local (más útil con
  * Tools/seed-dashboard-demo.php). Además: validación de la consulta, paginación, privacidad del expediente y que los
- * viajes sin flujo de registro se declaren "sin instrumentar".
+ * hechos sin flujo de registro (pagos) se declaren "sin instrumentar".
  */
 
 require __DIR__ . '/bootstrap.php';
-foreach (['Notificacion', 'Subasta', 'AdminDiagnostico', 'AdminDashboard'] as $modelo) require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
+foreach (['Notificacion', 'Subasta', 'AdminDashboard'] as $modelo) require_once dirname(__DIR__) . "/Application/Model/{$modelo}.php";
 require_once dirname(__DIR__) . '/Application/Controller/AdminDashboardController.php';
 
 use Application\Controller\AdminDashboardController;
@@ -56,7 +56,10 @@ $canal = $d['comercializacion']['ventasPorCanal']['SUBASTA'] ?? ['animales' => 0
 $ventasSubasta = (int) $uno("SELECT COUNT(*) FROM tbventa WHERE tbventaorigen = 'API_SUBASTAS' AND tbcomprasolicitudid IS NULL");
 test_assert($canal['animales'] === $ventasSubasta, 'ventas por subasta = filas de tbventa (sin la compra espejo)');
 test_assert($canal['animales'] === $s['estados']['adjudicadas']['total'], 'cada adjudicación es exactamente una venta');
-test_assert($d['control']['incompletos']['adjudicadasSinVenta'] === 0, 'el cierre siempre deja la venta: ninguna adjudicada sin tbventa');
+test_assert((int) $uno("SELECT COUNT(*) FROM tbsubasta s WHERE s.tbsubastaestado = 'FINALIZADA' AND NOT EXISTS (
+    SELECT 1 FROM tbventa v WHERE v.tbanimalid = s.tbanimalid AND v.tbventaorigen = 'API_SUBASTAS')") === 0,
+    'el cierre siempre deja la venta: ninguna adjudicada sin tbventa');
+test_assert(!isset($d['control']['incompletos']) && !isset($d['control']['bitacoraPorEntidad']), 'el resumen no trae revisión de datos ni bitácora');
 test_assert(abs($canal['monto'] - $montoSql) < 0.01, 'el monto de ventas por subasta coincide con el adjudicado');
 
 $solicitud = $d['comercializacion']['ventasPorCanal']['SOLICITUD'] ?? null;
@@ -67,12 +70,12 @@ if ($solicitud !== null) {
 
 // Transporte: un flete aceptado nunca aparece como viaje.
 $t = $d['transporte'];
-test_assert($t['viajesInstrumentados'] === false, 'viajes realizados declarados sin instrumentar');
+test_assert($t['viajesInstrumentados'] === true, 'los viajes realizados se registran (REGISTRAR_VIAJE)');
 test_assert($t['viajesRegistrados']['total'] === (int) $uno('SELECT COUNT(*) FROM tbtransportistaflete'), 'viajes = solo tbtransportistaflete');
 test_assert(($t['solicitudesFletePorEstado']['ACEPTADA'] ?? 0) === (int) $uno(
     "SELECT COUNT(*) FROM tbcomprasolicitud WHERE tbtransportistaofertaid IS NOT NULL AND tbcomprasolicitudfleteestado = 'ACEPTADA'"),
     'fletes aceptados vienen de la solicitud, no de los viajes');
-test_assert(isset($d['instrumentacion']['viajesRealizados']['motivo']), 'el motivo de lo no instrumentado viaja con los datos');
+test_assert(isset($d['instrumentacion']['pagos']['motivo']) && !isset($d['instrumentacion']['viajesRealizados']), 'el motivo de lo no instrumentado viaja con los datos');
 
 // ───── Periodo vacío: el pasado lejano no tiene hechos y los porcentajes quedan en null, no en 0 ─────
 $vacio = $ok($controlador->procesar('GET', ['desde' => '2001-01-01', 'hasta' => '2001-01-31']));

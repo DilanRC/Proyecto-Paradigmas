@@ -1,7 +1,7 @@
 // Banda "Subastas en vivo" de Explorar: las subastas activas como evento, con su contador y la puja más alta.
 // Se actualiza sola por Supabase Realtime (tópico `subastas`) y cada 30 s por si el WebSocket no está.
 
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { formatPrice } from './explore.js?v=explore-16';
 import { agrupar, alCambiarConexion, escuchar } from './shared/tiempo-real.js?v=tiempo-real-1';
 import { describirAnimal, tiempoRestante } from './subastas.js?v=subastas-8';

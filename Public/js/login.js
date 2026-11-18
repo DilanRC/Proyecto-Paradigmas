@@ -1,9 +1,9 @@
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { getAccessToken, signInWithPassword, signOut } from './shared/supabase-auth.js?v=session-4';
 import { readPublicProfile, syncPublicProfile } from './shared/public-profile.js?v=profile-2';
 import { safeNext } from './shared/next.js?v=next-4';
 import { CONFIRMACION_PENDIENTE_MESSAGE, completarRegistroPendiente, leerBorradorRegistro } from './shared/registro-pendiente.js?v=pendiente-4';
-import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-17';
+import { clearAdminBrowserSession, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-18';
 import { marcarAvisoDocumento } from './shared/aviso-documento.js?v=aviso-1';
 import { ESTADO_CUENTA, estadoPorError } from './shared/estado-cuenta.js?v=estado-cuenta-1';
 

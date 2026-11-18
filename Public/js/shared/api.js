@@ -1,5 +1,5 @@
-import './auth-gate.js?v=auth-gate-17';
-import './admin-ui.js?v=admin-18';
+import './auth-gate.js?v=auth-gate-18';
+import './admin-ui.js?v=admin-19';
 import { AuthError, authSessionGeneration, authSessionVersion, getAccessToken, readAuthSession } from './supabase-auth.js?v=session-4';
 
 // Token Bearer vigente en esta pestaña (Supabase/proveedor de identidad).

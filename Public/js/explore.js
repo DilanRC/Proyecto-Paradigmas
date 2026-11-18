@@ -4,7 +4,7 @@
 // hay recomendación ni ranking: este módulo formatea lo que llega y lo pinta.
 // Las funciones de formato se exportan puras para poder probarlas sin DOM.
 
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import {
     inicializarUbicacionAutomatica,
     leerUbicacionUsuario,

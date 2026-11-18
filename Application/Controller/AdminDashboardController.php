@@ -10,7 +10,6 @@ require_once dirname(__DIR__) . '/Service/DashboardService.php';
 
 use Application\HttpException;
 use Application\Model\AdminDashboard;
-use Application\Model\AdminDiagnostico;
 use Application\Model\Subasta;
 use Application\Service\DashboardService;
 use Application\Service\SubastaCierreService;
@@ -24,13 +23,11 @@ use PDO;
  *  - EVIDENCIA: filas paginadas que explican un nodo (`nodo`, `estado` opcional, `pagina`, `tamanoPagina`).
  *  - TRANSPORTISTAS: métricas por transportista (paginadas).
  *  - PERSONA: expediente de una Persona (`personaId`) o búsqueda por nombre (`q`).
- *  - DIAGNOSTICO: calidad de datos; sin `tipo` el resumen de los seis, con `tipo` sus filas paginadas (lista cerrada).
- * Cada indicador declara `instrumentado`: false cuando ningún flujo de la aplicación escribe ese hecho (p. ej. viajes
- * realizados), para que la pantalla diga "sin instrumentar" en vez de mostrar un 0 que parezca ausencia de actividad.
+ * Cada indicador declara `instrumentado`: false cuando ningún flujo de la aplicación escribe ese hecho (p. ej. pagos), para que la pantalla diga "sin instrumentar" en vez de mostrar un 0 que parezca ausencia de actividad.
  */
 final class AdminDashboardController
 {
-    public const VISTAS = ['RESUMEN', 'EVIDENCIA', 'TRANSPORTISTAS', 'PERSONA', 'DIAGNOSTICO'];
+    public const VISTAS = ['RESUMEN', 'EVIDENCIA', 'TRANSPORTISTAS', 'PERSONA'];
     /** Nodos con evidencia y los estados que aceptan (null = sin filtro de estado). */
     public const NODOS = [
         'subastas' => ['ACTIVA', 'FINALIZADA', 'DESIERTA', 'CANCELADA'],
@@ -66,7 +63,6 @@ final class AdminDashboardController
                 'EVIDENCIA' => $this->evidencia($consulta, $periodo),
                 'TRANSPORTISTAS' => $this->transportistas($consulta),
                 'PERSONA' => $this->persona($consulta),
-                'DIAGNOSTICO' => $this->diagnostico($consulta),
             };
             $datos['periodo'] = $periodo['publico'];
             $datos['generado'] = Subasta::iso(gmdate('Y-m-d H:i:s'));
@@ -119,14 +115,12 @@ final class AdminDashboardController
                 ], array_filter($lista, static fn (array $s): bool => $s['estado'] === 'FINALIZADA' && $s['montoAdjudicado'] !== null))),
             ],
             'transporte' => $this->consultas->transporte($sql) + [
-                // Ningún flujo de la aplicación escribe tbtransportistaflete (solo TransportistaHistorico, sin callers):
-                // un flete aceptado no es un viaje realizado y no se infiere.
-                'viajesInstrumentados' => false,
+                // El transportista marca el viaje realizado (REGISTRAR_VIAJE, DEC-VIAJE-001); un flete aceptado no lo es.
+                'viajesInstrumentados' => true,
             ],
-            'control' => $this->consultas->control($sql),
+            'control' => $this->consultas->control(),
             'instrumentacion' => [
                 'altasDePersonas' => ['instrumentado' => false, 'motivo' => 'tbpersona no guarda fecha de alta; la bitácora no sustituye el hecho.'],
-                'viajesRealizados' => ['instrumentado' => false, 'motivo' => 'No hay flujo que registre un viaje en tbtransportistaflete; un flete aceptado no es un viaje.'],
                 'pagos' => ['instrumentado' => false, 'motivo' => 'La adjudicación y la venta se registran; el pago efectivo no.'],
                 'reputacion' => ['instrumentado' => false, 'motivo' => 'tbtransportistaresena no tiene flujo y Calidad no aprobó una política de confiabilidad.'],
             ],
@@ -166,17 +160,6 @@ final class AdminDashboardController
         [$pagina, $tamano] = $this->paginacion($consulta);
         return ['pagina' => $pagina, 'tamanoPagina' => $tamano, 'orden' => $orden]
             + $this->consultas->transportistas($pagina, $tamano, trim($q), $estado === '' ? null : $estado === 'ACTIVO', $orden);
-    }
-
-    private function diagnostico(array $consulta): array
-    {
-        $diagnostico = new AdminDiagnostico($this->conexion);
-        $tipo = $consulta['tipo'] ?? '';
-        if ($tipo === '') return ['diagnosticos' => array_values($diagnostico->resumen())];
-        if (!is_string($tipo) || !in_array($tipo, AdminDiagnostico::TIPOS, true)) {
-            throw new HttpException('Revise los campos indicados.', 422, null, ['tipo' => 'Elija un diagnóstico de la lista.']);
-        }
-        return $diagnostico->filas($tipo, ...$this->paginacion($consulta));
     }
 
     private function persona(array $consulta): array

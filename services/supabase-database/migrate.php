@@ -226,6 +226,9 @@ function ensureCurrentColumns(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbcompradorid INTEGER NULL,
         ADD COLUMN IF NOT EXISTS tbcomprasolicitudid INTEGER NULL,
         ALTER COLUMN tbproductorcompradorid DROP NOT NULL,
+        ALTER COLUMN tbpagometodoid DROP NOT NULL;
+        ALTER TABLE public.tbtransportistaflete
+        ADD COLUMN IF NOT EXISTS tbcomprasolicitudid INTEGER NULL,
         ALTER COLUMN tbpagometodoid DROP NOT NULL');
 }
 

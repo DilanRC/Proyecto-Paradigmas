@@ -231,6 +231,19 @@
 .dash-metrica__cuerpo { display:grid; gap:4px; min-width:0; }
 .dash-metrica__valor { margin:0; color:var(--tc-text); font-size:1.3rem; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; }
 .dash-metrica__texto { margin:0; color:var(--tc-text-soft); font-size:.84rem; line-height:1.4; }
+/* Ejemplares dentro de la tarjeta: foto, nombre y el dato que explica el número; cada fila abre su subasta. */
+.dash-metrica--con-lista .dash-metrica__cuerpo { flex:1; }
+.dash-mini-lista { display:grid; gap:6px; margin:8px 0 0; padding:0; list-style:none; }
+.dash-mini { display:grid; grid-template-columns:48px minmax(0, 1fr) auto; gap:10px; align-items:center; min-height:56px; padding:4px 8px 4px 4px;
+    border:1px solid var(--tc-line); border-radius:12px; color:var(--tc-text); background:var(--tc-bg-elevated); text-decoration:none; }
+.dash-mini:hover { border-color:var(--tc-line-strong, var(--tc-line)); }
+.dash-mini__textos { display:grid; gap:2px; min-width:0; }
+.dash-mini__textos strong { overflow:hidden; font-size:.88rem; text-overflow:ellipsis; white-space:nowrap; }
+.dash-mini__textos small { overflow:hidden; color:var(--tc-text-soft); font-size:.76rem; text-overflow:ellipsis; white-space:nowrap; }
+.dash-mini__dato { color:var(--tc-text); font-size:.82rem; font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dash-mini__dato { display:inline-flex; gap:5px; align-items:center; }
+.dash-mini__dato--exito i { color:var(--tc-success); }
+.dash-mini__dato--aviso i { color:var(--tc-warning); }
 
 /* Costo de adquisición: lo conocido, lo que falta y el total solo si es completo. */
 .dash-costo { display:grid; gap:10px; align-content:start; }

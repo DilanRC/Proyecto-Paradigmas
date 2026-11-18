@@ -1,6 +1,6 @@
 // Visor de la bitácora (P3-4), solo lectura. api.js se versiona por la cadena
 // de caché de las rutas admin (MEMORIA.md, Cuidados #11).
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { createDialogController } from './shared/dialog.js?v=dialog-2';
 import {
     applyAbort, applyFailure, applyResult, createListState, deriveListView, nextRequest,
@@ -19,6 +19,60 @@ export function formatFecha(fechaUtc, locale = 'es-CR', timeZone = undefined) {
     const fecha = new Date(`${String(fechaUtc ?? '').replace(' ', 'T')}Z`);
     if (Number.isNaN(fecha.getTime())) return String(fechaUtc ?? '—');
     return fecha.toLocaleString(locale, { dateStyle: 'short', timeStyle: 'short', timeZone });
+}
+
+const ACCIONES = {
+    CREAR: 'Creación', EDITAR: 'Edición', ELIMINAR: 'Eliminación', DESACTIVAR: 'Desactivación', REACTIVAR: 'Reactivación',
+    REGISTRO_PUBLICO: 'Registro público', PUJAR: 'Puja', COMENTAR: 'Comentario', FINALIZAR: 'Cierre', CANCELAR: 'Cancelación',
+    ACEPTAR: 'Aceptación', RECHAZAR: 'Rechazo', ACEPTAR_FLETE: 'Flete aceptado', RECHAZAR_FLETE: 'Flete rechazado',
+    REGISTRAR_VIAJE: 'Viaje realizado', VER_DOCUMENTO: 'Documento consultado', VERIFICAR: 'Verificación', PESAR: 'Pesaje',
+};
+const AREAS = {
+    PERSONA: 'Persona', SUBASTA: 'Subasta', PUBLICACION: 'Publicación', PUBLICACION_INTERACCION: 'Me interesa', OFERTA_FLETE: 'Oferta de flete',
+    VEHICULO: 'Vehículo', TRANSPORTISTA_VEHICULO: 'Vehículo', FINCA: 'Finca', PRODUCTORUBICACION: 'Finca', ANIMAL: 'Animal',
+    ANIMAL_VACUNACION: 'Vacuna', COMPRA_SOLICITUD: 'Solicitud de compra', PAGOMETODO: 'Método de pago', ADMINISTRADOR: 'Administrador',
+    CATALOGO: 'Catálogo', DOCUMENTO: 'Documento', COMPRADOR: 'Comprador', PRODUCTOR: 'Productor', TRANSPORTISTA: 'Transportista',
+};
+
+/** «REGISTRO_PUBLICO» → «Registro público» cuando no hay nombre propio. Puro y exportado para pruebas. */
+export function humanizar(clave) {
+    const texto = String(clave ?? '').replace(/^API_/, '').replaceAll('_', ' ').toLowerCase().trim();
+    return texto ? texto[0].toUpperCase() + texto.slice(1) : '—';
+}
+export function nombreAccion(accion) { return ACCIONES[accion] ?? humanizar(accion); }
+export function nombreAreaBitacora(entidad) { return AREAS[entidad] ?? humanizar(entidad); }
+/** «API_REGISTRO_PUBLICO» → «Registro público»: el origen se nombra como su acción si la hay. Puro. */
+export function nombreOrigen(origen) { return nombreAccion(String(origen ?? '').replace(/^API_/, '')); }
+
+/** «capacidadesCreadas» → «Capacidades creadas»; «personaId» → «Persona (id)». Puro y exportado para pruebas. */
+export function nombreCampo(clave) {
+    const k = String(clave);
+    if (/^[a-z]+Id$/.test(k)) return `${humanizar(k.slice(0, -2))} (id)`;
+    return humanizar(k.replace(/([a-z0-9])([A-Z])/g, '$1_$2'));
+}
+
+/** Valor legible: listas separadas por coma, sí/no, objetos como «campo: valor». Puro y exportado para pruebas. */
+export function valorLegible(valor) {
+    if (valor === null || valor === undefined || valor === '') return '—';
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (Array.isArray(valor)) return valor.length ? valor.map((v) => (typeof v === 'object' && v !== null ? valorLegible(v) : /^[A-Z_]+$/.test(String(v)) ? humanizar(v) : String(v))).join(', ') : '—';
+    if (typeof valor === 'object') return Object.entries(valor).map(([k, v]) => `${nombreCampo(k)}: ${valorLegible(v)}`).join(' · ') || '—';
+    return /^[A-Z][A-Z_]+$/.test(String(valor)) ? humanizar(valor) : String(valor);
+}
+
+/**
+ * Filas «campo, antes, después» del evento. Con datos anteriores solo salen los campos que cambiaron; sin ellos (una
+ * creación) salen todos los nuevos. Puro y exportado para pruebas.
+ */
+export function cambiosEvento(anteriores, nuevos) {
+    const objeto = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : (v == null ? {} : { valor: v }));
+    const antes = objeto(anteriores);
+    const despues = objeto(nuevos);
+    const claves = [...new Set([...Object.keys(antes), ...Object.keys(despues)])].filter((k) => k !== 'realizadoPor');
+    const hayAntes = anteriores != null;
+    return claves
+        .filter((k) => !hayAntes || JSON.stringify(antes[k]) !== JSON.stringify(despues[k]))
+        .map((k) => ({ campo: nombreCampo(k), antes: hayAntes ? valorLegible(antes[k]) : null, despues: valorLegible(despues[k]) }));
 }
 
 /** Quién hizo el cambio. Un admin sin Persona deja su correo en "realizadoPor". Exportado para pruebas. */
@@ -132,11 +186,12 @@ function initialize() {
         button.className = 'action action--ver';
         button.dataset.id = String(item.bitacoraId);
         button.textContent = 'Ver detalle';
+        button.setAttribute('aria-label', `Ver detalle: ${nombreAccion(item.accion)} de ${nombreAreaBitacora(item.entidad)}`);
         actions.appendChild(button);
         row.append(
             createCell('Fecha', formatFecha(item.fecha)),
-            createCell('Entidad', item.entidad),
-            createCell('Acción', item.accion),
+            createCell('Entidad', nombreAreaBitacora(item.entidad)),
+            createCell('Acción', nombreAccion(item.accion)),
             createCell('Registro', item.registro),
             createCell('Hecho por', describirActor(item)),
             actions,
@@ -144,29 +199,65 @@ function initialize() {
         return row;
     }
 
-    function detailRow(label, value, { json = false } = {}) {
+    function detailRow(label, value) {
         const dt = document.createElement('dt');
         dt.textContent = label;
         const dd = document.createElement('dd');
-        if (json) {
-            const pre = document.createElement('pre');
-            pre.textContent = value == null ? '—' : JSON.stringify(value, null, 2);
-            dd.appendChild(pre);
-        } else {
-            dd.textContent = value ?? '—';
-        }
+        dd.textContent = value ?? '—';
         return [dt, dd];
     }
 
+    /** Tabla de cambios legible; el JSON original queda plegado para quien audite el dato exacto. */
+    function cambios(item) {
+        const filas = cambiosEvento(item.datosAnteriores, item.datosNuevos);
+        const seccion = document.createElement('section');
+        seccion.className = 'bitacora-cambios detail--full';
+        const titulo = document.createElement('h3');
+        titulo.textContent = item.datosAnteriores == null ? 'Datos registrados' : 'Qué cambió';
+        seccion.appendChild(titulo);
+        if (!filas.length) {
+            const vacio = document.createElement('p');
+            vacio.textContent = 'El evento no guarda datos.';
+            seccion.appendChild(vacio);
+        } else {
+            const tabla = document.createElement('table');
+            const cabeza = document.createElement('tr');
+            for (const texto of ['Campo', ...(item.datosAnteriores == null ? [] : ['Antes']), item.datosAnteriores == null ? 'Valor' : 'Después']) {
+                const th = document.createElement('th');
+                th.scope = 'col';
+                th.textContent = texto;
+                cabeza.appendChild(th);
+            }
+            tabla.createTHead().appendChild(cabeza);
+            const cuerpo = tabla.createTBody();
+            for (const f of filas) {
+                const tr = cuerpo.insertRow();
+                const th = document.createElement('th');
+                th.scope = 'row';
+                th.textContent = f.campo;
+                tr.appendChild(th);
+                for (const v of f.antes === null ? [f.despues] : [f.antes, f.despues]) tr.insertCell().textContent = v;
+            }
+            seccion.appendChild(tabla);
+        }
+        const tecnico = document.createElement('details');
+        const resumen = document.createElement('summary');
+        resumen.textContent = 'Ver datos técnicos';
+        const pre = document.createElement('pre');
+        pre.textContent = JSON.stringify({ antes: item.datosAnteriores ?? null, despues: item.datosNuevos ?? null }, null, 2);
+        tecnico.append(resumen, pre);
+        seccion.appendChild(tecnico);
+        return seccion;
+    }
+
     function openDetail(item) {
-        elements.detailTitle.textContent = `${item.accion} · ${item.entidad}`;
+        elements.detailTitle.textContent = `${nombreAccion(item.accion)} · ${nombreAreaBitacora(item.entidad)}`;
         elements.detailContent.replaceChildren(
             ...detailRow('Fecha', formatFecha(item.fecha)),
             ...detailRow('Registro', item.registro),
             ...detailRow('Hecho por', describirActor(item)),
-            ...detailRow('Origen', item.origen),
-            ...detailRow('Datos anteriores', item.datosAnteriores, { json: true }),
-            ...detailRow('Datos nuevos', item.datosNuevos, { json: true }),
+            ...detailRow('Desde', nombreOrigen(item.origen)),
+            cambios(item),
         );
         dialogs.open(elements.detail, { focus: elements.detailClose2 });
     }

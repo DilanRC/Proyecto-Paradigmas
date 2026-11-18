@@ -15,9 +15,9 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-7">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-11">
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-12">
     <?php require dirname(__DIR__) . '/shared/admin-estilos.php'; ?>
-    <script type="module" src="js/dashboard.js?v=intel-8"></script>
+    <script type="module" src="js/dashboard.js?v=intel-9"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel admin-dashboard">
@@ -60,7 +60,7 @@
                 <div>
                     <span class="label">Centro de inteligencia</span>
                     <h1 id="page-title">Actividad de Ganado Cerca</h1>
-                    <p class="intel-cabecera__texto">Estado de la plataforma: qué requiere atención, cómo avanza cada proceso y qué tan completos están los datos.</p>
+                    <p class="intel-cabecera__texto">Estado de la plataforma: qué requiere atención, cómo avanza cada proceso y quién participa.</p>
                 </div>
                 <form class="intel-periodo" id="intel-periodo" aria-label="Periodo del análisis" novalidate>
                     <label class="intel-campo"><span>Periodo</span><select name="periodo">
@@ -91,10 +91,10 @@
             <section class="intel-zona" aria-labelledby="intel-atencion-titulo">
                 <div class="intel-zona__cabeza">
                     <h2 class="intel-zona__titulo" id="intel-atencion-titulo">Requieren atención</h2>
-                    <p class="intel-zona__ayuda">Pendientes del día a día separados de los problemas en los datos.</p>
+                    <p class="intel-zona__ayuda">Lo que espera una respuesta de compradores, vendedores, transportistas o administración.</p>
                 </div>
                 <div class="intel-atencion" id="intel-atencion" aria-busy="true">
-                    <?= str_repeat('<div class="intel-atencion__grupo intel-atencion__grupo--cargando" aria-hidden="true"><span></span><span></span><span></span></div>', 2) ?>
+                    <div class="intel-atencion__grupo intel-atencion__grupo--cargando" aria-hidden="true"><span></span><span></span><span></span></div>
                 </div>
             </section>
 
@@ -140,28 +140,10 @@
                 </div>
             </section>
 
-            <section class="intel-zona" aria-labelledby="intel-calidad-titulo">
-                <div class="intel-zona__cabeza">
-                    <h2 class="intel-zona__titulo" id="intel-calidad-titulo">Calidad de datos</h2>
-                    <p class="intel-zona__ayuda">Cada revisión dice si el dato es obligatorio u opcional, por qué falta y cómo se resuelve. Un dato opcional no es un error.</p>
-                </div>
-                <div class="intel-calidad" id="intel-calidad" aria-busy="true">
-                    <?= str_repeat('<div class="intel-diag intel-diag--cargando" aria-hidden="true"><span></span><span></span><span></span></div>', 3) ?>
-                </div>
-            </section>
-
-            <section class="intel-zona" aria-labelledby="intel-control-titulo">
-                <div class="intel-zona__cabeza">
-                    <h2 class="intel-zona__titulo" id="intel-control-titulo">Auditoría y trazabilidad</h2>
-                    <p class="intel-zona__ayuda">Movimientos guardados en la bitácora durante el periodo.</p>
-                </div>
-                <div class="intel-auditoria" id="intel-control"></div>
-            </section>
-
             <dialog class="intel-dialogo" id="intel-dialogo" aria-labelledby="intel-dialogo-titulo">
                 <div class="intel-dialogo__cabeza">
                     <h2 id="intel-dialogo-titulo">Registros</h2>
-                    <button class="button button--secondary button--small" type="button" data-cerrar-dialogo>Cerrar</button>
+                    <button class="button button--secondary button--small" type="button" data-cerrar-dialogo><i class="fa-solid fa-xmark" aria-hidden="true"></i><span>Cerrar</span></button>
                 </div>
                 <div class="intel-dialogo__cuerpo" id="intel-dialogo-cuerpo"></div>
             </dialog>

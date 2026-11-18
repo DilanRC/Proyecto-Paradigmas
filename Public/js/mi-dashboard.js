@@ -5,7 +5,7 @@
 // (verde = adjudicada/ganada, azul = activa, ámbar con rayas = desierta/superada, gris = cancelada/perdida, violeta =
 // montos), siempre con texto e ícono. Todo se pinta con DOM (textContent). La ubicación solo vive en memoria.
 
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { formatPrice, safeImageUrl } from './explore.js?v=explore-16';
 import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-3';
@@ -211,13 +211,50 @@ function kpi({ etiqueta, valor, detalle, tono = null, progreso = null, ids = [],
 }
 
 /** Métrica secundaria compacta (ícono, valor, texto y evidencia) para "Participación y operación". */
-function metrica({ nombreIcono, valor, texto, ids = [], etiqueta, alFiltrar, accion = null }) {
-    const t = el('article', 'dash-tarjeta dash-metrica');
+/** Cuántos ejemplares se ven dentro de una tarjeta; el resto queda en la tabla con «Ver todos». */
+export const EJEMPLARES_EN_TARJETA = 4;
+
+/**
+ * Ejemplares de una tarjeta, ya ordenados: comparables del más barato al más caro frente a su promedio; oportunidades
+ * de la más cercana a la más lejana y, sin distancia, la que cierra antes. Puro.
+ */
+export function ordenarEjemplares(subastas, modo) {
+    const lista = [...(subastas ?? [])];
+    if (modo === 'comparables') return lista.sort((a, b) => a.comparacion.diferenciaPorcentaje - b.comparacion.diferenciaPorcentaje);
+    const distancia = (s) => (typeof s.distanciaKm === 'number' ? s.distanciaKm : Infinity);
+    return lista.sort((a, b) => distancia(a) - distancia(b) || String(a.fechaFin ?? '').localeCompare(String(b.fechaFin ?? '')));
+}
+
+/** Lista corta de ejemplares con foto, enlazada a cada subasta. `detalle(s)` da el dato que explica la tarjeta. */
+function ejemplaresEnTarjeta(subastas, detalle) {
+    const ul = el('ul', 'dash-mini-lista');
+    subastas.slice(0, EJEMPLARES_EN_TARJETA).forEach((s) => {
+        const li = el('li');
+        const enlace = el('a', 'dash-mini');
+        enlace.href = `subastas?id=${Number(s.subastaId)}`;
+        const textos = el('span', 'dash-mini__textos');
+        textos.append(el('strong', null, s.titulo), el('small', null, [s.animal?.raza, s.zona?.provincia].filter(Boolean).join(' · ')));
+        const dato = detalle(s);
+        const valor = el('span', `dash-mini__dato${dato.tono ? ` dash-mini__dato--${dato.tono}` : ''}`);
+        // El color va en el ícono (más barato ↓, más caro ↑); el texto mantiene el contraste del tema.
+        if (dato.tono) valor.append(icono(dato.tono === 'exito' ? 'fa-solid fa-arrow-down' : 'fa-solid fa-arrow-up'));
+        valor.append(el('span', null, dato.texto));
+        enlace.append(foto(s.imagenUrl, `Foto de ${s.titulo}`), textos, valor);
+        li.append(enlace);
+        ul.append(li);
+    });
+    return ul;
+}
+
+function metrica({ nombreIcono, valor, texto, ids = [], etiqueta, alFiltrar, accion = null, ejemplares = null }) {
+    const t = el('article', `dash-tarjeta dash-metrica${ejemplares?.lista.length ? ' dash-metrica--con-lista' : ''}`);
     const caja = el('span', 'dash-metrica__icono');
     caja.append(icono(nombreIcono));
     const cuerpo = el('div', 'dash-metrica__cuerpo');
     cuerpo.append(el('p', 'dash-metrica__valor', valor), el('p', 'dash-metrica__texto', texto));
-    const evidencia = botonEvidencia(ids, etiqueta ?? texto, alFiltrar);
+    if (ejemplares?.lista.length) cuerpo.append(ejemplaresEnTarjeta(ejemplares.lista, ejemplares.detalle));
+    // Con la lista a la vista, el botón solo hace falta si quedan ejemplares fuera de la tarjeta.
+    const evidencia = !ejemplares?.lista.length || ejemplares.lista.length > EJEMPLARES_EN_TARJETA ? botonEvidencia(ids, etiqueta ?? texto, alFiltrar) : null;
     if (evidencia) cuerpo.append(evidencia);
     if (accion) cuerpo.append(accion);
     t.append(caja, cuerpo);
@@ -564,10 +601,15 @@ function pintarComprador(datos) {
             desgloseCosto(ind.costoAdquisicion, filtrar),
             metrica({ nombreIcono: 'fa-solid fa-scale-balanced', valor: formatoPorcentaje(diferencia, { signo: true }),
                 texto: diferencia == null ? 'Sin ventas comparables todavía' : `Tu precio actual frente al promedio pagado por animales comparables (${plural(ind.comparacion.ids.length, 'subasta', 'subastas')})`,
-                etiqueta: 'Comparación de precios', ids: ind.comparacion.ids, alFiltrar: filtrar }),
+                etiqueta: 'Comparación de precios', ids: ind.comparacion.ids, alFiltrar: filtrar,
+                ejemplares: { lista: ordenarEjemplares(comparables.filter((s) => ind.comparacion.ids.includes(s.subastaId)), 'comparables'),
+                    detalle: (s) => ({ texto: formatoPorcentaje(s.comparacion.diferenciaPorcentaje, { signo: true }),
+                        tono: s.comparacion.diferenciaPorcentaje <= 0 ? 'exito' : 'aviso' }) } }),
             metrica({ nombreIcono: 'fa-solid fa-location-dot',
                 valor: op.requiereUbicacion ? 'Oportunidades cercanas' : plural(op.total, 'oportunidad', 'oportunidades'),
                 texto: textoOportunidades, etiqueta: 'Oportunidades cercanas', ids: op.ids, alFiltrar: filtrar,
+                ejemplares: op.requiereUbicacion ? null : { lista: ordenarEjemplares(cerca, 'cercania'),
+                    detalle: (s) => ({ texto: `${situacionComprador(s)} · ${formatPrice(precio(s))}` }) },
                 accion: op.requiereUbicacion ? ubicacion : null }),
         )),
         seccion('dash-graficos', 'Evolución y comparación', null, grilla('dash-dos',

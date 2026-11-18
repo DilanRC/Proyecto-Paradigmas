@@ -18,7 +18,7 @@ require_once $raiz . '/Application/Service/AuthGuard.php';
 require_once $raiz . '/Application/Service/PublicacionCercaniaService.php';
 foreach ([
     'NamedLock', 'Persona', 'Comprador', 'ProductorFinca', 'Productor', 'Direccion', 'Vehiculo', 'TransportistaVehiculo',
-    'Transportista', 'TransportistaOferta', 'AnimalComercial', 'CompraSolicitud', 'PagoMetodo', 'Bitacora',
+    'Transportista', 'TransportistaOferta', 'TransportistaHistorico', 'AnimalComercial', 'CompraSolicitud', 'PagoMetodo', 'Bitacora',
 ] as $modelo) {
     require_once $raiz . "/Application/Model/{$modelo}.php";
 }

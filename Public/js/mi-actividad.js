@@ -1,5 +1,5 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
@@ -288,9 +288,14 @@ function filaRecibida(s) {
 
 function filaFlete(s) {
     const lineas = `<p>Comprador: ${contactoTexto(s.comprador)}</p><p>Vendedor: ${contactoTexto(s.vendedor)}</p>`;
-    const botones = s.flete?.estado === 'PENDIENTE' ? solicitudAccion('ACEPTAR_FLETE', 'Aceptar flete', s.solicitudId) + solicitudAccion('RECHAZAR_FLETE', 'Rechazar', s.solicitudId) : '';
     const estadoFlete = s.flete?.estado;
-    return filaSolicitud(s, lineas, botones, { texto: `Flete ${FLETE_ESTADOS[estadoFlete] ?? ''}`, vigente: estadoFlete === 'ACEPTADA' || estadoFlete === 'PENDIENTE' });
+    // Aceptar un flete no es hacer el viaje: el transportista lo marca como realizado cuando ocurre (una sola vez).
+    const viaje = estadoFlete === 'ACEPTADA' && s.flete?.viajeRegistrado;
+    const botones = estadoFlete === 'PENDIENTE'
+        ? solicitudAccion('ACEPTAR_FLETE', 'Aceptar flete', s.solicitudId) + solicitudAccion('RECHAZAR_FLETE', 'Rechazar', s.solicitudId)
+        : estadoFlete === 'ACEPTADA' && !viaje ? solicitudAccion('REGISTRAR_VIAJE', 'Marcar viaje realizado', s.solicitudId) : '';
+    const texto = viaje ? `Viaje realizado${s.flete.viajeFecha ? ` el ${escapeHtml(s.flete.viajeFecha)}` : ''}` : `Flete ${FLETE_ESTADOS[estadoFlete] ?? ''}`;
+    return filaSolicitud(s, lineas, botones, { texto, vigente: estadoFlete === 'ACEPTADA' || estadoFlete === 'PENDIENTE' });
 }
 
 function renderSolicitudes(datos) {
@@ -339,6 +344,15 @@ async function responderSolicitud(id, accion) {
         const motivo = window.prompt('Motivo del rechazo (opcional):');
         if (motivo === null) return;
         if (motivo.trim()) cuerpo.motivo = motivo.trim();
+    } else if (accion === 'REGISTRAR_VIAJE') {
+        if (!window.confirm('¿Marcar este viaje como realizado hoy? No se puede deshacer.')) return;
+        const km = window.prompt('Distancia recorrida en km (opcional):');
+        if (km === null) return;
+        if (km.trim()) {
+            const distancia = Number(km.replace(',', '.'));
+            if (!(distancia > 0 && distancia <= 5000)) { toast?.error('Indica una distancia entre 0 y 5000 km.'); return; }
+            cuerpo.distanciaKm = distancia;
+        }
     } else if (!window.confirm(accion === 'CANCELAR' ? '¿Cancelar esta solicitud?' : '¿Confirmas tu respuesta sobre el flete?')) {
         return;
     }
@@ -349,7 +363,7 @@ async function responderSolicitud(id, accion) {
         if (accion === 'ACEPTAR' && isActive('PRODUCTOR')) await loadPublications();
     } catch (error) {
         if (error?.status === 401) endExpiredSession(error?.authSessionVersion);
-        else toast?.error(error?.errors?.precio || error?.message || 'No pudimos responder la solicitud.');
+        else toast?.error(error?.errors?.precio || error?.errors?.fecha || error?.errors?.distanciaKm || error?.message || 'No pudimos responder la solicitud.');
     }
 }
 

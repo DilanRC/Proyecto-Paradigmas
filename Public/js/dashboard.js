@@ -1,18 +1,17 @@
 // Centro de inteligencia del administrador (/admin/dashboard, DEC-DASHBOARD-002). Una sola API de solo lectura
-// (api/v1/admin/dashboard) autorizada en PHP. Secciones: visión global, requieren atención (pendientes operativos
-// aparte de problemas de datos), actividad comercial (cuatro áreas; cada una abre sus etapas, y cada indicador su
-// evidencia paginada en un diálogo), personas y actividades (explorador y transportistas), calidad de datos
-// (diagnósticos clasificados por el servidor) y auditoría. Las etapas son conceptuales: no se calculan tasas entre ellas
+// (api/v1/admin/dashboard) autorizada en PHP. Secciones: visión global, requieren atención (pendientes de la operación),
+// actividad comercial (cuatro áreas; cada una abre sus etapas, y cada indicador su evidencia paginada en un diálogo)
+// y personas y actividades (explorador y transportistas). Las etapas son conceptuales: no se calculan tasas entre ellas
 // porque los registros no prueban que las mismas personas pasaran por todas. Lo que la plataforma no registra se dice
 // «todavía no disponible», nunca 0. Sin imágenes decorativas (decisión del PR #30). Todo con textContent.
 
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { el } from './dashboard-graficos.js?v=graficos-3';
 
 const API = 'api/v1/admin/dashboard';
 const ZONA = 'America/Costa_Rica';
 const $ = (selector) => document.querySelector(selector);
-const estado = { periodo: {}, pedido: 0, busqueda: 0, expediente: 0, areas: [], areaAbierta: null, diagnosticos: [], resumen: null };
+const estado = { periodo: {}, pedido: 0, busqueda: 0, expediente: 0, areas: [], areaAbierta: null };
 
 // ───────────────────────────── Funciones puras ─────────────────────────────
 
@@ -67,6 +66,7 @@ const DEFINICIONES = {
     ventas: 'Ventas registradas: una fila por animal vendido.',
     subastas: 'Subastas por la fecha de su hecho (cierre para las terminadas, inicio para las activas).',
     publicaciones: 'Publicaciones por fecha de alta, con su estado vigente.',
+    viajes: 'Viajes que el transportista marcó como realizados, por la fecha del viaje.',
 };
 
 /**
@@ -133,7 +133,7 @@ export function procesos(d) {
         },
         {
             clave: 'transporte', titulo: 'Transporte', icono: 'fa-truck-fast',
-            principal: { valor: formatoNumero(fletes.ACEPTADA ?? 0), etiqueta: 'fletes aceptados' },
+            principal: { valor: formatoNumero(sinViajes ? (fletes.ACEPTADA ?? 0) : (t.viajesRegistrados?.total ?? 0)), etiqueta: sinViajes ? 'fletes aceptados' : 'viajes realizados' },
             resumen: `${formatoNumero(ofertas.ACTIVA?.total ?? 0)} ofertas activas · ${formatoNumero(fletes.PENDIENTE ?? 0)} solicitudes pendientes`,
             etapas: [
                 { nombre: 'Ofertas', valor: formatoNumero((ofertas.ACTIVA?.total ?? 0) + (ofertas.PAUSADA?.total ?? 0)), evidencia: null,
@@ -146,6 +146,9 @@ export function procesos(d) {
                 { nombre: 'Aceptación o rechazo', valor: formatoNumero((fletes.ACEPTADA ?? 0) + (fletes.RECHAZADA ?? 0)), evidencia: null,
                     explicacion: 'Respuesta del transportista. Aceptar un flete no significa que el viaje ya ocurrió.',
                     estados: estadosDe(['ACEPTADA', 'RECHAZADA'], fletes, 'fletes') },
+                ...(sinViajes ? [] : [{ nombre: 'Viaje realizado', valor: formatoNumero(t.viajesRegistrados?.total ?? 0), evidencia: ev('viajes'),
+                    explicacion: `El transportista marcó el viaje como hecho: ${formatoNumero(t.viajesRegistrados?.cabezas ?? 0)} cabezas${t.viajesRegistrados?.km ? ` · ${formatoNumero(t.viajesRegistrados.km)} km` : ''}${t.viajesRegistrados?.ingresosRegistrados ? ` · ${formatoColones(t.viajesRegistrados.ingresosRegistrados)}` : ''}.`,
+                    estados: [] }]),
             ],
             salidas: [{ nombre: 'Canceladas', valor: formatoNumero(fletes.CANCELADA ?? 0), tono: 'neutro', evidencia: ev('fletes', 'CANCELADA'),
                 explicacion: 'La solicitud de compra se canceló antes del viaje.' }],
@@ -172,41 +175,15 @@ export function procesos(d) {
     ];
 }
 
-const CLASIFICACION = {
-    INCONSISTENCIA: ['Inconsistencia confirmada', 'peligro'], REVISION: ['Requiere revisión', 'aviso'],
-    SIN_EVIDENCIA: ['Sin evidencia suficiente', 'neutro'], OPCIONAL: ['Dato opcional', 'neutro'], CORRECTO: ['Correcto', 'exito'],
-};
-export function etiquetaClasificacion(c) { return CLASIFICACION[c]?.[0] ?? String(c ?? '—'); }
-
-/**
- * Diagnósticos en tres grupos: con incidencias que piden acción (inconsistencia, revisión o sin evidencia), solo datos
- * opcionales y sanos (cero). Dentro de cada grupo, por la prioridad que define el servidor. Puro.
- */
-export function agruparDiagnosticos(diagnosticos = []) {
-    const accion = (d) => (d.porClasificacion?.INCONSISTENCIA ?? 0) + (d.porClasificacion?.REVISION ?? 0) + (d.porClasificacion?.SIN_EVIDENCIA ?? 0);
-    const orden = [...diagnosticos].sort((a, b) => (a.prioridad ?? 99) - (b.prioridad ?? 99));
-    return {
-        activos: orden.filter((d) => accion(d) > 0),
-        opcionales: orden.filter((d) => accion(d) === 0 && d.total > 0),
-        sanos: orden.filter((d) => d.total === 0),
-    };
-}
-
-/** Lo que requiere atención: pendientes operativos y problemas de datos, por separado. Puro. */
-export function atencion(d, diagnosticos = []) {
-    const docs = d.control.documentosPorEstado?.PENDIENTE ?? 0;
-    const operativos = [
-        { nombre: 'Solicitudes de compra sin responder', valor: d.comercializacion.solicitudesCreadas?.PENDIENTE ?? 0, evidencia: { nodo: 'solicitudes', estado: 'PENDIENTE' } },
-        { nombre: 'Fletes sin respuesta del transportista', valor: d.transporte.solicitudesFletePorEstado?.PENDIENTE ?? 0, evidencia: { nodo: 'fletes', estado: 'PENDIENTE' } },
-        { nombre: 'Documentos de identidad por verificar', valor: docs, enlace: 'admin/documentos' },
-        { nombre: 'Cambios de correo sin confirmar', valor: d.control.correosPendientes ?? 0, enlace: 'admin/bitacora' },
+/** Pendientes de la operación que esperan respuesta de alguien. Puro. */
+export function atencion(d) {
+    return [
+        { nombre: 'Solicitudes de compra sin responder', valor: d.comercializacion.solicitudesCreadas?.PENDIENTE ?? 0, evidencia: { nodo: 'solicitudes', estado: 'PENDIENTE' }, accion: 'Ver solicitudes' },
+        { nombre: 'Fletes sin respuesta del transportista', valor: d.transporte.solicitudesFletePorEstado?.PENDIENTE ?? 0, evidencia: { nodo: 'fletes', estado: 'PENDIENTE' }, accion: 'Ver fletes' },
+        { nombre: 'Fletes aceptados sin viaje registrado', valor: d.transporte.fletesSinViaje ?? 0,
+            evidencia: { nodo: 'fletes', estado: 'ACEPTADA' }, accion: 'Ver fletes' },
+        { nombre: 'Documentos de identidad por verificar', valor: d.control.documentosPorEstado?.PENDIENTE ?? 0, enlace: 'admin/documentos', accion: 'Abrir documentos', icono: 'fa-id-card' },
     ].filter((x) => x.valor > 0);
-    const datos = agruparDiagnosticos(diagnosticos).activos.map((x) => ({
-        nombre: x.titulo, tipo: x.tipo,
-        valor: (x.porClasificacion.INCONSISTENCIA ?? 0) + (x.porClasificacion.REVISION ?? 0) + (x.porClasificacion.SIN_EVIDENCIA ?? 0),
-        tono: x.porClasificacion.INCONSISTENCIA ? 'peligro' : 'aviso',
-    }));
-    return { operativos, datos };
 }
 
 const ESTADOS = {
@@ -245,10 +222,21 @@ function icono(nombre) {
     return i;
 }
 
-function boton(texto, clase = 'button button--secondary button--small') {
-    const b = el('button', clase, texto);
+/** Botón con ícono y texto (el ícono es decorativo: el texto da el nombre accesible). */
+function boton(texto, clase = 'button button--secondary button--small', nombreIcono = null) {
+    const b = el('button', clase);
     b.type = 'button';
+    if (nombreIcono) b.append(icono(nombreIcono));
+    if (texto) b.append(el('span', null, texto));
     return b;
+}
+
+/** Enlace con forma de botón secundario, con ícono y texto. */
+function enlaceBoton(texto, href, nombreIcono = 'fa-arrow-right') {
+    const a = el('a', 'button button--secondary button--small intel-boton-enlace');
+    a.href = href;
+    a.append(icono(nombreIcono), el('span', null, texto));
+    return a;
 }
 
 function consulta(extra = {}) {
@@ -270,10 +258,10 @@ function paginacion(pagina, total, tamano, ir, etiquetaNav) {
     const paginas = Math.max(1, Math.ceil(total / tamano));
     const nav = el('nav', 'intel-paginas');
     nav.setAttribute('aria-label', etiquetaNav);
-    const anterior = boton('Anterior');
+    const anterior = boton('Anterior', undefined, 'fa-chevron-left');
     anterior.disabled = pagina <= 1;
     anterior.addEventListener('click', () => ir(pagina - 1));
-    const siguiente = boton('Siguiente');
+    const siguiente = boton('Siguiente', undefined, 'fa-chevron-right');
     siguiente.disabled = pagina >= paginas;
     siguiente.addEventListener('click', () => ir(pagina + 1));
     nav.append(anterior, el('span', 'intel-paginas__texto', `Página ${pagina} de ${paginas} · ${formatoNumero(total)} registros`), siguiente);
@@ -339,7 +327,7 @@ function cargaPaginada(destino, pedir, pintar, etiquetaNav) {
             destino.replaceChildren(pintar(data), paginacion(pagina, data.total, data.tamanoPagina, cargar, etiquetaNav));
         } catch (error) {
             if (error?.obsoleta) return; // llegó otra búsqueda más nueva
-            const reintentar = boton('Reintentar');
+            const reintentar = boton('Reintentar', undefined, 'fa-rotate');
             reintentar.addEventListener('click', () => cargar(pagina));
             destino.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudieron cargar los registros.'), reintentar);
         } finally {
@@ -367,7 +355,7 @@ function abrirEvidencia(titulo, evidencia) {
 }
 
 function botonEvidencia(texto, tituloDialogo, evidencia, clase = 'intel-accion') {
-    const b = boton(texto, clase);
+    const b = boton(texto, clase, texto ? 'fa-table-list' : null);
     b.addEventListener('click', () => abrirEvidencia(tituloDialogo, evidencia));
     return b;
 }
@@ -414,8 +402,8 @@ function pintarRed(p) {
         const card = el('article', 'dashboard-metric');
         const caja = el('span', 'dashboard-metric__icon');
         caja.append(icono(t.icon));
-        const enlace = el('a', 'dashboard-metric__link', 'Abrir módulo');
-        enlace.href = t.href;
+        const enlace = enlaceBoton(`Abrir ${t.etiqueta.toLowerCase()}`, t.href);
+        enlace.classList.add('dashboard-metric__link');
         card.append(caja, el('span', 'dashboard-metric__label', t.etiqueta), el('strong', 'dashboard-metric__value', formatoNumero(t.valor)),
             el('span', 'dashboard-metric__detalle', t.detalle), enlace);
         return card;
@@ -425,29 +413,22 @@ function pintarRed(p) {
 
 // ───── Requieren atención ─────
 
-function pintarAtencion(d, diagnosticos) {
-    const { operativos, datos } = atencion(d, diagnosticos ?? []);
-    const grupo = (titulo, ayuda, items, vacio, pintarItem) => {
-        const g = el('section', 'intel-atencion__grupo');
-        g.append(el('h3', 'intel-panel__titulo', titulo), el('p', 'intel-nota', ayuda));
-        if (!items.length) { g.append(etiqueta(null, vacio, vacio.startsWith('No se') ? 'neutro' : 'exito')); return g; }
+function pintarAtencion(d) {
+    const items = atencion(d);
+    const caja = el('section', 'intel-atencion__grupo');
+    caja.append(el('h3', 'intel-panel__titulo', 'Pendientes de la operación'), el('p', 'intel-nota', 'Esperan que alguien responda. Son normales en una plataforma activa.'));
+    if (!items.length) caja.append(etiqueta(null, 'Nada pendiente', 'exito'));
+    else {
         const ul = el('ul', 'intel-atencion__lista');
-        items.forEach((x) => { const li = el('li'); li.append(...pintarItem(x)); ul.append(li); });
-        g.append(ul);
-        return g;
-    };
-    $('#intel-atencion').replaceChildren(
-        grupo('Pendientes de la operación', 'Esperan que alguien responda. Son normales en una plataforma activa.', operativos, 'Nada pendiente', (x) => {
-            const accion = x.evidencia ? botonEvidencia('Ver', x.nombre, x.evidencia) : Object.assign(el('a', 'intel-accion', 'Abrir'), { href: x.enlace });
-            return [etiqueta(null, x.nombre, 'aviso'), el('strong', 'intel-atencion__valor', formatoNumero(x.valor)), accion];
-        }),
-        grupo('Problemas en los datos', 'Registros que contradicen una regla o necesitan que alguien complete un dato.',
-            diagnosticos === null ? [] : datos, diagnosticos === null ? 'No se pudo revisar' : 'Sin incidencias', (x) => {
-                const ir = boton('Revisar', 'intel-accion');
-                ir.addEventListener('click', () => abrirDiagnostico(estado.diagnosticos.find((g) => g.tipo === x.tipo)));
-                return [etiqueta(null, x.nombre, x.tono), el('strong', 'intel-atencion__valor', formatoNumero(x.valor)), ir];
-            }),
-    );
+        items.forEach((x) => {
+            const li = el('li');
+            const accion = x.evidencia ? botonEvidencia(x.accion, x.nombre, x.evidencia, 'button button--secondary button--small') : enlaceBoton(x.accion, x.enlace, x.icono);
+            li.append(etiqueta(null, x.nombre, 'aviso'), el('strong', 'intel-atencion__valor', formatoNumero(x.valor)), accion);
+            ul.append(li);
+        });
+        caja.append(ul);
+    }
+    $('#intel-atencion').replaceChildren(caja);
     $('#intel-atencion').setAttribute('aria-busy', 'false');
 }
 
@@ -467,7 +448,7 @@ function pintarAreas(d) {
         cabeza.append(caja, el('h3', 'intel-area__titulo', a.titulo));
         const cifra = el('p', 'intel-area__cifra');
         cifra.append(el('strong', null, a.principal.valor), el('span', null, ` ${a.principal.etiqueta}`));
-        const explorar = boton('Explorar proceso', 'button button--secondary button--small intel-area__boton');
+        const explorar = boton('Explorar proceso', 'button button--secondary button--small intel-area__boton', 'fa-route');
         explorar.setAttribute('aria-controls', 'intel-proceso');
         explorar.setAttribute('aria-expanded', String(estado.areaAbierta === a.clave));
         explorar.addEventListener('click', () => abrirProceso(a.clave, true));
@@ -512,7 +493,7 @@ function abrirProceso(clave, enfocar) {
     const titulo = el('h3', null, `Proceso: ${area.titulo}`);
     titulo.id = 'intel-proceso-titulo';
     titulo.tabIndex = -1;
-    const cerrar = boton('Cerrar proceso');
+    const cerrar = boton('Cerrar proceso', undefined, 'fa-xmark');
     cerrar.addEventListener('click', () => {
         estado.areaAbierta = null;
         panel.hidden = true;
@@ -554,135 +535,6 @@ function abrirProceso(clave, enfocar) {
     if (enfocar) titulo.focus();
 }
 
-// ───── Calidad de datos ─────
-
-function pintarCalidad(diagnosticos) {
-    const destino = $('#intel-calidad');
-    destino.setAttribute('aria-busy', 'false');
-    if (diagnosticos === null) {
-        const reintentar = boton('Reintentar');
-        reintentar.addEventListener('click', () => cargarDiagnosticos(estado.resumen));
-        destino.replaceChildren(el('p', 'intel-error', 'No se pudo revisar la calidad de los datos.'), reintentar);
-        return;
-    }
-    const { activos, opcionales, sanos } = agruparDiagnosticos(diagnosticos);
-    const tarjeta = (x) => {
-        const card = el('article', 'intel-diag');
-        const cabeza = el('div', 'intel-diag__cabeza');
-        cabeza.append(el('h3', 'intel-diag__titulo', x.titulo), el('strong', 'intel-diag__total', formatoNumero(x.total)));
-        const chips = el('ul', 'intel-etapa__estados');
-        Object.entries(x.porClasificacion).filter(([, n]) => n > 0).forEach(([c, n]) => {
-            const li = el('li');
-            const s = el('span', 'intel-chip intel-chip--fijo');
-            s.append(etiqueta(null, etiquetaClasificacion(c), CLASIFICACION[c]?.[1] ?? 'neutro'), el('strong', null, formatoNumero(n)));
-            li.append(s);
-            chips.append(li);
-        });
-        const dato = el('p', 'intel-diag__dato', x.dato === 'OBLIGATORIO' ? 'Dato obligatorio' : 'Dato opcional');
-        const revisar = boton('Ver registros y solución', 'intel-accion');
-        revisar.addEventListener('click', () => abrirDiagnostico(x));
-        card.append(cabeza, dato, chips, el('p', 'intel-nota', x.regla), revisar);
-        return card;
-    };
-    const bloques = [];
-    if (activos.length) bloques.push(...activos.map(tarjeta));
-    else bloques.push(etiqueta(null, 'Ningún dato obligatorio falta ni contradice una regla', 'exito'));
-    if (opcionales.length) {
-        const g = el('div', 'intel-calidad__grupo');
-        g.append(el('h3', 'intel-subtitulo', 'Datos opcionales vacíos'), ...opcionales.map(tarjeta));
-        bloques.push(g);
-    }
-    if (sanos.length) {
-        const g = el('div', 'intel-calidad__sanos');
-        g.append(el('h3', 'intel-subtitulo', 'Sin incidencias'));
-        const ul = el('ul', 'intel-sanos');
-        sanos.forEach((x) => { const li = el('li'); li.append(etiqueta(null, x.titulo, 'exito')); ul.append(li); });
-        g.append(ul);
-        bloques.push(g);
-    }
-    destino.replaceChildren(...bloques);
-}
-
-/** Valor de un detalle del diagnóstico: montos en colones, cantidades con separador y estados con su nombre. Puro. */
-export function textoDetalle({ etiqueta: rotulo, valor }) {
-    if (valor === null || valor === undefined) return '—';
-    if (typeof valor === 'number') return rotulo.startsWith('Monto') ? formatoColones(valor) : formatoNumero(valor);
-    if (/^\d{4}-\d{2}-\d{2}T/.test(valor)) return fecha(valor);
-    // Estado de un registro suelto (animal, publicación): en singular, no la etiqueta plural de los conteos.
-    if (rotulo.startsWith('Estado') && /^[A-Z_]+$/.test(valor)) return valor[0] + valor.slice(1).toLowerCase().replaceAll('_', ' ');
-    return ESTADOS[valor] ? etiquetaEstado(valor) : valor;
-}
-
-function abrirDiagnostico(x) {
-    if (!x) return;
-    abrirDialogo(x.titulo, (cuerpo) => {
-        const politica = el('dl', 'intel-politica');
-        [['Regla', x.regla], ['Cómo se resuelve', x.solucion]].forEach(([k, v]) => { const f = el('div'); f.append(el('dt', null, k), el('dd', null, v)); politica.append(f); });
-        const enlace = el('a', 'intel-accion', 'Abrir el módulo relacionado');
-        enlace.href = x.enlace;
-        const lista = el('div', 'intel-evidencia');
-        const comprobar = boton('Comprobar de nuevo');
-        cuerpo.append(politica, enlace, lista, comprobar);
-        const cargar = cargaPaginada(lista,
-            (pagina) => request(`${API}?${new URLSearchParams({ vista: 'DIAGNOSTICO', tipo: x.tipo, pagina, tamanoPagina: 10 })}`),
-            (data) => {
-                const filas = el('ul', 'intel-diag-filas');
-                data.items.forEach((f) => {
-                    const li = el('li', 'intel-diag-fila');
-                    const cabeza = el('div', 'intel-diag-fila__cabeza');
-                    cabeza.append(el('strong', null, `#${f.id} · ${f.registro}`), etiqueta(null, etiquetaClasificacion(f.clasificacion), CLASIFICACION[f.clasificacion]?.[1] ?? 'neutro'));
-                    if (f.origen === 'DEMO') cabeza.append(el('span', 'intel-insignia', 'Datos de demostración'));
-                    const dl = el('dl', 'intel-diag-fila__datos');
-                    [['Fecha', fecha(f.fecha)], ...f.detalles.map((d) => [d.etiqueta, textoDetalle(d)])]
-                        .forEach(([k, v]) => { const g = el('div'); g.append(el('dt', null, k), el('dd', null, v)); dl.append(g); });
-                    const responsable = el('p', 'intel-nota');
-                    responsable.append('Responsable: ', enlacePersona(f.personaId, f.persona ?? 'ya no existe'));
-                    li.append(cabeza, el('p', 'intel-diag-fila__causa', f.causa), dl, responsable);
-                    filas.append(li);
-                });
-                return filas;
-            }, 'Páginas del diagnóstico');
-        comprobar.addEventListener('click', async () => { await cargar(1); cargarDiagnosticos(estado.resumen); });
-        cargar(1);
-    });
-}
-
-async function cargarDiagnosticos(resumen) {
-    try {
-        const { data } = await request(`${API}?vista=DIAGNOSTICO`);
-        estado.diagnosticos = data.diagnosticos;
-    } catch {
-        estado.diagnosticos = null;
-    }
-    pintarCalidad(estado.diagnosticos);
-    if (resumen) pintarAtencion(resumen, estado.diagnosticos);
-}
-
-// ───── Auditoría ─────
-
-function pintarControl(d) {
-    const c = d.control;
-    const card = el('article', 'intel-panel');
-    card.append(el('h3', 'intel-panel__titulo', 'Movimientos por área'));
-    const dl = el('dl', 'intel-lista');
-    const filas = [['Total en la bitácora', formatoNumero(sumar(c.bitacoraPorEntidad))],
-        ...Object.entries(c.bitacoraPorEntidad ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => [nombreArea(k), formatoNumero(v)])];
-    filas.forEach(([k, v]) => { const f = el('div', 'intel-lista__fila'); f.append(el('dt', null, k), el('dd', null, v)); dl.append(f); });
-    const enlace = el('a', 'intel-accion', 'Abrir la bitácora');
-    enlace.href = 'admin/bitacora';
-    card.append(dl, enlace);
-    const docs = el('article', 'intel-panel');
-    docs.append(el('h3', 'intel-panel__titulo', 'Revisión de identidad'));
-    const dl2 = el('dl', 'intel-lista');
-    [['Por verificar', c.documentosPorEstado?.PENDIENTE ?? 0], ['Verificados', c.documentosPorEstado?.VERIFICADO ?? 0], ['Rechazados', c.documentosPorEstado?.RECHAZADO ?? 0],
-        ['Cambios de correo sin confirmar', c.correosPendientes ?? 0]]
-        .forEach(([k, v]) => { const f = el('div', 'intel-lista__fila'); f.append(el('dt', null, k), el('dd', null, formatoNumero(v))); dl2.append(f); });
-    const enlaceDocs = el('a', 'intel-accion', 'Abrir documentos');
-    enlaceDocs.href = 'admin/documentos';
-    docs.append(dl2, enlaceDocs);
-    $('#intel-control').replaceChildren(card, docs);
-}
-
 // ───── Personas y actividades ─────
 
 function pintarResumenTransporte(d) {
@@ -716,12 +568,12 @@ function iniciarTransportistas() {
         return r;
     }, (data) => tabla('Métricas por transportista',
         [['Transportista'], ['Ofertas activas', 'intel-num'], ['Capacidad', 'intel-num'], ['Vehículos', 'intel-num'], ['Solicitudes', 'intel-num'],
-            ['Aceptadas', 'intel-num'], ['Pendientes', 'intel-num'], ['Rechazadas', 'intel-num']],
+            ['Aceptadas', 'intel-num'], ['Pendientes', 'intel-num'], ['Viajes', 'intel-num']],
         data.items.map((f) => {
             const nombre = el('div', 'intel-tabla__persona');
             nombre.append(enlacePersona(f.personaId, f.nombre), etiqueta(null, f.activo ? 'Activo' : 'Inactivo', f.activo ? 'exito' : 'neutro'));
             return [nombre, formatoNumero(f.ofertasActivas), f.capacidadOfertada === null ? '—' : formatoNumero(f.capacidadOfertada), formatoNumero(f.vehiculos),
-                formatoNumero(f.solicitudesRecibidas), formatoNumero(f.solicitudesAceptadas), formatoNumero(f.solicitudesPendientes ?? 0), formatoNumero(f.solicitudesRechazadas)];
+                formatoNumero(f.solicitudesRecibidas), formatoNumero(f.solicitudesAceptadas), formatoNumero(f.solicitudesPendientes ?? 0), formatoNumero(f.viajesRegistrados ?? 0)];
         })), 'Páginas de transportistas');
     cargarTransportistas = () => cargar(1).catch(() => {});
     let espera = 0;
@@ -796,7 +648,7 @@ async function abrirExpediente(personaId) {
             ['Ventas', cantidadYMonto(x.vendedor.ventas, x.vendedor.montoVendido)]]));
         if (x.transportista) bloques.append(bloque('Como transportista', [['Estado', x.transportista.activo ? 'Activo' : 'Inactivo'], ['Ofertas', conteo(x.transportista.ofertas)],
             ['Capacidad ofertada', formatoNumero(x.transportista.capacidadOfertada)], ['Vehículos', formatoNumero(x.transportista.vehiculos)],
-            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)], ['Viajes realizados', 'Todavía no disponible']]));
+            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)], ['Viajes realizados', formatoNumero(x.transportista.viajesRegistrados ?? 0)]]));
         if (bloques.childElementCount) card.append(bloques); else card.append(el('p', 'intel-vacio', 'Sin actividades registradas.'));
         destino.replaceChildren(card);
         destino.focus({ preventScroll: true });
@@ -819,14 +671,11 @@ async function cargar() {
     try {
         const { data } = await request(`${API}?${consulta()}`);
         if (pedido !== estado.pedido) return; // solo vale la última respuesta
-        estado.resumen = data;
         pintarKpis(data);
         pintarRed(data.personas);
         pintarAreas(data);
-        pintarControl(data);
         pintarResumenTransporte(data);
-        pintarAtencion(data, estado.diagnosticos ?? []);
-        cargarDiagnosticos(data);
+        pintarAtencion(data);
         cargarTransportistas();
         const hora = new Intl.DateTimeFormat('es-CR', { hour: '2-digit', minute: '2-digit', timeZone: ZONA }).format(new Date(data.generado));
         status.textContent = `Periodo ${textoPeriodo(data.periodo)} · actualizado a las ${hora}.`;

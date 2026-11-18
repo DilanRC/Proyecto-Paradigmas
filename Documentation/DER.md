@@ -408,6 +408,7 @@ erDiagram
     tbtransportistaflete {
         INT tbtransportistafleteid PK
         INT tbtransportistaid
+        INT tbcomprasolicitudid
         INT tbproductororigenid
         INT tbfincaorigenid
         INT tbdireccionorigenid
@@ -522,6 +523,7 @@ erDiagram
     tbtransportistaoferta ||--o{ tbcomprasolicitud : "flete pedido"
     tbcomprador ||--o{ tbcompra : "compras"
     tbcomprasolicitud ||--o{ tbventa : "origen"
+    tbcomprasolicitud ||--o| tbtransportistaflete : "viaje"
     tbespecie ||--o{ tbanimaltipo : "tipos"
     tbespecie ||--o{ tbraza : "razas"
     tbespecie ||--o{ tbanimal : "especie"

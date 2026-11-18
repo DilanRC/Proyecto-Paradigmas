@@ -18,8 +18,8 @@ test('/mi-dashboard es una ruta con sesión y su API existe', () => {
 });
 
 test('la vista invalida el JS del dashboard y mantiene su hoja de estilos', () => {
-    assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-7/);
-    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-9/);
+    assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-8/);
+    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-10/);
     assert.match(vista, /data-dashboard-rol="VENDEDOR"/);
     assert.match(vista, /data-dashboard-rol="COMPRADOR"/);
 });
@@ -218,4 +218,15 @@ test('la vista reserva el selector de rol y los filtros de comprador hasta que e
     // Solo la respuesta del servidor (pintarRoles) termina la reserva.
     assert.match(js, /function pintarRoles\(roles\) \{[\s\S]*?removeAttribute\('data-roles-pendientes'\)/);
     assert.doesNotMatch(js, /rolesDesdePerfil|publicProfileForSession/);
+});
+
+test('comparables y oportunidades muestran sus ejemplares en la tarjeta, ordenados', async () => {
+    const { ordenarEjemplares, EJEMPLARES_EN_TARJETA } = await import('../../Public/js/mi-dashboard.js');
+    const c = (id, d) => ({ subastaId: id, comparacion: { diferenciaPorcentaje: d } });
+    assert.deepEqual(ordenarEjemplares([c(1, 12), c(2, -40), c(3, 0)], 'comparables').map((s) => s.subastaId), [2, 3, 1], 'del más barato al más caro');
+    const o = (id, km, fin) => ({ subastaId: id, distanciaKm: km, fechaFin: fin });
+    assert.deepEqual(ordenarEjemplares([o(1, null, '2026-11-20'), o(2, 30, '2026-11-25'), o(3, 5, '2026-11-30'), o(4, null, '2026-11-19')], 'cercania').map((s) => s.subastaId),
+        [3, 2, 4, 1], 'primero la más cercana; sin distancia, la que cierra antes');
+    assert.equal(EJEMPLARES_EN_TARJETA, 4);
+    assert.match(js, /ejemplares\.lista\.length > EJEMPLARES_EN_TARJETA \? botonEvidencia/, '«Ver en la tabla» solo si quedan ejemplares fuera');
 });

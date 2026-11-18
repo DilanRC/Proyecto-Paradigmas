@@ -1,5 +1,5 @@
 import { getAccessToken, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { request } from './shared/api.js?v=auth-gate-17';
+import { request } from './shared/api.js?v=auth-gate-18';
 import { subirImagenPublicacion, validarImagen } from './shared/storage.js?v=documento-4';
 import { safeImageUrl } from './explore.js?v=explore-16';
 import { digitosArete, errorArete, formatearArete } from './shared/arete.js';

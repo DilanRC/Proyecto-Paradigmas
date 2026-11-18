@@ -28,8 +28,8 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-8/);
-    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-11/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-9/);
+    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-12/);
 });
 
 test('el panel no expone tablas ni lo que la plataforma no registra', async () => {
@@ -48,7 +48,10 @@ test('el panel no expone tablas ni lo que la plataforma no registra', async () =
     assert.match(transporte.noDisponible[0].motivo, /todavía no disponible/);
     assert.equal('valor' in transporte.noDisponible[0], false, 'sin valor numérico');
     assert.ok(transporte.etapas.every((e) => !/Viaje/.test(e.nombre)), 'un flete aceptado no se presenta como viaje');
-    assert.equal(procesos({ ...base, transporte: { ...base.transporte, viajesInstrumentados: true } }).find((a) => a.clave === 'transporte').noDisponible.length, 0);
+    const conViajes = procesos({ ...base, transporte: { ...base.transporte, viajesInstrumentados: true, viajesRegistrados: { total: 3, cabezas: 7 } } }).find((a) => a.clave === 'transporte');
+    assert.equal(conViajes.noDisponible.length, 0);
+    assert.deepEqual([conViajes.etapas[conViajes.etapas.length - 1].nombre, conViajes.etapas[conViajes.etapas.length - 1].valor], ['Viaje realizado', '3'],
+        'con registro, el viaje es la última etapa y se cuenta aparte de los fletes aceptados');
     // Etapas conceptuales: sin tasas de conversión entre etapas.
     assert.doesNotMatch(texto, /conversi|tasa/i);
     const subastas = procesos(base).find((a) => a.clave === 'subastas');
@@ -87,37 +90,27 @@ test('el alias se muestra solo si es distinto del nombre', async () => {
     assert.equal(conAlias({ nombre: 'Ana', alias: null }), 'Ana');
 });
 
-test('calidad de datos: lo opcional no es error y lo sano no compite con las incidencias', async () => {
-    const { agruparDiagnosticos, atencion, textoDetalle } = await import('../../Public/js/dashboard.js');
-    const diag = (tipo, prioridad, porClasificacion) => ({ tipo, prioridad, titulo: tipo, total: Object.values(porClasificacion).reduce((a, b) => a + b, 0), porClasificacion });
-    const lista = [
-        diag('fotos', 5, { OPCIONAL: 3 }), diag('subastas', 1, { INCONSISTENCIA: 8 }), diag('precios', 6, {}),
-        diag('ventas', 2, { SIN_EVIDENCIA: 2, OPCIONAL: 0 }), diag('fincas', 3, { REVISION: 1 }),
-    ];
-    const g = agruparDiagnosticos(lista);
-    assert.deepEqual(g.activos.map((d) => d.tipo), ['subastas', 'ventas', 'fincas'], 'incidencias por prioridad');
-    assert.deepEqual(g.opcionales.map((d) => d.tipo), ['fotos']);
-    assert.deepEqual(g.sanos.map((d) => d.tipo), ['precios']);
-    const resumen = { control: { documentosPorEstado: { PENDIENTE: 2 }, correosPendientes: 0 }, comercializacion: { solicitudesCreadas: { PENDIENTE: 0 } },
-        transporte: { solicitudesFletePorEstado: { PENDIENTE: 1 } } };
-    const a = atencion(resumen, lista);
-    assert.deepEqual(a.operativos.map((x) => x.valor), [1, 2], 'solo los pendientes que existen');
-    assert.equal(a.datos[0].tono, 'peligro', 'rojo solo para inconsistencias confirmadas');
-    assert.equal(a.datos.find((x) => x.tipo === 'fincas').tono, 'aviso');
-    assert.equal(a.datos.some((x) => x.tipo === 'fotos'), false, 'un dato opcional no pide atención');
-    assert.match(textoDetalle({ etiqueta: 'Monto ganador', valor: 1500000 }), /^₡1\s?500\s?000$/);
-    assert.equal(textoDetalle({ etiqueta: 'Estado del animal', valor: 'VENDIDO' }), 'Vendido');
-    assert.equal(textoDetalle({ etiqueta: 'Ganador', valor: null }), '—');
+test('requieren atención: solo pendientes de la operación, incluidos los fletes aceptados sin viaje', async () => {
+    const { atencion } = await import('../../Public/js/dashboard.js');
+    const resumen = { control: { documentosPorEstado: { PENDIENTE: 2 }, correosPendientes: 3 }, comercializacion: { solicitudesCreadas: { PENDIENTE: 0 } },
+        transporte: { solicitudesFletePorEstado: { PENDIENTE: 1, ACEPTADA: 5 }, fletesSinViaje: 4, viajesRegistrados: { total: 1 } } };
+    const a = atencion(resumen);
+    assert.deepEqual(a.map((x) => [x.nombre, x.valor]), [['Fletes sin respuesta del transportista', 1], ['Fletes aceptados sin viaje registrado', 4],
+        ['Documentos de identidad por verificar', 2]], 'solo lo que existe; los correos no se exponen');
+    assert.ok(a.every((x) => x.accion && !/^(Ver|Abrir|Revisar)$/.test(x.accion)), 'cada acción dice qué abre');
 });
 
-test('el panel usa diálogo nativo con cierre accesible y carga el diagnóstico de la API cerrada', () => {
+test('el panel quita calidad de datos y bitácora, y sus acciones llevan ícono y texto', () => {
     const vista = read('Application/View/dashboard/index.php');
     const js = read('Public/js/dashboard.js');
     assert.match(vista, /<dialog class="intel-dialogo" id="intel-dialogo" aria-labelledby="intel-dialogo-titulo">/);
     assert.match(js, /showModal\(\)/, 'showModal atrapa el foco y Esc cierra');
     assert.match(js, /origenDialogo\.focus\(\)/, 'el foco vuelve al control que abrió el diálogo');
-    assert.match(js, /vista: 'DIAGNOSTICO', tipo: x\.tipo/);
-    for (const zona of ['intel-atencion', 'intel-arbol', 'intel-calidad', 'intel-transporte-resumen']) {
+    assert.doesNotMatch(vista, /intel-calidad|intel-control|Auditoría|Calidad de datos/);
+    assert.doesNotMatch(js, /DIAGNOSTICO|bitacoraPorEntidad|incompletos/);
+    assert.doesNotMatch(js, /boton\('(Ver|Abrir|Revisar)'/, 'sin botones que solo digan Ver, Abrir o Revisar');
+    assert.match(js, /enlaceBoton\(`Abrir \$\{t\.etiqueta\.toLowerCase\(\)\}`/, 'abrir un módulo es un botón con su nombre');
+    for (const zona of ['intel-atencion', 'intel-arbol', 'intel-transporte-resumen']) {
         assert.match(vista, new RegExp(`id="${zona}"[^>]*aria-busy="true"`), `${zona} reserva su espacio con esqueleto`);
     }
 });
