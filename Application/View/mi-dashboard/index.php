@@ -16,10 +16,10 @@
     <link rel="stylesheet" href="css/public-product.css?v=product-12">
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
-    <link rel="stylesheet" href="css/mi-dashboard.css?v=dashboard-5">
+    <link rel="stylesheet" href="css/mi-dashboard.css?v=dashboard-6">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-23"></script>
-    <script type="module" src="js/mi-dashboard.js?v=dashboard-7"></script>
+    <script type="module" src="js/mi-dashboard.js?v=dashboard-8"></script>
 </head>
 <body class="public-home activity-page dashboard-page">
     <div class="public-shell" id="inicio">
@@ -36,16 +36,19 @@
             </div>
         </header>
 
-        <main class="activity-main dash">
+        <main class="activity-main dash" data-roles-pendientes>
             <header class="dash-cabecera">
                 <div>
                     <h1 id="dashboard-title">Mi dashboard</h1>
                     <p class="dash-subtitulo" id="dashboard-subtitulo">Cómo te va en las subastas · últimos 30 días</p>
                 </div>
-                <!-- Un dashboard por rol. Solo aparecen los roles que la persona tiene. -->
-                <div class="dash-segmento" role="tablist" aria-label="Qué dashboard ver" hidden>
-                    <button type="button" role="tab" id="tab-vendedor" aria-controls="dashboard-panel" aria-selected="true" data-dashboard-rol="VENDEDOR" hidden><i class="fa-solid fa-store" aria-hidden="true"></i><span>Como vendedor</span></button>
-                    <button type="button" role="tab" id="tab-comprador" aria-controls="dashboard-panel" aria-selected="false" data-dashboard-rol="COMPRADOR" hidden><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i><span>Como comprador</span></button>
+                <!-- Un dashboard por rol. Solo aparecen los roles que la persona tiene. Mientras el servidor
+                     no los confirma (data-roles-pendientes) el selector y los filtros del rol inicial (Comprador,
+                     que toda cuenta completa tiene) ocupan su lugar sin verse: así el panel no salta al llegar la
+                     respuesta, haya o no caché. -->
+                <div class="dash-segmento" role="tablist" aria-label="Qué dashboard ver">
+                    <button type="button" role="tab" id="tab-vendedor" aria-controls="dashboard-panel" aria-selected="false" data-dashboard-rol="VENDEDOR"><i class="fa-solid fa-store" aria-hidden="true"></i><span>Como vendedor</span></button>
+                    <button type="button" role="tab" id="tab-comprador" aria-controls="dashboard-panel" aria-selected="true" data-dashboard-rol="COMPRADOR"><i class="fa-solid fa-hand-holding-dollar" aria-hidden="true"></i><span>Como comprador</span></button>
                 </div>
             </header>
 
@@ -68,37 +71,19 @@
                     <option>San José</option><option>Alajuela</option><option>Cartago</option><option>Heredia</option>
                     <option>Guanacaste</option><option>Puntarenas</option><option>Limón</option>
                 </select></label>
-                <label class="dash-campo" data-solo-comprador hidden><span>Radio de búsqueda</span><select name="radioKm">
+                <label class="dash-campo" data-solo-comprador><span>Radio de búsqueda</span><select name="radioKm">
                     <option value="10">10 km</option><option value="25">25 km</option><option value="50" selected>50 km</option>
                     <option value="100">100 km</option><option value="200">200 km</option>
                 </select></label>
                 <div class="dash-filtros__acciones">
-                    <button id="dashboard-ubicacion" class="dash-boton" type="button" aria-describedby="dashboard-ubicacion-estado" data-solo-comprador hidden><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i><span>Usar mi ubicación</span></button>
+                    <button id="dashboard-ubicacion" class="dash-boton" type="button" aria-describedby="dashboard-ubicacion-estado" data-solo-comprador><i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i><span>Usar mi ubicación</span></button>
                     <button class="dash-boton" type="reset">Limpiar</button>
                 </div>
                 <small id="dashboard-ubicacion-estado" class="dash-filtros__nota" role="status" data-solo-comprador hidden></small>
                 <small id="dashboard-filtros-error" class="field-error dash-filtros__nota" role="alert"></small>
             </form>
-            <script>
-                // Antes del primer pintado: las pestañas y los filtros del rol que dice el perfil en caché
-                // (misma regla que rolesDesdePerfil en mi-dashboard.js). Sin esto aparecen al cargar el
-                // módulo y empujan el panel. Solo es presentación: el servidor confirma los roles.
-                (function () {
-                    try {
-                        var perfil = JSON.parse(sessionStorage.getItem('tindercows:profile') || 'null');
-                        var capacidades = perfil && Array.isArray(perfil.capacidades) ? perfil.capacidades : null;
-                        if (!capacidades) return;
-                        var vendedor = capacidades.indexOf('PRODUCTOR') > -1;
-                        var comprador = capacidades.indexOf('COMPRADOR') > -1;
-                        document.getElementById('tab-vendedor').hidden = !vendedor;
-                        document.getElementById('tab-comprador').hidden = !comprador;
-                        document.querySelector('.dash-segmento').hidden = !(vendedor || comprador);
-                        document.querySelectorAll('[data-solo-comprador]').forEach(function (campo) { campo.hidden = vendedor || !comprador; });
-                    } catch (error) { /* sin caché decide la respuesta del servidor */ }
-                })();
-            </script>
 
-            <section id="dashboard-panel" role="tabpanel" aria-labelledby="tab-vendedor" aria-busy="true">
+            <section id="dashboard-panel" role="tabpanel" aria-labelledby="tab-comprador" aria-busy="true">
                 <div id="dashboard-loading" class="resource-state skeleton-estado" role="status" aria-live="polite"><span class="screen-reader-only">Cargando tus indicadores…</span><div class="skeleton-estado__huesos" aria-hidden="true"><?= tc_esqueleto_dashboard() ?></div></div>
                 <div id="dashboard-error" class="resource-state resource-state--error" role="alert" hidden><p id="dashboard-error-message">No pudimos cargar tus indicadores.</p><button id="dashboard-retry" class="dash-boton" type="button">Reintentar</button></div>
                 <div id="dashboard-sin-rol" class="panel-empty" hidden><strong>Todavía no tienes un dashboard</strong><p id="dashboard-sin-rol-texto">Cada dashboard aparece cuando activas su actividad (Vendedor o Comprador). <a href="participar">Elegir cómo participo</a></p></div>

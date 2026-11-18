@@ -5,7 +5,6 @@
 
 import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { publicProfileForSession } from './shared/public-profile.js?v=profile-2';
 import { formatPrice, safeImageUrl } from './explore.js?v=explore-15';
 import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-2';
 import { esRegistroIncompleto, mostrarRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
@@ -16,7 +15,9 @@ const ROLES = { VENDEDOR: 'vendedor', COMPRADOR: 'comprador' };
 const PERIODOS = { 7: 'últimos 7 días', 30: 'últimos 30 días', 90: 'últimos 90 días', 365: 'últimos 12 meses', todo: 'todo el tiempo' };
 const $ = (selector) => document.querySelector(selector);
 
-const estado = { rol: 'VENDEDOR', roles: null, punto: null, catalogos: { especies: [], tipos: [], razas: [] }, pedido: 0 };
+// Comprador primero: toda cuenta completa lo tiene, así la geometría inicial coincide con la final y
+// no hace falta una segunda petición tras un 409 "sin rol".
+const estado = { rol: 'COMPRADOR', roles: null, punto: null, catalogos: { especies: [], tipos: [], razas: [] }, pedido: 0 };
 
 // ───────────────────────────── Funciones puras ─────────────────────────────
 
@@ -115,18 +116,6 @@ export function situacionComprador(s) {
 export function rolDisponible(rol, roles = {}) {
     if (roles[ROLES[rol]]) return rol;
     return Object.keys(ROLES).find((otro) => roles[ROLES[otro]]) ?? null;
-}
-
-/**
- * Roles que sugiere el perfil en caché de esta pestaña (Vendedor = Productor
- * configurado). Solo sirve para pintar desde el inicio las pestañas y los
- * filtros del rol correcto y evitar que salten al llegar la respuesta; quien
- * decide sigue siendo el servidor (`datos.roles` o el 409 "sin rol").
- */
-export function rolesDesdePerfil(perfil) {
-    const capacidades = Array.isArray(perfil?.capacidades) ? perfil.capacidades : null;
-    if (!capacidades) return null;
-    return { vendedor: capacidades.includes('PRODUCTOR'), comprador: capacidades.includes('COMPRADOR') };
 }
 
 /** Definición de los estados de cada rol: nombre, descripción corta y si ocurre "ahora". */
@@ -507,7 +496,16 @@ function pintarRoles(roles) {
         if (elegido) $('#dashboard-panel').setAttribute('aria-labelledby', boton.id);
     });
     $('.dash-segmento').hidden = !alguno;
-    document.querySelectorAll('[data-solo-comprador]').forEach((campo) => { campo.hidden = estado.rol !== 'COMPRADOR'; });
+    // Roles confirmados por el servidor: termina la reserva de espacio de la vista.
+    document.querySelector('.dash')?.removeAttribute('data-roles-pendientes');
+    // Con Comprador y Vendedor, cambiar de pestaña es una acción de la persona: los filtros de comprador se
+    // quitan. Sin Comprador (cuenta antigua o desactivada) nunca aparecen: conservan su lugar sin verse para
+    // que el panel no suba al confirmar los roles.
+    const sinComprador = !roles[ROLES.COMPRADOR];
+    document.querySelectorAll('[data-solo-comprador]').forEach((campo) => {
+        campo.hidden = estado.rol !== 'COMPRADOR' && !sinComprador;
+        campo.toggleAttribute('data-reservado', sinComprador);
+    });
 }
 
 function valoresFormulario() {
@@ -639,11 +637,6 @@ function iniciar() {
     }));
     $('#dashboard-retry').addEventListener('click', cargar);
     $('#dashboard-ubicacion').addEventListener('click', pedirUbicacion);
-    const rolesPrevios = rolesDesdePerfil(publicProfileForSession(readAuthSession()));
-    if (rolesPrevios) {
-        estado.rol = rolDisponible(estado.rol, rolesPrevios) ?? estado.rol;
-        pintarRoles(rolesPrevios);
-    }
     void cargarCatalogos();
     cargar();
 }

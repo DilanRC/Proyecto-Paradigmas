@@ -41,6 +41,14 @@
 .dash-segmento button:hover { color:var(--tc-text); }
 .dash-segmento button[aria-selected='true'] { color:var(--tc-bg); background:var(--tc-success); }
 .dash-segmento button[hidden] { display:none; }
+/* Roles sin confirmar: el selector y los filtros del rol inicial ocupan su lugar sin verse ni recibir
+   foco (visibility). mi-dashboard.js quita el atributo cuando el servidor responde. */
+.dash[data-roles-pendientes] .dash-segmento,
+.dash[data-roles-pendientes] [data-solo-comprador],
+.dash [data-reservado] { visibility:hidden; }
+/* El panel es el contenido principal: reserva al menos casi una pantalla para que pasar del esqueleto
+   a un error, a "sin subastas" o a pocos datos no suba el pie de página. */
+#dashboard-panel { min-height:75vh; }
 
 /* ───── Tarjeta base, botones y foco ───── */
 .dash-tarjeta {

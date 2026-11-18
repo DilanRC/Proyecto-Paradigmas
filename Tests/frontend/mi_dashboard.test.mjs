@@ -18,8 +18,8 @@ test('/mi-dashboard es una ruta con sesión y su API existe', () => {
 });
 
 test('la vista invalida el JS del dashboard y mantiene su hoja de estilos', () => {
-    assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-5/);
-    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-7/);
+    assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-6/);
+    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-8/);
     assert.match(vista, /data-dashboard-rol="VENDEDOR"/);
     assert.match(vista, /data-dashboard-rol="COMPRADOR"/);
 });
@@ -144,22 +144,24 @@ test('montos cortos sobre columnas angostas', async () => {
     assert.equal(nombreMes('2026-10'), 'Oct 2026');
 });
 
-test('el rol inicial sale del perfil en caché para que pestañas y filtros no salten', async () => {
-    const { rolesDesdePerfil } = await import('../../Public/js/mi-dashboard.js');
-    assert.equal(rolesDesdePerfil(null), null, 'sin perfil decide el servidor');
-    assert.equal(rolesDesdePerfil({ persona: {} }), null);
-    assert.deepEqual(rolesDesdePerfil({ capacidades: ['COMPRADOR'] }), { vendedor: false, comprador: true });
-    assert.deepEqual(rolesDesdePerfil({ capacidades: ['PRODUCTOR', 'COMPRADOR', 'TRANSPORTISTA'] }), { vendedor: true, comprador: true });
-    const js = readFileSync('Public/js/mi-dashboard.js', 'utf8');
-    assert.match(js, /const rolesPrevios = rolesDesdePerfil\(publicProfileForSession\(readAuthSession\(\)\)\);[\s\S]*?pintarRoles\(rolesPrevios\);[\s\S]*?cargar\(\);/);
-});
-
-test('la vista aplica los roles en caché antes del primer pintado con la misma regla que el módulo', () => {
+test('la vista reserva el selector de rol y los filtros de comprador hasta que el servidor confirma los roles', () => {
     const vista = readFileSync('Application/View/mi-dashboard/index.php', 'utf8');
-    const script = vista.slice(vista.indexOf('</form>'), vista.indexOf('<section id="dashboard-panel"'));
-    assert.match(script, /<script>[\s\S]*sessionStorage\.getItem\('tindercows:profile'\)/, 'script clásico en línea, antes del panel');
-    assert.match(script, /indexOf\('PRODUCTOR'\)[\s\S]*indexOf\('COMPRADOR'\)/);
-    // Vendedor es el rol inicial cuando tiene los dos: los filtros de comprador quedan ocultos.
-    assert.match(script, /campo\.hidden = vendedor \|\| !comprador;/);
-    assert.match(script, /catch \(error\)/, 'sin caché o con datos dañados no rompe la página');
+    const css = readFileSync('Public/css/mi-dashboard.css', 'utf8');
+    const js = readFileSync('Public/js/mi-dashboard.js', 'utf8');
+    assert.match(vista, /<main class="activity-main dash" data-roles-pendientes>/);
+    assert.doesNotMatch(vista, /class="dash-segmento"[^>]*\bhidden\b/, 'el selector ocupa su lugar desde el primer pintado');
+    assert.doesNotMatch(vista, /tindercows:profile|sessionStorage/, 'ninguna caché decide qué actividad ve la persona');
+    assert.match(css, /\.dash\[data-roles-pendientes\] \.dash-segmento,[\s\S]*?visibility:hidden/);
+    // base.css impone [hidden] { display:none !important }: la reserva no puede apoyarse en hidden.
+    assert.doesNotMatch(vista, /<label class="dash-campo" data-solo-comprador hidden|data-solo-comprador hidden><i|data-dashboard-rol="[A-Z]+" hidden/);
+    assert.match(css, /\.dash\[data-roles-pendientes\] \[data-solo-comprador\],\s*\.dash \[data-reservado\] \{ visibility:hidden; \}/);
+    assert.match(css, /#dashboard-panel \{ min-height:75vh; \}/, 'error y vacío no suben el pie de página');
+    // Rol inicial Comprador (toda cuenta completa lo tiene): pestaña y panel coinciden desde el HTML.
+    assert.match(js, /const estado = \{ rol: 'COMPRADOR',/);
+    assert.match(vista, /aria-selected="true" data-dashboard-rol="COMPRADOR"/);
+    assert.match(vista, /role="tabpanel" aria-labelledby="tab-comprador"/);
+    assert.match(js, /campo\.toggleAttribute\('data-reservado', sinComprador\)/);
+    // Solo la respuesta del servidor (pintarRoles) termina la reserva.
+    assert.match(js, /function pintarRoles\(roles\) \{[\s\S]*?removeAttribute\('data-roles-pendientes'\)/);
+    assert.doesNotMatch(js, /rolesDesdePerfil|publicProfileForSession/);
 });

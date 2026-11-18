@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/password-toggle.js?v=password-1"></script>
-    <script type="module" src="js/registro.js?v=signup-16"></script>
+    <script type="module" src="js/registro.js?v=signup-17"></script>
 </head>
 <body class="auth-page onboarding-page">
 <main class="onboarding-shell" aria-labelledby="registro-title">

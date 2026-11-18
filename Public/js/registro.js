@@ -12,7 +12,7 @@ import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1'
 import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession, signUpWithPassword } from './shared/supabase-auth.js?v=session-4';
 import { signOutEverywhere } from './shared/auth-gate.js?v=auth-gate-15';
-import { ESTADO_CUENTA, consultarCuenta } from './shared/cuenta.js?v=cuenta-2';
+import { ESTADO_CUENTA, consultarCuenta, esRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
 import { safeNext } from './shared/next.js?v=next-4';
 import { REGISTRATION_DRAFT_KEY } from './shared/registro-pendiente.js?v=pendiente-4';
@@ -410,6 +410,22 @@ async function resolveAuthenticatedActivity(authSession) {
         return { ...cuenta, redirected: true };
     }
     return cuenta;
+}
+
+/**
+ * El alta respondió 409 (no el de registro incompleto): puede que la misma cuenta
+ * ya haya terminado el registro en otro navegador o pestaña. Se vuelve a preguntar
+ * al servidor; solo si confirma la cuenta completa se da por terminado. Nunca se
+ * reenvía el alta ni se decide con datos del navegador.
+ */
+export async function registroCompletadoEnOtroLugar(error, { consultar = consultarCuenta } = {}) {
+    if (error?.status !== 409 || esRegistroIncompleto(error)) return false;
+    try {
+        const cuenta = await consultar({ forzar: true });
+        return cuenta?.estado === ESTADO_CUENTA.COMPLETA;
+    } catch {
+        return false;
+    }
 }
 
 /** No se pudo saber si la cuenta ya tiene Persona: se ofrece reintentar en vez del formulario. */
@@ -952,6 +968,12 @@ async function initialize() {
             if (error?.code === 'account_already_exists') {
                 // Mismo destino y mismo aviso neutro: no se revela si existía.
                 window.location.assign(loginPendiente());
+                return;
+            }
+            if (!extending && readAuthSession() && await registroCompletadoEnOtroLugar(error)) {
+                sessionStorage.removeItem(DRAFT_KEY);
+                setStatus(status, 'Tu registro ya estaba completo (lo terminaste en otra ventana o dispositivo). Abriendo tu panel…', 'success');
+                window.location.assign(resolveNext('mi-actividad'));
                 return;
             }
             const fieldErrors = error?.errors ?? {};

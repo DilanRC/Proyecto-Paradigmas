@@ -2,6 +2,7 @@
 // Ejecutar: node --test Tests/frontend/cuenta_incompleta.test.mjs
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { accountPanelHtml } from '../../Public/js/public-ui.js';
 import { PROFILE_KEY } from '../../Public/js/shared/public-profile.js';
@@ -83,4 +84,31 @@ test('el borrador personal no se comparte entre cuentas ni se rellena con sesió
     assert.equal(borradorDeLaCuenta(draft, ' dilan@EXAMPLE.com '), draft, 'el correo se compara sin distinguir mayúsculas ni espacios');
     assert.equal(borradorDeLaCuenta(draft, 'otra@example.com'), null);
     assert.equal(borradorDeLaCuenta(draft, '', true), null, 'una sesión sin correo no debe heredar datos personales');
+});
+
+// Reserva B: el registro se terminó en otro navegador mientras este tenía el
+// formulario abierto. El 409 del alta no se queda como error si el servidor
+// confirma la cuenta completa; cualquier otra respuesta sigue siendo error.
+test('un 409 del alta con la cuenta ya completa en otro lugar lleva al panel sin reenviar el alta', async () => {
+    const { registroCompletadoEnOtroLugar } = await import('../../Public/js/registro.js');
+    const { ESTADO_CUENTA, CODIGO_REGISTRO_INCOMPLETO } = await import('../../Public/js/shared/cuenta.js');
+    const consultas = [];
+    const completa = async (opciones) => { consultas.push(opciones); return { estado: ESTADO_CUENTA.COMPLETA }; };
+    const conflicto = { status: 409, data: {} };
+
+    assert.equal(await registroCompletadoEnOtroLugar(conflicto, { consultar: completa }), true);
+    assert.deepEqual(consultas, [{ forzar: true }], 'pregunta de nuevo al servidor, sin la consulta cacheada de la página');
+
+    // Solo el servidor decide: sin cuenta completa, error de red o un 409 de registro incompleto, sigue el error.
+    assert.equal(await registroCompletadoEnOtroLugar(conflicto, { consultar: async () => ({ estado: ESTADO_CUENTA.CONFLICTO }) }), false);
+    assert.equal(await registroCompletadoEnOtroLugar(conflicto, { consultar: async () => { throw new Error('red'); } }), false);
+    let preguntada = false;
+    const espia = async () => { preguntada = true; return { estado: ESTADO_CUENTA.COMPLETA }; };
+    assert.equal(await registroCompletadoEnOtroLugar({ status: 409, data: { codigo: CODIGO_REGISTRO_INCOMPLETO } }, { consultar: espia }), false);
+    assert.equal(await registroCompletadoEnOtroLugar({ status: 422, errors: {} }, { consultar: espia }), false);
+    assert.equal(await registroCompletadoEnOtroLugar({ status: 500 }, { consultar: espia }), false);
+    assert.equal(preguntada, false, 'otros errores no consultan ni redirigen');
+
+    const js = readFileSync(new URL('../../Public/js/registro.js', import.meta.url), 'utf8');
+    assert.match(js, /if \(!extending && readAuthSession\(\) && await registroCompletadoEnOtroLugar\(error\)\) \{[\s\S]*?window\.location\.assign\(resolveNext\('mi-actividad'\)\);/);
 });
