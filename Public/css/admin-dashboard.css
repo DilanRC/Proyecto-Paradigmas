@@ -1,4 +1,4 @@
-/* Centro de inteligencia (/admin/dashboard, dashboard-7). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
+/* Centro de inteligencia (/admin/dashboard, dashboard-8). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
    semánticos propios, con los mismos significados que Mi dashboard: info = activo / en curso, data = montos. Verde,
    ámbar y gris salen de --admin-success / --admin-warning / --admin-muted. Sin banner ni imágenes decorativas. */
 body.admin-dashboard { --admin-info:#8ec5f2; --admin-data:#bdb6ea; }
@@ -145,3 +145,5 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 }
 @media (max-width:420px) { .intel-kpis { grid-template-columns:1fr; } }
 @media (prefers-reduced-motion:reduce) { .intel-proceso > summary::before { transition:none; } }
+/* Transportistas tiene 7 columnas: ocupa todo el ancho y la búsqueda queda debajo. */
+#intel-transportistas { grid-column:1 / -1; }

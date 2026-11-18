@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-7">
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-8">
     <script type="module" src="js/dashboard.js?v=intel-6"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>

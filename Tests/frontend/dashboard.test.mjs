@@ -29,7 +29,7 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
     assert.match(view, /js\/dashboard\.js\?v=intel-6/);
-    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-7/);
+    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-8/);
 });
 
 test('el panel no expone tablas ni lo que la plataforma no registra', async () => {
