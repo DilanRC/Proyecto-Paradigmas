@@ -6,7 +6,7 @@
 // porque los registros no prueban que las mismas personas pasaran por todas. Lo que la plataforma no registra se dice
 // «todavía no disponible», nunca 0. Sin imágenes decorativas (decisión del PR #30). Todo con textContent.
 
-import { request } from './shared/api.js?v=auth-gate-16';
+import { request } from './shared/api.js?v=auth-gate-17';
 import { el } from './dashboard-graficos.js?v=graficos-3';
 
 const API = 'api/v1/admin/dashboard';

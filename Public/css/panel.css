@@ -698,7 +698,6 @@ body.rural-panel {
     }
 }
 
-/* Sin saltos al cargar (CLS): la barra de desplazamiento ocupa su lugar desde el inicio (si aparece cuando llega la
-   tabla, todo el panel se corre a la izquierda) y la tabla reserva una altura para que el pie no baje al llenarse. */
+/* Sin saltos al cargar (CLS): la barra de desplazamiento ocupa su lugar desde el inicio; si aparece cuando llega la
+   tabla, todo el panel se corre a la izquierda. La altura reservada de la tabla está en admin-v3.css. */
 html { scrollbar-gutter:stable; }
-.rural-panel .table-container { min-height:min(56vh, 540px); }

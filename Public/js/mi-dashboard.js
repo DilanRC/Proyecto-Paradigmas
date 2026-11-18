@@ -5,7 +5,7 @@
 // (verde = adjudicada/ganada, azul = activa, ámbar con rayas = desierta/superada, gris = cancelada/perdida, violeta =
 // montos), siempre con texto e ícono. Todo se pinta con DOM (textContent). La ubicación solo vive en memoria.
 
-import { request } from './shared/api.js?v=auth-gate-16';
+import { request } from './shared/api.js?v=auth-gate-17';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { formatPrice, safeImageUrl } from './explore.js?v=explore-16';
 import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-3';

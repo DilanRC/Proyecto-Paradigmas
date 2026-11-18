@@ -1,6 +1,6 @@
 import { endExpiredSession, readAuthSession, getAccessToken } from './shared/supabase-auth.js?v=session-4';
 import { publicProfileForSession } from './shared/public-profile.js?v=profile-2';
-import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-16';
+import { signOutEverywhere, writeAdminBrowserSession } from './shared/auth-gate.js?v=auth-gate-17';
 import { ESTADO_CUENTA, estadoPublicado } from './shared/estado-cuenta.js?v=estado-cuenta-1';
 
 function ensureProductStyles() {

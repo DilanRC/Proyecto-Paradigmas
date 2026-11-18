@@ -2,7 +2,7 @@ import { openDialog, closeDialog } from './dialog.js?v=dialog-2';
 // Diálogo "Solicitar compra": el comprador pide el animal, con flete opcional, y el vendedor
 // decide (api/v1/solicitudes-compra). Los fletes son los que cubren la finca del animal
 // (api/v1/fletes?publicacionId=): el servidor resuelve el punto de la finca, el navegador no lo conoce.
-import { request } from './api.js?v=auth-gate-16';
+import { request } from './api.js?v=auth-gate-17';
 
 const SOLICITUDES_API = 'api/v1/solicitudes-compra';
 const FLETES_API = 'api/v1/fletes';

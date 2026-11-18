@@ -17,7 +17,7 @@
 // No hay navegación interna desde este módulo: el único destino que se ofrece
 // es el enlace explícito a entrar (contrato de la vista pública).
 
-import { request } from './api.js?v=auth-gate-16';
+import { request } from './api.js?v=auth-gate-17';
 import { resolverSuperficie } from './sesion.js?v=sesion-2';
 
 export const CAPACIDADES_URL = 'api/v1/capacidades';

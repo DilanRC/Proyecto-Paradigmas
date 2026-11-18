@@ -9,9 +9,9 @@ import {
 import { conectarDireccion } from './shared/direccion.js';
 import { buscarDireccionPorCoordenadas, crearSelectorPuntoFinca } from './shared/finca-mapa.js';
 import { validarPuntoConDireccion } from './shared/punto-direccion.js?v=punto-1';
-import { request } from './shared/api.js?v=auth-gate-16';
+import { request } from './shared/api.js?v=auth-gate-17';
 import { endExpiredSession, readAuthSession, signUpWithPassword } from './shared/supabase-auth.js?v=session-4';
-import { signOutEverywhere } from './shared/auth-gate.js?v=auth-gate-16';
+import { signOutEverywhere } from './shared/auth-gate.js?v=auth-gate-17';
 import { ESTADO_CUENTA, consultarCuenta, esRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';
 import { safeNext } from './shared/next.js?v=next-4';

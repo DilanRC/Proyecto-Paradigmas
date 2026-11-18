@@ -1,7 +1,7 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Mis animales (P2-4): inventario del vendedor en Mi panel. Registrar un animal sin publicarlo,
 // llevar su historial de vacunas y publicarlo cuando quiera venderlo.
-import { request } from './shared/api.js?v=auth-gate-16';
+import { request } from './shared/api.js?v=auth-gate-17';
 import { errorArete, formatearArete } from './shared/arete.js';
 import { formatDate } from './explore.js?v=explore-16';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';

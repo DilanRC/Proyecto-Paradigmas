@@ -6,7 +6,7 @@
 // iniciar sesión, el login termina el registro con ese borrador y la persona
 // no tiene que volver a escribir nada.
 
-import { request } from './api.js?v=auth-gate-16';
+import { request } from './api.js?v=auth-gate-17';
 import { buildRegistrationSummary, normalizeCapabilities } from './business-rules.js?v=business-2';
 
 export const REGISTRATION_DRAFT_KEY = 'tindercows:registration-draft';

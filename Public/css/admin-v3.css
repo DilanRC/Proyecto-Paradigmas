@@ -563,7 +563,8 @@ html[data-theme='light'] .rural-panel .page-header {
 }
 
 .rural-panel .table-container {
-    min-height:210px !important;
+    /* Alto reservado mientras llega la lista: el pie y la paginación quedan bajo el pliegue y no saltan (CLS). */
+    min-height:max(210px, calc(100vh - 220px)) !important;
     overflow-x:auto !important;
     border-top:0 !important;
     background:var(--admin-surface) !important;
