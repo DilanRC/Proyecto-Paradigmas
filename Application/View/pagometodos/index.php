@@ -55,15 +55,17 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/metodos-pago') ?>
                 <div><span class="label">Configuración</span><h1 id="page-title">Métodos de pago</h1><p>Administre los métodos de pago disponibles para las transacciones.</p></div>
                 <button class="button button--primary" id="crear-pagometodo" type="button"><span aria-hidden="true">＋</span>Crear método de pago</button>
             </section>
 
             <section class="panel" aria-label="Lista de métodos de pago" aria-busy="true" id="panel-pagometodos">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar método de pago</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-pagometodo" type="search" autocomplete="off" placeholder="Buscar por nombre o descripción"></label>
+                    <?= admin_filtros_cabeza('admin/metodos-pago') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-pagometodo" type="search" autocomplete="off" placeholder="Buscar por nombre o descripción"></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-pagometodos" aria-live="polite">Cargando métodos de pago…</p>

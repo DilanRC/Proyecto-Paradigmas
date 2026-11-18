@@ -4,7 +4,7 @@ import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Tiempo real: Supabase Realtime avisa "cambió" (shared/tiempo-real.js) y esta página vuelve a pedir el estado a la
 // API. Además consulta cada pocos segundos por si el WebSocket no está. La hora sale del servidor (`ahora`).
 
-import { request } from './shared/api.js?v=auth-gate-15';
+import { request } from './shared/api.js?v=auth-gate-16';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { formatPrice, safeImageUrl } from './explore.js?v=explore-16';
 import { createToast } from './shared/toast.js';

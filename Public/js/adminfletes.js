@@ -1,6 +1,6 @@
 // api.js se versiona: un api.js viejo en caché carga el auth-gate anterior, que no conoce esta ruta
 // y deja el panel oculto (ver base.css, body.rural-panel).
-import { request } from './shared/api.js?v=auth-gate-15';
+import { request } from './shared/api.js?v=auth-gate-16';
 import { createDialogController } from './shared/dialog.js?v=dialog-2';
 import { bindFormErrors, createSubmitGuard, setSaving } from './shared/form.js?v=form-2';
 import {

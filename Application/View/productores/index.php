@@ -55,15 +55,17 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/productores') ?>
                 <div><span class="label">Registro de productores</span><h1 id="page-title">Productores</h1><p>Administre productores identificados por su número, contacto, dirección y fincas.</p></div>
                 <button class="button button--primary" id="crear-productor" type="button"><span aria-hidden="true">＋</span>Crear productor</button>
             </section>
 
             <section class="panel" aria-label="Lista de productores" aria-busy="true" id="panel-productores">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar productor</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-productor" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
+                    <?= admin_filtros_cabeza('admin/productores') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-productor" type="search" autocomplete="off" placeholder="Buscar por nombre o identificación"></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-productores" aria-live="polite">Cargando productores…</p>

@@ -1,5 +1,5 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
-import { request } from './shared/api.js?v=auth-gate-15';
+import { request } from './shared/api.js?v=auth-gate-16';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { syncPublicProfile } from './shared/public-profile.js?v=profile-2';

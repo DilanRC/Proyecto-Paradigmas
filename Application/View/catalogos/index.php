@@ -55,15 +55,17 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/catalogos') ?>
                 <div><span class="label">Configuración</span><h1 id="page-title">Catálogos del animal</h1><p>Especies, tipos, razas y vacunas que aparecen en los formularios de publicar y de Mis animales.</p></div>
                 <button class="button button--primary" id="crear-registro" type="button"><span aria-hidden="true">＋</span>Agregar</button>
             </section>
 
             <section class="panel" aria-label="Lista del catálogo" aria-busy="true" id="panel-catalogos">
                 <div class="tools">
+                    <?= admin_filtros_cabeza('admin/catalogos') ?>
                     <label class="filter"><span>Catálogo</span><select id="filtro-catalogo"><option value="ESPECIE">Especies</option><option value="TIPO">Tipos de animal</option><option value="RAZA">Razas</option><option value="VACUNA">Vacunas</option></select></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-catalogo" aria-live="polite">Cargando catálogos…</p>

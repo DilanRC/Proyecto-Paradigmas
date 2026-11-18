@@ -55,15 +55,17 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/vehiculos') ?>
                 <div><span class="label">Registro de vehículos</span><h1 id="page-title">Vehículos</h1><p>Administre los vehículos disponibles para asignar a transportistas.</p></div>
                 <button class="button button--primary" id="crear-vehiculo" type="button"><span aria-hidden="true">＋</span>Crear vehículo</button>
             </section>
 
             <section class="panel" aria-label="Lista de vehículos" aria-busy="true" id="panel-vehiculos">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar vehículo</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-vehiculo" type="search" autocomplete="off" placeholder="Buscar por placa, VIN o modelo"></label>
+                    <?= admin_filtros_cabeza('admin/vehiculos') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-vehiculo" type="search" autocomplete="off" placeholder="Buscar por placa, VIN o modelo"></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activos</option><option value="INACTIVO">Inactivos</option></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-vehiculos" aria-live="polite">Cargando vehículos…</p>

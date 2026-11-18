@@ -2,7 +2,7 @@
 // y "Cómo participo" (activar/desactivar actividades). Usa los mismos
 // endpoints que antes vivían en Mi actividad; aquí solo cambió el lugar.
 
-import { request } from './shared/api.js?v=auth-gate-15';
+import { request } from './shared/api.js?v=auth-gate-16';
 import { BUSINESS_CAPABILITIES } from './shared/business-rules.js?v=business-2';
 import { endExpiredSession, readAuthSession, refreshAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { TIPOS_NUMERICOS, aplicarRestriccionIdentificacion, errorIdentificacion } from './shared/identificacion.js?v=mascaras-1';

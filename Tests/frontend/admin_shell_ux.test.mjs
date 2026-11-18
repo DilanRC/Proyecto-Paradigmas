@@ -101,3 +101,28 @@ test('el mapa opcional de finca conserva la paleta del panel administrativo', ()
     assert.match(adminCss, /\.rural-panel \.finca-fila__mapa \.farm-map-picker,[\s\S]*?\.rural-panel \.farm-map-picker \{/);
     assert.ok(adminCss.includes('background:var(--admin-surface-3);'));
 });
+
+test('ícono, filtros y «Limpiar» vienen del servidor con la misma información que MODULES (sin saltos al cargar)', () => {
+    const marco = read('../../Application/View/shared/admin-marco.php');
+    const inicio = adminJs.indexOf('const MODULES = {');
+    const modulos = Function(`return (${adminJs.slice(inicio + 16, adminJs.indexOf('\n};', inicio) + 2)})`)();
+    for (const [ruta, { icon, hint }] of Object.entries(modulos)) {
+        const php = hint.replaceAll("'", "\\'");
+        assert.ok(marco.includes(`'${ruta}' => ['icon' => '${icon}', 'hint' => '${php}']`), `admin-marco.php difiere de MODULES en ${ruta}`);
+    }
+    assert.ok(read('../../Application/View/shared/admin-estilos.php').includes("require_once __DIR__ . '/admin-marco.php'"));
+    const rutas = { adminfletes: 'admin/fletes', adminsubastas: 'admin/subastas', pagometodos: 'admin/metodos-pago' };
+    const todas = ['productores', 'compradores', 'transportistas', 'vehiculos', 'pagometodos', 'publicaciones', 'adminfletes', 'adminsubastas', 'documentos', 'catalogos', 'administradores', 'bitacora'];
+    for (const view of todas) {
+        const html = read(`../../Application/View/${view}/index.php`);
+        if (!html.includes('class="page-header"')) continue;
+        const ruta = rutas[view] ?? `admin/${view}`;
+        assert.ok(html.includes(`<?= admin_encabezado_icono('${ruta}') ?>`), `${view}: ícono del encabezado desde el servidor`);
+        if (html.includes('<div class="tools">')) {
+            assert.ok(html.includes(`<?= admin_filtros_cabeza('${ruta}') ?>`) && html.includes('<?= admin_filtros_limpiar() ?>'), `${view}: filtros desde el servidor`);
+            assert.equal(/class="search"><span class="screen-reader-only"/.test(html), false, `${view}: la etiqueta Buscar ya es visible`);
+        }
+    }
+    assert.match(adminJs, /if \(!tools\.querySelector\('\.admin-filter-heading'\)\)/, 'admin-ui no duplica el encabezado');
+    assert.match(adminJs, /let clear = tools\.querySelector\('\.admin-clear-filters'\)/, 'admin-ui reutiliza el botón del servidor');
+});

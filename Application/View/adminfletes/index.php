@@ -55,15 +55,17 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/fletes') ?>
                 <div><span class="label">Moderación</span><h1 id="page-title">Fletes</h1><p>Revise las ofertas de flete y retire las que incumplan las reglas. Las solicitudes de compra son de solo lectura.</p></div>
             </section>
 
             <section class="panel" aria-label="Lista de fletes" aria-busy="true" id="panel-fletes">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-flete" type="search" maxlength="150" autocomplete="off" placeholder="Buscar por transportista, vehículo o zona"></label>
+                    <?= admin_filtros_cabeza('admin/fletes') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-flete" type="search" maxlength="150" autocomplete="off" placeholder="Buscar por transportista, vehículo o zona"></label>
                     <label class="filter"><span>Ver</span><select id="filtro-vista"><option value="OFERTAS">Ofertas</option><option value="SOLICITUDES">Solicitudes</option></select></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-fletes" aria-live="polite">Cargando ofertas…</p>

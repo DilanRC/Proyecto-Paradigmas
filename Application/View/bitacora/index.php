@@ -55,16 +55,18 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/bitacora') ?>
                 <div><span class="label">Seguridad</span><h1 id="page-title">Bitácora</h1><p>Consulte quién cambió qué y cuándo. Es solo lectura.</p></div>
             </section>
 
             <section class="panel" aria-label="Eventos de la bitácora" aria-busy="true" id="panel-bitacora">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar por persona o registro</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-bitacora" type="search" maxlength="150" autocomplete="off" placeholder="Nombre, identificación o correo de quien hizo el cambio, o el registro"></label>
+                    <?= admin_filtros_cabeza('admin/bitacora') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-bitacora" type="search" maxlength="150" autocomplete="off" placeholder="Nombre, identificación o correo de quien hizo el cambio, o el registro"></label>
                     <label class="filter"><span>Entidad</span><select id="filtro-entidad"><option value="">Todas</option></select></label>
                     <label class="filter"><span>Desde</span><input id="filtro-desde" type="date"></label>
                     <label class="filter"><span>Hasta</span><input id="filtro-hasta" type="date"></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <p class="form-note" id="error-filtros" role="alert"></p>
                 <div class="list-summary">

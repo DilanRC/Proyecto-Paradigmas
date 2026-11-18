@@ -55,15 +55,17 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/subastas') ?>
                 <div><span class="label">Comercio</span><h1 id="page-title">Subastas</h1><p>Las subastas en vivo y su historial. Se actualizan solas; los administradores pueden verlas, pero no pujan ni comentan.</p></div>
                 <p class="label" id="estado-vivo" role="status" aria-live="polite">Conectando…</p>
             </section>
 
             <section class="panel" aria-label="Lista de subastas" aria-busy="true" id="panel-subastas">
                 <div class="tools">
+                    <?= admin_filtros_cabeza('admin/subastas') ?>
                     <label class="filter"><span>Ver</span><select id="filtro-vista"><option value="ACTIVAS">Activas</option><option value="HISTORIAL">Finalizadas</option></select></label>
                     <label class="filter"><span>Buscar</span><input id="filtro-busqueda" type="search" maxlength="100" autocomplete="off" placeholder="Título, raza o zona"></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-subastas" aria-live="polite">Cargando subastas…</p>

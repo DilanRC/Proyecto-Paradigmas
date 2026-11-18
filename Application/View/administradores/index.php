@@ -55,7 +55,7 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/administradores') ?>
                 <div><span class="label">Seguridad</span><h1 id="page-title">Administradores</h1><p>Decida qué correos pueden entrar al panel de administración.</p></div>
                 <button class="button button--primary" id="agregar-administrador" type="button"><span aria-hidden="true">＋</span>Agregar administrador</button>
             </section>

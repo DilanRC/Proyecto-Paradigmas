@@ -55,14 +55,16 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/documentos') ?>
                 <div><span class="label">Verificación</span><h1 id="page-title">Documentos de identidad</h1><p>Revise el documento que subió cada persona y verifíquelo o recházelo con un motivo.</p></div>
             </section>
 
             <section class="panel" aria-label="Documentos por revisar" aria-busy="true" id="panel-documentos">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar persona</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-documento" type="search" maxlength="150" autocomplete="off" placeholder="Buscar por nombre, identificación o correo"></label>
+                    <?= admin_filtros_cabeza('admin/documentos') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-documento" type="search" maxlength="150" autocomplete="off" placeholder="Buscar por nombre, identificación o correo"></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="PENDIENTE">Pendientes</option><option value="VERIFICADO">Verificados</option><option value="RECHAZADO">Rechazados</option><option value="TODOS">Todos</option></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-documentos" aria-live="polite">Cargando documentos…</p>

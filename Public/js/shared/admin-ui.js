@@ -1,9 +1,9 @@
-import { SESSION_KEY } from './auth-gate.js?v=auth-gate-15';
+import { SESSION_KEY } from './auth-gate.js?v=auth-gate-16';
 import { applyTheme, preferredTheme } from '../public-theme.js';
 
 const ADMIN_CSS = 'css/admin-v3.css?v=admin-9';
 const ADMIN_SIDEBAR_CSS = 'css/admin-sidebar-collapse.css?v=sidebar-1';
-const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-16';
+const ADMIN_REFINEMENTS_CSS = 'css/admin-refinements.css?v=admin-17';
 export const ADMIN_SIDEBAR_KEY = 'tindercows:admin-sidebar-collapsed';
 
 function browserStorage(target = globalThis) {
@@ -352,15 +352,19 @@ function resetFilters(tools) {
 
 function enhanceFilters() {
     const tools = document.querySelector('.rural-panel .tools');
-    if (!tools || tools.dataset.tcEnhanced === 'true') return;
-    tools.dataset.tcEnhanced = 'true';
+    if (!tools || tools.dataset.tcFiltros === 'true') return;
+    tools.dataset.tcFiltros = 'true';
 
+    // Encabezado y «Limpiar» vienen del servidor (View/shared/admin-marco.php) para no mover el marco al cargar;
+    // solo se crean aquí si una vista no los trae.
     const route = routeName();
     const info = MODULES[route] ?? {};
-    const heading = document.createElement('div');
-    heading.className = 'admin-filter-heading';
-    heading.innerHTML = `<span class="admin-filter-heading__title"><i class="fa-solid fa-filter" aria-hidden="true"></i><span>Filtros</span></span><span class="admin-filter-heading__hint">${filterDescription(route)}</span>`;
-    tools.prepend(heading);
+    if (!tools.querySelector('.admin-filter-heading')) {
+        const heading = document.createElement('div');
+        heading.className = 'admin-filter-heading';
+        heading.innerHTML = `<span class="admin-filter-heading__title"><i class="fa-solid fa-filter" aria-hidden="true"></i><span>Filtros</span></span><span class="admin-filter-heading__hint">${filterDescription(route)}</span>`;
+        tools.prepend(heading);
+    }
 
     const search = tools.querySelector('.search');
     if (search) {
@@ -377,12 +381,15 @@ function enhanceFilters() {
         }
     }
 
-    const clear = document.createElement('button');
-    clear.type = 'button';
-    clear.className = 'admin-clear-filters';
-    clear.innerHTML = '<i class="fa-solid fa-eraser" aria-hidden="true"></i><span>Limpiar</span>';
+    let clear = tools.querySelector('.admin-clear-filters');
+    if (!clear) {
+        clear = document.createElement('button');
+        clear.type = 'button';
+        clear.className = 'admin-clear-filters';
+        clear.innerHTML = '<i class="fa-solid fa-eraser" aria-hidden="true"></i><span>Limpiar</span>';
+        tools.appendChild(clear);
+    }
     clear.addEventListener('click', () => resetFilters(tools));
-    tools.appendChild(clear);
 }
 
 function enhanceTable() {

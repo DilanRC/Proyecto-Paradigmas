@@ -1,7 +1,7 @@
 import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // Página Fletes: ofertas de flete cercanas (cualquier persona con sesión) y
 // "Mis ofertas" para quien tiene Transportista activo. API: api/v1/fletes y api/v1/mi-ofertas.
-import { request } from './shared/api.js?v=auth-gate-15';
+import { request } from './shared/api.js?v=auth-gate-16';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { UBICACION_USUARIO_EVENT, capturarUbicacionAutomatica, leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
 import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=explore-16';

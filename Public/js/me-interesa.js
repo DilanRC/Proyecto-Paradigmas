@@ -1,7 +1,7 @@
 // Me interesa: las publicaciones que la persona marcó, con la tarjeta compacta de la
 // portada (buildCard con compacta) y un botón "Quitar" (acción RETIRAR, idempotente).
 
-import { request } from './shared/api.js?v=auth-gate-15';
+import { request } from './shared/api.js?v=auth-gate-16';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { buildCard } from './explore.js?v=explore-16';
 import { createToast } from './shared/toast.js';

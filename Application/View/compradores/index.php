@@ -51,13 +51,15 @@
         <div class="rural-panel__glow" aria-hidden="true"></div>
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/compradores') ?>
                 <div><span class="label">Contexto de negocio</span><h1 id="page-title">Compradores</h1><p>Personas que poseen un contexto Comprador registrado. La identidad y el contacto viven en <code>tbpersona</code>; este panel es de solo lectura y no convierte Comprador en un rol administrativo.</p></div>
             </section>
 
             <section class="panel" aria-label="Lista de compradores" aria-busy="true" id="panel-compradores">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar comprador</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-comprador" type="search" autocomplete="off" placeholder="Buscar por nombre, alias o identificación"></label>
+                    <?= admin_filtros_cabeza('admin/compradores') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-comprador" type="search" autocomplete="off" placeholder="Buscar por nombre, alias o identificación"></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-compradores" aria-live="polite">Cargando compradores…</p>

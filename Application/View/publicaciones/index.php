@@ -55,14 +55,16 @@
         <div class="rural-panel__content">
             <div class="rural-panel__admin-row"><a class="rural-panel__admin-link" href="./">Landing</a><a class="rural-panel__admin-link" href="entrar">Login</a></div>
 
-            <section class="page-header" aria-labelledby="page-title">
+            <section class="page-header" aria-labelledby="page-title"><?= admin_encabezado_icono('admin/publicaciones') ?>
                 <div><span class="label">Moderación</span><h1 id="page-title">Publicaciones</h1><p>Revise las publicaciones de la red y pause o retire las que incumplan las reglas.</p></div>
             </section>
 
             <section class="panel" aria-label="Lista de publicaciones" aria-busy="true" id="panel-publicaciones">
                 <div class="tools">
-                    <label class="search"><span class="screen-reader-only">Buscar publicación</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-publicacion" type="search" autocomplete="off" placeholder="Buscar por título, raza, vendedor, finca o zona"></label>
+                    <?= admin_filtros_cabeza('admin/publicaciones') ?>
+                    <label class="search"><span class="admin-filter-label">Buscar</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg><input id="busqueda-publicacion" type="search" autocomplete="off" placeholder="Buscar por título, raza, vendedor, finca o zona"></label>
                     <label class="filter"><span>Estado</span><select id="filtro-estado"><option value="TODOS">Todos</option><option value="ACTIVO">Activas</option><option value="PAUSADO">Pausadas</option><option value="VENDIDO">Vendidas</option><option value="RETIRADO">Retiradas</option></select></label>
+                    <?= admin_filtros_limpiar() ?>
                 </div>
                 <div class="list-summary">
                     <p id="total-publicaciones" aria-live="polite">Cargando publicaciones…</p>
