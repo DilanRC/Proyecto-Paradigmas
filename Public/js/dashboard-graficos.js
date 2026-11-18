@@ -3,10 +3,10 @@
 //  - columnas por mes, con el valor encima de cada columna,
 //  - barras horizontales ordenadas, con una línea de promedio al final,
 //  - barras divergentes desde un 0 central (más barato ← → más caro).
-// Colores: solo los del sitio (--tc-success, --tc-warning, --tc-neutral-status). Con esa paleta ningún par de 4 tonos
-// pasa la prueba de daltonismo (validate_palette.js), así que los estados vecinos se distinguen además por textura
-// (rayas a 45° y 135°) y siempre llevan etiqueta y número. Cada gráfico trae tooltip con puntero y teclado y su tabla.
-// Todo el texto entra con textContent.
+// Colores semánticos (mi-dashboard.css): los estados usan --tc-success / --tc-info / --tc-warning / --tc-neutral-status y
+// las cantidades económicas --tc-data (un monto alto no es "éxito"). Bajo protanopía verde y ámbar quedan cerca, así
+// que el ámbar lleva rayas y cada estado lleva siempre su texto, ícono y número. Cada gráfico trae tooltip con puntero
+// y teclado y su tabla. Escalas desde 0 (no se exageran diferencias). Todo el texto entra con textContent.
 
 const ZONA = 'America/Costa_Rica';
 
@@ -161,10 +161,19 @@ export function barraSegmentada(estados, etiquetaTotal) {
     return barra;
 }
 
-/** Columnas por mes, un solo tono, con el valor encima de cada una. meses: porMes(...). */
-export function columnasPorMes({ titulo, ayuda, meses, formato, vacio, unidad = 'Monto' }) {
+/**
+ * Columnas por mes en orden cronológico, desde una línea base en 0, con el valor encima de cada una y el máximo de la
+ * escala a la izquierda. Los meses sin operaciones se ven (columna vacía y "₡0" en la tabla). meses: porMes(...).
+ * `cantidadTexto` = [singular, plural] de lo que cuenta `cantidad` (por defecto subastas).
+ */
+export function columnasPorMes({ titulo, ayuda, meses, formato, vacio, unidad = 'Monto', cantidadTexto = ['subasta', 'subastas'] }) {
     const maximo = Math.max(...meses.map((m) => m.valor), 0);
+    const hayDatos = meses.some((m) => m.cantidad > 0);
     const plano = el('div', 'grafico-columnas');
+    const escala = el('div', 'grafico-columnas__escala');
+    escala.setAttribute('aria-hidden', 'true');
+    escala.append(el('span', null, montoCorto(maximo)), el('span', null, '₡0'));
+    const columnas = el('div', 'grafico-columnas__plano');
     meses.forEach((mes) => {
         const columna = el('div', 'grafico-columnas__columna');
         const zona = el('div', 'grafico-columnas__zona');
@@ -172,16 +181,17 @@ export function columnasPorMes({ titulo, ayuda, meses, formato, vacio, unidad = 
         barra.style.height = maximo > 0 ? `${(mes.valor / maximo) * 100}%` : '0%';
         if (mes.valor > 0) {
             // Con pocos meses cabe el monto completo; con más, el corto (₡3,6 M). El completo siempre está en el tooltip.
-            const valor = el('span', 'grafico-columnas__valor', meses.length <= 4 ? formato(mes.valor) : montoCorto(mes.valor));
-            barra.append(valor); // va pegado arriba de su columna (CSS: bottom 100%)
+            barra.append(el('span', 'grafico-columnas__valor', meses.length <= 4 ? formato(mes.valor) : montoCorto(mes.valor)));
         }
-        interactivo(zona, [[formato(mes.valor), mes.etiqueta], [String(mes.cantidad), mes.cantidad === 1 ? 'subasta' : 'subastas']]);
+        interactivo(zona, [[formato(mes.valor), mes.etiqueta], [String(mes.cantidad), mes.cantidad === 1 ? cantidadTexto[0] : cantidadTexto[1]]]);
         zona.append(barra);
         columna.append(zona, el('span', 'grafico-columnas__mes', mes.etiqueta));
-        plano.append(columna);
+        columnas.append(columna);
     });
+    plano.append(escala, columnas);
     return marco({ titulo, ayuda, cuerpo: plano, vacio,
-        tabla: { columnas: ['Mes', unidad, 'Subastas'], filas: maximo > 0 ? meses.map((m) => [m.etiqueta, formato(m.valor), String(m.cantidad)]) : [] } });
+        tabla: { columnas: ['Mes', unidad, cantidadTexto[1].charAt(0).toUpperCase() + cantidadTexto[1].slice(1)],
+            filas: hayDatos ? meses.map((m) => [m.etiqueta, formato(m.valor), String(m.cantidad)]) : [] } });
 }
 
 /** Línea final "Promedio · +19,8 %" separada por una línea fina. */
@@ -192,25 +202,30 @@ function filaPromedio(promedio) {
 }
 
 /**
- * Barras horizontales ordenadas de mayor a menor, un solo tono. items: [{ etiqueta, valor, texto, extra }];
- * `promedio`: { etiqueta, texto } opcional al final.
+ * Barras horizontales ordenadas de mayor a menor, un solo tono (--tc-data). items: [{ etiqueta, valor, texto, extra,
+ * tabla }]; `promedio`: { etiqueta, texto } opcional al final. Si algún valor es negativo se dibujan divergentes desde 0
+ * (antes los negativos se descartaban en silencio).
  */
-export function barrasHorizontales({ titulo, ayuda, items, vacio, columnas = ['Ejemplar', 'Valor'], promedio = null }) {
-    const ordenados = [...items].filter((i) => typeof i.valor === 'number' && i.valor >= 0).sort((a, b) => b.valor - a.valor);
+export function barrasHorizontales({ titulo, ayuda, items, vacio, columnas = ['Ejemplar', 'Valor'], promedio = null, izquierda = 'Menos', derecha = 'Más' }) {
+    const validos = items.filter((i) => typeof i.valor === 'number' && Number.isFinite(i.valor));
+    if (validos.some((i) => i.valor < 0)) {
+        return barrasDivergentes({ titulo, ayuda, items: validos, vacio, columnas, izquierda, derecha, promedio });
+    }
+    const ordenados = [...validos].sort((a, b) => b.valor - a.valor);
     const maximo = Math.max(...ordenados.map((i) => i.valor), 0);
     const lista = el('div', 'grafico-barras');
     ordenados.forEach((item) => {
         const fila = el('div', 'grafico-barras__fila');
         const pista = el('div', 'grafico-barras__pista');
         const barra = el('div', 'grafico-barras__barra');
-        barra.style.width = `${Math.max(2, maximo > 0 ? (item.valor / maximo) * 100 : 0)}%`;
+        barra.style.width = `${Math.max(1, maximo > 0 ? (item.valor / maximo) * 100 : 0)}%`;
         interactivo(barra, [[item.texto, item.etiqueta], ...(item.extra ?? [])]);
         pista.append(barra);
         fila.append(el('span', 'grafico-barras__etiqueta', item.etiqueta), pista, el('span', 'grafico-barras__valor', item.texto));
         lista.append(fila);
     });
     if (promedio && ordenados.length) lista.append(filaPromedio(promedio));
-    return marco({ titulo, ayuda, cuerpo: lista, vacio, tabla: { columnas, filas: ordenados.map((i) => [i.etiqueta, i.texto]) } });
+    return marco({ titulo, ayuda, cuerpo: lista, vacio, tabla: { columnas, filas: ordenados.map((i) => [i.etiqueta, i.texto, ...(i.tabla ?? [])]) } });
 }
 
 /**
@@ -231,7 +246,7 @@ export function barrasDivergentes({ titulo, ayuda, items, vacio, columnas, izqui
         barra.style.width = `${Math.max(1, (Math.abs(item.valor) / maximo) * 50)}%`;
         interactivo(barra, [[item.texto, item.etiqueta], ...(item.extra ?? [])]);
         pista.append(barra);
-        fila.append(el('span', 'grafico-barras__etiqueta', item.etiqueta), pista, el('span', 'grafico-barras__valor grafico-barras__valor--neutro', item.texto));
+        fila.append(el('span', 'grafico-barras__etiqueta', item.etiqueta), pista, el('span', 'grafico-barras__valor', item.texto));
         cuerpo.append(fila);
     });
     if (promedio && validos.length) cuerpo.append(filaPromedio(promedio));

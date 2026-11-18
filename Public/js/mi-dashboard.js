@@ -1,12 +1,14 @@
 // Mi dashboard (DEC-DASHBOARD-001): un dashboard por rol (Vendedor y Comprador), cada uno igual al de alguien que solo
-// tiene ese rol. Estructura (de arriba abajo): resultados del periodo (4 KPI), estados en una barra segmentada con mini
-// tarjetas, dos gráficos, actividad y una tabla única de ejemplares con foto y chips de filtro. Todo se pinta con DOM
-// (textContent). La ubicación del navegador solo vive en memoria (no se guarda).
+// tiene ese rol. Estructura (de arriba abajo): resultados (4 KPI), estado en una barra proporcional con leyenda que
+// filtra, participación y operación, evolución (dos gráficos) y una tabla única de ejemplares con foto. Cada KPI con
+// ejemplares trae «Ver ejemplares», que filtra la tabla por los ids exactos que forman ese número. Colores semánticos
+// (verde = adjudicada/ganada, azul = activa, ámbar con rayas = desierta/superada, gris = cancelada/perdida, violeta =
+// montos), siempre con texto e ícono. Todo se pinta con DOM (textContent). La ubicación solo vive en memoria.
 
 import { request } from './shared/api.js?v=auth-gate-15';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { formatPrice, safeImageUrl } from './explore.js?v=explore-16';
-import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-2';
+import { barraSegmentada, barrasDivergentes, barrasHorizontales, columnasPorMes, el, porMes } from './dashboard-graficos.js?v=graficos-3';
 import { esRegistroIncompleto, mostrarRegistroIncompleto } from './shared/cuenta.js?v=cuenta-2';
 
 const API = 'api/v1/mi-dashboard';
@@ -107,7 +109,7 @@ export function claveEstado(s, rol) {
 
 /** Cómo le va a la persona en esa subasta, desde el lado del comprador (texto corto). Puro. */
 export function situacionComprador(s) {
-    if (s.oportunidad) return s.distanciaKm != null ? `A ${String(s.distanciaKm).replace('.', ',')} km` : 'Cerca de ti';
+    if (s.oportunidad) return s.distanciaKm != null ? `A ${String(s.distanciaKm).replace('.', ',')} km` : 'En la provincia elegida';
     if (s.estado === 'FINALIZADA') return s.soyGanador ? 'La ganaste' : 'La ganó otro comprador';
     return s.voyGanando ? 'Vas ganando' : 'Te superaron';
 }
@@ -121,16 +123,16 @@ export function rolDisponible(rol, roles = {}) {
 /** Definición de los estados de cada rol: nombre, descripción corta y si ocurre "ahora". */
 export const ESTADOS = {
     VENDEDOR: [
-        { clave: 'adjudicada', etiqueta: 'Adjudicadas', descripcion: 'Cerraron con ganador' },
-        { clave: 'vivo', etiqueta: 'En vivo', descripcion: 'Reciben pujas', ahora: true },
-        { clave: 'sin-ofertas', etiqueta: 'Sin ofertas', descripcion: 'Cerraron sin pujas' },
-        { clave: 'cancelada', etiqueta: 'Canceladas', descripcion: 'Las cancelaste antes de recibir pujas' },
+        { clave: 'adjudicada', etiqueta: 'Adjudicadas', descripcion: 'Cerraron con ganador', icono: 'fa-circle-check' },
+        { clave: 'vivo', etiqueta: 'Activas', descripcion: 'Reciben pujas ahora', icono: 'fa-tower-broadcast' },
+        { clave: 'sin-ofertas', etiqueta: 'Desiertas', descripcion: 'Cerraron sin pujas', icono: 'fa-hourglass-end' },
+        { clave: 'cancelada', etiqueta: 'Canceladas', descripcion: 'Las cancelaste sin pujas', icono: 'fa-ban' },
     ],
     COMPRADOR: [
-        { clave: 'ganada', etiqueta: 'Ganadas', descripcion: 'Te las adjudicaron' },
-        { clave: 'ganando', etiqueta: 'Vas ganando', descripcion: 'Tu puja es la más alta', ahora: true },
-        { clave: 'superada', etiqueta: 'Te superaron', descripcion: 'Otro comprador va arriba', ahora: true },
-        { clave: 'perdida', etiqueta: 'Perdidas', descripcion: 'Las ganó otro comprador' },
+        { clave: 'ganada', etiqueta: 'Ganadas', descripcion: 'Te las adjudicaron', icono: 'fa-trophy' },
+        { clave: 'ganando', etiqueta: 'Vas ganando', descripcion: 'Tu puja es la más alta', icono: 'fa-arrow-trend-up' },
+        { clave: 'superada', etiqueta: 'Te superaron', descripcion: 'Otro comprador va arriba', icono: 'fa-triangle-exclamation' },
+        { clave: 'perdida', etiqueta: 'Perdidas', descripcion: 'Las ganó otro comprador', icono: 'fa-circle-xmark' },
     ],
 };
 
@@ -146,28 +148,51 @@ export function contarEstados(subastas, rol) {
 
 // ───────────────────────────── Piezas de la página ─────────────────────────────
 
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
 function icono(nombre) {
     const i = el('i', nombre);
     i.setAttribute('aria-hidden', 'true');
     return i;
 }
 
-function seccion(id, titulo, ...hijos) {
+function seccion(id, titulo, ayuda, ...hijos) {
     const s = el('section', 'dash-seccion');
     s.setAttribute('aria-labelledby', id);
+    const cabeza = el('div', 'dash-seccion__cabeza');
     const h = el('h2', 'dash-seccion__titulo', titulo);
     h.id = id;
-    s.append(h, ...hijos.filter(Boolean));
+    cabeza.append(h);
+    if (ayuda) cabeza.append(el('p', 'dash-seccion__ayuda', ayuda));
+    s.append(cabeza, ...hijos.filter(Boolean));
     return s;
 }
 
-/** Tarjeta KPI: etiqueta, número grande y una línea de detalle; `progreso` (0-100) dibuja una barra. */
-function kpi({ etiqueta, valor, detalle, destacado = false, progreso = null, tono = null }) {
-    const t = el('article', `dash-tarjeta dash-kpi${destacado ? ' dash-kpi--destacado' : ''}`);
-    t.append(el('p', 'dash-kpi__etiqueta', etiqueta));
-    const v = el('p', `dash-kpi__valor${tono ? ` dash-kpi__valor--${tono}` : ''}`, valor);
-    t.append(v);
-    if (progreso != null) {
+/**
+ * Botón "Ver N ejemplares" que filtra la tabla por las subastas exactas que forman un indicador. Sin ids no se dibuja:
+ * un indicador sin ejemplares no promete una lista vacía.
+ */
+function botonEvidencia(ids, etiqueta, alFiltrar) {
+    const lista = Array.isArray(ids) ? ids : [];
+    if (!lista.length) return null;
+    const b = el('button', 'dash-evidencia');
+    b.type = 'button';
+    b.append(el('span', null, `Ver ${plural(lista.length, 'ejemplar', 'ejemplares')}`), icono('fa-solid fa-arrow-down'));
+    b.setAttribute('aria-label', `Ver los ${plural(lista.length, 'ejemplar', 'ejemplares')} de «${etiqueta}» en la tabla`);
+    b.addEventListener('click', () => alFiltrar({ etiqueta, ids: lista }));
+    return b;
+}
+
+/**
+ * KPI: etiqueta, valor, detalle y su evidencia. `tono` es semántico (exito | info | aviso | dato); por defecto neutro.
+ * `progreso` (0-100) dibuja una barra solo cuando el porcentaje existe: sin base no hay barra en 0.
+ */
+function kpi({ etiqueta, valor, detalle, tono = null, progreso = null, ids = [], alFiltrar, definicion }) {
+    const t = el('article', `dash-tarjeta dash-kpi${tono ? ` dash-kpi--${tono}` : ''}`);
+    const cabeza = el('p', 'dash-kpi__etiqueta', etiqueta);
+    if (definicion) cabeza.title = definicion;
+    t.append(cabeza, el('p', 'dash-kpi__valor', valor));
+    if (typeof progreso === 'number' && Number.isFinite(progreso)) {
         const barra = el('div', 'dash-progreso');
         barra.setAttribute('role', 'progressbar');
         barra.setAttribute('aria-label', etiqueta);
@@ -180,46 +205,51 @@ function kpi({ etiqueta, valor, detalle, destacado = false, progreso = null, ton
         t.append(barra);
     }
     t.append(el('p', 'dash-kpi__detalle', detalle));
+    const evidencia = botonEvidencia(ids, etiqueta, alFiltrar);
+    if (evidencia) t.append(evidencia);
     return t;
 }
 
-/** Estados: barra segmentada + mini tarjetas que filtran la tabla + enlace a todos los ejemplares. */
-function estados(titulo, conteos, alElegir) {
-    const total = conteos.reduce((suma, e) => suma + e.cantidad, 0);
-    const tarjeta = el('div', 'dash-tarjeta dash-estados');
-    tarjeta.append(barraSegmentada(conteos, titulo));
-    const mini = el('div', 'dash-estados__lista');
-    conteos.forEach((e) => {
-        const boton = el('button', 'dash-estado');
-        boton.type = 'button';
-        boton.dataset.estado = e.clave;
-        const cabeza = el('span', 'dash-estado__cabeza');
-        const muestra = el('span', `dash-muestra estado--${e.clave}`);
-        muestra.setAttribute('aria-hidden', 'true');
-        cabeza.append(muestra, el('span', 'dash-estado__nombre', e.etiqueta));
-        if (e.ahora && e.cantidad > 0) cabeza.append(el('span', 'dash-ahora', 'AHORA'));
-        boton.append(cabeza, el('span', 'dash-estado__numero', e.cantidad), el('span', 'dash-estado__descripcion', e.descripcion));
-        boton.setAttribute('aria-label', `${e.etiqueta}: ${e.cantidad}. ${e.descripcion}. Ver en la tabla.`);
-        boton.addEventListener('click', () => alElegir(e.clave));
-        mini.append(boton);
-    });
-    const todos = el('a', 'dash-enlace', 'Ver todos los ejemplares →');
-    todos.href = '#dashboard-ejemplares';
-    todos.addEventListener('click', (evento) => { evento.preventDefault(); alElegir('todos'); });
-    tarjeta.append(mini, todos);
-    return { tarjeta, total };
-}
-
-/** Tarjeta horizontal con ícono, número y texto (sección "Actividad"). */
-function actividad(nombreIcono, valor, texto, accion = null) {
-    const t = el('article', 'dash-tarjeta dash-actividad');
-    const caja = el('span', 'dash-actividad__icono');
+/** Métrica secundaria compacta (ícono, valor, texto y evidencia) para "Participación y operación". */
+function metrica({ nombreIcono, valor, texto, ids = [], etiqueta, alFiltrar, accion = null }) {
+    const t = el('article', 'dash-tarjeta dash-metrica');
+    const caja = el('span', 'dash-metrica__icono');
     caja.append(icono(nombreIcono));
-    const cuerpo = el('div');
-    cuerpo.append(el('p', 'dash-actividad__valor', valor), el('p', 'dash-actividad__texto', texto));
+    const cuerpo = el('div', 'dash-metrica__cuerpo');
+    cuerpo.append(el('p', 'dash-metrica__valor', valor), el('p', 'dash-metrica__texto', texto));
+    const evidencia = botonEvidencia(ids, etiqueta ?? texto, alFiltrar);
+    if (evidencia) cuerpo.append(evidencia);
     if (accion) cuerpo.append(accion);
     t.append(caja, cuerpo);
     return t;
+}
+
+/** Estados: una barra proporcional y una leyenda compacta cuyos botones filtran la tabla. Sin tarjetas gigantes. */
+function estados(conteos, etiquetaTotal, alElegir, nota) {
+    const tarjeta = el('div', 'dash-tarjeta dash-estados');
+    const total = conteos.reduce((suma, e) => suma + e.cantidad, 0);
+    if (total) tarjeta.append(barraSegmentada(conteos, etiquetaTotal));
+    else tarjeta.append(el('p', 'grafico__vacio', 'Sin subastas en este periodo.'));
+    const leyenda = el('div', 'dash-leyenda');
+    leyenda.setAttribute('role', 'group');
+    leyenda.setAttribute('aria-label', `${etiquetaTotal}: filtrar la tabla`);
+    conteos.forEach((e) => {
+        const boton = el('button', `dash-leyenda__item estado-texto--${e.clave}`);
+        boton.type = 'button';
+        const muestra = el('span', `dash-muestra estado--${e.clave}`);
+        muestra.setAttribute('aria-hidden', 'true');
+        const textos = el('span', 'dash-leyenda__textos');
+        const nombre = el('span', 'dash-leyenda__nombre');
+        nombre.append(icono(`fa-solid ${e.icono}`), el('span', null, e.etiqueta));
+        textos.append(nombre, el('span', 'dash-leyenda__descripcion', e.descripcion));
+        boton.append(muestra, textos, el('strong', 'dash-leyenda__numero', e.cantidad));
+        boton.setAttribute('aria-label', `${e.etiqueta}: ${e.cantidad}. ${e.descripcion}. Ver en la tabla.`);
+        boton.addEventListener('click', () => alElegir(e.clave));
+        leyenda.append(boton);
+    });
+    tarjeta.append(leyenda);
+    if (nota) tarjeta.append(el('p', 'dash-estados__nota', nota));
+    return tarjeta;
 }
 
 function foto(url, alt) {
@@ -227,6 +257,7 @@ function foto(url, alt) {
     const segura = safeImageUrl(url);
     if (!segura) {
         caja.append(icono('fa-solid fa-cow'));
+        caja.title = 'Sin foto';
         return caja;
     }
     const img = el('img');
@@ -234,24 +265,42 @@ function foto(url, alt) {
     img.alt = alt;
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
-    img.width = 44;
-    img.height = 44;
+    img.width = 48;
+    img.height = 48;
     img.addEventListener('error', () => caja.replaceChildren(icono('fa-solid fa-cow')), { once: true });
     caja.append(img);
     return caja;
 }
 
 function etiquetaEstado(clave, texto) {
-    const tag = el('span', 'dash-tag');
+    const definicion = Object.values(ESTADOS).flat().find((e) => e.clave === clave);
+    const tag = el('span', `dash-tag estado-texto--${clave}`);
     const muestra = el('span', `dash-muestra estado--${clave}`);
     muestra.setAttribute('aria-hidden', 'true');
-    tag.append(muestra, el('span', null, texto));
+    tag.append(muestra, ...(definicion ? [icono(`fa-solid ${definicion.icono}`)] : []), el('span', null, texto));
     return tag;
 }
 
+/** Fecha corta (hora de Costa Rica) o "—". Puro. */
+export function fechaCorta(iso) {
+    const fecha = new Date(iso ?? '');
+    if (!iso || Number.isNaN(fecha.getTime())) return '—';
+    return fecha.toLocaleDateString('es-CR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Costa_Rica' });
+}
+
 /**
- * Tabla única de ejemplares con chips de filtro. columnas: [{ titulo, valor(s) → texto, clase }]; `chips`: [{ clave,
- * etiqueta, cantidad }]. Devuelve la sección y una función para elegir un chip desde fuera.
+ * Fecha del hecho de una fila: fin programado si cerró (FINALIZADA o DESIERTA), la cancelación, o el inicio si sigue
+ * activa (igual que Subasta::SQL_FECHA_HECHO). Puro.
+ */
+export function fechaHecho(s) {
+    if (s.estado === 'FINALIZADA' || s.estado === 'DESIERTA') return s.fechaFin;
+    if (s.estado === 'CANCELADA') return s.fechaCierre ?? s.fechaFin;
+    return s.fechaInicio;
+}
+
+/**
+ * Tabla única de ejemplares. Dos filtros que se combinan: un chip de estado y, opcional, la evidencia de un KPI
+ * ({ etiqueta, ids }) que deja ver exactamente las subastas que forman ese número. Devuelve la sección y dos funciones.
  */
 function tablaEjemplares({ subastas, rol, chips, columnas, etiqueta }) {
     const contenedor = el('div', 'dash-tarjeta dash-ejemplares');
@@ -259,15 +308,17 @@ function tablaEjemplares({ subastas, rol, chips, columnas, etiqueta }) {
     contenedor.tabIndex = -1;
     const barra = el('div', 'dash-chips');
     barra.setAttribute('role', 'group');
-    barra.setAttribute('aria-label', 'Filtrar ejemplares');
+    barra.setAttribute('aria-label', 'Filtrar ejemplares por estado');
+    const filtroKpi = el('div', 'dash-filtro-kpi');
+    filtroKpi.setAttribute('role', 'status');
     const caja = el('div', 'dash-tabla');
     caja.tabIndex = 0;
     caja.setAttribute('role', 'region');
     caja.setAttribute('aria-label', 'Tabla de ejemplares (se desplaza a los lados)');
     const tabla = el('table');
     const cabeza = el('tr');
-    ['Ejemplar', 'Estado', ...columnas.map((c) => c.titulo)].forEach((titulo, i) => {
-        const th = el('th', i > 1 ? 'dash-tabla__numero' : null, titulo);
+    ['Ejemplar', 'Estado', 'Fecha', ...columnas.map((c) => c.titulo)].forEach((titulo, i) => {
+        const th = el('th', i > 2 ? 'dash-tabla__numero' : null, titulo);
         th.scope = 'col';
         cabeza.append(th);
     });
@@ -275,26 +326,39 @@ function tablaEjemplares({ subastas, rol, chips, columnas, etiqueta }) {
     tabla.tHead.append(cabeza);
     caja.append(tabla);
 
-    const pintar = (filtro) => {
-        barra.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.chip === filtro)));
-        const visibles = filtro === 'todos' ? subastas : subastas.filter((s) => claveEstado(s, rol) === filtro);
+    const actual = { chip: 'todos', evidencia: null };
+    const pintar = () => {
+        barra.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.chip === actual.chip)));
+        const ids = actual.evidencia ? new Set(actual.evidencia.ids.map(Number)) : null;
+        const visibles = subastas.filter((s) => (actual.chip === 'todos' || claveEstado(s, rol) === actual.chip)
+            && (!ids || ids.has(Number(s.subastaId))));
+        filtroKpi.replaceChildren();
+        if (actual.evidencia) {
+            const quitar = el('button', 'dash-chip dash-chip--quitar');
+            quitar.type = 'button';
+            quitar.append(el('span', null, `${actual.evidencia.etiqueta} · ${plural(visibles.length, 'ejemplar', 'ejemplares')}`), icono('fa-solid fa-xmark'));
+            quitar.setAttribute('aria-label', `Quitar el filtro «${actual.evidencia.etiqueta}»`);
+            quitar.addEventListener('click', () => { actual.evidencia = null; pintar(); });
+            filtroKpi.append(el('span', 'dash-filtro-kpi__texto', 'Mostrando los ejemplares de'), quitar);
+        }
         tabla.tBodies[0].replaceChildren(...visibles.map((s) => {
             const tr = el('tr');
             const nombre = el('td');
             const enlace = el('a', 'dash-ejemplar');
             enlace.href = `subastas?id=${Number(s.subastaId)}`;
             const textos = el('span', 'dash-ejemplar__textos');
-            textos.append(el('strong', null, s.titulo), el('small', null, [s.animal?.tipo || s.animal?.especie, s.animal?.raza].filter(Boolean).join(' · ')));
-            enlace.append(foto(s.imagenUrl, ''), textos);
+            textos.append(el('strong', null, s.titulo), el('small', null, [s.animal?.tipo || s.animal?.especie, s.animal?.raza, s.zona?.provincia].filter(Boolean).join(' · ')));
+            enlace.append(foto(s.imagenUrl, `Foto de ${s.titulo}`), textos);
             nombre.append(enlace);
             const est = el('td');
             est.append(etiquetaEstado(claveEstado(s, rol), etiqueta(s)));
-            tr.append(nombre, est, ...columnas.map((c) => el('td', `dash-tabla__numero${c.clase ? ` ${c.clase(s)}` : ''}`, c.valor(s))));
+            tr.append(nombre, est, el('td', 'dash-tabla__fecha', fechaCorta(fechaHecho(s))),
+                ...columnas.map((c) => el('td', `dash-tabla__numero${c.clase ? ` ${c.clase(s)}` : ''}`, c.valor(s))));
             return tr;
         }));
         if (!visibles.length) {
-            const vacio = el('td', 'dash-tabla__vacio', 'No hay ejemplares en este estado.');
-            vacio.colSpan = columnas.length + 2;
+            const vacio = el('td', 'dash-tabla__vacio', 'No hay ejemplares con este filtro.');
+            vacio.colSpan = columnas.length + 3;
             const tr = el('tr');
             tr.append(vacio);
             tabla.tBodies[0].append(tr);
@@ -304,18 +368,27 @@ function tablaEjemplares({ subastas, rol, chips, columnas, etiqueta }) {
         const chip = el('button', 'dash-chip', `${c.etiqueta} · ${c.cantidad}`);
         chip.type = 'button';
         chip.dataset.chip = c.clave;
-        chip.addEventListener('click', () => pintar(c.clave));
+        chip.addEventListener('click', () => { actual.chip = c.clave; pintar(); });
         barra.append(chip);
     });
-    contenedor.append(barra, caja);
-    pintar('todos');
-    const elegir = (clave) => {
-        pintar(clave);
-        contenedor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    contenedor.append(barra, filtroKpi, caja);
+    pintar();
+    const mostrar = () => {
+        contenedor.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
         contenedor.focus({ preventScroll: true });
     };
-    return { contenedor, elegir };
+    return {
+        contenedor,
+        elegir: (clave) => { actual.chip = clave; actual.evidencia = null; pintar(); mostrar(); },
+        filtrar: (evidencia) => { actual.chip = 'todos'; actual.evidencia = evidencia; pintar(); mostrar(); },
+    };
 }
+
+const grilla = (clase, ...hijos) => {
+    const g = el('div', clase);
+    g.append(...hijos.filter(Boolean));
+    return g;
+};
 
 // ───────────────────────────── Vendedor ─────────────────────────────
 
@@ -324,150 +397,195 @@ function pintarVendedor(datos) {
     const lista = datos.subastas ?? [];
     const adjudicadas = lista.filter((s) => s.estado === 'FINALIZADA' && typeof s.montoAdjudicado === 'number');
     const conteos = contarEstados(lista, 'VENDEDOR');
-    const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
-
-    const etiquetas = { adjudicada: 'Adjudicada', vivo: 'En vivo', 'sin-ofertas': 'Sin ofertas', cancelada: 'Cancelada' };
-    const kpis = el('div', 'dash-kpis');
-    kpis.append(
-        kpi({ etiqueta: 'Monto vendido', valor: formatPrice(ind.precioPromedio.montoTotal), destacado: true,
-            detalle: plural(ind.precioPromedio.animales, 'animal adjudicado', 'animales adjudicados') }),
-        kpi({ etiqueta: 'Tasa de éxito', valor: formatoPorcentaje(ind.exito.porcentaje), progreso: ind.exito.porcentaje ?? 0,
-            detalle: `${ind.exito.adjudicadas} ${ind.exito.adjudicadas === 1 ? 'adjudicada' : 'adjudicadas'} de ${ind.exito.finalizadas} ${ind.exito.finalizadas === 1 ? 'finalizada' : 'finalizadas'}` }),
-        kpi({ etiqueta: 'Precio promedio de venta', valor: ind.precioPromedio.valor == null ? '—' : formatPrice(ind.precioPromedio.valor),
-            detalle: 'Por animal adjudicado' }),
-        kpi({ etiqueta: 'Incremento promedio de pujas', valor: formatoPorcentaje(ind.incrementoPromedio.porcentaje, { signo: true }),
-            tono: ind.incrementoPromedio.porcentaje > 0 ? 'positivo' : null, detalle: 'Del precio base al precio final' }),
-    );
+    const etiquetas = { adjudicada: 'Adjudicada', vivo: 'Activa', 'sin-ofertas': 'Sin ofertas', cancelada: 'Cancelada' };
 
     const tabla = tablaEjemplares({
         subastas: lista, rol: 'VENDEDOR',
         chips: [{ clave: 'todos', etiqueta: 'Todos', cantidad: lista.length }, ...conteos],
         etiqueta: (s) => etiquetas[claveEstado(s, 'VENDEDOR')],
         columnas: [
+            { titulo: 'Precio base', valor: (s) => formatPrice(s.precioBase) },
             { titulo: 'Precio final', valor: (s) => (s.estado === 'FINALIZADA' ? formatPrice(s.montoAdjudicado)
                 : s.estado === 'ACTIVA' && typeof s.precioActual === 'number' ? `${formatPrice(s.precioActual)} (va)` : '—') },
-            { titulo: 'Incremento', valor: (s) => formatoPorcentaje(s.incrementoPorcentaje, { signo: true }),
-                clase: (s) => (s.incrementoPorcentaje > 0 ? 'dash-positivo' : '') },
+            { titulo: 'Incremento', valor: (s) => formatoPorcentaje(s.incrementoPorcentaje, { signo: true }) },
+            { titulo: 'Postores', valor: (s) => String(s.postores ?? 0) },
         ],
     });
-    const { tarjeta: tarjetaEstados, total } = estados('Tus subastas por estado', conteos, tabla.elegir);
+    const filtrar = tabla.filtrar;
+    const exito = ind.exito;
 
+    const kpis = grilla('dash-kpis',
+        kpi({ etiqueta: 'Monto adjudicado', valor: formatPrice(ind.precioPromedio.montoTotal), tono: 'dato',
+            detalle: `${plural(ind.precioPromedio.animales, 'animal adjudicado', 'animales adjudicados')} · una subasta es un animal`,
+            definicion: 'Suma de las pujas ganadoras de las subastas adjudicadas del periodo (fecha de fin).',
+            ids: ind.precioPromedio.ids, alFiltrar: filtrar }),
+        kpi({ etiqueta: 'Porcentaje de éxito', valor: formatoPorcentaje(exito.porcentaje), tono: 'exito', progreso: exito.porcentaje,
+            detalle: exito.finalizadas ? `${exito.adjudicadas} adjudicadas de ${plural(exito.finalizadas, 'cerrada', 'cerradas')} (sin canceladas)`
+                : 'Sin subastas cerradas: no se calcula',
+            definicion: 'Adjudicadas ÷ (adjudicadas + desiertas). Las canceladas no cuentan.', ids: exito.ids, alFiltrar: filtrar }),
+        kpi({ etiqueta: 'Precio promedio por animal', valor: ind.precioPromedio.valor == null ? '—' : formatPrice(ind.precioPromedio.valor),
+            tono: 'dato', detalle: ind.precioPromedio.valor == null ? 'Sin ventas adjudicadas' : 'Monto adjudicado ÷ animales adjudicados',
+            ids: ind.precioPromedio.ids, alFiltrar: filtrar }),
+        kpi({ etiqueta: 'Incremento promedio', valor: formatoPorcentaje(ind.incrementoPromedio.porcentaje, { signo: true }), tono: 'dato',
+            detalle: ind.incrementoPromedio.porcentaje == null ? 'Sin adjudicadas con precio base' : 'Del precio base al precio final, por animal',
+            ids: ind.incrementoPromedio.ids, alFiltrar: filtrar }),
+    );
+
+    const e = ind.estados;
+    const participacion = grilla('dash-metricas',
+        metrica({ nombreIcono: 'fa-solid fa-users', valor: plural(ind.compradores.total, 'comprador', 'compradores'),
+            texto: 'Personas distintas que pujaron', etiqueta: 'Subastas con pujas', ids: ind.compradores.ids, alFiltrar: filtrar }),
+        metrica({ nombreIcono: 'fa-regular fa-clock', valor: formatoDuracion(ind.tiempoAdjudicacion.minutos),
+            texto: 'Promedio de la apertura al cierre adjudicado', etiqueta: 'Tiempo de adjudicación', ids: ind.tiempoAdjudicacion.ids, alFiltrar: filtrar }),
+        metrica({ nombreIcono: 'fa-solid fa-flag-checkered', valor: plural(e.cerradas.total, 'cerrada', 'cerradas'),
+            texto: `${e.adjudicadas?.total ?? exito.adjudicadas} adjudicadas + ${e.desiertas?.total ?? ind.sinOfertas.total} desiertas`,
+            etiqueta: 'Subastas cerradas', ids: e.cerradas.ids, alFiltrar: filtrar }),
+        metrica({ nombreIcono: 'fa-solid fa-hourglass-end', valor: plural(ind.sinOfertas.total, 'animal', 'animales'),
+            texto: 'Cerraron sin ninguna puja', etiqueta: 'Animales sin ofertas', ids: ind.sinOfertas.ids, alFiltrar: filtrar }),
+    );
+
+    const conIncremento = adjudicadas.filter((s) => typeof s.incrementoPorcentaje === 'number');
     $('#dashboard-contenido').replaceChildren(
-        seccion('dash-resultados', 'Resultados del periodo', kpis),
-        seccion('dash-estados', `Tus ${plural(total, 'subasta', 'subastas')} por estado`, tarjetaEstados),
-        seccion('dash-graficos', 'Ventas y pujas', (() => {
-            const g = el('div', 'dash-dos');
-            g.append(
-                columnasPorMes({ titulo: 'Monto vendido por mes', ayuda: 'Según el mes en que cerró cada subasta adjudicada.',
-                    vacio: 'Aún no hay ventas adjudicadas en este periodo.', formato: formatPrice,
-                    meses: porMes(adjudicadas, (s) => s.fechaCierre ?? s.fechaFin, (s) => s.montoAdjudicado) }),
-                barrasHorizontales({ titulo: 'Cuánto subió cada subasta', ayuda: 'Del precio base al precio final adjudicado.',
-                    vacio: 'Aún no hay subastas adjudicadas.', columnas: ['Ejemplar', 'Incremento'],
-                    promedio: { etiqueta: 'Promedio', texto: formatoPorcentaje(ind.incrementoPromedio.porcentaje, { signo: true }) },
-                    items: adjudicadas.filter((s) => typeof s.incrementoPorcentaje === 'number').map((s) => ({
-                        etiqueta: s.titulo, valor: s.incrementoPorcentaje, texto: formatoPorcentaje(s.incrementoPorcentaje, { signo: true }),
-                        extra: [[formatPrice(s.precioBase), 'Precio base'], [formatPrice(s.montoAdjudicado), 'Precio final']],
-                    })) }),
-            );
-            return g;
-        })()),
-        seccion('dash-actividad', 'Actividad de compradores', (() => {
-            const fila = el('div', 'dash-dos');
-            fila.append(
-                actividad('fa-solid fa-users', plural(ind.compradores.total, 'comprador', 'compradores'),
-                    ind.compradores.total ? `Personas distintas pujaron en ${ind.compradores.ids.length} de tus subastas` : 'Nadie ha pujado todavía en este periodo'),
-                actividad('fa-regular fa-clock', formatoDuracion(ind.tiempoAdjudicacion.minutos), 'Tiempo promedio desde publicar hasta adjudicar'),
-            );
-            return fila;
-        })()),
-        seccion('dash-ejemplares-titulo', 'Tus ejemplares', tabla.contenedor),
+        seccion('dash-resultados', 'Resultados del periodo', null, kpis),
+        seccion('dash-estados', 'Estado de tus subastas', null,
+            estados(conteos, 'Tus subastas por estado', tabla.elegir, 'Cerradas = adjudicadas + desiertas. Una cancelada no es una venta ni una subasta sin ofertas.')),
+        seccion('dash-participacion', 'Participación y operación', null, participacion),
+        seccion('dash-graficos', 'Evolución y comparación', null, grilla('dash-dos',
+            columnasPorMes({ titulo: 'Monto adjudicado por mes', ayuda: 'Según el mes en que terminó cada subasta adjudicada (hora de Costa Rica).',
+                vacio: 'Aún no hay subastas adjudicadas en este periodo.', formato: formatPrice, unidad: 'Monto',
+                meses: porMes(adjudicadas, (s) => s.fechaFin, (s) => s.montoAdjudicado) }),
+            barrasHorizontales({ titulo: 'Incremento por ejemplar', ayuda: 'Cuánto subió cada animal adjudicado desde su precio base.',
+                vacio: 'Aún no hay subastas adjudicadas.', columnas: ['Ejemplar', 'Incremento', 'Precio base', 'Precio final'],
+                promedio: { etiqueta: 'Promedio del periodo', texto: formatoPorcentaje(ind.incrementoPromedio.porcentaje, { signo: true }) },
+                items: conIncremento.map((s) => ({
+                    etiqueta: s.titulo, valor: s.incrementoPorcentaje, texto: formatoPorcentaje(s.incrementoPorcentaje, { signo: true }),
+                    extra: [[formatPrice(s.precioBase), 'Precio base'], [formatPrice(s.montoAdjudicado), 'Precio final']],
+                    tabla: [formatPrice(s.precioBase), formatPrice(s.montoAdjudicado)],
+                })) }),
+        )),
+        seccion('dash-ejemplares-titulo', 'Tus ejemplares', 'Cada fila es una subasta de un animal, con su foto. Los botones «Ver ejemplares» filtran esta tabla.', tabla.contenedor),
     );
 }
 
 // ───────────────────────────── Comprador ─────────────────────────────
+
+/** Texto del costo de adquisición: nunca presenta como completo un total al que le faltan fletes. Puro. */
+export function textoCosto(costo) {
+    if (!costo || !costo.subastas) return { valor: '—', detalle: 'Sin pujas activas' };
+    if (costo.completo) return { valor: formatPrice(costo.total), detalle: `Tus pujas + el flete más barato · ${plural(costo.subastas, 'subasta', 'subastas')}` };
+    return {
+        valor: 'Incompleto',
+        detalle: `${plural(costo.sinFlete, 'subasta', 'subastas')} sin precio de flete: el total no se puede calcular`,
+    };
+}
+
+function desgloseCosto(costo, alFiltrar) {
+    const t = el('article', 'dash-tarjeta dash-costo');
+    t.append(el('h3', 'grafico__titulo', 'Costo estimado de adquisición'),
+        el('p', 'grafico__ayuda', 'De tus pujas activas. El flete es el más barato con precio que cubre la finca; uno «a convenir» no vale ₡0.'));
+    const filas = el('dl', 'dash-costo__filas');
+    const fila = (nombre, valor, clase = '') => {
+        const d = el('div', `dash-costo__fila ${clase}`);
+        d.append(el('dt', null, nombre), el('dd', null, valor));
+        filas.append(d);
+    };
+    if (!costo.subastas) {
+        t.append(el('p', 'grafico__vacio', 'No tienes pujas activas en este periodo.'));
+        return t;
+    }
+    fila('Tus pujas (conocidas)', formatPrice(costo.pujas));
+    fila(`Fletes con precio (${costo.conFlete})`, costo.fletesConocidos == null ? '—' : formatPrice(costo.fletesConocidos));
+    fila('Subastas sin precio de flete', String(costo.sinFlete), costo.sinFlete ? 'dash-costo__fila--aviso' : '');
+    fila('Total estimado', costo.completo ? formatPrice(costo.total) : 'No calculable', 'dash-costo__fila--total');
+    t.append(filas);
+    const evidencia = botonEvidencia(costo.idsSinFlete, 'Sin precio de flete', alFiltrar);
+    if (evidencia) t.append(evidencia);
+    return t;
+}
 
 function pintarComprador(datos) {
     const ind = datos.indicadores;
     const lista = datos.subastas ?? [];
     const propias = lista.filter((s) => !s.oportunidad);
     const cerca = lista.filter((s) => s.oportunidad);
-    const ganadas = propias.filter((s) => s.soyGanador && typeof s.montoAdjudicado === 'number');
     const precio = (s) => (typeof s.precioActual === 'number' ? s.precioActual : s.precioBase);
     const conteos = contarEstados(propias, 'COMPRADOR');
     const op = ind.oportunidades;
-    const costo = ind.costoAdquisicion;
-    const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
     const etiquetas = { ganada: 'Ganada', ganando: 'Vas ganando', superada: 'Te superaron', perdida: 'Perdida' };
 
     const tabla = tablaEjemplares({
         subastas: [...propias, ...cerca], rol: 'COMPRADOR',
         chips: [{ clave: 'todos', etiqueta: 'Todos', cantidad: lista.length }, ...conteos,
-            ...(op.requiereUbicacion ? [] : [{ clave: 'cerca', etiqueta: 'Cerca de ti', cantidad: cerca.length }])],
+            ...(op.requiereUbicacion ? [] : [{ clave: 'cerca', etiqueta: 'Oportunidades', cantidad: cerca.length }])],
         etiqueta: (s) => (s.oportunidad ? situacionComprador(s) : etiquetas[claveEstado(s, 'COMPRADOR')]),
         columnas: [
             { titulo: 'Precio', valor: (s) => formatPrice(s.estado === 'FINALIZADA' ? s.montoAdjudicado : precio(s)) },
             { titulo: 'Tu puja', valor: (s) => (typeof s.miPuja === 'number' ? formatPrice(s.miPuja) : '—') },
-            { titulo: 'Costo estimado', valor: (s) => (typeof s.costoEstimado === 'number'
-                ? `${formatPrice(s.costoEstimado)}${s.costoFlete == null ? ' (sin flete)' : ''}` : '—') },
-            { titulo: 'Frente al promedio', valor: (s) => formatoPorcentaje(s.comparacion?.diferenciaPorcentaje, { signo: true }),
-                clase: (s) => (s.comparacion?.diferenciaPorcentaje < 0 ? 'dash-positivo' : '') },
+            { titulo: 'Flete', valor: (s) => (s.estado !== 'ACTIVA' || s.oportunidad ? '—' : typeof s.costoFlete === 'number' ? formatPrice(s.costoFlete) : 'Sin precio') },
+            { titulo: 'Costo estimado', valor: (s) => (typeof s.costoEstimado === 'number' ? formatPrice(s.costoEstimado) : '—') },
+            { titulo: 'Frente a comparables', valor: (s) => formatoPorcentaje(s.comparacion?.diferenciaPorcentaje, { signo: true }) },
         ],
     });
-    const { tarjeta: tarjetaEstados, total } = estados('Tus pujas por estado', conteos, tabla.elegir);
+    const filtrar = tabla.filtrar;
+    const adj = ind.adjudicacion;
+    const diferencia = ind.comparacion.porcentaje;
+    const costo = textoCosto(ind.costoAdquisicion);
+
+    const kpis = grilla('dash-kpis',
+        kpi({ etiqueta: 'Monto adjudicado', valor: formatPrice(ind.montoAdjudicado.valor), tono: 'dato',
+            detalle: plural(ind.montoAdjudicado.animales, 'animal ganado', 'animales ganados'),
+            definicion: 'Suma de lo que ganaste en subastas adjudicadas del periodo (es un costo para ti).',
+            ids: ind.montoAdjudicado.ids, alFiltrar: filtrar }),
+        kpi({ etiqueta: 'Porcentaje de adjudicación', valor: formatoPorcentaje(adj.porcentaje), tono: 'exito', progreso: adj.porcentaje,
+            detalle: adj.finalizadas ? `${adj.ganadas} ganadas de ${plural(adj.finalizadas, 'cerrada', 'cerradas')} donde pujaste` : 'Sin subastas cerradas donde pujaras',
+            ids: adj.ids, alFiltrar: filtrar }),
+        kpi({ etiqueta: 'Pujas activas', valor: String(ind.pujasActivas.total), tono: 'info',
+            detalle: `${ind.vasGanando?.total ?? 0} vas ganando · ${plural(ind.pujasSuperadas.total, 'superada', 'superadas')}`,
+            ids: ind.pujasActivas.ids, alFiltrar: filtrar }),
+        kpi({ etiqueta: 'Costo estimado', valor: costo.valor, tono: ind.costoAdquisicion.completo ? 'dato' : ind.costoAdquisicion.subastas ? 'aviso' : null,
+            detalle: costo.detalle, ids: ind.costoAdquisicion.ids, alFiltrar: filtrar }),
+    );
 
     const ubicacion = el('button', 'dash-boton dash-boton--chico');
     ubicacion.type = 'button';
-    ubicacion.append(icono('fa-solid fa-location-crosshairs'), el('span', null, op.requiereUbicacion ? 'Usar mi ubicación' : 'Ver en la tabla'));
-    ubicacion.addEventListener('click', () => (op.requiereUbicacion ? pedirUbicacion() : tabla.elegir('cerca')));
+    ubicacion.append(icono('fa-solid fa-location-crosshairs'), el('span', null, 'Usar mi ubicación'));
+    ubicacion.addEventListener('click', pedirUbicacion);
+    const textoOportunidades = op.requiereUbicacion
+        ? 'Comparte tu ubicación o elige una provincia en «Ubicación» para ver subastas abiertas donde aún no pujas.'
+        : op.modo === 'PROVINCIA' ? `Subastas abiertas en ${datos.filtros?.provincia ?? 'la provincia elegida'} en las que aún no pujas`
+            : `Subastas abiertas a ${op.radioKm} km o menos en las que aún no pujas`;
 
-    const kpis = el('div', 'dash-kpis');
-    const diferencia = ind.comparacion.porcentaje;
-    kpis.append(
-        kpi({ etiqueta: 'Monto adjudicado', valor: formatPrice(ind.montoAdjudicado.valor), destacado: true,
-            detalle: plural(ind.montoAdjudicado.animales, 'animal ganado', 'animales ganados') }),
-        kpi({ etiqueta: 'Porcentaje de adjudicación', valor: formatoPorcentaje(ind.adjudicacion.porcentaje), progreso: ind.adjudicacion.porcentaje ?? 0,
-            detalle: `${ind.adjudicacion.ganadas} ${ind.adjudicacion.ganadas === 1 ? 'ganada' : 'ganadas'} de ${ind.adjudicacion.finalizadas} ${ind.adjudicacion.finalizadas === 1 ? 'finalizada' : 'finalizadas'}` }),
-        kpi({ etiqueta: 'Costo estimado de adquisición', valor: costo.total == null ? '—' : formatPrice(costo.total),
-            detalle: costo.sinFlete ? `Tus pujas + flete · ${plural(costo.sinFlete, 'subasta', 'subastas')} sin precio de flete` : 'Tus pujas activas + el flete más barato' }),
-        kpi({ etiqueta: 'Precio frente al promedio', valor: formatoPorcentaje(diferencia, { signo: true }),
-            tono: diferencia < 0 ? 'positivo' : null,
-            detalle: diferencia == null ? 'Sin ventas comparables todavía' : diferencia < 0 ? 'Más barato que animales comparables' : 'Más caro que animales comparables' }),
-    );
-
+    const comparables = lista.filter((s) => s.comparacion?.diferenciaPorcentaje != null);
     $('#dashboard-contenido').replaceChildren(
-        seccion('dash-resultados', 'Resultados del periodo', kpis),
-        seccion('dash-estados', `Tus ${plural(total, 'puja', 'pujas')} por estado`, tarjetaEstados),
-        seccion('dash-graficos', 'Compras y precios', (() => {
-            const g = el('div', 'dash-dos');
-            g.append(
-                columnasPorMes({ titulo: 'Monto comprado por mes', ayuda: 'Según el mes en que cerró cada subasta que ganaste.',
-                    vacio: 'Aún no has ganado subastas en este periodo.', formato: formatPrice,
-                    meses: porMes(ganadas, (s) => s.fechaCierre ?? s.fechaFin, (s) => s.montoAdjudicado) }),
-                barrasDivergentes({ titulo: 'Precio actual frente al promedio', ayuda: 'Contra lo que se pagó antes por animales comparables.',
-                    vacio: 'Todavía no hay ventas comparables para tus subastas.', izquierda: 'Más barato', derecha: 'Más caro',
-                    columnas: ['Ejemplar', 'Diferencia', 'Precio actual', 'Promedio histórico'],
-                    promedio: { etiqueta: 'Promedio', texto: formatoPorcentaje(diferencia, { signo: true }) },
-                    items: lista.filter((s) => s.comparacion?.diferenciaPorcentaje != null).map((s) => ({
-                        etiqueta: s.titulo, valor: s.comparacion.diferenciaPorcentaje,
-                        texto: formatoPorcentaje(s.comparacion.diferenciaPorcentaje, { signo: true }),
-                        extra: [[formatPrice(precio(s)), 'Precio actual'], [formatPrice(s.comparacion.promedio), `Promedio (${NIVELES[s.comparacion.nivel]})`]],
-                        tabla: [formatPrice(precio(s)), formatPrice(s.comparacion.promedio)],
-                    })) }),
-            );
-            return g;
-        })()),
-        seccion('dash-actividad', 'Oportunidades y pujas activas', (() => {
-            const fila = el('div', 'dash-dos');
-            fila.append(
-                actividad('fa-solid fa-location-dot', op.requiereUbicacion ? 'Oportunidades cercanas' : plural(op.total, 'oportunidad', 'oportunidades'),
-                    op.requiereUbicacion ? 'Comparte tu ubicación para ver las subastas abiertas cerca de ti.'
-                        : `Subastas abiertas a ${op.radioKm} km o menos en las que aún no pujas`, ubicacion),
-                actividad('fa-solid fa-gavel', plural(ind.pujasActivas.total, 'puja activa', 'pujas activas'),
-                    `${plural(ind.pujasSuperadas.total, 'superada', 'superadas')}: otro comprador mantiene la oferta más alta`),
-            );
-            return fila;
-        })()),
-        seccion('dash-ejemplares-titulo', 'Tus ejemplares', tabla.contenedor),
+        seccion('dash-resultados', 'Tus pujas y resultados', null, kpis),
+        seccion('dash-estados', 'Estado de tus pujas', null,
+            estados(conteos, 'Tus pujas por estado', tabla.elegir, 'Activas: vas ganando o te superaron. Cerradas: ganadas o perdidas.')),
+        seccion('dash-participacion', 'Costo, precios y oportunidades', null, grilla('dash-tres',
+            desgloseCosto(ind.costoAdquisicion, filtrar),
+            metrica({ nombreIcono: 'fa-solid fa-scale-balanced', valor: formatoPorcentaje(diferencia, { signo: true }),
+                texto: diferencia == null ? 'Sin ventas comparables todavía' : `Tu precio actual frente al promedio pagado por animales comparables (${plural(ind.comparacion.ids.length, 'subasta', 'subastas')})`,
+                etiqueta: 'Comparación de precios', ids: ind.comparacion.ids, alFiltrar: filtrar }),
+            metrica({ nombreIcono: 'fa-solid fa-location-dot',
+                valor: op.requiereUbicacion ? 'Oportunidades cercanas' : plural(op.total, 'oportunidad', 'oportunidades'),
+                texto: textoOportunidades, etiqueta: 'Oportunidades cercanas', ids: op.ids, alFiltrar: filtrar,
+                accion: op.requiereUbicacion ? ubicacion : null }),
+        )),
+        seccion('dash-graficos', 'Evolución y comparación', null, grilla('dash-dos',
+            columnasPorMes({ titulo: 'Compras y pujas por mes', ayuda: 'Monto ganado (barra) según el mes en que terminó la subasta; el tooltip y la tabla dan las subastas donde pujaste.',
+                vacio: 'Aún no has pujado en este periodo.', formato: formatPrice, unidad: 'Monto ganado', cantidadTexto: ['subasta con tu puja', 'subastas con tu puja'],
+                meses: porMes(propias, fechaHecho, (s) => (s.soyGanador ? s.montoAdjudicado : 0)) }),
+            barrasDivergentes({ titulo: 'Precio frente a comparables', ayuda: 'Contra el promedio pagado por animales parecidos. Más barato es mejor para ti; no es un juicio del animal.',
+                vacio: 'Todavía no hay ventas comparables para tus subastas.', izquierda: 'Más barato', derecha: 'Más caro',
+                columnas: ['Ejemplar', 'Diferencia', 'Precio actual', 'Promedio comparable'],
+                promedio: { etiqueta: 'Promedio', texto: formatoPorcentaje(diferencia, { signo: true }) },
+                items: comparables.map((s) => ({
+                    etiqueta: s.titulo, valor: s.comparacion.diferenciaPorcentaje,
+                    texto: formatoPorcentaje(s.comparacion.diferenciaPorcentaje, { signo: true }),
+                    extra: [[formatPrice(precio(s)), 'Precio actual'], [formatPrice(s.comparacion.promedio), `Promedio (${NIVELES[s.comparacion.nivel]}, ${s.comparacion.muestras} ventas)`]],
+                    tabla: [formatPrice(precio(s)), formatPrice(s.comparacion.promedio)],
+                })) }),
+        )),
+        seccion('dash-ejemplares-titulo', 'Tus ejemplares', 'Subastas donde pujaste y oportunidades, con su foto. Los botones «Ver ejemplares» filtran esta tabla.', tabla.contenedor),
     );
 }
 

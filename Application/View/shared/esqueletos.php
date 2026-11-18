@@ -103,13 +103,14 @@ function tc_esqueleto_dashboard(): string
     $filas = str_repeat('<div class="dash-skeleton__fila">' . tc_esqueleto_linea('texto') . tc_esqueleto_linea('texto') . tc_esqueleto_linea('texto') . '</div>', 4);
 
     $titulo = '<span class="dash-skeleton__titulo">' . tc_esqueleto_linea('titulo corta') . '</span>';
-    $estado = '<div class="dash-skeleton__kpi">' . tc_esqueleto_linea('texto media') . tc_esqueleto_linea('cifra corta') . tc_esqueleto_linea('texto') . '</div>';
+    $metrica = '<div class="dash-skeleton__kpi">' . tc_esqueleto_linea('cifra corta') . tc_esqueleto_linea('texto') . tc_esqueleto_linea('texto media') . '</div>';
 
+    // Misma geometría que mi-dashboard.js: resultados, estado (barra + leyenda), 4 métricas, dos gráficos y tabla.
     return '<div class="dash-skeleton">'
         . $titulo . '<div class="dash-skeleton__kpis">' . str_repeat($kpi, 4) . '</div>'
-        . $titulo . '<div class="dash-skeleton__estados"><div class="dash-skeleton__kpis">' . str_repeat($estado, 4) . '</div></div>'
-        . '<div class="dash-skeleton__graficos">' . $grafico . $grafico . '</div>'
-        . '<div class="dash-skeleton__bloque">' . tc_esqueleto_linea('titulo corta') . tc_esqueleto_linea('texto') . tc_esqueleto_linea('texto media') . '</div>'
-        . '<div class="dash-skeleton__bloque">' . tc_esqueleto_linea('titulo corta') . $filas . '</div>'
+        . $titulo . '<div class="dash-skeleton__estados">' . tc_esqueleto_linea('texto') . '<div class="dash-skeleton__kpis">' . str_repeat(tc_esqueleto_linea('texto'), 4) . '</div></div>'
+        . $titulo . '<div class="dash-skeleton__kpis dash-skeleton__metricas">' . str_repeat($metrica, 4) . '</div>'
+        . $titulo . '<div class="dash-skeleton__graficos">' . $grafico . $grafico . '</div>'
+        . $titulo . '<div class="dash-skeleton__bloque">' . tc_esqueleto_linea('titulo corta') . $filas . '</div>'
         . '</div>';
 }

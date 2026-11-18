@@ -28,6 +28,13 @@
     --tc-success-bg:#203b2b;
     --tc-warning:#f2c477;
     --tc-neutral-status:#c7bdb3;
+    /* Semántica de datos (dashboards): informativo = activo / en vivo / vas ganando; data = cantidades económicas,
+       que no son ni éxito ni error. AA ≥ 6,6:1 sobre bg, surface y bg-elevated. */
+    --tc-info:#8ec5f2;
+    --tc-info-bg:#1c2f3d;
+    --tc-warning-bg:#3a2f18;
+    --tc-neutral-bg:#2e3330;
+    --tc-data:#bdb6ea;
     /* Aliases consumidos por onboarding.css y las vistas de actividad. */
     --background:var(--tc-bg);
     --surface:var(--tc-surface);
@@ -62,6 +69,11 @@ html[data-theme='light'] {
     --tc-success-bg:#e5f6ec;
     --tc-warning:#8a5a00;
     --tc-neutral-status:#5f6762;
+    --tc-info:#235f9c;
+    --tc-info-bg:#e6f0fa;
+    --tc-warning-bg:#fbf0d9;
+    --tc-neutral-bg:#efebe5;
+    --tc-data:#574f8f;
     color-scheme:light;
 }
 

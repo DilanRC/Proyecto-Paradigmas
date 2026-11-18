@@ -18,8 +18,8 @@ test('/mi-dashboard es una ruta con sesión y su API existe', () => {
 });
 
 test('la vista invalida el JS del dashboard y mantiene su hoja de estilos', () => {
-    assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-6/);
-    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-8/);
+    assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-7/);
+    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-9/);
     assert.match(vista, /data-dashboard-rol="VENDEDOR"/);
     assert.match(vista, /data-dashboard-rol="COMPRADOR"/);
 });
@@ -100,15 +100,37 @@ test('gráficos: montos por mes en hora de Costa Rica, con los meses vacíos en 
     assert.deepEqual(porMes([], (i) => i.f, (i) => i.v), []);
 });
 
-test('gráficos: un solo tono, tooltip con teclado, tabla y sin colores nuevos', () => {
+test('gráficos: montos en el tono de datos, tooltip con teclado, tabla y sin colores sueltos', () => {
     const graficos = readFileSync('Public/js/dashboard-graficos.js', 'utf8');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(graficos), 'sin innerHTML');
     assert.match(graficos, /addEventListener\('focus'/, 'el tooltip también sale con el teclado');
     assert.match(graficos, /Ver como tabla/, 'cada gráfico trae su tabla');
-    assert.match(js, /dashboard-graficos\.js\?v=graficos-\d+/, 'import versionado');
-    const reglas = css;
-    assert.ok(reglas.includes('var(--tc-success)'), 'el tono de los datos');
-    assert.ok(!/#[0-9a-f]{3,6}\b/i.test(reglas), 'sin colores nuevos');
+    assert.match(js, /dashboard-graficos\.js\?v=graficos-3/, 'import versionado');
+    // Un monto no es un "éxito": las barras económicas usan --tc-data, no el verde de los estados.
+    for (const barra of ['.grafico-columnas__barra', '.grafico-barras__barra', '.grafico-divergente__barra {']) {
+        const regla = css.slice(css.indexOf(barra), css.indexOf('}', css.indexOf(barra)));
+        assert.match(regla, /var\(--tc-data\)/, `${barra} en el tono de datos`);
+    }
+    assert.ok(!/#[0-9a-f]{3,6}\b/i.test(css), 'sin colores sueltos: todo sale de los tokens');
+});
+
+test('tokens semánticos definidos en los dos temas y con contraste AA', () => {
+    const auth = readFileSync('Public/css/public-auth.css', 'utf8');
+    const temas = [auth.slice(0, auth.indexOf("html[data-theme='light']")), auth.slice(auth.indexOf("html[data-theme='light']"))];
+    const lum = (hex) => {
+        const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const contraste = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+    for (const tema of temas) {
+        const valor = (nombre) => tema.match(new RegExp(`--tc-${nombre}:(#[0-9a-f]{6})`, 'i'))?.[1];
+        for (const token of ['success', 'info', 'warning', 'neutral-status', 'data']) {
+            assert.ok(valor(token), `--tc-${token} en ambos temas`);
+            for (const fondo of ['bg', 'surface']) {
+                assert.ok(contraste(valor(token), valor(fondo)) >= 4.5, `--tc-${token} sobre --tc-${fondo} ≥ 4,5:1`);
+            }
+        }
+    }
 });
 
 test('estados de cada rol: el vendedor y el comprador cuentan lo suyo', async () => {
@@ -128,12 +150,44 @@ test('estados de cada rol: el vendedor y el comprador cuentan lo suyo', async ()
     assert.equal(textoPeriodo({ periodo: 'rango', desde: '2026-10-01', hasta: '2026-10-31' }), 'del 2026-10-01 al 2026-10-31');
 });
 
-test('cada estado vecino se distingue también por textura, no solo por color', () => {
-    const regla = (clase) => css.slice(css.indexOf(`.estado--${clase}`), css.indexOf('}', css.indexOf(`.estado--${clase}`)));
-    assert.match(regla('vivo'), /repeating-linear-gradient\(45deg/);
-    assert.match(regla('cancelada'), /repeating-linear-gradient\(135deg/);
+test('cada estado tiene su color semántico y una segunda señal (texto e ícono; rayas en el ámbar)', async () => {
+    const { ESTADOS } = await import('../../Public/js/mi-dashboard.js');
     assert.match(css, /\.estado--adjudicada,\s*\.estado--ganada \{ background:var\(--tc-success\); \}/);
-    assert.match(css, /\.estado--sin-ofertas,\s*\.estado--superada \{ background:var\(--tc-warning\); \}/);
+    assert.match(css, /\.estado--vivo,\s*\.estado--ganando \{ background:var\(--tc-info\); \}/, 'activa ≠ adjudicada');
+    assert.match(css, /\.estado--cancelada,\s*\.estado--perdida \{ background:var\(--tc-neutral-status\); \}/);
+    const ambar = css.slice(css.indexOf('.estado--sin-ofertas,'), css.indexOf('}', css.indexOf('.estado--sin-ofertas,')));
+    assert.match(ambar, /repeating-linear-gradient\(45deg, var\(--tc-warning\)/, 'ámbar con rayas: bajo protanopía queda cerca del verde');
+    for (const lista of Object.values(ESTADOS)) {
+        for (const e of lista) assert.ok(e.icono && e.etiqueta && e.descripcion, `${e.clave} con ícono, nombre y descripción`);
+        assert.equal(new Set(lista.map((e) => e.icono)).size, lista.length, 'íconos distintos');
+    }
+});
+
+test('costo de adquisición: un flete sin precio no se suma como cero', async () => {
+    const { textoCosto } = await import('../../Public/js/mi-dashboard.js');
+    assert.deepEqual(textoCosto({ subastas: 0 }), { valor: '—', detalle: 'Sin pujas activas' });
+    assert.equal(textoCosto({ subastas: 2, completo: false, sinFlete: 1, total: null }).valor, 'Incompleto');
+    assert.match(textoCosto({ subastas: 2, completo: false, sinFlete: 1 }).detalle, /1 subasta sin precio de flete/);
+    assert.equal(textoCosto({ subastas: 1, completo: true, total: 550000 }).valor, '₡550.000');
+    assert.doesNotMatch(js, /costoFlete \?\? 0/, 'nunca flete desconocido = 0');
+});
+
+test('fecha del hecho: fin programado al cerrar, cancelación, o inicio si sigue activa', async () => {
+    const { fechaHecho } = await import('../../Public/js/mi-dashboard.js');
+    const s = { fechaInicio: 'I', fechaFin: 'F', fechaCierre: 'C' };
+    assert.equal(fechaHecho({ ...s, estado: 'FINALIZADA' }), 'F', 'no la hora en que se procesó el cierre');
+    assert.equal(fechaHecho({ ...s, estado: 'DESIERTA' }), 'F');
+    assert.equal(fechaHecho({ ...s, estado: 'CANCELADA' }), 'C');
+    assert.equal(fechaHecho({ ...s, estado: 'ACTIVA' }), 'I');
+});
+
+test('cada KPI con ejemplares filtra la tabla por sus ids exactos', () => {
+    assert.match(js, /function botonEvidencia\(ids, etiqueta, alFiltrar\)/);
+    assert.match(js, /ids\.has\(Number\(s\.subastaId\)\)/, 'el filtro usa los ids del backend, no una aproximación');
+    for (const id of ['precioPromedio.ids', 'exito.ids', 'incrementoPromedio.ids', 'compradores.ids', 'tiempoAdjudicacion.ids',
+        'sinOfertas.ids', 'montoAdjudicado.ids', 'adj.ids', 'pujasActivas.ids', 'comparacion.ids', 'op.ids', 'idsSinFlete']) {
+        assert.ok(js.includes(id), `evidencia conectada: ${id}`);
+    }
 });
 
 test('montos cortos sobre columnas angostas', async () => {
