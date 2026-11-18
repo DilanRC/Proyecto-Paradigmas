@@ -667,3 +667,98 @@
 /* El contenido principal de las páginas de la app reserva una pantalla: mientras llegan los datos
    el pie de página queda debajo del pliegue y no salta al pintarse (CLS 0,10-0,19 medido en staging). */
 .public-shell > :is(.activity-main, .activity-shell, .explore-main, .publish-main) { min-height:100vh; }
+
+/* ---------------------------------------------------------------------------
+ * Menú móvil (≤850px, public-ui.js → initializeMobileMenu): una sola fila con logo, avisos, carrito y hamburguesa.
+ * El panel trae la navegación y el menú de cuenta; sin él (visitante) el encabezado queda como antes.
+ * ------------------------------------------------------------------------- */
+.public-header--product { position:relative; }
+.public-menu-toggle,
+.public-menu { display:none; }
+
+@media (max-width:850px) {
+    /* Desde el primer pintado: la fila de enlaces no aparece y luego se va (CLS). Sus enlaces viven en el panel. */
+    .public-header--product {
+        grid-template-columns:auto minmax(0,1fr);
+        row-gap:0;
+    }
+    .public-header--product .public-nav--primary,
+    .public-header--product[data-menu-movil] [data-public-account] { display:none; }
+    .public-header--product .public-header__actions { grid-column:2; grid-row:1; }
+
+    .public-menu-toggle:not([hidden]) {
+        display:inline-flex;
+        width:44px;
+        min-width:44px;
+        height:44px;
+        align-items:center;
+        justify-content:center;
+        border:1px solid var(--tc-line-strong);
+        border-radius:999px;
+        color:var(--tc-text);
+        background:color-mix(in srgb,var(--tc-surface) 82%,transparent);
+        font:inherit;
+        font-size:18px;
+        cursor:pointer;
+    }
+    .public-menu-toggle[aria-expanded='true'] { border-color:var(--tc-text-soft); }
+    .public-menu-toggle[aria-expanded='true'] .fa-bars::before { content:'\f00d'; }
+    .public-menu-toggle:focus-visible { outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent); outline-offset:2px; }
+
+    .public-menu:not([hidden]) {
+        position:absolute;
+        z-index:60;
+        top:calc(100% + 6px);
+        right:0;
+        left:0;
+        display:grid;
+        max-height:calc(100dvh - 96px);
+        gap:6px;
+        overflow-y:auto;
+        overscroll-behavior:contain;
+        padding:8px;
+        border:1px solid var(--tc-line-strong);
+        border-radius:18px;
+        background:var(--tc-bg-elevated);
+        box-shadow:var(--tc-shadow-soft);
+    }
+    .public-menu__grupo { display:grid; gap:2px; }
+    .public-menu__grupo--cuenta { padding-top:6px; border-top:1px solid var(--tc-line); }
+    .public-menu__grupo a,
+    .public-menu__grupo button {
+        display:flex;
+        width:100%;
+        min-height:48px;
+        align-items:center;
+        gap:12px;
+        padding:0 12px;
+        border:0;
+        border-radius:12px;
+        color:var(--tc-text);
+        background:transparent;
+        font:inherit;
+        font-size:16px;
+        font-weight:700;
+        text-align:left;
+        text-decoration:none;
+        cursor:pointer;
+    }
+    .public-menu__grupo a i,
+    .public-menu__grupo button i { width:20px; color:var(--tc-text-soft); text-align:center; }
+    .public-menu__grupo a[aria-current='page'] { background:color-mix(in srgb,var(--tc-secondary) 28%,transparent); }
+    .public-menu__grupo a:hover,
+    .public-menu__grupo button:hover { background:color-mix(in srgb,var(--tc-secondary) 20%,transparent); }
+    .public-menu__grupo a:focus-visible,
+    .public-menu__grupo button:focus-visible { outline:3px solid color-mix(in srgb,var(--tc-primary) 55%,transparent); outline-offset:-3px; }
+    .public-menu .public-account-menu__identity { padding:8px 12px 10px; }
+
+    @media (prefers-reduced-motion:no-preference) {
+        .public-menu:not([hidden]) { animation:public-menu-entrada .16s ease-out; }
+    }
+}
+
+@keyframes public-menu-entrada {
+    from { opacity:0; transform:translateY(-4px); }
+    to { opacity:1; transform:none; }
+}
+

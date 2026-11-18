@@ -19,7 +19,7 @@ test('/mi-dashboard es una ruta con sesión y su API existe', () => {
 
 test('la vista invalida el JS del dashboard y mantiene su hoja de estilos', () => {
     assert.match(vista, /css\/mi-dashboard\.css\?v=dashboard-8/);
-    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-10/);
+    assert.match(vista, /js\/mi-dashboard\.js\?v=dashboard-11/);
     assert.match(vista, /data-dashboard-rol="VENDEDOR"/);
     assert.match(vista, /data-dashboard-rol="COMPRADOR"/);
 });

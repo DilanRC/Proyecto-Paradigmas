@@ -28,7 +28,7 @@ test('la pantalla usa las API de ofertas y las versiona donde importa', () => {
     assert.match(js, /api\/v1\/mi-ofertas/);
     assert.match(js, /editor-direccion\.js\?v=oferta-1/);
     assert.match(read('Public/js/shared/editor-direccion.js'), /finca-mapa\.js\?v=oferta-1/);
-    assert.match(vista, /js\/fletes\.js\?v=fletes-13/);
+    assert.match(vista, /js\/fletes\.js\?v=fletes-14/);
 });
 
 test('permite buscar por provincia sin GPS y no pinta HTML sin escapar', () => {

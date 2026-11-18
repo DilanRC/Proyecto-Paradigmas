@@ -48,9 +48,9 @@ $page = $pages[$pageKey] ?? $pages['about'];
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-4">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-14" data-tc-public-product="true">
+    <link rel="stylesheet" href="css/public-product.css?v=product-15" data-tc-public-product="true">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-24"></script>
+    <script type="module" src="js/public-ui.js?v=public-25"></script>
 </head>
 <body class="public-info-page">
     <div class="public-shell">

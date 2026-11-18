@@ -3,7 +3,7 @@
 
 import { request } from './shared/api.js?v=auth-gate-18';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
-import { buildCard } from './explore.js?v=explore-16';
+import { buildCard } from './explore.js?v=explore-17';
 import { createToast } from './shared/toast.js';
 
 const API = 'api/v1/publicaciones/interacciones';

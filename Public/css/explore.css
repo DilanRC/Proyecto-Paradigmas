@@ -491,8 +491,24 @@
 @media (max-width:620px) {
     .explore-main {
         width:min(100% - 20px,1460px);
-        padding-top:34px;
+        padding-top:14px;
     }
+
+    /* Hero móvil compacto: el mismo mensaje en menos alto, para llegar antes a filtros, subastas y catálogo. */
+    .explore-heading {
+        min-height:0;
+        gap:0;
+        padding:22px 20px;
+        border-radius:22px;
+    }
+    .explore-heading h1 {
+        margin:6px 0 8px;
+        font-size:clamp(30px,8.6vw,38px);
+        line-height:1;
+        letter-spacing:-.04em;
+    }
+    .explore-heading p:not(.section-kicker) { font-size:15px; line-height:1.5; }
+    .explore-filters { gap:12px; margin-top:14px; padding:14px; border-radius:18px; }
 
     .explore-card {
         grid-template-rows:150px 1fr;
@@ -708,7 +724,9 @@
 
 
 @media (max-width:760px) {
-    .explore-filters { grid-template-columns:minmax(0,1fr); }
+    /* Ubicación a todo el ancho; mínimo y máximo lado a lado (ambos campos cortos). */
+    .explore-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .explore-filters > .explore-heading__controls + .explore-filters__field { grid-column:1 / -1; }
 }
 
 /* ---------------------------------------------------------------------------
@@ -793,3 +811,6 @@
 @media (prefers-reduced-motion:reduce) {
     .explore-deck__viewport.is-refreshing { transition:none; }
 }
+
+/* Fila de propósitos reservada mientras llegan las publicaciones (explore.js → renderPurposeFilters). */
+.explore-heading__controls[data-reservado] { visibility:hidden; min-height:44px; }

@@ -16,7 +16,7 @@ test('el contenido principal de la app reserva una pantalla para que el pie no s
     assert.match(css, /\.public-shell > :is\(\.activity-main, \.activity-shell, \.explore-main, \.publish-main\) \{ min-height:100vh; \}/);
     for (const vista of ['mi-actividad', 'ajustes', 'me-interesa', 'subastas', 'fletes', 'explorar', 'publicar', 'mi-dashboard']) {
         const html = read(`Application/View/${vista}/index.php`);
-        assert.match(html, /css\/public-product\.css\?v=product-14/, `${vista} carga la regla nueva`);
+        assert.match(html, /css\/public-product\.css\?v=product-15/, `${vista} carga la regla nueva`);
         assert.match(html, /<main class="(activity-main|activity-shell|explore-main|publish-main)[" ]/, `${vista} usa un main cubierto`);
     }
 });
@@ -30,7 +30,7 @@ test('Explorar pinta la barra de filtros desde el HTML y la mantiene durante la 
 
 test('toda vista con public-ui.js trae public-product.css en el head (inyectarlo después mueve la página)', () => {
     const info = read('Application/View/public/info.php');
-    assert.match(info, /<link rel="stylesheet" href="css\/public-product\.css\?v=product-14" data-tc-public-product="true">/);
+    assert.match(info, /<link rel="stylesheet" href="css\/public-product\.css\?v=product-15" data-tc-public-product="true">/);
     // public-ui.js no la vuelve a inyectar si ya está en el head.
     assert.match(read('Public/js/public-ui.js'), /link\[href\*="css\/public-product\.css"\]/);
 });

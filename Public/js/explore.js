@@ -366,8 +366,11 @@ function renderPurposeFilters() {
     const propositos = availablePurposes(state.items);
     state.proposito = normalizePurpose(state.proposito, propositos);
     contenedor.replaceChildren();
-    // "Todo" solo no filtra nada: sin propósitos no hay chips.
-    contenedor.hidden = propositos.length === 0;
+    // "Todo" solo no filtra nada: sin propósitos no hay chips. Mientras carga, la fila guarda su lugar (sin CLS).
+    const reservar = propositos.length === 0 && state.cargando && state.items.length === 0;
+    contenedor.hidden = propositos.length === 0 && !reservar;
+    contenedor.toggleAttribute('data-reservado', reservar);
+    if (reservar) contenedor.setAttribute('aria-hidden', 'true'); else contenedor.removeAttribute('aria-hidden');
     if (propositos.length === 0) return;
     for (const [valor, etiqueta] of [['todos', 'Todo'], ...propositos.map((p) => [p, formatPurpose(p)])]) {
         const boton = element('button', 'explore-chip');

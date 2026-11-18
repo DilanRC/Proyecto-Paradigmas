@@ -12,11 +12,11 @@
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-4">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-14">
+    <link rel="stylesheet" href="css/public-product.css?v=product-15">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-24"></script>
-    <script type="module" src="js/publicar.js?v=publish-8"></script>
+    <script type="module" src="js/public-ui.js?v=public-25"></script>
+    <script type="module" src="js/publicar.js?v=publish-9"></script>
 </head>
 <body class="public-home publish-page">
     <div class="public-shell" id="inicio">

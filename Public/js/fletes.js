@@ -4,7 +4,7 @@ import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 import { request } from './shared/api.js?v=auth-gate-18';
 import { endExpiredSession, readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { UBICACION_USUARIO_EVENT, capturarUbicacionAutomatica, leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
-import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=explore-16';
+import { formatLocation, formatPrice, safeImageUrl } from './explore.js?v=explore-17';
 import { montarEditorDireccion } from './shared/editor-direccion.js?v=oferta-1';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { erroresNativos } from './shared/validacion-nativa.js?v=nativa-1';

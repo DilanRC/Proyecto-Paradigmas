@@ -3,7 +3,7 @@ import { openDialog, closeDialog } from './shared/dialog.js?v=dialog-2';
 // llevar su historial de vacunas y publicarlo cuando quiera venderlo.
 import { request } from './shared/api.js?v=auth-gate-18';
 import { errorArete, formatearArete } from './shared/arete.js';
-import { formatDate } from './explore.js?v=explore-16';
+import { formatDate } from './explore.js?v=explore-17';
 import { montarCampoFoto } from './shared/foto-campo.js?v=foto-campo-3';
 import { erroresSinLugar } from './shared/field-errors.js?v=errores-1';
 import { mostrarEstado } from './shared/estado.js?v=estado-1';

@@ -246,7 +246,9 @@
 
 .subasta-tel { color:var(--tc-text); font-weight:800; }
 
-/* Banda "Subastas en vivo" en Explorar */
+/* Banda "Subastas en vivo" en Explorar.
+ * Móvil: carrusel nativo (scroll-snap) con una tarjeta legible y el borde de la siguiente; nunca columnas comprimidas
+ * (el ancho de pista tiene mínimo fijo, no minmax(0,…)). Escritorio: varias tarjetas de 250-300 px. */
 .subastas-banda {
     display:grid;
     gap:12px;
@@ -255,44 +257,123 @@
     border:1px solid var(--tc-line-strong);
     border-radius:18px;
     background:var(--tc-surface);
+    min-width:0;
 }
 
 .subastas-banda__cabecera {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:4px 12px;
+}
+.subastas-banda__cabecera h2 { margin:0; font-size:1.15rem; }
+.subastas-banda__ver {
+    display:inline-flex;
+    min-height:44px;
+    align-items:center;
+    gap:6px;
+    color:var(--tc-text);
+    font-weight:800;
+    white-space:nowrap;
+}
+.subastas-banda__meta {
+    grid-column:1 / -1;
     display:flex;
     flex-wrap:wrap;
     align-items:center;
-    justify-content:space-between;
-    gap:10px;
+    gap:4px 14px;
+    margin:0;
 }
-
-.subastas-banda__cabecera h2 { margin:0; font-size:1.15rem; }
-.subastas-banda__ver { margin-left:auto; color:var(--tc-text); font-weight:800; }
+.subastas-banda__pista { display:none; color:var(--tc-text-soft); font-size:.8rem; }
 
 .subastas-banda__lista {
     display:grid;
     grid-auto-flow:column;
-    grid-auto-columns:minmax(230px, 280px);
+    grid-auto-columns:minmax(250px, 300px);
     gap:12px;
     overflow-x:auto;
-    padding-bottom:4px;
+    overscroll-behavior-x:contain;
+    scroll-snap-type:x mandatory;
+    scroll-padding-inline:2px;
+    padding:2px 2px 6px;
+    min-width:0;
 }
 
 .subastas-banda__item {
     display:grid;
-    gap:4px;
+    grid-template-columns:64px minmax(0,1fr);
+    grid-template-areas:"foto texto" "precio precio" "reloj reloj";
+    align-content:start;
+    gap:8px 10px;
     padding:12px;
     border:1px solid var(--tc-line);
     border-radius:14px;
     color:var(--tc-text);
     background:var(--tc-bg-elevated);
     text-decoration:none;
+    scroll-snap-align:start;
+    min-width:0;
 }
-
 .subastas-banda__item:hover,
 .subastas-banda__item:focus-visible { border-color:var(--tc-text-soft); }
 .subastas-banda__item:focus-visible { outline:3px solid color-mix(in srgb, var(--tc-primary) 55%, transparent); outline-offset:2px; }
-.subastas-banda__item strong { font-size:1.1rem; }
-.subastas-banda__item span { color:var(--tc-text-soft); font-size:.85rem; }
+
+.subastas-banda__foto {
+    grid-area:foto;
+    position:relative;
+    display:grid;
+    width:64px;
+    height:64px;
+    place-items:center;
+    overflow:hidden;
+    border-radius:12px;
+    color:var(--tc-text-soft);
+    background:color-mix(in srgb, var(--tc-secondary) 18%, var(--tc-surface));
+    font-size:1.4rem;
+}
+.subastas-banda__foto img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+
+.subastas-banda__texto { grid-area:texto; display:grid; height:80px; align-content:center; gap:3px; min-width:0; overflow:hidden; }
+.subastas-banda__titulo {
+    display:-webkit-box;
+    overflow:hidden;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    line-clamp:2;
+    font-weight:800;
+    line-height:1.25;
+    overflow-wrap:anywhere;
+}
+.subastas-banda__detalle {
+    display:-webkit-box;
+    overflow:hidden;
+    -webkit-box-orient:vertical;
+    -webkit-line-clamp:2;
+    color:var(--tc-text-soft);
+    font-size:.85rem;
+    line-height:1.3;
+}
+
+.subastas-banda__precio { grid-area:precio; display:grid; gap:1px; min-width:0; }
+.subastas-banda__precio small { color:var(--tc-text-soft); font-size:.78rem; font-weight:700; }
+.subastas-banda__precio strong {
+    font-size:clamp(1.05rem, 4.6vw, 1.3rem);
+    font-variant-numeric:tabular-nums;
+    line-height:1.2;
+    white-space:nowrap;
+}
+
+.subastas-banda__reloj {
+    grid-area:reloj;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--tc-text-soft);
+    font-size:.85rem;
+    font-weight:700;
+}
+.subastas-banda__reloj [data-urgente='true'] { color:var(--tc-text); }
+.subastas-banda__reloj [data-urgente='true']::after { content:' · último minuto'; font-weight:800; }
 
 @media (max-width: 860px) {
     .subasta-layout { grid-template-columns:minmax(0, 1fr); }
@@ -310,16 +391,19 @@
 .subastas-grid.is-refreshing { opacity:.55; transition:opacity .2s ease; }
 @media (prefers-reduced-motion:reduce) { .subastas-grid.is-refreshing { transition:none; } }
 
-/* Espacio estable desde el primer pintado: estado vacío, error y tarjetas usan la misma franja. */
-.subastas-banda { min-height:230px; box-sizing:border-box; }
-.subastas-banda__estado { display:flex; align-items:center; min-height:138px; margin:0; color:var(--tc-text-soft); }
-.subastas-banda__lista { min-height:138px; }
-.subastas-banda__item { min-height:136px; box-sizing:border-box; }
+/* Espacio estable desde el primer pintado: estado vacío, error y tarjetas usan la misma franja (CLS). */
+/* Tarjeta de alto fijo (texto en 80 px, precio y tiempo en una línea): una tarjeta larga no estira la banda. */
+.subastas-banda__estado { display:flex; align-items:center; height:196px; margin:0; color:var(--tc-text-soft); box-sizing:border-box; }
+.subastas-banda__lista { height:196px; box-sizing:border-box; }
+.subastas-banda__item { height:188px; box-sizing:border-box; overflow:hidden; }
 .subastas-banda__estado[hidden], .subastas-banda__lista[hidden] { display:none !important; }
 @media(max-width:620px) {
-    .subastas-banda { min-height:260px; padding:14px; }
-    .subastas-banda__cabecera { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; }
+    .subastas-banda { padding:14px 0 14px 14px; }
+    .subastas-banda__cabecera { padding-right:14px; }
     .subastas-banda__cabecera h2 { font-size:1rem; }
-    .subastas-banda__ver { grid-column:1/-1; margin-left:0; font-size:.875rem; }
-    .subastas-banda__lista { grid-auto-columns:minmax(0, min(240px, 85vw)); }
+    .subastas-banda__estado { padding-right:14px; }
+    /* Una tarjeta completa y el borde de la siguiente: invita a deslizar sin comprimir. */
+    .subastas-banda__lista { grid-auto-columns:min(82%, 300px); padding-right:14px; scroll-padding-inline:0 14px; }
+    .subastas-banda[data-varias] .subastas-banda__pista { display:inline-flex; gap:6px; align-items:center; }
 }
+@media (prefers-reduced-motion:no-preference) { .subastas-banda__lista { scroll-behavior:smooth; } }

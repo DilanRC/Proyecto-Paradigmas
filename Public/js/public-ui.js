@@ -8,7 +8,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product], link[href*="css/public-product.css"]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-14';
+    link.href = 'css/public-product.css?v=product-15';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
@@ -317,6 +317,7 @@ async function resolveAdminLink(menu) {
         });
         if (response.ok) {
             adminLink.hidden = false;
+            pintarMenuMovil();
             adminLink.addEventListener('click', async (event) => {
                 event.preventDefault();
                 const session = readSession();
@@ -422,6 +423,7 @@ function initializeAccountState(nav, actions, session) {
         synchronizeBusinessNav(nav, resultado.estado);
         synchronizeFooterAccountLink(resultado.estado, completarHref);
         if (actions) paintAccount(actions, session, resultado, { signal: controlador.signal, completarHref, reintentar: () => verificar(true) });
+        pintarMenuMovil();
         if (resultado.estado === ESTADO_CUENTA.REGISTRO_INCOMPLETO && cuenta) {
             initializeIncompleteGate(cuenta.PAGINAS_CON_PERSONA);
             if (cuenta.PAGINAS_CON_PERSONA.includes(pageName(window.location.href))) cuenta.mostrarRegistroIncompleto();
@@ -504,6 +506,124 @@ function enhancePublicNavigation() {
     }
 }
 
+/*
+ * Menú móvil (≤ MENU_MOVIL_MAX px): una sola fila con logo, avisos, carrito y un botón hamburguesa. El panel copia,
+ * cada vez que se abre, la navegación principal y el menú de cuenta ya filtrados por el estado verificado: no hay una
+ * segunda lista de permisos que pueda desincronizarse. Es un panel desplegable (no modal): Escape, clic fuera o elegir
+ * una ruta lo cierran y el foco vuelve al botón.
+ */
+export const MENU_MOVIL_MAX = 850;
+let menuMovil = null;
+
+/** Grupos del menú móvil a partir del encabezado actual. Puro sobre el DOM: lo usan la página y las pruebas. */
+export function gruposMenuMovil(header) {
+    const nav = header?.querySelector('.public-nav--primary');
+    const cuenta = header?.querySelector('[data-public-account] .public-account-menu__panel');
+    const enlaces = nav ? [...nav.querySelectorAll('a[href]')] : [];
+    const deCuenta = cuenta ? [...cuenta.children].filter((n) => !n.hidden) : [];
+    return { enlaces, cuenta: deCuenta };
+}
+
+function cerrarMenuMovil({ devolverFoco = false } = {}) {
+    if (!menuMovil || menuMovil.panel.hidden) return;
+    menuMovil.panel.hidden = true;
+    menuMovil.boton.setAttribute('aria-expanded', 'false');
+    menuMovil.boton.setAttribute('aria-label', 'Abrir menú');
+    menuMovil.header.removeAttribute('data-menu-abierto');
+    if (devolverFoco) menuMovil.boton.focus();
+}
+
+function pintarMenuMovil() {
+    if (!menuMovil) return;
+    const { header, panel, boton } = menuMovil;
+    const { enlaces, cuenta } = gruposMenuMovil(header);
+    // Sin enlaces ni cuenta (visitante: solo Entrar y Crear cuenta) no hay nada que esconder tras el botón.
+    boton.hidden = enlaces.length === 0 && cuenta.length === 0;
+    header.toggleAttribute('data-menu-movil', !boton.hidden);
+    const grupos = [];
+    if (enlaces.length) {
+        const nav = document.createElement('nav');
+        nav.className = 'public-menu__grupo';
+        nav.setAttribute('aria-label', 'Secciones');
+        nav.append(...enlaces.map((a) => {
+            const copia = a.cloneNode(true);
+            if (a.classList.contains('is-active')) copia.setAttribute('aria-current', 'page');
+            return copia;
+        }));
+        grupos.push(nav);
+    }
+    if (cuenta.length) {
+        const grupo = document.createElement('div');
+        grupo.className = 'public-menu__grupo public-menu__grupo--cuenta';
+        grupo.setAttribute('role', 'group');
+        grupo.setAttribute('aria-label', 'Tu cuenta');
+        // "Explorar ganado" del menú de cuenta repite "Explorar" de la navegación: un mismo destino aparece una vez.
+        const enNav = new Set(enlaces.map((a) => a.getAttribute('href')));
+        grupo.append(...cuenta.filter((n) => !(n.matches('a[href]') && enNav.has(n.getAttribute('href')))).map((n) => n.cloneNode(true)));
+        grupos.push(grupo);
+    }
+    panel.replaceChildren(...grupos);
+    if (boton.hidden) cerrarMenuMovil();
+}
+
+function initializeMobileMenu() {
+    const header = document.querySelector('.public-header--product');
+    if (!header || header.querySelector('[data-public-menu-toggle]')) return;
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.className = 'public-menu-toggle';
+    boton.dataset.publicMenuToggle = 'true';
+    boton.setAttribute('aria-expanded', 'false');
+    boton.setAttribute('aria-controls', 'public-menu');
+    boton.setAttribute('aria-label', 'Abrir menú');
+    boton.innerHTML = '<i class="fa-solid fa-bars" aria-hidden="true"></i>';
+    const panel = document.createElement('div');
+    panel.className = 'public-menu';
+    panel.id = 'public-menu';
+    panel.hidden = true;
+    header.querySelector('.public-header__actions')?.append(boton);
+    header.append(panel);
+    menuMovil = { header, panel, boton };
+
+    boton.addEventListener('click', () => {
+        if (!panel.hidden) { cerrarMenuMovil(); return; }
+        pintarMenuMovil();
+        panel.hidden = false;
+        boton.setAttribute('aria-expanded', 'true');
+        boton.setAttribute('aria-label', 'Cerrar menú');
+        header.setAttribute('data-menu-abierto', '');
+        panel.querySelector('a[href], button')?.focus();
+    });
+    panel.addEventListener('click', (event) => {
+        const objetivo = event.target instanceof Element ? event.target.closest('a[href], button') : null;
+        if (!objetivo) return;
+        if (objetivo.matches('[data-public-logout]')) { void signOutEverywhere(); return; }
+        if (objetivo.matches('[data-admin-link]')) {
+            // El acceso admin prepara su sesión en el enlace original (resolveAdminLink).
+            event.preventDefault();
+            cerrarMenuMovil();
+            header.querySelector('[data-public-account] [data-admin-link]')?.click();
+            return;
+        }
+        if (objetivo.matches('[data-cuenta-reintentar]')) {
+            cerrarMenuMovil({ devolverFoco: true });
+            header.querySelector('[data-public-account] [data-cuenta-reintentar]')?.click();
+            return;
+        }
+        cerrarMenuMovil();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !panel.hidden) { event.preventDefault(); cerrarMenuMovil({ devolverFoco: true }); }
+    });
+    document.addEventListener('click', (event) => {
+        if (!panel.hidden && event.target instanceof Node && !panel.contains(event.target) && !boton.contains(event.target)) cerrarMenuMovil();
+    });
+    // Al pasar a escritorio el panel no puede quedar abierto e invisible.
+    const movil = window.matchMedia?.(`(max-width:${MENU_MOVIL_MAX}px)`);
+    movil?.addEventListener?.('change', (event) => { if (!event.matches) cerrarMenuMovil(); });
+    pintarMenuMovil();
+}
+
 function initializeBusinessActionGate() {
     document.addEventListener('click', (event) => {
         const button = event.target instanceof Element ? event.target.closest('[data-explore-action]') : null;
@@ -532,7 +652,9 @@ function initializeBusinessActionGate() {
 
 function initialize() {
     initializePublicSearch();
+    initializeMobileMenu();
     enhancePublicNavigation();
+    pintarMenuMovil();
     initializeBusinessActionGate();
 }
 

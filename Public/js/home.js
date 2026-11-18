@@ -12,7 +12,7 @@ import { request } from './shared/api.js?v=auth-gate-18';
 import { readAuthSession } from './shared/supabase-auth.js?v=session-4';
 import { leerUbicacionUsuario } from './shared/ubicacion-sesion.js';
 import { montarCarrusel } from './shared/carousel.js';
-import { buildCard } from './explore.js?v=explore-16';
+import { buildCard } from './explore.js?v=explore-17';
 
 const MAXIMO = 12;
 const FIJAS_HASTA = 4;

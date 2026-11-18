@@ -56,15 +56,15 @@ test('la página, Explorar, el encabezado y Mis animales llevan a las subastas',
     }
     const explorar = read('Application/View/explorar/index.php');
     assert.match(explorar, /data-subastas-banda/);
-    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-6/);
-    assert.match(explorar, /css\/subastas\.css\?v=subastas-3/);
+    assert.match(explorar, /js\/subastas-vivo\.js\?v=subastas-vivo-7/);
+    assert.match(explorar, /css\/subastas\.css\?v=subastas-4/);
     const ui = read('Public/js/public-ui.js');
     assert.match(ui, /PRIVATE_PAGES = Object\.freeze\(\[[^\]]*'subastas'/);
     assert.match(ui, /\['subastas', 'fa-gavel', 'Subastas'\]/);
     assert.match(ui, /api\/v1\/notificaciones/);
     assert.match(ui, /notificaciones-\$\{personaId\}/, 'la campana escucha su tópico');
     assert.match(read('Public/js/mis-animales.js'), /subastas\?nueva=\$\{id\}/, 'Mis animales ofrece Subastar');
-    assert.match(read('Application/View/subastas/index.php'), /js\/subastas\.js\?v=subastas-8/);
+    assert.match(read('Application/View/subastas/index.php'), /js\/subastas\.js\?v=subastas-9/);
 });
 
 test('los estilos usan solo variables del sitio', () => {
@@ -84,6 +84,8 @@ test('Explorar reserva Subastas en vivo después de los filtros con estados real
     assert.match(js, /estadoConsulta === 'error'/);
     assert.match(js, /secuencia/);
     assert.match(js, /!hayActivas \? 'Sin subastas activas'/);
-    assert.match(css, /\.subastas-banda \{ min-height:230px;/);
+    // Vacío, error y tarjetas ocupan la misma franja (CLS): la lista y el aviso miden lo mismo.
+    assert.match(css, /\.subastas-banda__estado \{[^}]*height:196px/);
+    assert.match(css, /\.subastas-banda__lista \{ height:196px/);
     assert.match(css, /@media\(max-width:620px\)/);
 });

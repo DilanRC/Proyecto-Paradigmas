@@ -14,13 +14,13 @@
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-4">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-14">
+    <link rel="stylesheet" href="css/public-product.css?v=product-15">
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/onboarding.css?v=publish-4">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-24"></script>
-    <script type="module" src="js/ajustes.js?v=ajustes-16"></script>
+    <script type="module" src="js/public-ui.js?v=public-25"></script>
+    <script type="module" src="js/ajustes.js?v=ajustes-17"></script>
 </head>
 <body class="public-home activity-page settings-page"<?= $soloParticipacion ? ' data-pagina="participar"' : '' ?>>
     <div class="public-shell" id="inicio">
