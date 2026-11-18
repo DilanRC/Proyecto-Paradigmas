@@ -60,12 +60,8 @@ jobs:
               'QA') tag='archive/branches/QA-2026-11-18' ;;
               'test/Validaciones') tag='archive/branches/test-Validaciones-2026-11-18' ;;
             esac
-            existing="$(gh api "repos/$repo/git/ref/tags/$tag" --jq '.object.sha // empty' 2>/dev/null || true)"
-            if [[ -n "$existing" ]]; then
-              [[ "$existing" == "${expected[$name]}" ]] || { echo "Tag $tag points elsewhere"; exit 1; }
-            else
-              gh api -X POST "repos/$repo/git/refs" -f "ref=refs/tags/$tag" -f "sha=${expected[$name]}" --silent
-            fi
+            # Create the backup only if GitHub accepts the exact ref. Never overwrite a tag.
+            gh api -X POST "repos/$repo/git/refs" -f "ref=refs/tags/$tag" -f "sha=${expected[$name]}" --silent
             echo "History preserved: $name -> $tag"
           done
 
