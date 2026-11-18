@@ -1332,3 +1332,28 @@ bitácora como estado operativo mezclaría bitácora con histórico.
 **Comprobado.** `Tests/perfil_correo_conciliacion_test.php` provoca cada punto de fallo (rechazo, fallo de `COMMIT` con y
 sin restauración, `COMMIT` ambiguo, proceso caído antes y después de Supabase, otra cuenta, correo de otra Persona).
 Sin la conciliación en el resolvedor la prueba falla con 409.
+
+## DEC-VIAJE-002 - Reversión de la migración 027 y retiro de «Marcar viaje realizado»
+
+**Fecha:** 18/11/2026. **Decisión de:** Dilan. **Reemplaza a:** DEC-VIAJE-001 (commit 4999a1e).
+
+La 027 agregó `tbtransportistaflete.tbcomprasolicitudid` y volvió opcional `tbpagometodoid` para que el transportista
+marcara un flete aceptado como viaje realizado. Se revierte: el esquema de `tbtransportistaflete` vuelve a ser el
+anterior a la 027 en MySQL y PostgreSQL, y no se agrega ningún campo sustituto (ni la bitácora, ni la descripción, ni
+`origen` hacen de enlace).
+
+- **Datos:** antes de revertir se comprobó que ninguna base tenía viajes que dependieran de la 027 (staging: 0 filas en
+  `tbtransportistaflete`, 0 bitácoras `REGISTRAR_VIAJE`; MySQL local nunca la corrió).
+- **Bases existentes:** MySQL corre la `028revertirviajerealizado.sql`, que solo borra la columna si ningún viaje
+  guarda el enlace y solo exige `NOT NULL` si ningún viaje tiene el pago vacío (si no, lo informa y no cambia nada).
+  PostgreSQL lo hace en `migrate.php` (`revertirViajeSolicitud` + `ensureExpectedNullability`) dentro de su
+  transacción: si hay un enlace o un NULL aborta y no cambia nada. La 027 se conserva en la cadena como historia; una
+  instalación nueva (`000`, `schema.sql`) ya trae el esquema anterior.
+- **Flujo:** sin un enlace inequívoco no se garantiza un viaje por solicitud, así que se retiran la acción
+  `REGISTRAR_VIAJE`, el botón, el pendiente «Fletes aceptados sin viaje» y sus consultas. `TransportistaHistorico` y
+  el histórico de fletes se conservan.
+- **Panel admin:** el histórico se muestra como «viajes registrados» (cabezas, distancia y monto registrados), nunca
+  como viajes verificados, pagos cobrados ni ganancias; un flete aceptado nunca es un viaje.
+- **Despliegue:** en dos pasos: primero el código que ya no lee la columna (compatible con ambos esquemas), después la
+  reversión del esquema.
+

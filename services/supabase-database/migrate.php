@@ -226,10 +226,29 @@ function ensureCurrentColumns(PDO $connection): void
         ADD COLUMN IF NOT EXISTS tbcompradorid INTEGER NULL,
         ADD COLUMN IF NOT EXISTS tbcomprasolicitudid INTEGER NULL,
         ALTER COLUMN tbproductorcompradorid DROP NOT NULL,
-        ALTER COLUMN tbpagometodoid DROP NOT NULL;
-        ALTER TABLE public.tbtransportistaflete
-        ADD COLUMN IF NOT EXISTS tbcomprasolicitudid INTEGER NULL,
         ALTER COLUMN tbpagometodoid DROP NOT NULL');
+}
+
+/**
+ * Deshace la migración 027 (viaje enlazado a la solicitud), retirada por decisión de Dilan: tbtransportistaflete
+ * vuelve a no tener tbcomprasolicitudid y la nulabilidad de tbpagometodoid la restaura ensureExpectedNullability()
+ * (que se niega si hay NULL). Si algún viaje guarda el enlace, aborta: borrar la columna perdería un hecho que el
+ * esquema anterior no puede guardar. Todo corre en la transacción del migrador: un error lo deja como estaba.
+ */
+function revertirViajeSolicitud(PDO $connection): void
+{
+    $existe = (int) $connection->query("SELECT COUNT(*) FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'tbtransportistaflete'
+          AND column_name = 'tbcomprasolicitudid'")->fetchColumn();
+    if ($existe === 0) {
+        return;
+    }
+    $enlazados = (int) $connection->query('SELECT COUNT(*) FROM public.tbtransportistaflete
+        WHERE tbcomprasolicitudid IS NOT NULL')->fetchColumn();
+    if ($enlazados > 0) {
+        throw new RuntimeException("Migración abortada: {$enlazados} viajes guardan tbcomprasolicitudid; revertir la 027 los perdería.");
+    }
+    $connection->exec('ALTER TABLE public.tbtransportistaflete DROP COLUMN IF EXISTS tbcomprasolicitudid');
 }
 
 /**
@@ -581,6 +600,7 @@ try {
     normalizeProductorAddress($connection);
     agregarHistoricoDireccion($connection);
     eliminarEstadoProductor($connection);
+    revertirViajeSolicitud($connection);
     ensureExpectedNullability($connection, $schema);
     seedInitialData($connection);
     seedCatalogs($connection);

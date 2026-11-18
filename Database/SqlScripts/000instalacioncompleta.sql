@@ -402,7 +402,6 @@ CREATE TABLE IF NOT EXISTS tbtransportistahorario (
 CREATE TABLE IF NOT EXISTS tbtransportistaflete (
     tbtransportistafleteid INT NOT NULL,
     tbtransportistaid INT NOT NULL,
-    tbcomprasolicitudid INT NULL,
     tbproductororigenid INT NULL,
     tbfincaorigenid INT NULL,
     tbdireccionorigenid INT NULL,
@@ -414,7 +413,7 @@ CREATE TABLE IF NOT EXISTS tbtransportistaflete (
     tbtransportistafletecantidadcabezas INT NULL,
     tbtransportistafletedistanciakm DECIMAL(10,2) NULL,
     tbtransportistafleteprecio DECIMAL(12,2) NULL,
-    tbpagometodoid INT NULL,
+    tbpagometodoid INT NOT NULL,
     tbtransportistafleteorigen VARCHAR(100) NOT NULL,
     PRIMARY KEY (tbtransportistafleteid)
 ) ENGINE=InnoDB;

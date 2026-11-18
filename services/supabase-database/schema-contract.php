@@ -138,7 +138,7 @@ const EXPECTED_COLUMNS = [
         'tbtransportistaestadoperiodofecharegistroensistema',
     ],
     'tbtransportistaflete' => [
-        'tbtransportistafleteid', 'tbtransportistaid', 'tbcomprasolicitudid', 'tbproductororigenid',
+        'tbtransportistafleteid', 'tbtransportistaid', 'tbproductororigenid',
         'tbfincaorigenid', 'tbdireccionorigenid', 'tbdirecciondestinoid', 'tbvehiculoid',
         'tbtransportistafletefecha', 'tbtransportistafletehora',
         'tbtransportistafletedescripcion', 'tbtransportistafletecantidadcabezas',

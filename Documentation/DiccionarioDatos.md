@@ -507,7 +507,6 @@ agregaciones.
 |---|---|---|---|---|---|
 | `tbtransportistafleteid` | `INT NOT NULL` | No | **Llave primaria.** Consecutivo calculado por Backend bajo lock global. | Aplicación | - |
 | `tbtransportistaid` | `INT NOT NULL` | No | Transportista que realiza el flete. | Aplicación | `tbtransportista` |
-| `tbcomprasolicitudid` | `INT NULL` | Sí | Solicitud de compra cuyo flete aceptado el transportista marcó como viaje realizado (DEC-VIAJE-001). Uno por solicitud, validado en PHP. Nulo en fletes que no vienen de una solicitud. | Aplicación | `tbcomprasolicitud` |
 | `tbproductororigenid` | `INT NULL` | Sí | Productor origen, si aplica. | Aplicación | `tbproductor` |
 | `tbfincaorigenid` | `INT NULL` | Sí | Finca origen, si aplica. | Aplicación | `tbfinca` |
 | `tbdireccionorigenid` | `INT NULL` | Sí | Dirección origen, si aplica. | Aplicación | `tbdireccion` |
@@ -519,7 +518,7 @@ agregaciones.
 | `tbtransportistafletecantidadcabezas` | `INT NULL` | Sí | Cantidad de cabezas transportadas. | Usuario | - |
 | `tbtransportistafletedistanciakm` | `DECIMAL(10,2) NULL` | Sí | Distancia recorrida en kilómetros. | Usuario | - |
 | `tbtransportistafleteprecio` | `DECIMAL(12,2) NULL` | Sí | Precio cobrado, si aplica. | Usuario | - |
-| `tbpagometodoid` | `INT NULL` | Sí | Método de pago de la solicitud, si el comprador lo indicó (es opcional). | Aplicación | `tbpagometodo` |
+| `tbpagometodoid` | `INT NOT NULL` | No | Método de pago usado. | Aplicación | `tbpagometodo` |
 | `tbtransportistafleteorigen` | `VARCHAR(100) NOT NULL` | No | Origen técnico del registro. | Aplicación | - |
 
 ## tbtransportistahorario

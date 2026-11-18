@@ -317,7 +317,6 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaestadoperiodo (
 CREATE TABLE IF NOT EXISTS public.tbtransportistaflete (
     tbtransportistafleteid INTEGER NOT NULL,
     tbtransportistaid INTEGER NOT NULL,
-    tbcomprasolicitudid INTEGER NULL,
     tbproductororigenid INTEGER NULL,
     tbfincaorigenid INTEGER NULL,
     tbdireccionorigenid INTEGER NULL,
@@ -329,7 +328,7 @@ CREATE TABLE IF NOT EXISTS public.tbtransportistaflete (
     tbtransportistafletecantidadcabezas INTEGER NULL,
     tbtransportistafletedistanciakm NUMERIC(10,2) NULL,
     tbtransportistafleteprecio NUMERIC(12,2) NULL,
-    tbpagometodoid INTEGER NULL,
+    tbpagometodoid INTEGER NOT NULL,
     tbtransportistafleteorigen VARCHAR(100) NOT NULL,
     PRIMARY KEY (tbtransportistafleteid)
 );
