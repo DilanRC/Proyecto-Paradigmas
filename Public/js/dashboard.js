@@ -1,8 +1,10 @@
 // Centro de inteligencia del administrador (/admin/dashboard, DEC-DASHBOARD-002). Una sola API de solo lectura
-// (api/v1/admin/dashboard) autorizada en PHP. Tres niveles: visión global (KPI y red ganadera), procesos (árbol
-// accesible con <details>: cada nodo trae conteo, definición, fuente, periodo y su evidencia paginada, que se pide al
-// abrirla) y expediente individual (transportistas y personas). Lo que ningún flujo registra se marca
-// «sin instrumentar» en vez de pintar un 0. Sin imágenes decorativas (decisión del PR #30). Todo con textContent.
+// (api/v1/admin/dashboard) autorizada en PHP. Secciones: visión global, requieren atención (pendientes operativos
+// aparte de problemas de datos), actividad comercial (cuatro áreas; cada una abre sus etapas, y cada indicador su
+// evidencia paginada en un diálogo), personas y actividades (explorador y transportistas), calidad de datos
+// (diagnósticos clasificados por el servidor) y auditoría. Las etapas son conceptuales: no se calculan tasas entre ellas
+// porque los registros no prueban que las mismas personas pasaran por todas. Lo que la plataforma no registra se dice
+// «todavía no disponible», nunca 0. Sin imágenes decorativas (decisión del PR #30). Todo con textContent.
 
 import { request } from './shared/api.js?v=auth-gate-15';
 import { el } from './dashboard-graficos.js?v=graficos-3';
@@ -10,7 +12,7 @@ import { el } from './dashboard-graficos.js?v=graficos-3';
 const API = 'api/v1/admin/dashboard';
 const ZONA = 'America/Costa_Rica';
 const $ = (selector) => document.querySelector(selector);
-const estado = { periodo: {}, pedido: 0, busqueda: 0 };
+const estado = { periodo: {}, pedido: 0, busqueda: 0, expediente: 0, areas: [], areaAbierta: null, diagnosticos: [], resumen: null };
 
 // ───────────────────────────── Funciones puras ─────────────────────────────
 
@@ -56,9 +58,21 @@ export function textoPeriodo(periodo = {}) {
     return 'todo el tiempo';
 }
 
+
+/** Definición de cada evidencia: lo que se ve en el diálogo encima de la tabla. */
+const DEFINICIONES = {
+    interes: 'Marcas «Me interesa» registradas en publicaciones.',
+    solicitudes: 'Solicitudes de compra creadas por compradores, con su estado actual.',
+    fletes: 'Solicitudes de compra que pidieron un flete, con la respuesta del transportista.',
+    ventas: 'Ventas registradas: una fila por animal vendido.',
+    subastas: 'Subastas por la fecha de su hecho (cierre para las terminadas, inicio para las activas).',
+    publicaciones: 'Publicaciones por fecha de alta, con su estado vigente.',
+};
+
 /**
- * Áreas del panel a partir del resumen. Cada indicador: { nombre, valor, evidencia: { nodo, estado } | null, hijos, tono }.
- * Solo se muestra lo que la plataforma registra: lo que no tiene registro no aparece (ni como cero). Puro.
+ * Áreas de actividad comercial a partir del resumen. Cada área: { clave, titulo, icono, principal, resumen, etapas,
+ * salidas, noDisponible }. Cada etapa: { nombre, valor, explicacion, estados: [{ nombre, valor, tono, evidencia }],
+ * evidencia }. Las etapas no se encadenan con tasas: cada una cuenta sus propios registros. Puro.
  */
 export function procesos(d) {
     const s = d.subastas;
@@ -66,77 +80,133 @@ export function procesos(d) {
     const t = d.transporte;
     const inv = d.inventario;
     const canal = (nombre) => c.ventasPorCanal?.[nombre] ?? { animales: 0, operaciones: 0, monto: 0 };
-    const nodo = (nombre, valor, extra = {}) => ({ nombre, valor, evidencia: null, hijos: [], ...extra });
-    const porEstado = (estados, conteos, nodoEvidencia) => estados.map((e) => nodo(etiquetaEstado(e), formatoNumero(conteos?.[e] ?? 0),
-        { evidencia: { nodo: nodoEvidencia, estado: e }, tono: tonoEstado(e) }));
+    const ev = (nodo, estado = null) => ({ nodo, estado });
+    const estadosDe = (lista, conteos, nodo) => lista.map((e) => ({ nombre: etiquetaEstado(e), valor: formatoNumero(conteos?.[e] ?? 0),
+        tono: tonoEstado(e), evidencia: nodo ? ev(nodo, e) : null }));
     const ofertas = t.ofertasPorEstado ?? {};
+    const fletes = t.solicitudesFletePorEstado ?? {};
+    const respondidas = c.solicitudesRespondidas ?? {};
+    const sinViajes = t.viajesInstrumentados === false;
 
     return [
         {
-            clave: 'directa', titulo: 'Compras directas',
-            resumen: `${formatoNumero(canal('SOLICITUD').operaciones)} ventas`,
-            nodos: [
-                nodo('Me interesa', formatoNumero(c.interes.registros), { detalle: `${formatoNumero(c.interes.personas)} personas · ${formatoNumero(c.interes.publicaciones)} publicaciones`, evidencia: { nodo: 'interes', estado: 'REGISTRAR' } }),
-                nodo('Solicitudes de compra', formatoNumero(sumar(c.solicitudesCreadas)), {
-                    evidencia: { nodo: 'solicitudes', estado: null },
-                    hijos: porEstado(['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'], c.solicitudesCreadas, 'solicitudes'),
-                }),
-                nodo('Respondidas por el vendedor', formatoNumero(sumar(c.solicitudesRespondidas))),
-                nodo('Ventas', `${formatoNumero(canal('SOLICITUD').operaciones)} · ${formatoColones(canal('SOLICITUD').monto)}`,
-                    { detalle: `${formatoNumero(canal('SOLICITUD').animales)} animales`, evidencia: { nodo: 'ventas', estado: 'SOLICITUD' }, tono: 'exito' }),
+            clave: 'directa', titulo: 'Compras directas', icono: 'fa-handshake',
+            principal: { valor: formatoNumero(canal('SOLICITUD').operaciones), etiqueta: 'ventas por solicitud' },
+            resumen: `${formatoNumero(c.solicitudesCreadas?.PENDIENTE ?? 0)} solicitudes esperan respuesta · ${formatoColones(canal('SOLICITUD').monto)} vendidos`,
+            etapas: [
+                { nombre: 'Interés registrado', valor: formatoNumero(c.interes.registros), evidencia: ev('interes', 'REGISTRAR'),
+                    explicacion: `${formatoNumero(c.interes.personas)} personas marcaron ${formatoNumero(c.interes.publicaciones)} publicaciones con «Me interesa».`, estados: [] },
+                { nombre: 'Solicitudes', valor: formatoNumero(sumar(c.solicitudesCreadas)), evidencia: ev('solicitudes'),
+                    explicacion: 'Compradores que pidieron comprar una publicación.',
+                    estados: estadosDe(['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'], c.solicitudesCreadas, 'solicitudes') },
+                { nombre: 'Respuestas', valor: formatoNumero(sumar(respondidas)), evidencia: null,
+                    explicacion: 'Solicitudes que el vendedor aceptó o rechazó en el periodo.',
+                    estados: estadosDe(['ACEPTADA', 'RECHAZADA'], respondidas, 'solicitudes') },
+                { nombre: 'Ventas', valor: formatoNumero(canal('SOLICITUD').operaciones), evidencia: ev('ventas', 'SOLICITUD'),
+                    explicacion: `${formatoNumero(canal('SOLICITUD').animales)} animales por ${formatoColones(canal('SOLICITUD').monto)}. Cada solicitud aceptada registra su venta.`, estados: [] },
             ],
+            salidas: [], noDisponible: [],
         },
         {
-            clave: 'subastas', titulo: 'Subastas',
-            resumen: `${formatoNumero(s.estados.adjudicadas.total)} adjudicadas · ${formatoColones(s.precioPromedio.montoTotal)}`,
-            nodos: [
-                nodo('Subastas', formatoNumero(s.estados.activas.total + s.estados.cerradas.total + s.estados.canceladas.total), {
-                    evidencia: { nodo: 'subastas', estado: null },
-                    hijos: [
-                        nodo('Activas', formatoNumero(s.estados.activas.total), { evidencia: { nodo: 'subastas', estado: 'ACTIVA' }, tono: 'info' }),
-                        nodo('Adjudicadas', formatoNumero(s.estados.adjudicadas.total), { evidencia: { nodo: 'subastas', estado: 'FINALIZADA' }, tono: 'exito' }),
-                        nodo('Desiertas', formatoNumero(s.estados.desiertas.total), { evidencia: { nodo: 'subastas', estado: 'DESIERTA' }, tono: 'aviso' }),
-                        nodo('Canceladas', formatoNumero(s.estados.canceladas.total), { evidencia: { nodo: 'subastas', estado: 'CANCELADA' }, tono: 'neutro' }),
-                    ],
-                }),
-                nodo('Pujas', formatoNumero(s.pujas), { detalle: `${formatoNumero(s.compradores.total)} compradores` }),
-                nodo('Éxito', formatoPorcentaje(s.exito.porcentaje), { detalle: 'Adjudicadas sobre las que cerraron' }),
-                nodo('Monto adjudicado', formatoColones(s.precioPromedio.montoTotal), {
-                    detalle: `Promedio por animal ${formatoColones(s.precioPromedio.valor)} · incremento ${formatoPorcentaje(s.incrementoPromedio.porcentaje)}`,
-                    evidencia: { nodo: 'subastas', estado: 'FINALIZADA' }, tono: 'dato',
-                }),
-                nodo('Ventas', `${formatoNumero(canal('SUBASTA').animales)} · ${formatoColones(canal('SUBASTA').monto)}`, { evidencia: { nodo: 'ventas', estado: 'SUBASTA' }, tono: 'exito' }),
+            clave: 'subastas', titulo: 'Subastas', icono: 'fa-gavel',
+            principal: { valor: formatoNumero(s.estados.adjudicadas.total), etiqueta: 'adjudicadas' },
+            resumen: `${formatoNumero(s.estados.activas.total)} activas · ${formatoColones(s.precioPromedio.montoTotal)} adjudicados`,
+            etapas: [
+                { nombre: 'Subastas abiertas', valor: formatoNumero(s.estados.activas.total + s.estados.cerradas.total + s.estados.canceladas.total),
+                    evidencia: ev('subastas'), explicacion: 'Subastas del periodo, en cualquier estado.',
+                    estados: [{ nombre: 'Activas ahora', valor: formatoNumero(s.estados.activas.total), tono: 'info', evidencia: ev('subastas', 'ACTIVA') }] },
+                { nombre: 'Pujas', valor: formatoNumero(s.pujas), evidencia: null,
+                    explicacion: `${formatoNumero(s.compradores.total)} compradores distintos pujaron.`, estados: [] },
+                { nombre: 'Cierre', valor: formatoNumero(s.estados.cerradas.total), evidencia: null,
+                    explicacion: `Terminaron por tiempo. Éxito ${formatoPorcentaje(s.exito.porcentaje)}: adjudicadas sobre las que cerraron.`, estados: [] },
+                { nombre: 'Resultado', valor: formatoColones(s.precioPromedio.montoTotal), evidencia: ev('subastas', 'FINALIZADA'),
+                    explicacion: `Promedio por animal ${formatoColones(s.precioPromedio.valor)}; las pujas subieron ${formatoPorcentaje(s.incrementoPromedio.porcentaje)} sobre la base.`,
+                    estados: [
+                        { nombre: 'Adjudicadas', valor: formatoNumero(s.estados.adjudicadas.total), tono: 'exito', evidencia: ev('subastas', 'FINALIZADA') },
+                        { nombre: 'Desiertas', valor: formatoNumero(s.estados.desiertas.total), tono: 'aviso', evidencia: ev('subastas', 'DESIERTA') },
+                        { nombre: 'Ventas registradas', valor: formatoNumero(canal('SUBASTA').animales), tono: 'dato', evidencia: ev('ventas', 'SUBASTA') },
+                    ] },
             ],
+            salidas: [{ nombre: 'Canceladas', valor: formatoNumero(s.estados.canceladas.total), tono: 'neutro', evidencia: ev('subastas', 'CANCELADA'),
+                explicacion: 'El vendedor la canceló antes de recibir pujas.' }],
+            noDisponible: [],
         },
         {
-            clave: 'transporte', titulo: 'Transporte',
-            resumen: `${formatoNumero(t.solicitudesFletePorEstado?.ACEPTADA ?? 0)} fletes aceptados`,
-            nodos: [
-                nodo('Ofertas de flete', formatoNumero((ofertas.ACTIVA?.total ?? 0) + (ofertas.PAUSADA?.total ?? 0)),
-                    { detalle: `${formatoNumero(ofertas.ACTIVA?.total ?? 0)} activas · ${formatoNumero(ofertas.ACTIVA?.capacidad ?? 0)} cabezas de capacidad · ${formatoNumero(ofertas.PAUSADA?.total ?? 0)} pausadas` }),
-                nodo('Solicitudes de flete', formatoNumero(sumar(t.solicitudesFletePorEstado)), {
-                    evidencia: { nodo: 'fletes', estado: null },
-                    hijos: porEstado(['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'], t.solicitudesFletePorEstado, 'fletes'),
-                }),
+            clave: 'transporte', titulo: 'Transporte', icono: 'fa-truck-fast',
+            principal: { valor: formatoNumero(fletes.ACEPTADA ?? 0), etiqueta: 'fletes aceptados' },
+            resumen: `${formatoNumero(ofertas.ACTIVA?.total ?? 0)} ofertas activas · ${formatoNumero(fletes.PENDIENTE ?? 0)} solicitudes pendientes`,
+            etapas: [
+                { nombre: 'Ofertas', valor: formatoNumero((ofertas.ACTIVA?.total ?? 0) + (ofertas.PAUSADA?.total ?? 0)), evidencia: null,
+                    explicacion: `${formatoNumero(ofertas.ACTIVA?.capacidad ?? 0)} cabezas de capacidad en las ofertas activas.`,
+                    estados: [{ nombre: 'Activas', valor: formatoNumero(ofertas.ACTIVA?.total ?? 0), tono: 'info', evidencia: null },
+                        { nombre: 'Pausadas', valor: formatoNumero(ofertas.PAUSADA?.total ?? 0), tono: 'aviso', evidencia: null }] },
+                { nombre: 'Solicitudes', valor: formatoNumero(sumar(fletes)), evidencia: ev('fletes'),
+                    explicacion: 'Compras que pidieron un flete a un transportista.',
+                    estados: estadosDe(['PENDIENTE'], fletes, 'fletes') },
+                { nombre: 'Aceptación o rechazo', valor: formatoNumero((fletes.ACEPTADA ?? 0) + (fletes.RECHAZADA ?? 0)), evidencia: null,
+                    explicacion: 'Respuesta del transportista. Aceptar un flete no significa que el viaje ya ocurrió.',
+                    estados: estadosDe(['ACEPTADA', 'RECHAZADA'], fletes, 'fletes') },
             ],
+            salidas: [{ nombre: 'Canceladas', valor: formatoNumero(fletes.CANCELADA ?? 0), tono: 'neutro', evidencia: ev('fletes', 'CANCELADA'),
+                explicacion: 'La solicitud de compra se canceló antes del viaje.' }],
+            noDisponible: sinViajes ? [{ nombre: 'Viajes realizados', motivo: 'Información todavía no disponible: la plataforma aún no registra cuándo se hace un viaje, así que no se muestra un número.' }] : [],
         },
         {
-            clave: 'publicaciones', titulo: 'Animales y publicaciones',
-            resumen: `${formatoNumero(inv.publicacionesPorEstado?.ACTIVO ?? 0)} publicaciones activas`,
-            nodos: [
-                nodo('Animales', formatoNumero(sumar(inv.animalesPorEstado)),
-                    { detalle: Object.entries(inv.animalesPorEstado ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${formatoNumero(v)}`).join(' · ') || null }),
-                nodo('Publicaciones', formatoNumero(sumar(inv.publicacionesPorEstado)), {
-                    evidencia: { nodo: 'publicaciones', estado: null },
-                    hijos: porEstado(['ACTIVO', 'PAUSADO', 'VENDIDO', 'RETIRADO'], inv.publicacionesPorEstado, 'publicaciones'),
-                }),
-                nodo('Publicaciones nuevas', formatoNumero(inv.publicacionesNuevas)),
-                nodo('Cambios de estado', formatoNumero(sumar(inv.cambiosDeEstado)),
-                    { detalle: Object.entries(inv.cambiosDeEstado ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${formatoNumero(v)}`).join(' · ') || null }),
-                nodo('Esperan respuesta', formatoNumero(inv.conSolicitudesPendientes), { detalle: 'Publicaciones con solicitudes sin responder', tono: 'aviso' }),
+            clave: 'publicaciones', titulo: 'Animales y publicaciones', icono: 'fa-cow',
+            principal: { valor: formatoNumero(inv.publicacionesPorEstado?.ACTIVO ?? 0), etiqueta: 'publicaciones activas' },
+            resumen: `${formatoNumero(sumar(inv.animalesPorEstado))} animales · ${formatoNumero(inv.publicacionesNuevas)} publicaciones nuevas`,
+            etapas: [
+                { nombre: 'Animales registrados', valor: formatoNumero(sumar(inv.animalesPorEstado)), evidencia: null,
+                    explicacion: 'Inventario actual de los vendedores, por estado del animal.',
+                    estados: Object.entries(inv.animalesPorEstado ?? {}).map(([k, v]) => ({ nombre: etiquetaEstado(k), valor: formatoNumero(v), tono: tonoEstado(k), evidencia: null })) },
+                { nombre: 'Publicaciones', valor: formatoNumero(inv.publicacionesNuevas), evidencia: ev('publicaciones'),
+                    explicacion: 'Publicaciones creadas en el periodo.', estados: [] },
+                { nombre: 'Estado vigente', valor: formatoNumero(sumar(inv.publicacionesPorEstado)), evidencia: ev('publicaciones'),
+                    explicacion: `${formatoNumero(sumar(inv.cambiosDeEstado))} cambios de estado en el periodo, según el historial de cada publicación.`,
+                    estados: estadosDe(['ACTIVO', 'PAUSADO', 'VENDIDO', 'RETIRADO'], inv.publicacionesPorEstado, 'publicaciones') },
+                { nombre: 'Solicitud o venta', valor: formatoNumero(inv.conSolicitudesPendientes), evidencia: ev('solicitudes', 'PENDIENTE'),
+                    explicacion: 'Publicaciones con solicitudes de compra sin responder.', estados: [] },
             ],
+            salidas: [], noDisponible: [],
         },
     ];
+}
+
+const CLASIFICACION = {
+    INCONSISTENCIA: ['Inconsistencia confirmada', 'peligro'], REVISION: ['Requiere revisión', 'aviso'],
+    SIN_EVIDENCIA: ['Sin evidencia suficiente', 'neutro'], OPCIONAL: ['Dato opcional', 'neutro'], CORRECTO: ['Correcto', 'exito'],
+};
+export function etiquetaClasificacion(c) { return CLASIFICACION[c]?.[0] ?? String(c ?? '—'); }
+
+/**
+ * Diagnósticos en tres grupos: con incidencias que piden acción (inconsistencia, revisión o sin evidencia), solo datos
+ * opcionales y sanos (cero). Dentro de cada grupo, por la prioridad que define el servidor. Puro.
+ */
+export function agruparDiagnosticos(diagnosticos = []) {
+    const accion = (d) => (d.porClasificacion?.INCONSISTENCIA ?? 0) + (d.porClasificacion?.REVISION ?? 0) + (d.porClasificacion?.SIN_EVIDENCIA ?? 0);
+    const orden = [...diagnosticos].sort((a, b) => (a.prioridad ?? 99) - (b.prioridad ?? 99));
+    return {
+        activos: orden.filter((d) => accion(d) > 0),
+        opcionales: orden.filter((d) => accion(d) === 0 && d.total > 0),
+        sanos: orden.filter((d) => d.total === 0),
+    };
+}
+
+/** Lo que requiere atención: pendientes operativos y problemas de datos, por separado. Puro. */
+export function atencion(d, diagnosticos = []) {
+    const docs = d.control.documentosPorEstado?.PENDIENTE ?? 0;
+    const operativos = [
+        { nombre: 'Solicitudes de compra sin responder', valor: d.comercializacion.solicitudesCreadas?.PENDIENTE ?? 0, evidencia: { nodo: 'solicitudes', estado: 'PENDIENTE' } },
+        { nombre: 'Fletes sin respuesta del transportista', valor: d.transporte.solicitudesFletePorEstado?.PENDIENTE ?? 0, evidencia: { nodo: 'fletes', estado: 'PENDIENTE' } },
+        { nombre: 'Documentos de identidad por verificar', valor: docs, enlace: 'admin/documentos' },
+        { nombre: 'Cambios de correo sin confirmar', valor: d.control.correosPendientes ?? 0, enlace: 'admin/bitacora' },
+    ].filter((x) => x.valor > 0);
+    const datos = agruparDiagnosticos(diagnosticos).activos.map((x) => ({
+        nombre: x.titulo, tipo: x.tipo,
+        valor: (x.porClasificacion.INCONSISTENCIA ?? 0) + (x.porClasificacion.REVISION ?? 0) + (x.porClasificacion.SIN_EVIDENCIA ?? 0),
+        tono: x.porClasificacion.INCONSISTENCIA ? 'peligro' : 'aviso',
+    }));
+    return { operativos, datos };
 }
 
 const ESTADOS = {
@@ -145,6 +215,7 @@ const ESTADOS = {
     ACTIVA: ['Activa', 'info'], FINALIZADA: ['Adjudicada', 'exito'], DESIERTA: ['Desierta', 'aviso'], SOLICITUD: ['Por solicitud', 'exito'],
     REGISTRAR: ['Registrado', 'info'], RETIRAR: ['Retirado', 'neutro'], REGISTRADO: ['Registrado', 'dato'], SIN_DATO: ['Sin dato', 'neutro'],
     COMPRADOR: ['Comprador', 'neutro'], VENDEDOR: ['Vendedor', 'neutro'], TRANSPORTISTA: ['Transportista', 'neutro'],
+    OTRO: ['Otro canal', 'neutro'], EDITAR: ['Editado', 'neutro'],
 };
 const DOCUMENTO = { PENDIENTE: 'por verificar', VERIFICADO: 'verificado', RECHAZADO: 'rechazado' };
 
@@ -165,6 +236,7 @@ export function nombreArea(clave) {
 export function etiquetaEstado(e) { return ESTADOS[e]?.[0] ?? String(e ?? '—'); }
 export function tonoEstado(e) { return ESTADOS[e]?.[1] ?? 'neutro'; }
 
+
 // ───────────────────────────── DOM ─────────────────────────────
 
 function icono(nombre) {
@@ -173,16 +245,141 @@ function icono(nombre) {
     return i;
 }
 
+function boton(texto, clase = 'button button--secondary button--small') {
+    const b = el('button', clase, texto);
+    b.type = 'button';
+    return b;
+}
+
 function consulta(extra = {}) {
     return new URLSearchParams({ ...estado.periodo, ...extra }).toString();
 }
 
-function kpi({ etiqueta, valor, completo, detalle, tono }) {
+function etiqueta(estadoClave, texto = etiquetaEstado(estadoClave), tono = tonoEstado(estadoClave)) {
+    const e = el('span', `intel-estado intel-estado--${tono}`);
+    e.append(el('span', 'intel-estado__punto'), el('span', null, texto));
+    return e;
+}
+
+function fecha(valor) {
+    return valor ? new Date(valor).toLocaleDateString('es-CR', { timeZone: ZONA }) : '—';
+}
+
+/** Navegación Anterior/Siguiente. */
+function paginacion(pagina, total, tamano, ir, etiquetaNav) {
+    const paginas = Math.max(1, Math.ceil(total / tamano));
+    const nav = el('nav', 'intel-paginas');
+    nav.setAttribute('aria-label', etiquetaNav);
+    const anterior = boton('Anterior');
+    anterior.disabled = pagina <= 1;
+    anterior.addEventListener('click', () => ir(pagina - 1));
+    const siguiente = boton('Siguiente');
+    siguiente.disabled = pagina >= paginas;
+    siguiente.addEventListener('click', () => ir(pagina + 1));
+    nav.append(anterior, el('span', 'intel-paginas__texto', `Página ${pagina} de ${paginas} · ${formatoNumero(total)} registros`), siguiente);
+    return nav;
+}
+
+function tabla(etiquetaRegion, columnas, filas) {
+    const contenedor = el('div', 'intel-tabla');
+    contenedor.tabIndex = 0;
+    contenedor.setAttribute('role', 'region');
+    contenedor.setAttribute('aria-label', etiquetaRegion);
+    const t = el('table');
+    const cab = el('tr');
+    columnas.forEach(([texto, clase]) => { const th = el('th', clase ?? null, texto); th.scope = 'col'; cab.append(th); });
+    t.append(el('thead'), el('tbody'));
+    t.tHead.append(cab);
+    filas.forEach((celdas) => {
+        const tr = el('tr');
+        celdas.forEach((contenido, i) => {
+            const td = el('td', columnas[i][1] ?? null);
+            td.dataset.etiqueta = columnas[i][0];
+            if (contenido instanceof Node) td.append(contenido); else td.textContent = contenido ?? '—';
+            tr.append(td);
+        });
+        t.tBodies[0].append(tr);
+    });
+    contenedor.append(t);
+    return contenedor;
+}
+
+function enlacePersona(personaId, nombre) {
+    if (!personaId) return el('span', null, nombre ?? '—');
+    const b = boton(nombre ?? '—', 'intel-enlace');
+    b.addEventListener('click', () => { cerrarDialogo(); abrirExpediente(personaId); });
+    return b;
+}
+
+// ───── Diálogo de evidencia (dialog nativo: atrapa el foco, Esc cierra; el foco vuelve a quien lo abrió) ─────
+
+let origenDialogo = null;
+function abrirDialogo(titulo, pintar) {
+    const dialogo = $('#intel-dialogo');
+    origenDialogo = document.activeElement;
+    $('#intel-dialogo-titulo').textContent = titulo;
+    const cuerpo = $('#intel-dialogo-cuerpo');
+    cuerpo.replaceChildren();
+    pintar(cuerpo);
+    if (!dialogo.open) dialogo.showModal();
+}
+function cerrarDialogo() {
+    const dialogo = $('#intel-dialogo');
+    if (dialogo?.open) dialogo.close();
+}
+
+/** Carga paginada en un contenedor, con estados de carga, vacío, error y reintento. */
+function cargaPaginada(destino, pedir, pintar, etiquetaNav) {
+    const cargar = async (pagina) => {
+        destino.setAttribute('aria-busy', 'true');
+        destino.replaceChildren(el('p', 'intel-vacio', 'Cargando registros…'));
+        try {
+            const { data } = await pedir(pagina);
+            if (!data.items.length) { destino.replaceChildren(el('p', 'intel-vacio', 'No hay registros.')); return; }
+            destino.replaceChildren(pintar(data), paginacion(pagina, data.total, data.tamanoPagina, cargar, etiquetaNav));
+        } catch (error) {
+            if (error?.obsoleta) return; // llegó otra búsqueda más nueva
+            const reintentar = boton('Reintentar');
+            reintentar.addEventListener('click', () => cargar(pagina));
+            destino.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudieron cargar los registros.'), reintentar);
+        } finally {
+            destino.setAttribute('aria-busy', 'false');
+        }
+    };
+    return cargar;
+}
+
+function abrirEvidencia(titulo, evidencia) {
+    abrirDialogo(titulo, (cuerpo) => {
+        const meta = el('p', 'intel-nota', `${DEFINICIONES[evidencia.nodo] ?? ''} Periodo: ${textoPeriodo(estado.periodo)}.`);
+        const filtro = evidencia.estado ? el('p', 'intel-nota') : null;
+        if (filtro) filtro.append('Filtrado por estado: ', etiqueta(evidencia.estado));
+        const lista = el('div', 'intel-evidencia');
+        cuerpo.append(meta, ...(filtro ? [filtro] : []), lista);
+        const cantidad = evidencia.nodo === 'subastas' ? 'Pujas' : null;
+        cargaPaginada(lista,
+            (pagina) => request(`${API}?${consulta({ vista: 'EVIDENCIA', nodo: evidencia.nodo, ...(evidencia.estado ? { estado: evidencia.estado } : {}), pagina, tamanoPagina: 10 })}`),
+            (data) => tabla('Registros de la evidencia', [['#', 'intel-num'], ['Registro'], ['Estado'], ['Fecha'], ['Monto', 'intel-num'], ...(cantidad ? [[cantidad, 'intel-num']] : []), ['Persona']],
+                data.items.map((i) => [String(i.id), i.titulo ?? '—', etiqueta(i.estado), fecha(i.fecha), formatoColones(i.monto),
+                    ...(cantidad ? [formatoNumero(i.cantidad)] : []), enlacePersona(i.personaId, i.persona)])),
+            'Páginas de la evidencia')(1);
+    });
+}
+
+function botonEvidencia(texto, tituloDialogo, evidencia, clase = 'intel-accion') {
+    const b = boton(texto, clase);
+    b.addEventListener('click', () => abrirEvidencia(tituloDialogo, evidencia));
+    return b;
+}
+
+// ───── Visión global ─────
+
+function kpi({ etiqueta: rotulo, valor, completo, detalle, tono }) {
     const t = el('article', `intel-kpi intel-kpi--${tono}`);
     const cifra = el('strong', 'intel-kpi__valor', valor);
     // El valor compacto se ve; el exacto queda en el título y lo lee el lector de pantalla.
     if (completo && completo !== valor) { cifra.title = completo; cifra.setAttribute('aria-label', completo); }
-    t.append(el('span', 'intel-kpi__etiqueta', etiqueta), cifra, el('span', 'intel-kpi__detalle', detalle));
+    t.append(el('span', 'intel-kpi__etiqueta', rotulo), cifra, el('span', 'intel-kpi__detalle', detalle));
     return t;
 }
 
@@ -195,10 +392,10 @@ function pintarKpis(d) {
         kpi({ etiqueta: 'Personas únicas', valor: formatoNumero(d.personas.personas), tono: 'neutro',
             detalle: `${formatoNumero((d.personas.porNumeroDeActividades?.[2] ?? 0) + (d.personas.porNumeroDeActividades?.[3] ?? 0))} con más de una actividad` }),
         kpi({ etiqueta: 'Ventas registradas', valor: formatoColonesCorto(monto), completo: formatoColones(monto), tono: 'dato',
-            detalle: `${formatoNumero(animales)} animales en el periodo (subasta y solicitud, sin la compra espejo)` }),
+            detalle: `${formatoNumero(animales)} animales vendidos en el periodo` }),
         kpi({ etiqueta: 'Subastas adjudicadas', valor: formatoNumero(d.subastas.estados.adjudicadas.total), tono: 'exito',
             detalle: `Éxito ${formatoPorcentaje(d.subastas.exito.porcentaje)} de ${formatoNumero(d.subastas.exito.finalizadas)} cerradas` }),
-        kpi({ etiqueta: 'Subastas activas', valor: formatoNumero(d.subastas.estados.activas.total), tono: 'info', detalle: `${formatoNumero(d.subastas.pujas)} pujas válidas en el periodo` }),
+        kpi({ etiqueta: 'Subastas activas', valor: formatoNumero(d.subastas.estados.activas.total), tono: 'info', detalle: `${formatoNumero(d.subastas.pujas)} pujas en el periodo` }),
         kpi({ etiqueta: 'Solicitudes pendientes', valor: formatoNumero(d.comercializacion.solicitudesCreadas?.PENDIENTE ?? 0), tono: 'aviso',
             detalle: `${formatoNumero(d.inventario.conSolicitudesPendientes)} publicaciones esperan respuesta` }),
         kpi({ etiqueta: 'Documentos por verificar', valor: formatoNumero(docs), tono: docs ? 'aviso' : 'neutro', detalle: 'Identidad pendiente de revisión' }),
@@ -226,206 +423,308 @@ function pintarRed(p) {
     $('#dashboard-metrics').setAttribute('aria-busy', 'false');
 }
 
-/** Evidencia paginada de un nodo: se pide al abrirla y se queda con el periodo vigente. */
-function panelEvidencia(evidencia) {
-    const caja = el('div', 'intel-evidencia');
-    const cuerpo = el('div', 'intel-evidencia__cuerpo');
-    const paginas = el('nav', 'intel-paginas');
-    paginas.setAttribute('aria-label', 'Páginas de la evidencia');
-    caja.append(cuerpo, paginas);
-    const cargar = async (pagina) => {
-        cuerpo.replaceChildren(el('p', 'intel-vacio', 'Cargando filas…'));
-        caja.setAttribute('aria-busy', 'true');
-        try {
-            const r = await request(`${API}?${consulta({ vista: 'EVIDENCIA', nodo: evidencia.nodo, ...(evidencia.estado ? { estado: evidencia.estado } : {}), pagina, tamanoPagina: 10 })}`);
-            const datos = r.data;
-            if (!datos.items.length) {
-                cuerpo.replaceChildren(el('p', 'intel-vacio', 'No hay filas en este periodo.'));
-                paginas.replaceChildren();
-                return;
-            }
-            cuerpo.replaceChildren(tablaEvidencia(datos.items, evidencia.nodo));
-            const total = Math.max(1, Math.ceil(datos.total / datos.tamanoPagina));
-            const boton = (texto, destino, deshabilitado) => {
-                const b = el('button', 'button button--secondary button--small', texto);
-                b.type = 'button';
-                b.disabled = deshabilitado;
-                b.addEventListener('click', () => cargar(destino));
-                return b;
-            };
-            paginas.replaceChildren(boton('Anterior', pagina - 1, pagina <= 1),
-                el('span', 'intel-paginas__texto', `Página ${pagina} de ${total} · ${formatoNumero(datos.total)} filas`), boton('Siguiente', pagina + 1, pagina >= total));
-        } catch (error) {
-            cuerpo.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudo cargar la evidencia.'));
-            const reintentar = el('button', 'button button--secondary button--small', 'Reintentar');
-            reintentar.type = 'button';
-            reintentar.addEventListener('click', () => cargar(pagina));
-            cuerpo.append(reintentar);
-        } finally {
-            caja.setAttribute('aria-busy', 'false');
-        }
+// ───── Requieren atención ─────
+
+function pintarAtencion(d, diagnosticos) {
+    const { operativos, datos } = atencion(d, diagnosticos ?? []);
+    const grupo = (titulo, ayuda, items, vacio, pintarItem) => {
+        const g = el('section', 'intel-atencion__grupo');
+        g.append(el('h3', 'intel-panel__titulo', titulo), el('p', 'intel-nota', ayuda));
+        if (!items.length) { g.append(etiqueta(null, vacio, vacio.startsWith('No se') ? 'neutro' : 'exito')); return g; }
+        const ul = el('ul', 'intel-atencion__lista');
+        items.forEach((x) => { const li = el('li'); li.append(...pintarItem(x)); ul.append(li); });
+        g.append(ul);
+        return g;
     };
-    return { caja, cargar };
+    $('#intel-atencion').replaceChildren(
+        grupo('Pendientes de la operación', 'Esperan que alguien responda. Son normales en una plataforma activa.', operativos, 'Nada pendiente', (x) => {
+            const accion = x.evidencia ? botonEvidencia('Ver', x.nombre, x.evidencia) : Object.assign(el('a', 'intel-accion', 'Abrir'), { href: x.enlace });
+            return [etiqueta(null, x.nombre, 'aviso'), el('strong', 'intel-atencion__valor', formatoNumero(x.valor)), accion];
+        }),
+        grupo('Problemas en los datos', 'Registros que contradicen una regla o necesitan que alguien complete un dato.',
+            diagnosticos === null ? [] : datos, diagnosticos === null ? 'No se pudo revisar' : 'Sin incidencias', (x) => {
+                const ir = boton('Revisar', 'intel-accion');
+                ir.addEventListener('click', () => abrirDiagnostico(estado.diagnosticos.find((g) => g.tipo === x.tipo)));
+                return [etiqueta(null, x.nombre, x.tono), el('strong', 'intel-atencion__valor', formatoNumero(x.valor)), ir];
+            }),
+    );
+    $('#intel-atencion').setAttribute('aria-busy', 'false');
 }
 
-function tablaEvidencia(items, nodo) {
-    const contenedor = el('div', 'intel-tabla');
-    contenedor.tabIndex = 0;
-    contenedor.setAttribute('role', 'region');
-    contenedor.setAttribute('aria-label', 'Filas de la evidencia');
-    const t = el('table');
-    const cab = el('tr');
-    const cantidad = nodo === 'subastas' ? 'Pujas' : nodo === 'viajes' ? 'Cabezas' : null;
-    ['#', 'Registro', 'Estado', 'Fecha', 'Monto', ...(cantidad ? [cantidad] : []), 'Persona'].forEach((c) => { const th = el('th', null, c); th.scope = 'col'; cab.append(th); });
-    t.append(el('thead'), el('tbody'));
-    t.tHead.append(cab);
-    items.forEach((i) => {
-        const tr = el('tr');
-        const persona = el('td');
-        const enlace = el('button', 'intel-enlace', i.persona ?? '—');
-        enlace.type = 'button';
-        enlace.addEventListener('click', () => abrirExpediente(i.personaId));
-        persona.append(enlace);
-        const est = el('td');
-        est.append(etiqueta(i.estado));
-        tr.append(el('td', 'intel-num', i.id), el('td', null, i.titulo ?? '—'), est,
-            el('td', null, i.fecha ? new Date(i.fecha).toLocaleDateString('es-CR', { timeZone: ZONA }) : '—'),
-            el('td', 'intel-num', formatoColones(i.monto)), ...(cantidad ? [el('td', 'intel-num', formatoNumero(i.cantidad))] : []), persona);
-        t.tBodies[0].append(tr);
-    });
-    contenedor.append(t);
-    return contenedor;
-}
+// ───── Actividad comercial: áreas y explorador de procesos ─────
 
-function etiqueta(estadoClave) {
-    const e = el('span', `intel-estado intel-estado--${tonoEstado(estadoClave)}`);
-    e.append(el('span', 'intel-estado__punto'), el('span', null, etiquetaEstado(estadoClave)));
-    return e;
-}
-
-function pintarNodo(n) {
-    const item = el('li', `intel-nodo${n.tono ? ` intel-nodo--${n.tono}` : ''}`);
-    const cabeza = el('div', 'intel-nodo__cabeza');
-    const nombre = el('span', 'intel-nodo__nombre');
-    if (n.tono) nombre.append(el('span', 'intel-estado__punto'));
-    nombre.append(el('span', null, n.nombre));
-    cabeza.append(nombre, el('strong', 'intel-nodo__valor', n.valor));
-    item.append(cabeza);
-    if (n.detalle) item.append(el('p', 'intel-nodo__meta', n.detalle));
-    if (n.evidencia) {
-        const detalles = el('details', 'intel-nodo__evidencia');
-        detalles.append(el('summary', null, 'Ver registros'));
-        const panel = panelEvidencia(n.evidencia);
-        detalles.append(panel.caja);
-        detalles.addEventListener('toggle', () => { if (detalles.open && !detalles.dataset.cargado) { detalles.dataset.cargado = '1'; panel.cargar(1); } });
-        item.append(detalles);
-    }
-    if (n.hijos?.length) {
-        const hijos = el('ul', 'intel-nodos intel-nodos--hijos');
-        hijos.append(...n.hijos.map(pintarNodo));
-        item.append(hijos);
-    }
-    return item;
-}
-
-function pintarArbol(d) {
-    const abiertos = new Set([...document.querySelectorAll('.intel-proceso[open]')].map((p) => p.dataset.clave));
-    $('#intel-arbol').setAttribute('aria-busy', 'false');
-    $('#intel-arbol').replaceChildren(...procesos(d).map((p) => {
-        const det = el('details', 'intel-proceso');
-        det.dataset.clave = p.clave;
-        // Cerrados al llegar (misma altura que el esqueleto): la persona abre el proceso que le interesa.
-        det.open = abiertos.has(p.clave);
-        const sum = el('summary');
-        const titulos = el('span', 'intel-proceso__titulos');
-        titulos.append(el('strong', null, p.titulo));
-        sum.append(titulos, el('span', 'intel-proceso__resumen', p.resumen));
-        const lista = el('ul', 'intel-nodos');
-        lista.append(...p.nodos.map(pintarNodo));
-        det.append(sum, lista);
-        return det;
+function pintarAreas(d) {
+    const areas = procesos(d);
+    estado.areas = areas;
+    const contenedor = $('#intel-arbol');
+    contenedor.setAttribute('aria-busy', 'false');
+    contenedor.replaceChildren(...areas.map((a) => {
+        const card = el('article', 'intel-area');
+        card.dataset.clave = a.clave;
+        const cabeza = el('div', 'intel-area__cabeza');
+        const caja = el('span', 'intel-area__icono');
+        caja.append(icono(a.icono));
+        cabeza.append(caja, el('h3', 'intel-area__titulo', a.titulo));
+        const cifra = el('p', 'intel-area__cifra');
+        cifra.append(el('strong', null, a.principal.valor), el('span', null, ` ${a.principal.etiqueta}`));
+        const explorar = boton('Explorar proceso', 'button button--secondary button--small intel-area__boton');
+        explorar.setAttribute('aria-controls', 'intel-proceso');
+        explorar.setAttribute('aria-expanded', String(estado.areaAbierta === a.clave));
+        explorar.addEventListener('click', () => abrirProceso(a.clave, true));
+        card.append(cabeza, cifra, el('p', 'intel-area__resumen', a.resumen), explorar);
+        if (estado.areaAbierta === a.clave) card.classList.add('intel-area--abierta');
+        return card;
     }));
+    if (estado.areaAbierta) abrirProceso(estado.areaAbierta, false);
 }
+
+function pintarEstados(estados, area) {
+    const ul = el('ul', 'intel-etapa__estados');
+    estados.forEach((e) => {
+        const li = el('li');
+        const nombre = etiqueta(null, e.nombre, e.tono);
+        if (e.evidencia) {
+            const b = botonEvidencia('', `${area} · ${e.nombre}`, e.evidencia, 'intel-chip');
+            b.append(nombre, el('strong', null, e.valor));
+            b.setAttribute('aria-label', `${e.nombre}: ${e.valor}. Ver registros`);
+            li.append(b);
+        } else {
+            const s = el('span', 'intel-chip intel-chip--fijo');
+            s.append(nombre, el('strong', null, e.valor));
+            li.append(s);
+        }
+        ul.append(li);
+    });
+    return ul;
+}
+
+function abrirProceso(clave, enfocar) {
+    const area = estado.areas?.find((a) => a.clave === clave);
+    const panel = $('#intel-proceso');
+    if (!area) return;
+    estado.areaAbierta = clave;
+    document.querySelectorAll('.intel-area').forEach((c) => {
+        const abierta = c.dataset.clave === clave;
+        c.classList.toggle('intel-area--abierta', abierta);
+        c.querySelector('.intel-area__boton')?.setAttribute('aria-expanded', String(abierta));
+    });
+    const cabeza = el('div', 'intel-proceso-panel__cabeza');
+    const titulo = el('h3', null, `Proceso: ${area.titulo}`);
+    titulo.id = 'intel-proceso-titulo';
+    titulo.tabIndex = -1;
+    const cerrar = boton('Cerrar proceso');
+    cerrar.addEventListener('click', () => {
+        estado.areaAbierta = null;
+        panel.hidden = true;
+        document.querySelectorAll('.intel-area').forEach((c) => {
+            c.classList.remove('intel-area--abierta');
+            c.querySelector('.intel-area__boton')?.setAttribute('aria-expanded', 'false');
+        });
+        document.querySelector(`.intel-area[data-clave="${clave}"] .intel-area__boton`)?.focus();
+    });
+    cabeza.append(titulo, el('p', 'intel-nota', `Etapas en orden; cada una cuenta sus propios registros del periodo (${textoPeriodo(estado.periodo)}).`), cerrar);
+    const etapas = el('ol', 'intel-etapas');
+    area.etapas.forEach((e, i) => {
+        const li = el('li', 'intel-etapa');
+        const encabezado = el('div', 'intel-etapa__cabeza');
+        encabezado.append(el('span', 'intel-etapa__paso', `Etapa ${i + 1}`), el('h4', null, e.nombre));
+        li.append(encabezado, el('strong', 'intel-etapa__valor', e.valor), el('p', 'intel-etapa__texto', e.explicacion));
+        if (e.estados.length) li.append(pintarEstados(e.estados, area.titulo));
+        if (e.evidencia) li.append(botonEvidencia('Ver registros', `${area.titulo} · ${e.nombre}`, e.evidencia));
+        etapas.append(li);
+    });
+    const extras = [];
+    if (area.salidas.length || area.noDisponible.length) {
+        const pie = el('div', 'intel-proceso-panel__pie');
+        area.salidas.forEach((s) => {
+            const caja = el('div', 'intel-salida');
+            caja.append(el('span', 'intel-etapa__paso', 'Salida aparte'), el('h4', null, `${s.nombre}: ${s.valor}`), el('p', 'intel-etapa__texto', s.explicacion));
+            if (s.evidencia) caja.append(botonEvidencia('Ver registros', `${area.titulo} · ${s.nombre}`, s.evidencia));
+            pie.append(caja);
+        });
+        area.noDisponible.forEach((n) => {
+            const caja = el('div', 'intel-salida intel-salida--sin');
+            caja.append(el('span', 'intel-etapa__paso', 'Sin registro'), el('h4', null, n.nombre), el('p', 'intel-etapa__texto', n.motivo));
+            pie.append(caja);
+        });
+        extras.push(pie);
+    }
+    panel.replaceChildren(cabeza, etapas, ...extras);
+    panel.hidden = false;
+    if (enfocar) titulo.focus();
+}
+
+// ───── Calidad de datos ─────
+
+function pintarCalidad(diagnosticos) {
+    const destino = $('#intel-calidad');
+    destino.setAttribute('aria-busy', 'false');
+    if (diagnosticos === null) {
+        const reintentar = boton('Reintentar');
+        reintentar.addEventListener('click', () => cargarDiagnosticos(estado.resumen));
+        destino.replaceChildren(el('p', 'intel-error', 'No se pudo revisar la calidad de los datos.'), reintentar);
+        return;
+    }
+    const { activos, opcionales, sanos } = agruparDiagnosticos(diagnosticos);
+    const tarjeta = (x) => {
+        const card = el('article', 'intel-diag');
+        const cabeza = el('div', 'intel-diag__cabeza');
+        cabeza.append(el('h3', 'intel-diag__titulo', x.titulo), el('strong', 'intel-diag__total', formatoNumero(x.total)));
+        const chips = el('ul', 'intel-etapa__estados');
+        Object.entries(x.porClasificacion).filter(([, n]) => n > 0).forEach(([c, n]) => {
+            const li = el('li');
+            const s = el('span', 'intel-chip intel-chip--fijo');
+            s.append(etiqueta(null, etiquetaClasificacion(c), CLASIFICACION[c]?.[1] ?? 'neutro'), el('strong', null, formatoNumero(n)));
+            li.append(s);
+            chips.append(li);
+        });
+        const dato = el('p', 'intel-diag__dato', x.dato === 'OBLIGATORIO' ? 'Dato obligatorio' : 'Dato opcional');
+        const revisar = boton('Ver registros y solución', 'intel-accion');
+        revisar.addEventListener('click', () => abrirDiagnostico(x));
+        card.append(cabeza, dato, chips, el('p', 'intel-nota', x.regla), revisar);
+        return card;
+    };
+    const bloques = [];
+    if (activos.length) bloques.push(...activos.map(tarjeta));
+    else bloques.push(etiqueta(null, 'Ningún dato obligatorio falta ni contradice una regla', 'exito'));
+    if (opcionales.length) {
+        const g = el('div', 'intel-calidad__grupo');
+        g.append(el('h3', 'intel-subtitulo', 'Datos opcionales vacíos'), ...opcionales.map(tarjeta));
+        bloques.push(g);
+    }
+    if (sanos.length) {
+        const g = el('div', 'intel-calidad__sanos');
+        g.append(el('h3', 'intel-subtitulo', 'Sin incidencias'));
+        const ul = el('ul', 'intel-sanos');
+        sanos.forEach((x) => { const li = el('li'); li.append(etiqueta(null, x.titulo, 'exito')); ul.append(li); });
+        g.append(ul);
+        bloques.push(g);
+    }
+    destino.replaceChildren(...bloques);
+}
+
+/** Valor de un detalle del diagnóstico: montos en colones, cantidades con separador y estados con su nombre. Puro. */
+export function textoDetalle({ etiqueta: rotulo, valor }) {
+    if (valor === null || valor === undefined) return '—';
+    if (typeof valor === 'number') return rotulo.startsWith('Monto') ? formatoColones(valor) : formatoNumero(valor);
+    if (/^\d{4}-\d{2}-\d{2}T/.test(valor)) return fecha(valor);
+    return ESTADOS[valor] ? etiquetaEstado(valor) : valor;
+}
+
+function abrirDiagnostico(x) {
+    if (!x) return;
+    abrirDialogo(x.titulo, (cuerpo) => {
+        const politica = el('dl', 'intel-politica');
+        [['Regla', x.regla], ['Cómo se resuelve', x.solucion]].forEach(([k, v]) => { const f = el('div'); f.append(el('dt', null, k), el('dd', null, v)); politica.append(f); });
+        const enlace = el('a', 'intel-accion', 'Abrir el módulo relacionado');
+        enlace.href = x.enlace;
+        const lista = el('div', 'intel-evidencia');
+        const comprobar = boton('Comprobar de nuevo');
+        cuerpo.append(politica, enlace, lista, comprobar);
+        const cargar = cargaPaginada(lista,
+            (pagina) => request(`${API}?${new URLSearchParams({ vista: 'DIAGNOSTICO', tipo: x.tipo, pagina, tamanoPagina: 10 })}`),
+            (data) => {
+                const filas = el('ul', 'intel-diag-filas');
+                data.items.forEach((f) => {
+                    const li = el('li', 'intel-diag-fila');
+                    const cabeza = el('div', 'intel-diag-fila__cabeza');
+                    cabeza.append(el('strong', null, `#${f.id} · ${f.registro}`), etiqueta(null, etiquetaClasificacion(f.clasificacion), CLASIFICACION[f.clasificacion]?.[1] ?? 'neutro'));
+                    if (f.origen === 'DEMO') cabeza.append(el('span', 'intel-insignia', 'Datos de demostración'));
+                    const dl = el('dl', 'intel-diag-fila__datos');
+                    [['Fecha', fecha(f.fecha)], ...f.detalles.map((d) => [d.etiqueta, textoDetalle(d)])]
+                        .forEach(([k, v]) => { const g = el('div'); g.append(el('dt', null, k), el('dd', null, v)); dl.append(g); });
+                    const responsable = el('p', 'intel-nota');
+                    responsable.append('Responsable: ', enlacePersona(f.personaId, f.persona ?? 'ya no existe'));
+                    li.append(cabeza, el('p', 'intel-diag-fila__causa', f.causa), dl, responsable);
+                    filas.append(li);
+                });
+                return filas;
+            }, 'Páginas del diagnóstico');
+        comprobar.addEventListener('click', async () => { await cargar(1); cargarDiagnosticos(estado.resumen); });
+        cargar(1);
+    });
+}
+
+async function cargarDiagnosticos(resumen) {
+    try {
+        const { data } = await request(`${API}?vista=DIAGNOSTICO`);
+        estado.diagnosticos = data.diagnosticos;
+    } catch {
+        estado.diagnosticos = null;
+    }
+    pintarCalidad(estado.diagnosticos);
+    if (resumen) pintarAtencion(resumen, estado.diagnosticos);
+}
+
+// ───── Auditoría ─────
 
 function pintarControl(d) {
     const c = d.control;
-    const lista = (titulo, filas) => {
-        const card = el('article', 'intel-panel intel-panel--abierto');
-        card.append(el('h3', 'intel-panel__titulo', titulo));
-        const dl = el('dl', 'intel-lista');
-        filas.forEach(([k, v, tono]) => {
-            const fila = el('div', tono ? `intel-lista__fila intel-lista__fila--${tono}` : 'intel-lista__fila');
-            fila.append(el('dt', null, k), el('dd', null, v));
-            dl.append(fila);
-        });
-        card.append(dl);
-        return card;
-    };
-    const inc = c.incompletos;
-    const enlaceBitacora = el('a', 'text-link', 'Abrir la bitácora');
-    enlaceBitacora.href = 'admin/bitacora';
-    const control = lista('Revisión y actividad', [
-        ['Documentos pendientes', formatoNumero(c.documentosPorEstado?.PENDIENTE ?? 0), (c.documentosPorEstado?.PENDIENTE ?? 0) ? 'aviso' : null],
-        ['Documentos verificados', formatoNumero(c.documentosPorEstado?.VERIFICADO ?? 0)],
-        ['Cambios de correo pendientes', formatoNumero(c.correosPendientes), c.correosPendientes ? 'aviso' : null],
-        ['Movimientos en la bitácora', formatoNumero(sumar(c.bitacoraPorEntidad))],
-        ...Object.entries(c.bitacoraPorEntidad ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => [`· ${nombreArea(k)}`, formatoNumero(v)]),
-    ]);
-    control.append(enlaceBitacora);
-    const calidad = lista('Datos incompletos', [
-        ['Publicaciones sin foto', formatoNumero(inc.publicacionesSinFoto), inc.publicacionesSinFoto ? 'aviso' : null],
-        ['Animales sin tipo de ganado', formatoNumero(inc.animalesSinEspecie), inc.animalesSinEspecie ? 'aviso' : null],
-        ['Fincas sin dirección', formatoNumero(inc.fincasSinDireccion), inc.fincasSinDireccion ? 'aviso' : null],
-        ['Ofertas activas sin precio', formatoNumero(inc.ofertasActivasSinPrecio), inc.ofertasActivasSinPrecio ? 'aviso' : null],
-        ['Ventas sin comprador', formatoNumero(inc.ventasSinComprador), inc.ventasSinComprador ? 'aviso' : null],
-        ['Subastas adjudicadas sin venta', formatoNumero(inc.adjudicadasSinVenta), inc.adjudicadasSinVenta ? 'aviso' : null],
-    ]);
-    $('#intel-control').replaceChildren(control, calidad);
+    const card = el('article', 'intel-panel');
+    card.append(el('h3', 'intel-panel__titulo', 'Movimientos por área'));
+    const dl = el('dl', 'intel-lista');
+    const filas = [['Total en la bitácora', formatoNumero(sumar(c.bitacoraPorEntidad))],
+        ...Object.entries(c.bitacoraPorEntidad ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([k, v]) => [nombreArea(k), formatoNumero(v)])];
+    filas.forEach(([k, v]) => { const f = el('div', 'intel-lista__fila'); f.append(el('dt', null, k), el('dd', null, v)); dl.append(f); });
+    const enlace = el('a', 'intel-accion', 'Abrir la bitácora');
+    enlace.href = 'admin/bitacora';
+    card.append(dl, enlace);
+    const docs = el('article', 'intel-panel');
+    docs.append(el('h3', 'intel-panel__titulo', 'Revisión de identidad'));
+    const dl2 = el('dl', 'intel-lista');
+    [['Por verificar', c.documentosPorEstado?.PENDIENTE ?? 0], ['Verificados', c.documentosPorEstado?.VERIFICADO ?? 0], ['Rechazados', c.documentosPorEstado?.RECHAZADO ?? 0],
+        ['Cambios de correo sin confirmar', c.correosPendientes ?? 0]]
+        .forEach(([k, v]) => { const f = el('div', 'intel-lista__fila'); f.append(el('dt', null, k), el('dd', null, formatoNumero(v))); dl2.append(f); });
+    const enlaceDocs = el('a', 'intel-accion', 'Abrir documentos');
+    enlaceDocs.href = 'admin/documentos';
+    docs.append(dl2, enlaceDocs);
+    $('#intel-control').replaceChildren(card, docs);
 }
 
-async function cargarTransportistas(pagina = 1) {
+// ───── Personas y actividades ─────
+
+function pintarResumenTransporte(d) {
+    const ofertas = d.transporte.ofertasPorEstado ?? {};
+    const fletes = d.transporte.solicitudesFletePorEstado ?? {};
+    const mini = (rotulo, valor, tono = 'neutro') => {
+        const m = el('div', `intel-mini intel-mini--${tono}`);
+        m.append(el('span', null, rotulo), el('strong', null, formatoNumero(valor)));
+        return m;
+    };
+    $('#intel-transporte-resumen').replaceChildren(
+        mini('Transportistas activos', d.personas.transportistas.activos), mini('Ofertas activas', ofertas.ACTIVA?.total ?? 0, 'info'),
+        mini('Capacidad ofertada (cabezas)', ofertas.ACTIVA?.capacidad ?? 0, 'dato'), mini('Solicitudes recibidas', sumar(fletes)),
+        mini('Aceptadas', fletes.ACEPTADA ?? 0, 'exito'), mini('Pendientes', fletes.PENDIENTE ?? 0, 'aviso'),
+    );
+    $('#intel-transporte-resumen').setAttribute('aria-busy', 'false');
+}
+
+let cargarTransportistas = () => {};
+function iniciarTransportistas() {
+    const form = $('#intel-transportistas-filtros');
     const cuerpo = $('#intel-transportistas-cuerpo');
-    cuerpo.replaceChildren(el('p', 'intel-vacio', 'Cargando transportistas…'));
-    try {
-        const { data } = await request(`${API}?${consulta({ vista: 'TRANSPORTISTAS', pagina, tamanoPagina: 10 })}`);
-        if (!data.items.length) { cuerpo.replaceChildren(el('p', 'intel-vacio', 'No hay transportistas registrados.')); return; }
-        const contenedor = el('div', 'intel-tabla');
-        contenedor.tabIndex = 0;
-        contenedor.setAttribute('role', 'region');
-        contenedor.setAttribute('aria-label', 'Métricas por transportista');
-        const t = el('table');
-        const cab = el('tr');
-        ['Transportista', 'Ofertas activas', 'Capacidad (cabezas)', 'Vehículos', 'Solicitudes', 'Aceptadas', 'Rechazadas'].forEach((c) => { const th = el('th', null, c); th.scope = 'col'; cab.append(th); });
-        t.append(el('thead'), el('tbody'));
-        t.tHead.append(cab);
-        data.items.forEach((f) => {
-            const tr = el('tr');
-            const nombre = el('td');
-            const b = el('button', 'intel-enlace', f.nombre);
-            b.type = 'button';
-            b.addEventListener('click', () => abrirExpediente(f.personaId));
-            nombre.append(b, el('small', 'intel-tabla__sub', f.activo ? 'Activo' : 'Inactivo'));
-            tr.append(nombre, el('td', 'intel-num', formatoNumero(f.ofertasActivas)), el('td', 'intel-num', formatoNumero(f.capacidadOfertada)),
-                el('td', 'intel-num', f.vehiculos), el('td', 'intel-num', f.solicitudesRecibidas), el('td', 'intel-num', f.solicitudesAceptadas),
-                el('td', 'intel-num', f.solicitudesRechazadas));
-            t.tBodies[0].append(tr);
-        });
-        contenedor.append(t);
-        const total = Math.max(1, Math.ceil(data.total / 10));
-        const nav = el('nav', 'intel-paginas');
-        nav.setAttribute('aria-label', 'Páginas de transportistas');
-        const boton = (texto, destino, deshabilitado) => {
-            const b = el('button', 'button button--secondary button--small', texto);
-            b.type = 'button';
-            b.disabled = deshabilitado;
-            b.addEventListener('click', () => cargarTransportistas(destino));
-            return b;
-        };
-        nav.append(boton('Anterior', pagina - 1, pagina <= 1), el('span', 'intel-paginas__texto', `Página ${pagina} de ${total}`), boton('Siguiente', pagina + 1, pagina >= total));
-        cuerpo.replaceChildren(contenedor, ...(total > 1 ? [nav] : []));
-    } catch (error) {
-        cuerpo.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudieron cargar los transportistas.'));
-    }
+    let pedido = 0;
+    const cargar = cargaPaginada(cuerpo, async (pagina) => {
+        const actual = ++pedido;
+        const valores = Object.fromEntries(new FormData(form));
+        if (valores.q.trim().length < 2) delete valores.q;
+        if (!valores.estado) delete valores.estado;
+        const r = await request(`${API}?${new URLSearchParams({ vista: 'TRANSPORTISTAS', pagina, tamanoPagina: 10, ...valores })}`);
+        if (actual !== pedido) throw Object.assign(new Error(''), { obsoleta: true });
+        return r;
+    }, (data) => tabla('Métricas por transportista',
+        [['Transportista'], ['Ofertas activas', 'intel-num'], ['Capacidad', 'intel-num'], ['Vehículos', 'intel-num'], ['Solicitudes', 'intel-num'],
+            ['Aceptadas', 'intel-num'], ['Pendientes', 'intel-num'], ['Rechazadas', 'intel-num']],
+        data.items.map((f) => {
+            const nombre = el('div', 'intel-tabla__persona');
+            nombre.append(enlacePersona(f.personaId, f.nombre), etiqueta(null, f.activo ? 'Activo' : 'Inactivo', f.activo ? 'exito' : 'neutro'));
+            return [nombre, formatoNumero(f.ofertasActivas), f.capacidadOfertada === null ? '—' : formatoNumero(f.capacidadOfertada), formatoNumero(f.vehiculos),
+                formatoNumero(f.solicitudesRecibidas), formatoNumero(f.solicitudesAceptadas), formatoNumero(f.solicitudesPendientes ?? 0), formatoNumero(f.solicitudesRechazadas)];
+        })), 'Páginas de transportistas');
+    cargarTransportistas = () => cargar(1).catch(() => {});
+    let espera = 0;
+    form.addEventListener('input', (e) => { clearTimeout(espera); espera = setTimeout(cargarTransportistas, e.target.name === 'q' ? 250 : 0); });
+    form.addEventListener('submit', (e) => { e.preventDefault(); cargarTransportistas(); });
 }
 
 /** «Nombre (alias)» solo si el alias dice algo distinto del nombre. Puro. */
@@ -438,7 +737,7 @@ function cantidadYMonto(cantidad, monto) {
 }
 
 async function buscarPersonas(q) {
-    const destino = $('#intel-persona');
+    const destino = $('#intel-persona-resultados');
     const pedido = ++estado.busqueda; // al escribir rápido solo vale la última búsqueda
     destino.replaceChildren(el('p', 'intel-vacio', 'Buscando…'));
     try {
@@ -448,13 +747,13 @@ async function buscarPersonas(q) {
         const ul = el('ul', 'intel-resultados');
         data.personas.forEach((p) => {
             const li = el('li');
-            const b = el('button', 'intel-enlace', conAlias(p));
-            b.type = 'button';
+            const b = boton(conAlias(p), 'intel-resultado');
+            b.append(el('small', null, p.actividades.map((a) => etiquetaEstado(a)).join(' · ') || 'Sin actividades'));
             b.addEventListener('click', () => abrirExpediente(p.personaId));
-            li.append(b, el('small', 'intel-tabla__sub', p.actividades.map((a) => etiquetaEstado(a)).join(' · ') || 'Sin actividades'));
+            li.append(b);
             ul.append(li);
         });
-        destino.replaceChildren(ul);
+        destino.replaceChildren(el('p', 'screen-reader-only', `${data.personas.length} personas encontradas`), ul);
     } catch (error) {
         if (pedido !== estado.busqueda) return;
         destino.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudo buscar.'));
@@ -463,54 +762,69 @@ async function buscarPersonas(q) {
 
 async function abrirExpediente(personaId) {
     const destino = $('#intel-persona');
+    const pedido = ++estado.expediente;
     destino.replaceChildren(el('p', 'intel-vacio', 'Cargando expediente…'));
-    destino.closest('.intel-panel')?.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    destino.scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
     try {
         const { data } = await request(`${API}?vista=PERSONA&personaId=${Number(personaId)}`);
+        if (pedido !== estado.expediente) return;
         const x = data.expediente;
         const card = el('article', 'intel-expediente');
-        card.append(el('h3', 'intel-panel__titulo', conAlias(x)),
-            el('p', 'intel-nota', `${x.activa ? 'Cuenta activa' : 'Cuenta inactiva'} · documento ${DOCUMENTO[x.documento] ?? 'sin enviar'}`));
-        const bloque = (titulo, filas) => {
+        const titulo = el('h4', 'intel-expediente__nombre', conAlias(x));
+        const estadoCuenta = el('div', 'intel-expediente__estado');
+        estadoCuenta.append(etiqueta(null, x.activa ? 'Cuenta activa' : 'Cuenta inactiva', x.activa ? 'exito' : 'neutro'),
+            el('span', 'intel-nota', `Identidad ${DOCUMENTO[x.documento] ?? 'sin enviar'}`),
+            el('span', 'intel-nota', [x.comprador && 'Comprador', x.vendedor && 'Vendedor', x.transportista && 'Transportista'].filter(Boolean).join(' · ') || 'Sin actividades'));
+        card.append(titulo, estadoCuenta);
+        const bloque = (rotulo, filas) => {
             const sec = el('section', 'intel-expediente__bloque');
-            sec.append(el('h4', null, titulo));
+            sec.append(el('h5', null, rotulo));
             const dl = el('dl', 'intel-lista');
             filas.forEach(([k, v]) => { const f = el('div', 'intel-lista__fila'); f.append(el('dt', null, k), el('dd', null, v)); dl.append(f); });
             sec.append(dl);
             return sec;
         };
-        const conteo = (o) => Object.entries(o ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${v}`).join(' · ') || '—';
-        if (x.comprador) card.append(bloque('Como comprador', [['Pujas', formatoNumero(x.comprador.pujas)], ['Subastas ganadas', formatoNumero(x.comprador.subastasGanadas)],
+        const conteo = (o) => Object.entries(o ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${v}`).join(' · ') || '0';
+        const bloques = el('div', 'intel-expediente__bloques');
+        if (x.comprador) bloques.append(bloque('Como comprador', [['Pujas', formatoNumero(x.comprador.pujas)], ['Subastas ganadas', formatoNumero(x.comprador.subastasGanadas)],
             ['Solicitudes', conteo(x.comprador.solicitudes)], ['Compras', cantidadYMonto(x.comprador.compras, x.comprador.montoComprado)],
             ['Me interesa', formatoNumero(x.comprador.meInteresa)]]));
-        if (x.vendedor) card.append(bloque('Como vendedor', [['Fincas', formatoNumero(x.vendedor.fincas)], ['Animales', formatoNumero(x.vendedor.animales)],
+        if (x.vendedor) bloques.append(bloque('Como vendedor', [['Fincas', formatoNumero(x.vendedor.fincas)], ['Animales', formatoNumero(x.vendedor.animales)],
             ['Publicaciones', formatoNumero(x.vendedor.publicaciones)], ['Subastas', conteo(x.vendedor.subastas)],
             ['Ventas', cantidadYMonto(x.vendedor.ventas, x.vendedor.montoVendido)]]));
-        if (x.transportista) card.append(bloque('Como transportista', [['Estado', x.transportista.activo ? 'Activo' : 'Inactivo'], ['Ofertas', conteo(x.transportista.ofertas)],
+        if (x.transportista) bloques.append(bloque('Como transportista', [['Estado', x.transportista.activo ? 'Activo' : 'Inactivo'], ['Ofertas', conteo(x.transportista.ofertas)],
             ['Capacidad ofertada', formatoNumero(x.transportista.capacidadOfertada)], ['Vehículos', formatoNumero(x.transportista.vehiculos)],
-            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)]]));
-        if (!x.comprador && !x.vendedor && !x.transportista) card.append(el('p', 'intel-vacio', 'Sin actividades registradas.'));
+            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)], ['Viajes realizados', 'Todavía no disponible']]));
+        if (bloques.childElementCount) card.append(bloques); else card.append(el('p', 'intel-vacio', 'Sin actividades registradas.'));
         destino.replaceChildren(card);
+        destino.focus({ preventScroll: true });
     } catch (error) {
+        if (pedido !== estado.expediente) return;
         destino.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudo cargar el expediente.'));
     }
 }
+
+// ───── Carga ─────
 
 async function cargar() {
     const pedido = ++estado.pedido;
     const form = $('#intel-periodo');
     estado.periodo = parametrosPeriodo(Object.fromEntries(new FormData(form)));
-    const boton = $('#dashboard-refresh');
+    const botonActualizar = $('#dashboard-refresh');
     const status = $('#dashboard-status');
-    boton.disabled = true;
+    botonActualizar.disabled = true;
     status.textContent = 'Actualizando indicadores…';
     try {
         const { data } = await request(`${API}?${consulta()}`);
         if (pedido !== estado.pedido) return; // solo vale la última respuesta
+        estado.resumen = data;
         pintarKpis(data);
         pintarRed(data.personas);
-        pintarArbol(data);
+        pintarAreas(data);
         pintarControl(data);
+        pintarResumenTransporte(data);
+        pintarAtencion(data, estado.diagnosticos ?? []);
+        cargarDiagnosticos(data);
         cargarTransportistas();
         const hora = new Intl.DateTimeFormat('es-CR', { hour: '2-digit', minute: '2-digit', timeZone: ZONA }).format(new Date(data.generado));
         status.textContent = `Periodo ${textoPeriodo(data.periodo)} · actualizado a las ${hora}.`;
@@ -520,7 +834,7 @@ async function cargar() {
         $('#intel-arbol').setAttribute('aria-busy', 'false');
         $('#intel-arbol').replaceChildren(el('p', 'intel-error', 'No se pudieron cargar los procesos. Usa «Actualizar» para reintentar.'));
     } finally {
-        if (pedido === estado.pedido) boton.disabled = false;
+        if (pedido === estado.pedido) botonActualizar.disabled = false;
     }
 }
 
@@ -533,16 +847,21 @@ function iniciar() {
         cargar();
     });
     form.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
+    const dialogo = $('#intel-dialogo');
+    dialogo.querySelector('[data-cerrar-dialogo]').addEventListener('click', cerrarDialogo);
+    dialogo.addEventListener('click', (e) => { if (e.target === dialogo) cerrarDialogo(); }); // clic fuera del contenido
+    dialogo.addEventListener('close', () => { if (origenDialogo?.isConnected) origenDialogo.focus(); origenDialogo = null; });
     const busqueda = $('#intel-busqueda');
     let espera = 0;
     const buscar = () => {
         clearTimeout(espera);
         const q = busqueda.elements.q.value.trim();
-        if (q.length < 2) { estado.busqueda++; $('#intel-persona').replaceChildren(); return; }
+        if (q.length < 2) { estado.busqueda++; $('#intel-persona-resultados').replaceChildren(); return; }
         espera = setTimeout(() => buscarPersonas(q), 250);
     };
     busqueda.addEventListener('input', buscar);
     busqueda.addEventListener('submit', (e) => { e.preventDefault(); buscar(); });
+    iniciarTransportistas();
     cargar();
 }
 

@@ -1,7 +1,8 @@
-/* Centro de inteligencia (/admin/dashboard, dashboard-8). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
+/* Centro de inteligencia (/admin/dashboard, dashboard-9). Tokens --admin-* del panel (admin-v3.css, ambos temas) más dos
    semánticos propios, con los mismos significados que Mi dashboard: info = activo / en curso, data = montos. Verde,
    ámbar y gris salen de --admin-success / --admin-warning / --admin-muted. Sin banner ni imágenes decorativas. */
 body.admin-dashboard { --admin-info:#8ec5f2; --admin-data:#bdb6ea; }
+/* Rojo solo para inconsistencias confirmadas (sale de --admin-danger, ya en la paleta del panel). */
 html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-data:#574f8f; }
 
 .admin-dashboard .rural-panel__content { max-width:1500px; }
@@ -54,37 +55,6 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 .dashboard-metric--loading span { display:block; width:60%; height:12px; border-radius:20px; background:var(--admin-surface-2); }
 .dashboard-metric--loading span:nth-child(2) { width:38%; height:28px; }
 
-/* ───── Árbol de procesos (details: accesible y legible en móvil) ───── */
-.intel-arbol { display:grid; gap:12px; }
-/* Esqueleto: cuatro procesos cerrados con la altura del summary real (64px + borde). */
-.intel-proceso--cargando { display:grid; align-content:center; gap:8px; min-height:76px; padding:14px 18px; }
-.intel-proceso--cargando span { display:block; width:30%; height:14px; border-radius:20px; background:var(--admin-surface-2); }
-.intel-proceso--cargando span + span { width:45%; height:10px; }
-.intel-proceso { border:1px solid var(--admin-line); border-radius:16px; background:var(--admin-surface); }
-.intel-proceso > summary { display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; justify-content:space-between; min-height:64px; padding:14px 18px; cursor:pointer; list-style:none; }
-.intel-proceso > summary::-webkit-details-marker { display:none; }
-.intel-proceso > summary::before { color:var(--admin-text-soft); content:'▸'; transition:transform .15s; }
-.intel-proceso[open] > summary::before { transform:rotate(90deg); }
-.intel-proceso__titulos { display:grid; flex:1 1 260px; gap:2px; }
-.intel-proceso__titulos strong { color:var(--admin-text); font-size:1.02rem; }
-.intel-proceso__titulos small { color:var(--admin-text-soft); font-size:.8rem; }
-.intel-proceso__resumen { color:var(--admin-text); font-size:.9rem; font-weight:700; font-variant-numeric:tabular-nums; }
-
-.intel-nodos { display:grid; gap:0; margin:0; padding:0 18px 14px; list-style:none; }
-.intel-nodos--hijos { margin:10px 0 0 6px; padding:0 0 0 16px; border-left:2px solid var(--admin-line); }
-.intel-nodo { display:grid; gap:6px; padding:12px 0; border-top:1px solid var(--admin-line); }
-.intel-nodos--hijos > .intel-nodo { padding:8px 0; }
-.intel-nodo__cabeza { display:flex; flex-wrap:wrap; gap:6px 16px; align-items:baseline; justify-content:space-between; }
-.intel-nodo__nombre { display:inline-flex; gap:8px; align-items:center; color:var(--admin-text); font-weight:700; }
-.intel-nodo__valor { color:var(--admin-text); font-size:1.1rem; font-variant-numeric:tabular-nums; }
-.intel-nodo--sin .intel-nodo__valor { color:var(--admin-text-soft); font-size:.95rem; font-style:italic; }
-.intel-nodo__meta { margin:0; color:var(--admin-text-soft); font-size:.84rem; line-height:1.5; }
-.intel-nodo__fuente { display:flex; flex-wrap:wrap; gap:4px 14px; color:var(--admin-muted); font-size:.76rem; }
-.intel-nodo__fuente span:first-child { font-family:ui-monospace, monospace; }
-.intel-insignia { padding:1px 8px; border:1px dashed var(--admin-line-strong); border-radius:999px; color:var(--admin-text-soft); font-weight:700; }
-.intel-nodo__evidencia > summary { display:inline-flex; min-height:36px; align-items:center; color:var(--admin-primary-strong); font-size:.84rem; font-weight:700; cursor:pointer; }
-.intel-evidencia { display:grid; gap:10px; margin-top:6px; }
-
 /* Punto de estado: color + texto siempre. */
 .intel-estado { display:inline-flex; gap:7px; align-items:center; white-space:nowrap; }
 .intel-estado__punto { display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--admin-muted); }
@@ -134,16 +104,148 @@ html[data-theme='light'] body.admin-dashboard { --admin-info:#235f9c; --admin-da
 
 .admin-dashboard :is(button, a, select, input, summary, [tabindex]):focus-visible { outline:3px solid color-mix(in srgb, var(--admin-primary) 65%, transparent); outline-offset:2px; }
 
+/* ───── Requieren atención ───── */
+.intel-atencion { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
+.intel-atencion__grupo { display:grid; align-content:start; gap:8px; min-height:150px; padding:16px 18px; border:1px solid var(--admin-line); border-radius:16px; background:var(--admin-surface); }
+.intel-atencion__grupo--cargando span { display:block; width:50%; height:12px; border-radius:20px; background:var(--admin-surface-2); }
+.intel-atencion__grupo--cargando span + span { width:80%; height:10px; }
+.intel-atencion__lista { display:grid; gap:0; margin:4px 0 0; padding:0; list-style:none; }
+.intel-atencion__lista li { display:grid; grid-template-columns:minmax(0, 1fr) auto auto; gap:12px; align-items:center; min-height:44px; border-top:1px solid var(--admin-line); }
+.intel-atencion__lista .intel-estado { white-space:normal; }
+.intel-atencion__valor { color:var(--admin-text); font-size:1.15rem; font-variant-numeric:tabular-nums; }
+
+/* Acción secundaria de texto: sin coral (el coral es para la acción principal de la pantalla). */
+.intel-accion { display:inline-flex; justify-self:start; align-items:center; min-height:36px; padding:0 2px; border:0; color:var(--admin-text); background:none;
+    font:inherit; font-size:.84rem; font-weight:700; text-decoration:underline; text-decoration-color:var(--admin-line-strong); text-underline-offset:4px; cursor:pointer; }
+.intel-accion:hover { text-decoration-color:currentColor; }
+
+/* ───── Actividad comercial ───── */
+.intel-areas { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; }
+.intel-area { display:grid; grid-template-rows:auto auto 1fr auto; gap:8px; min-height:188px; padding:16px 18px; border:1px solid var(--admin-line); border-radius:16px; background:var(--admin-surface); }
+.intel-area--abierta { border-color:var(--admin-line-strong); box-shadow:inset 0 0 0 1px var(--admin-line-strong); }
+.intel-area--cargando span { display:block; width:45%; height:14px; border-radius:20px; background:var(--admin-surface-2); }
+.intel-area--cargando span:nth-child(2) { width:30%; height:28px; }
+.intel-area__cabeza { display:flex; gap:10px; align-items:center; }
+.intel-area__icono { display:grid; place-items:center; width:34px; height:34px; border-radius:10px; color:var(--admin-text-soft); background:var(--admin-surface-2); }
+.intel-area__titulo { margin:0; color:var(--admin-text); font-size:1rem; }
+.intel-area__cifra { display:flex; flex-wrap:wrap; gap:6px; align-items:baseline; margin:0; color:var(--admin-text-soft); font-size:.86rem; }
+.intel-area__cifra strong { color:var(--admin-text); font-size:1.7rem; line-height:1; font-variant-numeric:tabular-nums; }
+.intel-area__resumen { margin:0; color:var(--admin-text-soft); font-size:.84rem; line-height:1.45; }
+.intel-area__boton { justify-self:start; }
+
+.intel-proceso-panel { display:grid; gap:16px; margin-top:12px; padding:18px; border:1px solid var(--admin-line-strong); border-radius:16px; background:var(--admin-surface); }
+.intel-proceso-panel__cabeza { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:4px 16px; align-items:center; }
+.intel-proceso-panel__cabeza h3 { margin:0; color:var(--admin-text); font-size:1.1rem; }
+.intel-proceso-panel__cabeza .intel-nota { grid-column:1; }
+.intel-proceso-panel__cabeza .button { grid-column:2; grid-row:1 / span 2; }
+.intel-etapas { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; margin:0; padding:0; list-style:none; counter-reset:etapa; }
+.intel-etapa { display:grid; align-content:start; gap:8px; padding:14px; border:1px solid var(--admin-line); border-top:3px solid var(--admin-info); border-radius:12px; background:var(--admin-surface-2); }
+.intel-etapa:last-child { border-top-color:var(--admin-success); }
+.intel-etapa__cabeza { display:grid; gap:2px; }
+.intel-etapa__cabeza h4,
+.intel-salida h4 { margin:0; color:var(--admin-text); font-size:.95rem; }
+.intel-etapa__paso { color:var(--admin-text-soft); font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.intel-etapa__valor { color:var(--admin-text); font-size:1.45rem; line-height:1.1; font-variant-numeric:tabular-nums; }
+.intel-etapa__texto { margin:0; color:var(--admin-text-soft); font-size:.82rem; line-height:1.45; }
+.intel-etapa__estados { display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; list-style:none; }
+.intel-chip { display:inline-flex; gap:8px; align-items:center; min-height:32px; padding:0 10px; border:1px solid var(--admin-line); border-radius:999px; color:var(--admin-text); background:var(--admin-surface); font:inherit; font-size:.8rem; cursor:pointer; }
+.intel-chip strong { font-variant-numeric:tabular-nums; }
+.intel-chip:hover { border-color:var(--admin-line-strong); }
+.intel-chip--fijo { cursor:default; }
+.intel-proceso-panel__pie { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px; }
+.intel-salida { display:grid; align-content:start; gap:6px; padding:12px 14px; border:1px dashed var(--admin-line-strong); border-radius:12px; }
+.intel-salida--sin h4 { color:var(--admin-text-soft); }
+
+/* ───── Personas y actividades ───── */
+.intel-personas { display:grid; grid-template-columns:minmax(0, 5fr) minmax(0, 7fr); gap:12px; align-items:start; }
+.intel-busqueda label span { color:var(--admin-text); font-weight:700; }
+.intel-resultados-caja:empty,
+.intel-expediente-caja:empty { display:none; }
+.intel-resultados li { display:block; }
+.intel-resultado { display:grid; gap:2px; width:100%; min-height:44px; padding:8px 12px; border:1px solid var(--admin-line); border-radius:10px; color:var(--admin-text); background:var(--admin-surface-2);
+    font:inherit; font-weight:700; text-align:left; cursor:pointer; }
+.intel-resultado:hover { border-color:var(--admin-line-strong); }
+.intel-resultado small { color:var(--admin-text-soft); font-weight:400; }
+.intel-expediente-caja { padding-top:12px; border-top:1px solid var(--admin-line); }
+.intel-expediente__nombre { margin:0; color:var(--admin-text); font-size:1.05rem; }
+.intel-expediente__estado { display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; }
+.intel-expediente__bloques { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px; }
+.intel-expediente__bloque { padding:12px; border:1px solid var(--admin-line); border-radius:12px; background:var(--admin-surface-2); }
+.intel-expediente__bloque h5 { margin:0 0 4px; color:var(--admin-text); font-size:.9rem; }
+.intel-mini-kpis { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:8px; }
+.intel-mini { display:grid; gap:2px; min-height:64px; padding:10px 12px; border:1px solid var(--admin-line); border-left:3px solid var(--admin-line-strong); border-radius:10px; background:var(--admin-surface-2); }
+.intel-mini span { color:var(--admin-text-soft); font-size:.78rem; }
+.intel-mini strong { color:var(--admin-text); font-size:1.25rem; font-variant-numeric:tabular-nums; }
+.intel-mini--info { border-left-color:var(--admin-info); }
+.intel-mini--dato { border-left-color:var(--admin-data); }
+.intel-mini--exito { border-left-color:var(--admin-success); }
+.intel-mini--aviso { border-left-color:var(--admin-warning); }
+.intel-mini--cargando span { display:block; width:60%; height:10px; border-radius:20px; background:var(--admin-surface); }
+.intel-filtros { display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+.intel-filtros .intel-campo { flex:1 1 150px; }
+.intel-tabla__persona { display:grid; gap:4px; justify-items:start; }
+.intel-tabla table { font-size:.88rem; }
+.intel-tabla th { font-size:.8rem; }
+
+/* ───── Calidad de datos ───── */
+.intel-calidad { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; align-items:start; }
+.intel-calidad__grupo,
+.intel-calidad__sanos { display:grid; grid-column:1 / -1; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:12px; }
+.intel-calidad__grupo > h3,
+.intel-calidad__sanos > h3 { grid-column:1 / -1; margin:8px 0 0; }
+.intel-diag { display:grid; align-content:start; gap:8px; min-height:150px; padding:16px 18px; border:1px solid var(--admin-line); border-radius:16px; background:var(--admin-surface); }
+.intel-diag--cargando span { display:block; width:55%; height:14px; border-radius:20px; background:var(--admin-surface-2); }
+.intel-diag__cabeza { display:flex; gap:12px; align-items:baseline; justify-content:space-between; }
+.intel-diag__titulo { margin:0; color:var(--admin-text); font-size:1rem; }
+.intel-diag__total { color:var(--admin-text); font-size:1.5rem; font-variant-numeric:tabular-nums; }
+.intel-diag__dato { margin:0; color:var(--admin-text-soft); font-size:.76rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; }
+.intel-sanos { display:flex; flex-wrap:wrap; grid-column:1 / -1; gap:8px 20px; margin:0; padding:0; list-style:none; font-size:.86rem; }
+.intel-politica { display:grid; gap:10px; margin:0; }
+.intel-politica dt { color:var(--admin-text-soft); font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.intel-politica dd { margin:2px 0 0; color:var(--admin-text); line-height:1.5; }
+.intel-diag-filas { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+.intel-diag-fila { display:grid; gap:6px; padding:12px; border:1px solid var(--admin-line); border-radius:12px; background:var(--admin-surface-2); }
+.intel-diag-fila__cabeza { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; color:var(--admin-text); }
+.intel-diag-fila__causa { margin:0; color:var(--admin-text); font-size:.88rem; }
+.intel-diag-fila__datos { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:6px 14px; margin:0; font-size:.82rem; }
+.intel-diag-fila__datos dt { color:var(--admin-text-soft); }
+.intel-diag-fila__datos dd { margin:0; color:var(--admin-text); font-weight:700; }
+.intel-estado--peligro .intel-estado__punto { border-radius:2px; background:var(--admin-danger); transform:rotate(45deg); }
+.intel-estado--peligro { color:var(--admin-danger); font-weight:700; }
+
+/* ───── Auditoría ───── */
+.intel-auditoria { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; align-items:start; }
+
+/* ───── Diálogo de evidencia ───── */
+.intel-dialogo { width:min(980px, calc(100vw - 32px)); max-height:calc(100vh - 48px); padding:0; overflow:auto; border:1px solid var(--admin-line-strong); border-radius:16px; color:var(--admin-text); background:var(--admin-surface); }
+.intel-dialogo::backdrop { background:rgba(10, 14, 12, .55); }
+.intel-dialogo__cabeza { position:sticky; top:0; z-index:1; display:flex; gap:12px; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--admin-line); background:var(--admin-surface); }
+.intel-dialogo__cabeza h2 { margin:0; font-size:1.1rem; }
+.intel-dialogo__cuerpo { display:grid; gap:12px; padding:16px 18px 20px; }
+
 @media (min-width:1281px) { .intel-kpi { min-height:154px; } }
-@media (max-width:1280px) { .intel-kpis { grid-template-columns:repeat(3, minmax(0, 1fr)); } }
-@media (max-width:1000px) { .dashboard-metrics { grid-template-columns:repeat(2, minmax(0, 1fr)); } .intel-dos { grid-template-columns:1fr; } }
+@media (max-width:1280px) { .intel-kpis { grid-template-columns:repeat(3, minmax(0, 1fr)); } .intel-areas { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+@media (max-width:1100px) { .intel-personas { grid-template-columns:1fr; } }
+@media (max-width:1000px) { .dashboard-metrics { grid-template-columns:repeat(2, minmax(0, 1fr)); } .intel-atencion, .intel-auditoria { grid-template-columns:1fr; } }
 @media (max-width:700px) {
     .intel-kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-    .dashboard-metrics { grid-template-columns:1fr; }
-    .intel-nodos { padding:0 12px 12px; }
-    .intel-proceso > summary { padding:12px; }
+    .intel-mini-kpis { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .intel-areas { grid-template-columns:1fr; }
+    .intel-area { min-height:0; }
+    .intel-proceso-panel__cabeza { grid-template-columns:1fr; }
+    .intel-proceso-panel__cabeza .button { grid-column:1; grid-row:auto; justify-self:start; }
+    .intel-etapas { grid-template-columns:1fr; }
+    .intel-calidad, .intel-calidad__grupo, .intel-calidad__sanos { grid-template-columns:1fr; }
+    /* Tablas en filas apiladas: cada celda con su encabezado, sin scroll lateral. */
+    .intel-tabla { overflow:visible; border:0; }
+    .intel-tabla table { min-width:0; }
+    .intel-tabla thead { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+    .intel-tabla tr { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:6px 12px; margin-bottom:10px; padding:12px; border:1px solid var(--admin-line); border-radius:12px; }
+    .intel-tabla td { display:grid; gap:2px; padding:0; border:0; text-align:left; }
+    .intel-tabla td:first-child { grid-column:1 / -1; }
+    .intel-tabla td::before { color:var(--admin-text-soft); font-size:.72rem; font-weight:700; content:attr(data-etiqueta); }
+    .intel-num { text-align:left; }
+    .intel-atencion__lista li { grid-template-columns:minmax(0, 1fr) auto; }
+    .intel-atencion__lista li > :last-child { grid-column:1 / -1; }
 }
 @media (max-width:420px) { .intel-kpis { grid-template-columns:1fr; } }
-@media (prefers-reduced-motion:reduce) { .intel-proceso > summary::before { transition:none; } }
-/* Transportistas tiene 7 columnas: ocupa todo el ancho y la búsqueda queda debajo. */
-#intel-transportistas { grid-column:1 / -1; }
