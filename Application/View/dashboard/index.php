@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-7">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-10">
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-11">
     <?php require dirname(__DIR__) . '/shared/admin-estilos.php'; ?>
     <script type="module" src="js/dashboard.js?v=intel-8"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
