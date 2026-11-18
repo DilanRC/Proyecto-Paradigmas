@@ -701,3 +701,5 @@ body.rural-panel {
 /* Sin saltos al cargar (CLS): la barra de desplazamiento ocupa su lugar desde el inicio; si aparece cuando llega la
    tabla, todo el panel se corre a la izquierda. La altura reservada de la tabla está en admin-v3.css. */
 html { scrollbar-gutter:stable; }
+/* Estado en vivo del encabezado («Conectando…», «En vivo», «Reconectando…»): ancho del texto más largo, sin saltos. */
+.rural-panel .page-header > [role="status"] { min-width:14ch; white-space:nowrap; text-align:right; }
