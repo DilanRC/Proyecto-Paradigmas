@@ -965,7 +965,7 @@ final class AnimalComercial
         'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u'];
 
     /** "San José" y "san jose" deben encontrar lo mismo en MySQL y en Postgres. */
-    private static function sinTildesSql(string $expresion): string
+    public static function sinTildesSql(string $expresion): string
     {
         $sql = "LOWER({$expresion})";
         foreach (self::TILDES as $con => $sin) {
@@ -974,7 +974,7 @@ final class AnimalComercial
         return $sql;
     }
 
-    private static function sinTildesTexto(string $texto): string
+    public static function sinTildesTexto(string $texto): string
     {
         return strtr(mb_strtolower(trim($texto), 'UTF-8'), self::TILDES);
     }

@@ -132,5 +132,28 @@ if ($personaId > 0) {
 test_assert($controlador->procesar('GET', ['vista' => 'PERSONA', 'personaId' => '2147483647'])['status'] === 404, 'persona inexistente → 404');
 $busqueda = $ok($controlador->procesar('GET', ['vista' => 'PERSONA', 'q' => 'zz-nadie-se-llama-asi']));
 test_assert($busqueda['personas'] === [], 'búsqueda sin resultados');
+test_assert($ok($controlador->procesar('GET', ['vista' => 'PERSONA', 'q' => '%%']))['personas'] === [], '«%» se busca como texto, no como comodín');
+
+// Búsqueda con 2 letras, sin tildes ni mayúsculas: una Persona temporal «Ñandú Ávila» aparece con «AV» y con «ña».
+$idTemporal = (int) $uno('SELECT COALESCE(MAX(tbpersonaid), 0) + 1 FROM tbpersona');
+// Copia de una fila existente con id, nombre y alias propios (el esquema no tiene UNIQUE; se borra al final).
+$columnas = array_column($db->query("SELECT column_name AS c FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'tbpersona'")->fetchAll(PDO::FETCH_ASSOC), 'c');
+$propias = ['tbpersonaid' => '?', 'tbpersonanombre' => '?', 'tbpersonaalias' => '?'];
+$seleccion = array_map(static fn (string $c): string => $propias[$c] ?? $c, $columnas);
+$db->prepare('INSERT INTO tbpersona (' . implode(', ', $columnas) . ') SELECT ' . implode(', ', $seleccion)
+    . ' FROM tbpersona WHERE tbpersonaid = (SELECT MIN(tbpersonaid) FROM (SELECT tbpersonaid FROM tbpersona) x)')
+    ->execute(array_values(array_filter(array_map(static fn (string $c) => ['tbpersonaid' => $idTemporal, 'tbpersonanombre' => 'Ñandú Ávila', 'tbpersonaalias' => 'zzbusq'][$c] ?? null, $columnas))));
+try {
+    foreach (['AV', 'ña', 'nandu', 'zzb'] as $texto) {
+        $ids = array_column($ok($controlador->procesar('GET', ['vista' => 'PERSONA', 'q' => $texto]))['personas'], 'personaId');
+        test_assert(in_array($idTemporal, $ids, true), "«{$texto}» encuentra a la persona por nombre o alias sin tildes");
+    }
+    $primera = $ok($controlador->procesar('GET', ['vista' => 'PERSONA', 'q' => 'ávi']))['personas'][0]['personaId'] ?? null;
+    test_assert($primera === $idTemporal || $uno("SELECT COUNT(*) FROM tbpersona WHERE LOWER(tbpersonanombre) LIKE 'avi%'") > 0,
+        'quien empieza una palabra con el texto va primero');
+} finally {
+    $db->prepare('DELETE FROM tbpersona WHERE tbpersonaid = ?')->execute([$idTemporal]);
+}
 
 echo "OK admin_dashboard_test\n";

@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/panel.css?v=official-shell-2">
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
-    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-6">
-    <script type="module" src="js/dashboard.js?v=intel-4"></script>
+    <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-7">
+    <script type="module" src="js/dashboard.js?v=intel-5"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel admin-dashboard">
@@ -59,7 +59,7 @@
                 <div>
                     <span class="label">Centro de inteligencia</span>
                     <h1 id="page-title">Actividad de Ganado Cerca</h1>
-                    <p class="intel-cabecera__texto">Cada número sale de un hecho guardado. Abre un proceso para ver su definición, su fuente y las filas que lo forman.</p>
+                    <p class="intel-cabecera__texto">Lo que pasa en la plataforma: personas, ventas, subastas y transporte. Abre un área para ver sus registros.</p>
                 </div>
                 <form class="intel-periodo" id="intel-periodo" aria-label="Periodo del análisis" novalidate>
                     <label class="intel-campo"><span>Periodo</span><select name="periodo">
@@ -81,31 +81,28 @@
                 <div class="intel-kpis" id="intel-kpis" aria-busy="true">
                     <?= str_repeat('<article class="intel-kpi intel-kpi--cargando"><span></span><span></span><span></span></article>', 6) ?>
                 </div>
-                <h3 class="intel-subtitulo">Red ganadera (foto actual)</h3>
+                <h3 class="intel-subtitulo">Red ganadera hoy</h3>
                 <div class="dashboard-metrics" id="dashboard-metrics" aria-busy="true">
                     <?= str_repeat('<article class="dashboard-metric dashboard-metric--loading"><span></span><span></span><span></span></article>', 4) ?>
                 </div>
             </section>
 
             <section class="intel-zona" aria-labelledby="intel-arbol-titulo">
-                <div class="intel-zona__cabeza">
-                    <h2 class="intel-zona__titulo" id="intel-arbol-titulo">Procesos de la plataforma</h2>
-                    <p class="intel-zona__ayuda">Persona → actividad → acción → hecho → estado → indicador → evidencia. Lo marcado «sin instrumentar» no tiene un flujo que lo registre: no es un cero.</p>
-                </div>
-                <div class="intel-arbol" id="intel-arbol" aria-busy="true"><p class="screen-reader-only" role="status">Cargando procesos…</p><?= str_repeat('<div class="intel-proceso intel-proceso--cargando" aria-hidden="true"><span></span><span></span></div>', 4) ?></div>
+                <h2 class="intel-zona__titulo" id="intel-arbol-titulo">Actividad por área</h2>
+                <div class="intel-arbol" id="intel-arbol" aria-busy="true"><p class="screen-reader-only" role="status">Cargando áreas…</p><?= str_repeat('<div class="intel-proceso intel-proceso--cargando" aria-hidden="true"><span></span><span></span></div>', 4) ?></div>
             </section>
 
             <section class="intel-zona" aria-labelledby="intel-actividad-titulo">
                 <h2 class="intel-zona__titulo" id="intel-actividad-titulo">Análisis por actividad</h2>
                 <div class="intel-dos">
-                    <details class="intel-panel" id="intel-transportistas">
-                        <summary><span><strong>Transportistas</strong><small>Ofertas, capacidad, solicitudes y viajes registrados de cada uno</small></span></summary>
-                        <div class="intel-panel__cuerpo" data-contenido></div>
-                    </details>
+                    <section class="intel-panel intel-panel--abierto" id="intel-transportistas" aria-labelledby="intel-transportistas-titulo">
+                        <h3 class="intel-panel__titulo" id="intel-transportistas-titulo">Transportistas</h3>
+                        <div class="intel-panel__cuerpo" id="intel-transportistas-cuerpo"><p class="intel-vacio">Cargando transportistas…</p></div>
+                    </section>
                     <div class="intel-panel intel-panel--abierto">
                         <form class="intel-busqueda" id="intel-busqueda" role="search">
-                            <label for="intel-q"><strong>Expediente de una persona</strong><small>Comprador, vendedor y transportista en una sola identidad</small></label>
-                            <div class="intel-busqueda__fila"><input id="intel-q" name="q" type="search" minlength="2" maxlength="80" autocomplete="off" placeholder="Nombre o alias"><button class="button button--secondary button--small" type="submit">Buscar</button></div>
+                            <label for="intel-q"><strong>Buscar una persona</strong><small>Escribe al menos 2 letras del nombre o el alias</small></label>
+                            <div class="intel-busqueda__fila"><input id="intel-q" name="q" type="search" maxlength="80" autocomplete="off" placeholder="Nombre o alias" aria-controls="intel-persona"></div>
                         </form>
                         <div id="intel-persona" class="intel-panel__cuerpo" aria-live="polite"></div>
                     </div>
@@ -113,10 +110,9 @@
             </section>
 
             <section class="intel-zona" aria-labelledby="intel-control-titulo">
-                <h2 class="intel-zona__titulo" id="intel-control-titulo">Calidad de datos y control</h2>
+                <h2 class="intel-zona__titulo" id="intel-control-titulo">Revisión de datos</h2>
                 <div class="intel-dos" id="intel-control"></div>
             </section>
-            <p class="rural-panel__footnote">Centro de inteligencia · Fuente: api/v1/admin/dashboard (solo lectura, autorizado en el servidor)</p>
         </div>
     </main>
 </body>

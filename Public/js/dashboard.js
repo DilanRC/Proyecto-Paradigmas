@@ -10,7 +10,7 @@ import { el } from './dashboard-graficos.js?v=graficos-3';
 const API = 'api/v1/admin/dashboard';
 const ZONA = 'America/Costa_Rica';
 const $ = (selector) => document.querySelector(selector);
-const estado = { periodo: {}, pedido: 0 };
+const estado = { periodo: {}, pedido: 0, busqueda: 0 };
 
 // ───────────────────────────── Funciones puras ─────────────────────────────
 
@@ -57,8 +57,8 @@ export function textoPeriodo(periodo = {}) {
 }
 
 /**
- * Procesos del árbol a partir del resumen. Cada nodo: { nombre, valor, definicion, fuente, periodo ('periodo' | 'actual'),
- * instrumentado, evidencia: { nodo, estado } | null, hijos }. Puro: la vista solo lo dibuja.
+ * Áreas del panel a partir del resumen. Cada indicador: { nombre, valor, evidencia: { nodo, estado } | null, hijos, tono }.
+ * Solo se muestra lo que la plataforma registra: lo que no tiene registro no aparece (ni como cero). Puro.
  */
 export function procesos(d) {
     const s = d.subastas;
@@ -66,88 +66,74 @@ export function procesos(d) {
     const t = d.transporte;
     const inv = d.inventario;
     const canal = (nombre) => c.ventasPorCanal?.[nombre] ?? { animales: 0, operaciones: 0, monto: 0 };
-    const nodo = (nombre, valor, definicion, fuente, extra = {}) => ({ nombre, valor, definicion, fuente, periodo: 'periodo', instrumentado: true, evidencia: null, hijos: [], ...extra });
-    const viajes = t.viajesRegistrados;
+    const nodo = (nombre, valor, extra = {}) => ({ nombre, valor, evidencia: null, hijos: [], ...extra });
+    const porEstado = (estados, conteos, nodoEvidencia) => estados.map((e) => nodo(etiquetaEstado(e), formatoNumero(conteos?.[e] ?? 0),
+        { evidencia: { nodo: nodoEvidencia, estado: e }, tono: tonoEstado(e) }));
+    const ofertas = t.ofertasPorEstado ?? {};
 
     return [
         {
-            clave: 'directa', titulo: 'Comercialización directa', ruta: 'Publicación → Me interesa → Solicitud → Respuesta → Venta',
-            resumen: `${formatoNumero(canal('SOLICITUD').operaciones)} ventas por solicitud`,
+            clave: 'directa', titulo: 'Compras directas',
+            resumen: `${formatoNumero(canal('SOLICITUD').operaciones)} ventas`,
             nodos: [
-                nodo('Me interesa registrados', formatoNumero(c.interes.registros), `Marcas «Me interesa» del periodo, de ${formatoNumero(c.interes.personas)} personas distintas sobre ${formatoNumero(c.interes.publicaciones)} publicaciones. No todo comprador pasa por aquí.`,
-                    'tbanimalpublicacioninteraccion (tipo ME_INTERESA, acción REGISTRAR)', { evidencia: { nodo: 'interes', estado: 'REGISTRAR' } }),
-                nodo('Solicitudes creadas', formatoNumero(sumar(c.solicitudesCreadas)), 'Solicitudes de compra con fecha de creación en el periodo, por su estado actual.',
-                    'tbcomprasolicitud.tbcomprasolicitudfecha', {
-                        evidencia: { nodo: 'solicitudes', estado: null },
-                        hijos: ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'].map((e) => nodo(etiquetaEstado(e), formatoNumero(c.solicitudesCreadas?.[e] ?? 0),
-                            `Creadas en el periodo que hoy están ${etiquetaEstado(e).toLowerCase()}.`, 'tbcomprasolicitud', { evidencia: { nodo: 'solicitudes', estado: e }, tono: tonoEstado(e) })),
-                    }),
-                nodo('Respuestas del vendedor', formatoNumero(sumar(c.solicitudesRespondidas)), 'Solicitudes respondidas (aceptadas o rechazadas) con fecha de respuesta en el periodo.',
-                    'tbcomprasolicitud.tbcomprasolicitudrespuestafecha'),
-                nodo('Ventas originadas en solicitudes', `${formatoNumero(canal('SOLICITUD').operaciones)} · ${formatoColones(canal('SOLICITUD').monto)}`,
-                    `Solicitudes aceptadas que registraron venta (${formatoNumero(canal('SOLICITUD').animales)} animales: un lote registra una venta por animal). Monto acordado, no pago confirmado.`,
-                    'tbventa con tbcomprasolicitudid (la compra espejo no se suma)', { evidencia: { nodo: 'ventas', estado: 'SOLICITUD' }, tono: 'exito' }),
+                nodo('Me interesa', formatoNumero(c.interes.registros), { detalle: `${formatoNumero(c.interes.personas)} personas · ${formatoNumero(c.interes.publicaciones)} publicaciones`, evidencia: { nodo: 'interes', estado: 'REGISTRAR' } }),
+                nodo('Solicitudes de compra', formatoNumero(sumar(c.solicitudesCreadas)), {
+                    evidencia: { nodo: 'solicitudes', estado: null },
+                    hijos: porEstado(['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'], c.solicitudesCreadas, 'solicitudes'),
+                }),
+                nodo('Respondidas por el vendedor', formatoNumero(sumar(c.solicitudesRespondidas))),
+                nodo('Ventas', `${formatoNumero(canal('SOLICITUD').operaciones)} · ${formatoColones(canal('SOLICITUD').monto)}`,
+                    { detalle: `${formatoNumero(canal('SOLICITUD').animales)} animales`, evidencia: { nodo: 'ventas', estado: 'SOLICITUD' }, tono: 'exito' }),
             ],
         },
         {
-            clave: 'subastas', titulo: 'Subastas', ruta: 'Publicar animal → Subasta → Pujas → Adjudicación → Venta',
+            clave: 'subastas', titulo: 'Subastas',
             resumen: `${formatoNumero(s.estados.adjudicadas.total)} adjudicadas · ${formatoColones(s.precioPromedio.montoTotal)}`,
             nodos: [
-                nodo('Subastas del periodo', formatoNumero(s.estados.activas.total + s.estados.cerradas.total + s.estados.canceladas.total),
-                    'Por la fecha del hecho: fin programado si cerró, la cancelación, o el inicio si sigue activa.', 'tbsubasta', {
-                        evidencia: { nodo: 'subastas', estado: null },
-                        hijos: [
-                            nodo('Activas', formatoNumero(s.estados.activas.total), 'Reciben pujas ahora.', 'tbsubasta (ACTIVA)', { evidencia: { nodo: 'subastas', estado: 'ACTIVA' }, tono: 'info' }),
-                            nodo('Adjudicadas', formatoNumero(s.estados.adjudicadas.total), 'Cerraron con una puja ganadora.', 'tbsubasta (FINALIZADA)', { evidencia: { nodo: 'subastas', estado: 'FINALIZADA' }, tono: 'exito' }),
-                            nodo('Desiertas', formatoNumero(s.estados.desiertas.total), 'Cerraron sin ninguna puja.', 'tbsubasta (DESIERTA)', { evidencia: { nodo: 'subastas', estado: 'DESIERTA' }, tono: 'aviso' }),
-                            nodo('Canceladas', formatoNumero(s.estados.canceladas.total), 'El vendedor la canceló sin pujas. No es una venta ni una desierta.', 'tbsubasta (CANCELADA)', { evidencia: { nodo: 'subastas', estado: 'CANCELADA' }, tono: 'neutro' }),
-                        ],
-                    }),
-                nodo('Pujas válidas', formatoNumero(s.pujas), `De ${formatoNumero(s.compradores.total)} compradores distintos. Toda puja guardada ya cumplió el mínimo.`, 'tbsubastapuja'),
-                nodo('Porcentaje de éxito', formatoPorcentaje(s.exito.porcentaje), 'Adjudicadas ÷ (adjudicadas + desiertas). Sin cerradas no se calcula.', 'tbsubasta'),
-                nodo('Monto adjudicado', formatoColones(s.precioPromedio.montoTotal), `Suma de las pujas ganadoras. Promedio por animal ${formatoColones(s.precioPromedio.valor)}; incremento promedio ${formatoPorcentaje(s.incrementoPromedio.porcentaje)}. Una adjudicación no es un pago confirmado.`,
-                    'tbsubastapuja ganadora', { evidencia: { nodo: 'subastas', estado: 'FINALIZADA' }, tono: 'dato' }),
-                nodo('Ventas por subasta', `${formatoNumero(canal('SUBASTA').animales)} · ${formatoColones(canal('SUBASTA').monto)}`, 'Cada adjudicación registra una venta (y una compra espejo que no se suma).',
-                    'tbventa (origen API_SUBASTAS)', { evidencia: { nodo: 'ventas', estado: 'SUBASTA' }, tono: 'exito' }),
+                nodo('Subastas', formatoNumero(s.estados.activas.total + s.estados.cerradas.total + s.estados.canceladas.total), {
+                    evidencia: { nodo: 'subastas', estado: null },
+                    hijos: [
+                        nodo('Activas', formatoNumero(s.estados.activas.total), { evidencia: { nodo: 'subastas', estado: 'ACTIVA' }, tono: 'info' }),
+                        nodo('Adjudicadas', formatoNumero(s.estados.adjudicadas.total), { evidencia: { nodo: 'subastas', estado: 'FINALIZADA' }, tono: 'exito' }),
+                        nodo('Desiertas', formatoNumero(s.estados.desiertas.total), { evidencia: { nodo: 'subastas', estado: 'DESIERTA' }, tono: 'aviso' }),
+                        nodo('Canceladas', formatoNumero(s.estados.canceladas.total), { evidencia: { nodo: 'subastas', estado: 'CANCELADA' }, tono: 'neutro' }),
+                    ],
+                }),
+                nodo('Pujas', formatoNumero(s.pujas), { detalle: `${formatoNumero(s.compradores.total)} compradores` }),
+                nodo('Éxito', formatoPorcentaje(s.exito.porcentaje), { detalle: 'Adjudicadas sobre las que cerraron' }),
+                nodo('Monto adjudicado', formatoColones(s.precioPromedio.montoTotal), {
+                    detalle: `Promedio por animal ${formatoColones(s.precioPromedio.valor)} · incremento ${formatoPorcentaje(s.incrementoPromedio.porcentaje)}`,
+                    evidencia: { nodo: 'subastas', estado: 'FINALIZADA' }, tono: 'dato',
+                }),
+                nodo('Ventas', `${formatoNumero(canal('SUBASTA').animales)} · ${formatoColones(canal('SUBASTA').monto)}`, { evidencia: { nodo: 'ventas', estado: 'SUBASTA' }, tono: 'exito' }),
             ],
         },
         {
-            clave: 'transporte', titulo: 'Transporte', ruta: 'Ofrecer flete → Solicitud → Respuesta → Viaje realizado',
+            clave: 'transporte', titulo: 'Transporte',
             resumen: `${formatoNumero(t.solicitudesFletePorEstado?.ACEPTADA ?? 0)} fletes aceptados`,
             nodos: [
-                nodo('Ofertas vigentes', formatoNumero((t.ofertasPorEstado?.ACTIVA?.total ?? 0) + (t.ofertasPorEstado?.PAUSADA?.total ?? 0)),
-                    `${formatoNumero(t.ofertasPorEstado?.ACTIVA?.total ?? 0)} activas (capacidad ofertada ${formatoNumero(t.ofertasPorEstado?.ACTIVA?.capacidad ?? 0)} cabezas) y ${formatoNumero(t.ofertasPorEstado?.PAUSADA?.total ?? 0)} pausadas. Una oferta no es un servicio contratado.`,
-                    'tbtransportistaoferta (foto actual)', { periodo: 'actual' }),
-                nodo('Solicitudes de flete', formatoNumero(sumar(t.solicitudesFletePorEstado)), 'Compras que eligieron una oferta de flete, creadas en el periodo.', 'tbcomprasolicitud.tbtransportistaofertaid', {
+                nodo('Ofertas de flete', formatoNumero((ofertas.ACTIVA?.total ?? 0) + (ofertas.PAUSADA?.total ?? 0)),
+                    { detalle: `${formatoNumero(ofertas.ACTIVA?.total ?? 0)} activas · ${formatoNumero(ofertas.ACTIVA?.capacidad ?? 0)} cabezas de capacidad · ${formatoNumero(ofertas.PAUSADA?.total ?? 0)} pausadas` }),
+                nodo('Solicitudes de flete', formatoNumero(sumar(t.solicitudesFletePorEstado)), {
                     evidencia: { nodo: 'fletes', estado: null },
-                    hijos: ['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'].map((e) => nodo(etiquetaEstado(e), formatoNumero(t.solicitudesFletePorEstado?.[e] ?? 0),
-                        e === 'ACEPTADA' ? 'El transportista aceptó. Un flete aceptado no es un viaje completado.' : `Respuesta del transportista: ${etiquetaEstado(e).toLowerCase()}.`,
-                        'tbcomprasolicitud.tbcomprasolicitudfleteestado', { evidencia: { nodo: 'fletes', estado: e }, tono: tonoEstado(e) })),
+                    hijos: porEstado(['PENDIENTE', 'ACEPTADA', 'RECHAZADA', 'CANCELADA'], t.solicitudesFletePorEstado, 'fletes'),
                 }),
-                nodo('Viajes realizados', d.transporte.viajesInstrumentados ? formatoNumero(viajes.total) : 'Sin instrumentar',
-                    d.instrumentacion?.viajesRealizados?.motivo ?? 'No hay un flujo que registre viajes.', 'tbtransportistaflete', {
-                        instrumentado: Boolean(d.transporte.viajesInstrumentados),
-                        detalle: viajes.total ? `Hay ${formatoNumero(viajes.total)} filas cargadas fuera de la aplicación (${formatoNumero(viajes.cabezas)} cabezas, ${formatoNumero(viajes.km)} km, ingresos registrados ${formatoColones(viajes.ingresosRegistrados)}).` : null,
-                        evidencia: viajes.total ? { nodo: 'viajes', estado: null } : null,
-                    }),
             ],
         },
         {
-            clave: 'publicaciones', titulo: 'Inventario y publicaciones', ruta: 'Registrar animal → Publicar → Cambios de estado',
+            clave: 'publicaciones', titulo: 'Animales y publicaciones',
             resumen: `${formatoNumero(inv.publicacionesPorEstado?.ACTIVO ?? 0)} publicaciones activas`,
             nodos: [
-                nodo('Animales registrados', formatoNumero(sumar(inv.animalesPorEstado)), Object.entries(inv.animalesPorEstado ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${formatoNumero(v)}`).join(' · ') || 'Sin animales.',
-                    'tbanimal (foto actual)', { periodo: 'actual' }),
-                nodo('Publicaciones por estado vigente', formatoNumero(sumar(inv.publicacionesPorEstado)), 'Estado del periodo histórico abierto (sin fecha de fin), no una columna de estado.',
-                    'tbanimalpublicacionestadoperiodo', {
-                        periodo: 'actual', evidencia: { nodo: 'publicaciones', estado: null },
-                        hijos: ['ACTIVO', 'PAUSADO', 'VENDIDO', 'RETIRADO'].map((e) => nodo(etiquetaEstado(e), formatoNumero(inv.publicacionesPorEstado?.[e] ?? 0), `Publicaciones hoy ${etiquetaEstado(e).toLowerCase()}.`,
-                            'tbanimalpublicacionestadoperiodo', { periodo: 'actual', evidencia: { nodo: 'publicaciones', estado: e }, tono: tonoEstado(e) })),
-                    }),
-                nodo('Publicaciones nuevas', formatoNumero(inv.publicacionesNuevas), 'Con fecha de publicación en el periodo.', 'tbanimalpublicacion.tbanimalpublicacionfecha'),
-                nodo('Cambios de estado', formatoNumero(sumar(inv.cambiosDeEstado)), Object.entries(inv.cambiosDeEstado ?? {}).map(([k, v]) => `a ${etiquetaEstado(k).toLowerCase()} ${formatoNumero(v)}`).join(' · ') || 'Sin cambios en el periodo.',
-                    'tbanimalpublicacionestadoperiodo (inicio en el periodo)'),
-                nodo('Con solicitudes pendientes', formatoNumero(inv.conSolicitudesPendientes), 'Publicaciones con al menos una solicitud de compra sin responder.', 'tbcomprasolicitud (PENDIENTE)', { periodo: 'actual', tono: 'aviso' }),
+                nodo('Animales', formatoNumero(sumar(inv.animalesPorEstado)),
+                    { detalle: Object.entries(inv.animalesPorEstado ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${formatoNumero(v)}`).join(' · ') || null }),
+                nodo('Publicaciones', formatoNumero(sumar(inv.publicacionesPorEstado)), {
+                    evidencia: { nodo: 'publicaciones', estado: null },
+                    hijos: porEstado(['ACTIVO', 'PAUSADO', 'VENDIDO', 'RETIRADO'], inv.publicacionesPorEstado, 'publicaciones'),
+                }),
+                nodo('Publicaciones nuevas', formatoNumero(inv.publicacionesNuevas)),
+                nodo('Cambios de estado', formatoNumero(sumar(inv.cambiosDeEstado)),
+                    { detalle: Object.entries(inv.cambiosDeEstado ?? {}).map(([k, v]) => `${etiquetaEstado(k)} ${formatoNumero(v)}`).join(' · ') || null }),
+                nodo('Esperan respuesta', formatoNumero(inv.conSolicitudesPendientes), { detalle: 'Publicaciones con solicitudes sin responder', tono: 'aviso' }),
             ],
         },
     ];
@@ -158,7 +144,24 @@ const ESTADOS = {
     ACTIVO: ['Activas', 'info'], PAUSADO: ['Pausadas', 'aviso'], VENDIDO: ['Vendidas', 'exito'], RETIRADO: ['Retiradas', 'neutro'], SUBASTA: ['En subasta', 'info'],
     ACTIVA: ['Activa', 'info'], FINALIZADA: ['Adjudicada', 'exito'], DESIERTA: ['Desierta', 'aviso'], SOLICITUD: ['Por solicitud', 'exito'],
     REGISTRAR: ['Registrado', 'info'], RETIRAR: ['Retirado', 'neutro'], REGISTRADO: ['Registrado', 'dato'], SIN_DATO: ['Sin dato', 'neutro'],
+    COMPRADOR: ['Comprador', 'neutro'], VENDEDOR: ['Vendedor', 'neutro'], TRANSPORTISTA: ['Transportista', 'neutro'],
 };
+const DOCUMENTO = { PENDIENTE: 'por verificar', VERIFICADO: 'verificado', RECHAZADO: 'rechazado' };
+
+/** Nombre legible del área de un movimiento de la bitácora (la clave interna nunca se muestra). Puro. */
+const AREAS = {
+    SUBASTA: 'Subastas', PUBLICACION: 'Publicaciones', PUBLICACION_INTERACCION: 'Me interesa', OFERTA_FLETE: 'Ofertas de flete',
+    PERSONA: 'Personas', VEHICULO: 'Vehículos', TRANSPORTISTA_VEHICULO: 'Vehículos', FINCA: 'Fincas', PRODUCTORUBICACION: 'Fincas', ANIMAL: 'Animales',
+    ANIMAL_VACUNACION: 'Vacunas', COMPRA_SOLICITUD: 'Solicitudes de compra', PAGOMETODO: 'Métodos de pago',
+    ADMINISTRADOR: 'Administradores', CATALOGO: 'Catálogos', DOCUMENTO: 'Documentos', COMPRADOR: 'Compradores',
+    PRODUCTOR: 'Productores', TRANSPORTISTA: 'Transportistas', VACUNA: 'Vacunas',
+};
+export function nombreArea(clave) {
+    const k = String(clave ?? '').toUpperCase();
+    if (AREAS[k]) return AREAS[k];
+    const texto = k.toLowerCase().replaceAll('_', ' ').trim();
+    return texto ? texto[0].toUpperCase() + texto.slice(1) : 'Otros';
+}
 export function etiquetaEstado(e) { return ESTADOS[e]?.[0] ?? String(e ?? '—'); }
 export function tonoEstado(e) { return ESTADOS[e]?.[1] ?? 'neutro'; }
 
@@ -301,22 +304,17 @@ function etiqueta(estadoClave) {
 }
 
 function pintarNodo(n) {
-    const item = el('li', `intel-nodo${n.instrumentado ? '' : ' intel-nodo--sin'}${n.tono ? ` intel-nodo--${n.tono}` : ''}`);
+    const item = el('li', `intel-nodo${n.tono ? ` intel-nodo--${n.tono}` : ''}`);
     const cabeza = el('div', 'intel-nodo__cabeza');
     const nombre = el('span', 'intel-nodo__nombre');
     if (n.tono) nombre.append(el('span', 'intel-estado__punto'));
     nombre.append(el('span', null, n.nombre));
     cabeza.append(nombre, el('strong', 'intel-nodo__valor', n.valor));
-    const meta = el('p', 'intel-nodo__meta');
-    meta.append(el('span', null, n.definicion));
-    const fuente = el('span', 'intel-nodo__fuente');
-    fuente.append(el('span', null, `Fuente: ${n.fuente}`), el('span', null, n.periodo === 'actual' ? 'Foto actual' : `Periodo: ${textoPeriodo(estado.periodo)}`));
-    if (!n.instrumentado) fuente.append(el('span', 'intel-insignia', 'Sin instrumentar'));
-    item.append(cabeza, meta, fuente);
+    item.append(cabeza);
     if (n.detalle) item.append(el('p', 'intel-nodo__meta', n.detalle));
     if (n.evidencia) {
         const detalles = el('details', 'intel-nodo__evidencia');
-        detalles.append(el('summary', null, 'Ver evidencia'));
+        detalles.append(el('summary', null, 'Ver registros'));
         const panel = panelEvidencia(n.evidencia);
         detalles.append(panel.caja);
         detalles.addEventListener('toggle', () => { if (detalles.open && !detalles.dataset.cargado) { detalles.dataset.cargado = '1'; panel.cargar(1); } });
@@ -340,7 +338,7 @@ function pintarArbol(d) {
         det.open = abiertos.has(p.clave);
         const sum = el('summary');
         const titulos = el('span', 'intel-proceso__titulos');
-        titulos.append(el('strong', null, p.titulo), el('small', null, p.ruta));
+        titulos.append(el('strong', null, p.titulo));
         sum.append(titulos, el('span', 'intel-proceso__resumen', p.resumen));
         const lista = el('ul', 'intel-nodos');
         lista.append(...p.nodos.map(pintarNodo));
@@ -366,32 +364,27 @@ function pintarControl(d) {
     const inc = c.incompletos;
     const enlaceBitacora = el('a', 'text-link', 'Abrir la bitácora');
     enlaceBitacora.href = 'admin/bitacora';
-    const control = lista('Control y trazabilidad', [
+    const control = lista('Revisión y actividad', [
         ['Documentos pendientes', formatoNumero(c.documentosPorEstado?.PENDIENTE ?? 0), (c.documentosPorEstado?.PENDIENTE ?? 0) ? 'aviso' : null],
         ['Documentos verificados', formatoNumero(c.documentosPorEstado?.VERIFICADO ?? 0)],
         ['Cambios de correo pendientes', formatoNumero(c.correosPendientes), c.correosPendientes ? 'aviso' : null],
-        ['Acciones en la bitácora (periodo)', formatoNumero(sumar(c.bitacoraPorEntidad))],
-        ...Object.entries(c.bitacoraPorEntidad ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => [`· ${k.toLowerCase().replaceAll('_', ' ')}`, formatoNumero(v)]),
+        ['Movimientos en la bitácora', formatoNumero(sumar(c.bitacoraPorEntidad))],
+        ...Object.entries(c.bitacoraPorEntidad ?? {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => [`· ${nombreArea(k)}`, formatoNumero(v)]),
     ]);
     control.append(enlaceBitacora);
-    const instr = Object.values(d.instrumentacion ?? {}).map((x) => x.motivo);
     const calidad = lista('Datos incompletos', [
         ['Publicaciones sin foto', formatoNumero(inc.publicacionesSinFoto), inc.publicacionesSinFoto ? 'aviso' : null],
         ['Animales sin tipo de ganado', formatoNumero(inc.animalesSinEspecie), inc.animalesSinEspecie ? 'aviso' : null],
         ['Fincas sin dirección', formatoNumero(inc.fincasSinDireccion), inc.fincasSinDireccion ? 'aviso' : null],
         ['Ofertas activas sin precio', formatoNumero(inc.ofertasActivasSinPrecio), inc.ofertasActivasSinPrecio ? 'aviso' : null],
-        ['Ventas sin comprador enlazado', formatoNumero(inc.ventasSinComprador), inc.ventasSinComprador ? 'aviso' : null],
-        ['Subastas adjudicadas sin venta registrada', formatoNumero(inc.adjudicadasSinVenta), inc.adjudicadasSinVenta ? 'aviso' : null],
+        ['Ventas sin comprador', formatoNumero(inc.ventasSinComprador), inc.ventasSinComprador ? 'aviso' : null],
+        ['Subastas adjudicadas sin venta', formatoNumero(inc.adjudicadasSinVenta), inc.adjudicadasSinVenta ? 'aviso' : null],
     ]);
-    calidad.append(el('h3', 'intel-panel__titulo', 'Sin instrumentar'));
-    const ul = el('ul', 'intel-sin');
-    instr.forEach((m) => ul.append(el('li', null, m)));
-    calidad.append(ul);
     $('#intel-control').replaceChildren(control, calidad);
 }
 
 async function cargarTransportistas(pagina = 1) {
-    const cuerpo = $('#intel-transportistas [data-contenido]');
+    const cuerpo = $('#intel-transportistas-cuerpo');
     cuerpo.replaceChildren(el('p', 'intel-vacio', 'Cargando transportistas…'));
     try {
         const { data } = await request(`${API}?${consulta({ vista: 'TRANSPORTISTAS', pagina, tamanoPagina: 10 })}`);
@@ -402,7 +395,7 @@ async function cargarTransportistas(pagina = 1) {
         contenedor.setAttribute('aria-label', 'Métricas por transportista');
         const t = el('table');
         const cab = el('tr');
-        ['Transportista', 'Ofertas', 'Capacidad', 'Vehículos', 'Solicitudes', 'Aceptadas', 'Rechazadas', 'Viajes registrados', 'Ingresos registrados'].forEach((c) => { const th = el('th', null, c); th.scope = 'col'; cab.append(th); });
+        ['Transportista', 'Ofertas activas', 'Capacidad (cabezas)', 'Vehículos', 'Solicitudes', 'Aceptadas', 'Rechazadas'].forEach((c) => { const th = el('th', null, c); th.scope = 'col'; cab.append(th); });
         t.append(el('thead'), el('tbody'));
         t.tHead.append(cab);
         data.items.forEach((f) => {
@@ -414,12 +407,10 @@ async function cargarTransportistas(pagina = 1) {
             nombre.append(b, el('small', 'intel-tabla__sub', f.activo ? 'Activo' : 'Inactivo'));
             tr.append(nombre, el('td', 'intel-num', `${f.ofertasActivas}/${f.ofertas}`), el('td', 'intel-num', formatoNumero(f.capacidadOfertada)),
                 el('td', 'intel-num', f.vehiculos), el('td', 'intel-num', f.solicitudesRecibidas), el('td', 'intel-num', f.solicitudesAceptadas),
-                el('td', 'intel-num', f.solicitudesRechazadas), el('td', 'intel-num', f.viajesRegistrados ? formatoNumero(f.viajesRegistrados) : 'Sin instrumentar'),
-                el('td', 'intel-num', formatoColones(f.ingresosRegistrados)));
+                el('td', 'intel-num', f.solicitudesRechazadas));
             t.tBodies[0].append(tr);
         });
         contenedor.append(t);
-        const nota = el('p', 'intel-nota', 'Ofertas: activas/total. Capacidad: cabezas de las ofertas activas (nominal, no transportadas). Los viajes solo cuentan filas de tbtransportistaflete; un flete aceptado no es un viaje. «Ingresos registrados» no es ganancia neta.');
         const total = Math.max(1, Math.ceil(data.total / 10));
         const nav = el('nav', 'intel-paginas');
         nav.setAttribute('aria-label', 'Páginas de transportistas');
@@ -431,7 +422,7 @@ async function cargarTransportistas(pagina = 1) {
             return b;
         };
         nav.append(boton('Anterior', pagina - 1, pagina <= 1), el('span', 'intel-paginas__texto', `Página ${pagina} de ${total}`), boton('Siguiente', pagina + 1, pagina >= total));
-        cuerpo.replaceChildren(contenedor, nota, nav);
+        cuerpo.replaceChildren(contenedor, ...(total > 1 ? [nav] : []));
     } catch (error) {
         cuerpo.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudieron cargar los transportistas.'));
     }
@@ -439,9 +430,11 @@ async function cargarTransportistas(pagina = 1) {
 
 async function buscarPersonas(q) {
     const destino = $('#intel-persona');
+    const pedido = ++estado.busqueda; // al escribir rápido solo vale la última búsqueda
     destino.replaceChildren(el('p', 'intel-vacio', 'Buscando…'));
     try {
         const { data } = await request(API, { method: 'POST', body: JSON.stringify({ consulta: { vista: 'PERSONA', q } }) });
+        if (pedido !== estado.busqueda) return;
         if (!data.personas.length) { destino.replaceChildren(el('p', 'intel-vacio', 'Ninguna persona coincide.')); return; }
         const ul = el('ul', 'intel-resultados');
         data.personas.forEach((p) => {
@@ -449,11 +442,12 @@ async function buscarPersonas(q) {
             const b = el('button', 'intel-enlace', p.alias ? `${p.nombre} (${p.alias})` : p.nombre);
             b.type = 'button';
             b.addEventListener('click', () => abrirExpediente(p.personaId));
-            li.append(b, el('small', 'intel-tabla__sub', p.actividades.map((a) => a.toLowerCase()).join(' · ') || 'Sin actividades'));
+            li.append(b, el('small', 'intel-tabla__sub', p.actividades.map((a) => etiquetaEstado(a)).join(' · ') || 'Sin actividades'));
             ul.append(li);
         });
         destino.replaceChildren(ul);
     } catch (error) {
+        if (pedido !== estado.busqueda) return;
         destino.replaceChildren(el('p', 'intel-error', error?.message || 'No se pudo buscar.'));
     }
 }
@@ -467,7 +461,7 @@ async function abrirExpediente(personaId) {
         const x = data.expediente;
         const card = el('article', 'intel-expediente');
         card.append(el('h3', 'intel-panel__titulo', x.alias ? `${x.nombre} (${x.alias})` : x.nombre),
-            el('p', 'intel-nota', `Persona #${x.personaId} · ${x.activa ? 'activa' : 'inactiva'} · documento ${String(x.documento ?? 'sin enviar').toLowerCase()}. Una identidad; sus actividades abajo.`));
+            el('p', 'intel-nota', `${x.activa ? 'Cuenta activa' : 'Cuenta inactiva'} · documento ${DOCUMENTO[x.documento] ?? 'sin enviar'}`));
         const bloque = (titulo, filas) => {
             const sec = el('section', 'intel-expediente__bloque');
             sec.append(el('h4', null, titulo));
@@ -485,9 +479,7 @@ async function abrirExpediente(personaId) {
             ['Ventas registradas', `${formatoNumero(x.vendedor.ventas)} · ${formatoColones(x.vendedor.montoVendido)}`]]));
         if (x.transportista) card.append(bloque('Como transportista', [['Estado', x.transportista.activo ? 'Activo' : 'Inactivo'], ['Ofertas', conteo(x.transportista.ofertas)],
             ['Capacidad ofertada', formatoNumero(x.transportista.capacidadOfertada)], ['Vehículos', formatoNumero(x.transportista.vehiculos)],
-            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)],
-            ['Viajes registrados', x.transportista.viajesRegistrados ? `${formatoNumero(x.transportista.viajesRegistrados)} (${formatoNumero(x.transportista.vehiculosUsadosEnViajes)} vehículos)` : 'Sin instrumentar'],
-            ...x.transportista.viajesPorMes.map((m) => [`· ${m.mes}`, `${m.viajes} viajes · ${m.cabezas} cabezas · ${formatoNumero(m.km)} km · ${formatoColones(m.ingresos)}`])]));
+            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)]]));
         if (!x.comprador && !x.vendedor && !x.transportista) card.append(el('p', 'intel-vacio', 'Sin actividades registradas.'));
         destino.replaceChildren(card);
     } catch (error) {
@@ -510,7 +502,7 @@ async function cargar() {
         pintarRed(data.personas);
         pintarArbol(data);
         pintarControl(data);
-        if ($('#intel-transportistas').open) cargarTransportistas();
+        cargarTransportistas();
         const hora = new Intl.DateTimeFormat('es-CR', { hour: '2-digit', minute: '2-digit', timeZone: ZONA }).format(new Date(data.generado));
         status.textContent = `Periodo ${textoPeriodo(data.periodo)} · actualizado a las ${hora}.`;
     } catch (error) {
@@ -532,12 +524,16 @@ function iniciar() {
         cargar();
     });
     form.addEventListener('submit', (e) => { e.preventDefault(); cargar(); });
-    $('#intel-transportistas').addEventListener('toggle', (e) => { if (e.target.open) cargarTransportistas(); });
-    $('#intel-busqueda').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const q = e.target.elements.q.value.trim();
-        if (q.length >= 2) buscarPersonas(q);
-    });
+    const busqueda = $('#intel-busqueda');
+    let espera = 0;
+    const buscar = () => {
+        clearTimeout(espera);
+        const q = busqueda.elements.q.value.trim();
+        if (q.length < 2) { estado.busqueda++; $('#intel-persona').replaceChildren(); return; }
+        espera = setTimeout(() => buscarPersonas(q), 250);
+    };
+    busqueda.addEventListener('input', buscar);
+    busqueda.addEventListener('submit', (e) => { e.preventDefault(); buscar(); });
     cargar();
 }
 

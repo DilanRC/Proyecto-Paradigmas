@@ -474,20 +474,32 @@ final class AdminDashboard
     }
 
     /** Personas por nombre o alias (para abrir un expediente). Solo id, nombre, alias y actividades. */
+    /**
+     * Búsqueda por nombre o alias sin distinguir tildes ni mayúsculas. Primero quien empieza con el texto (nombre o
+     * cualquier palabra del nombre), después quien lo contiene en otra parte. Los comodines de LIKE («%», «_») se buscan como texto.
+     */
     public function buscarPersonas(string $texto, int $limite): array
     {
+        // «!» como escape: «\\» se lee distinto en MySQL y en Postgres.
+        $limpio = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], AnimalComercial::sinTildesTexto($texto));
+        $nombre = AnimalComercial::sinTildesSql('p.tbpersonanombre');
+        $alias = AnimalComercial::sinTildesSql("COALESCE(p.tbpersonaalias, '')");
         $sentencia = $this->conexion->prepare(
             "SELECT p.tbpersonaid AS personaid, p.tbpersonanombre AS nombre, p.tbpersonaalias AS alias,
                     (SELECT COUNT(*) FROM tbcomprador c WHERE c.tbpersonaid = p.tbpersonaid) AS comprador,
                     (SELECT COUNT(*) FROM tbproductor pr WHERE pr.tbpersonaid = p.tbpersonaid) AS productor,
-                    (SELECT COUNT(*) FROM tbtransportista t WHERE t.tbpersonaid = p.tbpersonaid) AS transportista
+                    (SELECT COUNT(*) FROM tbtransportista t WHERE t.tbpersonaid = p.tbpersonaid) AS transportista,
+                    CASE WHEN {$nombre} LIKE :inicio ESCAPE '!' OR {$alias} LIKE :inicio2 ESCAPE '!'
+                           OR {$nombre} LIKE :palabra ESCAPE '!' THEN 0 ELSE 1 END AS orden
              FROM tbpersona p
-             WHERE LOWER(p.tbpersonanombre) LIKE :q OR LOWER(COALESCE(p.tbpersonaalias, '')) LIKE :q2
-             ORDER BY p.tbpersonanombre LIMIT :limite"
+             WHERE {$nombre} LIKE :q ESCAPE '!' OR {$alias} LIKE :q2 ESCAPE '!'
+             ORDER BY orden, p.tbpersonanombre LIMIT :limite"
         );
-        $patron = '%' . mb_strtolower($texto, 'UTF-8') . '%';
-        $sentencia->bindValue('q', $patron);
-        $sentencia->bindValue('q2', $patron);
+        $sentencia->bindValue('inicio', $limpio . '%');
+        $sentencia->bindValue('inicio2', $limpio . '%');
+        $sentencia->bindValue('palabra', '% ' . $limpio . '%');
+        $sentencia->bindValue('q', '%' . $limpio . '%');
+        $sentencia->bindValue('q2', '%' . $limpio . '%');
         $sentencia->bindValue('limite', $limite, PDO::PARAM_INT);
         $sentencia->execute();
         return array_map(static fn (array $f): array => [

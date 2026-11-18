@@ -28,29 +28,32 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-4/);
-    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-6/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-5/);
+    assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-7/);
 });
 
-test('el árbol marca lo no instrumentado en vez de mostrar un cero', async () => {
-    const { procesos, sumar, parametrosPeriodo } = await import('../../Public/js/dashboard.js');
+test('el panel no expone tablas ni lo que la plataforma no registra', async () => {
+    const { procesos, nombreArea } = await import('../../Public/js/dashboard.js');
     const base = {
-        subastas: { estados: { activas: { total: 1 }, adjudicadas: { total: 2 }, desiertas: { total: 0 }, cerradas: { total: 2 }, canceladas: { total: 1 } },
-            exito: { porcentaje: 100, finalizadas: 2 }, precioPromedio: { montoTotal: 500, valor: 250 }, incrementoPromedio: { porcentaje: 10 },
-            compradores: { total: 3 }, pujas: 7 },
+        subastas: { estados: { activas: { total: 1 }, adjudicadas: { total: 2 }, desiertas: { total: 0 }, cerradas: { total: 2 }, canceladas: { total: 0 } }, pujas: 3, compradores: { total: 2 }, exito: { porcentaje: 100 }, precioPromedio: { montoTotal: 10, valor: 5 }, incrementoPromedio: { porcentaje: 0 } },
         comercializacion: { interes: { registros: 0, personas: 0, publicaciones: 0 }, solicitudesCreadas: {}, solicitudesRespondidas: {}, ventasPorCanal: {} },
         transporte: { ofertasPorEstado: {}, solicitudesFletePorEstado: { ACEPTADA: 4 }, viajesRegistrados: { total: 0 }, viajesInstrumentados: false },
         inventario: { animalesPorEstado: {}, publicacionesPorEstado: {}, cambiosDeEstado: {}, publicacionesNuevas: 0, conSolicitudesPendientes: 0 },
-        instrumentacion: { viajesRealizados: { motivo: 'Sin flujo.' } },
     };
-    const transporte = procesos(base).find((p) => p.clave === 'transporte');
-    const viajes = transporte.nodos.find((n) => n.nombre === 'Viajes realizados');
-    assert.equal(viajes.instrumentado, false);
-    assert.equal(viajes.valor, 'Sin instrumentar', 'cuatro fletes aceptados no se convierten en viajes');
-    assert.equal(viajes.evidencia, null);
-    assert.equal(sumar({ A: 2, B: 3 }), 5);
-    assert.deepEqual(parametrosPeriodo({ periodo: 'todo' }), {});
-    assert.deepEqual(parametrosPeriodo({ periodo: '30' }, new Date('2026-11-10T01:00:00Z')), { desde: '2026-10-11', hasta: '2026-11-09' });
+    const texto = JSON.stringify(procesos(base));
+    assert.doesNotMatch(texto, /\btb[a-z]+|→|instrument|API_|Fuente/i, 'sin nombres de tablas, flechas ni jerga interna');
+    assert.doesNotMatch(texto, /Viajes/, 'lo que no se registra no aparece, ni como cero');
+    const vista = read('Application/View/dashboard/index.php');
+    assert.doesNotMatch(vista, /\btb[a-z]+|→|instrumentar|api\/v1/i);
+    assert.equal(nombreArea('PUBLICACION_INTERACCION'), 'Me interesa');
+    assert.equal(nombreArea('ALGO_NUEVO'), 'Algo nuevo');
+});
+
+test('la búsqueda de personas responde al escribir desde 2 letras', () => {
+    const js = read('Public/js/dashboard.js');
+    assert.match(js, /addEventListener\('input', buscar\)/);
+    assert.match(js, /q\.length < 2/);
+    assert.doesNotMatch(read('Application/View/dashboard/index.php'), /id="intel-q"[^>]*minlength/);
 });
 
 test('los assets ganaderos pueden seguir siendo usados por el sitio público, pero no por el dashboard', () => {
