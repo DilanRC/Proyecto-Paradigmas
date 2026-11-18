@@ -13,12 +13,12 @@
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/public-product.css?v=product-12">
     <link rel="stylesheet" href="css/components.css?v=official-shell-3">
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
     <link rel="stylesheet" href="css/mi-dashboard.css?v=dashboard-5">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/public-ui.js?v=public-23"></script>
     <script type="module" src="js/mi-dashboard.js?v=dashboard-6"></script>
 </head>
 <body class="public-home activity-page dashboard-page">

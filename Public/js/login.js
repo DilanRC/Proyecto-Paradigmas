@@ -150,6 +150,13 @@ function initialize() {
                     return;
                 }
                 if (fallo === ESTADO_CUENTA.ANONIMA || fallo === ESTADO_CUENTA.CONFLICTO) {
+                    // La autorización admin es independiente del estado de la Persona.
+                    if (fallo === ESTADO_CUENTA.CONFLICTO && await isAdminAccount()) {
+                        writeAdminBrowserSession(email);
+                        setStatus(status, 'Acceso administrativo confirmado. Abriendo TinderCows…', 'success');
+                        window.location.assign(resolveAdminNext(window.location.search));
+                        return;
+                    }
                     // Una Persona inactiva o un correo ligado a dos Personas no se arregla
                     // llenando el registro otra vez: se avisa y no queda la sesión abierta.
                     try { await signOut(); } catch { /* signOut limpia solo la sesión que intentó revocar */ }

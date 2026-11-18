@@ -119,7 +119,7 @@ function pintarConexion() {
 }
 
 // ───────────────────────────── Lista ─────────────────────────────
-const lista = { vista: 'ACTIVAS', q: '', items: [], recargaPedida: false, pedido: 0 };
+const lista = { vista: 'ACTIVAS', q: '', items: [], recargaPedida: false, pedido: 0, cargando: false };
 
 function tarjeta(subasta) {
     const card = el('article', 'subasta-card');
@@ -170,7 +170,9 @@ function vistaLista(estado, mensaje = '') {
  */
 async function cargarLista({ silencioso = false, conservar = false } = {}) {
     if (cuentaIncompleta()) return;
+    if (silencioso && lista.cargando) return;
     const pedido = ++lista.pedido;
+    lista.cargando = !silencioso;
     const grid = $('#subastas-grid');
     const atenuar = conservar && !grid.hidden;
     if (atenuar) {
@@ -199,6 +201,7 @@ async function cargarLista({ silencioso = false, conservar = false } = {}) {
         if (!silencioso) vistaLista('error', error?.message || 'No pudimos cargar las subastas.');
     } finally {
         if (pedido === lista.pedido) {
+            lista.cargando = false;
             grid.classList.remove('is-refreshing');
             grid.setAttribute('aria-busy', 'false');
         }
@@ -416,7 +419,7 @@ async function cargarDetalle({ silencioso = false } = {}) {
     } catch (error) {
         if (pedido !== detalle.pedido) return;
         if (manejarSesion(error)) return;
-        if (!silencioso) vistaDetalle('error', error?.status === 404 ? 'Esta subasta no existe.' : (error?.message || 'No pudimos cargar la subasta.'));
+        if (!silencioso || !$('#subasta-loading').hidden) vistaDetalle('error', error?.status === 404 ? 'Esta subasta no existe.' : (error?.message || 'No pudimos cargar la subasta.'));
     }
 }
 
@@ -444,6 +447,7 @@ function iniciarDetalle(id) {
             const respuesta = await request(API, { method: 'PATCH', body: JSON.stringify({ subastaId: detalle.id, accion: 'PUJAR', monto }) });
             sincronizarHora(respuesta);
             pujar.elements.monto.value = '';
+            ++detalle.pedido;
             pintarDetalle(respuesta.data.subasta);
             toast?.success(`Pujaste ${formatPrice(monto)}. ¡Vas ganando!`);
         } catch (fallo) {
@@ -481,6 +485,7 @@ function iniciarDetalle(id) {
         const progreso = iniciarProgreso(evento.currentTarget, 'Cancelando…');
         try {
             const respuesta = await request(API, { method: 'PATCH', body: JSON.stringify({ subastaId: detalle.id, accion: 'CANCELAR' }) });
+            ++detalle.pedido;
             pintarDetalle(respuesta.data.subasta);
             toast?.success(respuesta.message);
         } catch (fallo) {

@@ -384,6 +384,30 @@
         width:min(100% - 18px,1540px);
     }
 
+    /* Conserva el nombre accesible y deja espacio para los controles de cuenta. */
+    .public-header--product .public-brand > span:last-child,
+    .public-header--product .public-account-menu__label {
+        position:absolute;
+        width:1px;
+        height:1px;
+        overflow:hidden;
+        clip:rect(0 0 0 0);
+        white-space:nowrap;
+    }
+
+    .public-header--product .public-account-menu__trigger {
+        width:44px;
+        min-width:44px;
+        min-height:44px;
+        padding:0;
+        gap:0;
+        justify-content:center;
+    }
+
+    .public-header--product .public-account-menu__trigger > .fa-chevron-down {
+        display:none;
+    }
+
     .public-nav--primary a {
         min-height:44px;
         padding-inline:10px;

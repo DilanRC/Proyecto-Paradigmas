@@ -20,16 +20,16 @@ $query = isset($_GET['q']) ? trim((string) $_GET['q']) : '';
     <link rel="stylesheet" href="css/base.css?v=product-10">
     <link rel="stylesheet" href="css/public-auth.css?v=brand-3">
     <link rel="stylesheet" href="css/public-v3.css?v=public-10">
-    <link rel="stylesheet" href="css/public-product.css?v=product-11">
+    <link rel="stylesheet" href="css/public-product.css?v=product-12">
     <link rel="stylesheet" href="css/explore.css?v=explore-10">
     <link rel="stylesheet" href="css/solicitud.css?v=solicitud-2">
     <link rel="stylesheet" href="css/subastas.css?v=subastas-2">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
-    <script type="module" src="js/public-ui.js?v=public-22"></script>
+    <script type="module" src="js/public-ui.js?v=public-23"></script>
     <script type="module" src="js/explore.js?v=explore-15"></script>
     <script type="module" src="js/explore-interactions.js?v=interactions-9"></script>
     <script type="module" src="js/shared/aviso-documento.js?v=aviso-1"></script>
-    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-4"></script>
+    <script type="module" src="js/subastas-vivo.js?v=subastas-vivo-5"></script>
 </head>
 <body class="public-home explore-page">
     <div class="public-shell" id="inicio">

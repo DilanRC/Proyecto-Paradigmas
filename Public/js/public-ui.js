@@ -7,7 +7,7 @@ function ensureProductStyles() {
     if (document.querySelector('link[data-tc-public-product]')) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/public-product.css?v=product-11';
+    link.href = 'css/public-product.css?v=product-12';
     link.dataset.tcPublicProduct = 'true';
     document.head.appendChild(link);
 }
