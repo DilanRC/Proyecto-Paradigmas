@@ -271,6 +271,10 @@ final class AdminDashboard
                 'ofertasActivasSinPrecio' => (int) $this->valor(
                     "SELECT COUNT(*) FROM tbtransportistaoferta WHERE tbtransportistaofertaestado = 'ACTIVA' AND tbtransportistaofertaprecio IS NULL"),
                 'ventasSinComprador' => (int) $this->valor('SELECT COUNT(*) FROM tbventa WHERE tbcompradorid IS NULL AND tbproductorcompradorid IS NULL'),
+                // El cierre escribe la venta en la misma transacción: una adjudicada sin venta vino de otro camino (datos cargados a mano).
+                'adjudicadasSinVenta' => (int) $this->valor(
+                    "SELECT COUNT(*) FROM tbsubasta s WHERE s.tbsubastaestado = 'FINALIZADA' AND NOT EXISTS (
+                        SELECT 1 FROM tbventa v WHERE v.tbanimalid = s.tbanimalid AND v.tbventaorigen = 'API_SUBASTAS')"),
             ],
         ];
     }

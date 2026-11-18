@@ -381,6 +381,7 @@ function pintarControl(d) {
         ['Fincas sin dirección', formatoNumero(inc.fincasSinDireccion), inc.fincasSinDireccion ? 'aviso' : null],
         ['Ofertas activas sin precio', formatoNumero(inc.ofertasActivasSinPrecio), inc.ofertasActivasSinPrecio ? 'aviso' : null],
         ['Ventas sin comprador enlazado', formatoNumero(inc.ventasSinComprador), inc.ventasSinComprador ? 'aviso' : null],
+        ['Subastas adjudicadas sin venta registrada', formatoNumero(inc.adjudicadasSinVenta), inc.adjudicadasSinVenta ? 'aviso' : null],
     ]);
     calidad.append(el('h3', 'intel-panel__titulo', 'Sin instrumentar'));
     const ul = el('ul', 'intel-sin');

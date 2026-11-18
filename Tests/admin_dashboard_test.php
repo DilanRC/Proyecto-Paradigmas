@@ -56,6 +56,7 @@ $canal = $d['comercializacion']['ventasPorCanal']['SUBASTA'] ?? ['animales' => 0
 $ventasSubasta = (int) $uno("SELECT COUNT(*) FROM tbventa WHERE tbventaorigen = 'API_SUBASTAS' AND tbcomprasolicitudid IS NULL");
 test_assert($canal['animales'] === $ventasSubasta, 'ventas por subasta = filas de tbventa (sin la compra espejo)');
 test_assert($canal['animales'] === $s['estados']['adjudicadas']['total'], 'cada adjudicación es exactamente una venta');
+test_assert($d['control']['incompletos']['adjudicadasSinVenta'] === 0, 'el cierre siempre deja la venta: ninguna adjudicada sin tbventa');
 test_assert(abs($canal['monto'] - $montoSql) < 0.01, 'el monto de ventas por subasta coincide con el adjudicado');
 
 $solicitud = $d['comercializacion']['ventasPorCanal']['SOLICITUD'] ?? null;

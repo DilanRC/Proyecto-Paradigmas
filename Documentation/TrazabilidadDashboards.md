@@ -84,7 +84,7 @@ Vistas: `RESUMEN` (secciones A-F), `EVIDENCIA` (nodo + estado, paginada, máx. 5
 | C. Comercialización | Me interesa (registros, personas, publicaciones); solicitudes creadas y respondidas; ventas por canal (animales, operaciones, monto) | `tbanimalpublicacioninteraccion`, `tbcomprasolicitud`, `tbventa` | fecha de cada hecho |
 | D. Subastas | mismas fórmulas que el vendedor sobre todas las subastas + pujas, por especie y provincia | `tbsubasta`, `tbsubastapuja` | fecha del hecho |
 | E. Transporte | ofertas por estado y capacidad; solicitudes de flete por estado; viajes registrados (marcado sin instrumentar); por transportista: ofertas, capacidad, vehículos, solicitudes recibidas/aceptadas/rechazadas, viajes, cabezas, km, ingresos registrados, promedio por viaje | `tbtransportistaoferta`, `tbcomprasolicitud`, `tbtransportistaflete` | solicitudes y viajes: periodo |
-| F. Control | documentos por estado, bitácora por entidad y acción, correos pendientes, datos incompletos | `tbpersona`, `tbbitacora`, `tbpersonacorreocambio` | bitácora: periodo |
+| F. Control | documentos por estado, bitácora por entidad y acción, correos pendientes, datos incompletos (incluye subastas adjudicadas sin `tbventa`: el cierre siempre la escribe, así que solo aparece con datos cargados por otro camino) | `tbpersona`, `tbbitacora`, `tbpersonacorreocambio` | bitácora: periodo |
 
 Sin doble conteo: una adjudicación escribe `tbcompra` y `tbventa`; solo se suma `tbventa`. Una solicitud de un lote
 escribe una venta por animal: «operaciones» cuenta solicitudes distintas y «animales» las filas.
