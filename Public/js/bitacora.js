@@ -25,7 +25,7 @@ const ACCIONES = {
     CREAR: 'Creación', EDITAR: 'Edición', ELIMINAR: 'Eliminación', DESACTIVAR: 'Desactivación', REACTIVAR: 'Reactivación',
     REGISTRO_PUBLICO: 'Registro público', PUJAR: 'Puja', COMENTAR: 'Comentario', FINALIZAR: 'Cierre', CANCELAR: 'Cancelación',
     ACEPTAR: 'Aceptación', RECHAZAR: 'Rechazo', ACEPTAR_FLETE: 'Flete aceptado', RECHAZAR_FLETE: 'Flete rechazado',
-    REGISTRAR_VIAJE: 'Viaje realizado', VER_DOCUMENTO: 'Documento consultado', VERIFICAR: 'Verificación', PESAR: 'Pesaje',
+    VER_DOCUMENTO: 'Documento consultado', VERIFICAR: 'Verificación', PESAR: 'Pesaje',
 };
 const AREAS = {
     PERSONA: 'Persona', SUBASTA: 'Subasta', PUBLICACION: 'Publicación', PUBLICACION_INTERACCION: 'Me interesa', OFERTA_FLETE: 'Oferta de flete',

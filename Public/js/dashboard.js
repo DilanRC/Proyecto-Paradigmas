@@ -66,7 +66,7 @@ const DEFINICIONES = {
     ventas: 'Ventas registradas: una fila por animal vendido.',
     subastas: 'Subastas por la fecha de su hecho (cierre para las terminadas, inicio para las activas).',
     publicaciones: 'Publicaciones por fecha de alta, con su estado vigente.',
-    viajes: 'Viajes que el transportista marcó como realizados, por la fecha del viaje.',
+    viajes: 'Viajes guardados en el histórico de fletes, por la fecha del viaje. Ninguna pantalla de la plataforma los registra hoy.',
 };
 
 /**
@@ -86,7 +86,9 @@ export function procesos(d) {
     const ofertas = t.ofertasPorEstado ?? {};
     const fletes = t.solicitudesFletePorEstado ?? {};
     const respondidas = c.solicitudesRespondidas ?? {};
-    const sinViajes = t.viajesInstrumentados === false;
+    // Histórico de viajes: puede tener filas aunque ningún proceso de la aplicación lo alimente (viajesInstrumentados).
+    const viajesHistoricos = t.viajesRegistrados?.total ?? 0;
+    const sinViajes = viajesHistoricos === 0;
 
     return [
         {
@@ -133,7 +135,7 @@ export function procesos(d) {
         },
         {
             clave: 'transporte', titulo: 'Transporte', icono: 'fa-truck-fast',
-            principal: { valor: formatoNumero(sinViajes ? (fletes.ACEPTADA ?? 0) : (t.viajesRegistrados?.total ?? 0)), etiqueta: sinViajes ? 'fletes aceptados' : 'viajes realizados' },
+            principal: { valor: formatoNumero(sinViajes ? (fletes.ACEPTADA ?? 0) : (t.viajesRegistrados?.total ?? 0)), etiqueta: sinViajes ? 'fletes aceptados' : 'viajes registrados' },
             resumen: `${formatoNumero(ofertas.ACTIVA?.total ?? 0)} ofertas activas · ${formatoNumero(fletes.PENDIENTE ?? 0)} solicitudes pendientes`,
             etapas: [
                 { nombre: 'Ofertas', valor: formatoNumero((ofertas.ACTIVA?.total ?? 0) + (ofertas.PAUSADA?.total ?? 0)), evidencia: null,
@@ -146,13 +148,15 @@ export function procesos(d) {
                 { nombre: 'Aceptación o rechazo', valor: formatoNumero((fletes.ACEPTADA ?? 0) + (fletes.RECHAZADA ?? 0)), evidencia: null,
                     explicacion: 'Respuesta del transportista. Aceptar un flete no significa que el viaje ya ocurrió.',
                     estados: estadosDe(['ACEPTADA', 'RECHAZADA'], fletes, 'fletes') },
-                ...(sinViajes ? [] : [{ nombre: 'Viaje realizado', valor: formatoNumero(t.viajesRegistrados?.total ?? 0), evidencia: ev('viajes'),
-                    explicacion: `El transportista marcó el viaje como hecho: ${formatoNumero(t.viajesRegistrados?.cabezas ?? 0)} cabezas${t.viajesRegistrados?.km ? ` · ${formatoNumero(t.viajesRegistrados.km)} km` : ''}${t.viajesRegistrados?.ingresosRegistrados ? ` · ${formatoColones(t.viajesRegistrados.ingresosRegistrados)}` : ''}.`,
+                ...(sinViajes ? [] : [{ nombre: 'Viajes registrados', valor: formatoNumero(viajesHistoricos), evidencia: ev('viajes'),
+                    explicacion: `Histórico de fletes: ${t.viajesRegistrados?.cabezas == null ? 'cabezas sin registrar' : `${formatoNumero(t.viajesRegistrados.cabezas)} cabezas registradas`}${t.viajesRegistrados?.km ? ` · ${formatoNumero(t.viajesRegistrados.km)} km registrados` : ''}${t.viajesRegistrados?.ingresosRegistrados ? ` · ${formatoColones(t.viajesRegistrados.ingresosRegistrados)} registrados por fletes (no es un pago confirmado)` : ''}. No se relaciona con una solicitud de compra.`,
                     estados: [] }]),
             ],
             salidas: [{ nombre: 'Canceladas', valor: formatoNumero(fletes.CANCELADA ?? 0), tono: 'neutro', evidencia: ev('fletes', 'CANCELADA'),
                 explicacion: 'La solicitud de compra se canceló antes del viaje.' }],
-            noDisponible: sinViajes ? [{ nombre: 'Viajes realizados', motivo: 'Información todavía no disponible: la plataforma aún no registra cuándo se hace un viaje, así que no se muestra un número.' }] : [],
+            noDisponible: t.viajesInstrumentados === false ? [{ nombre: 'Viajes realizados', motivo: sinViajes
+                ? 'Información todavía no disponible: la plataforma no registra cuándo se hace un viaje, así que no se muestra un número.'
+                : 'La plataforma no registra viajes nuevos: los viajes de arriba vienen del histórico de fletes, no de un flete aceptado.' }] : [],
         },
         {
             clave: 'publicaciones', titulo: 'Animales y publicaciones', icono: 'fa-cow',
@@ -180,8 +184,6 @@ export function atencion(d) {
     return [
         { nombre: 'Solicitudes de compra sin responder', valor: d.comercializacion.solicitudesCreadas?.PENDIENTE ?? 0, evidencia: { nodo: 'solicitudes', estado: 'PENDIENTE' }, accion: 'Ver solicitudes' },
         { nombre: 'Fletes sin respuesta del transportista', valor: d.transporte.solicitudesFletePorEstado?.PENDIENTE ?? 0, evidencia: { nodo: 'fletes', estado: 'PENDIENTE' }, accion: 'Ver fletes' },
-        { nombre: 'Fletes aceptados sin viaje registrado', valor: d.transporte.fletesSinViaje ?? 0,
-            evidencia: { nodo: 'fletes', estado: 'ACEPTADA' }, accion: 'Ver fletes' },
         { nombre: 'Documentos de identidad por verificar', valor: d.control.documentosPorEstado?.PENDIENTE ?? 0, enlace: 'admin/documentos', accion: 'Abrir documentos', icono: 'fa-id-card' },
     ].filter((x) => x.valor > 0);
 }
@@ -568,7 +570,7 @@ function iniciarTransportistas() {
         return r;
     }, (data) => tabla('Métricas por transportista',
         [['Transportista'], ['Ofertas activas', 'intel-num'], ['Capacidad', 'intel-num'], ['Vehículos', 'intel-num'], ['Solicitudes', 'intel-num'],
-            ['Aceptadas', 'intel-num'], ['Pendientes', 'intel-num'], ['Viajes', 'intel-num']],
+            ['Aceptadas', 'intel-num'], ['Pendientes', 'intel-num'], ['Viajes registrados', 'intel-num']],
         data.items.map((f) => {
             const nombre = el('div', 'intel-tabla__persona');
             nombre.append(enlacePersona(f.personaId, f.nombre), etiqueta(null, f.activo ? 'Activo' : 'Inactivo', f.activo ? 'exito' : 'neutro'));
@@ -648,7 +650,7 @@ async function abrirExpediente(personaId) {
             ['Ventas', cantidadYMonto(x.vendedor.ventas, x.vendedor.montoVendido)]]));
         if (x.transportista) bloques.append(bloque('Como transportista', [['Estado', x.transportista.activo ? 'Activo' : 'Inactivo'], ['Ofertas', conteo(x.transportista.ofertas)],
             ['Capacidad ofertada', formatoNumero(x.transportista.capacidadOfertada)], ['Vehículos', formatoNumero(x.transportista.vehiculos)],
-            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)], ['Viajes realizados', formatoNumero(x.transportista.viajesRegistrados ?? 0)]]));
+            ['Solicitudes de flete', conteo(x.transportista.solicitudesFlete)], ['Viajes registrados', formatoNumero(x.transportista.viajesRegistrados ?? 0)]]));
         if (bloques.childElementCount) card.append(bloques); else card.append(el('p', 'intel-vacio', 'Sin actividades registradas.'));
         destino.replaceChildren(card);
         destino.focus({ preventScroll: true });

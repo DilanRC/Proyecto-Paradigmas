@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="css/red-ganadera.css?v=official-shell-3">
     <link rel="stylesheet" href="css/admin-dashboard.css?v=dashboard-12">
     <?php require dirname(__DIR__) . '/shared/admin-estilos.php'; ?>
-    <script type="module" src="js/dashboard.js?v=intel-9"></script>
+    <script type="module" src="js/dashboard.js?v=intel-10"></script>
     <script defer src="js/shared/panel-runtime.js?v=runtime-1"></script>
 </head>
 <body class="rural-panel admin-dashboard">

@@ -28,7 +28,7 @@ test('dashboard centraliza indicadores en una API admin autorizada en PHP sin ex
     assert.match(endpoint, /fromGlobalsPermitiendoPersonaNoVinculada/, 'un administrador puede no tener Persona');
     assert.ok(!/\.innerHTML\s*=|insertAdjacentHTML/.test(js), 'sin innerHTML');
     assert.equal(/identificacionNumero|correoElectronico|telefono|password|token/.test(js), false);
-    assert.match(view, /js\/dashboard\.js\?v=intel-9/);
+    assert.match(view, /js\/dashboard\.js\?v=intel-10/);
     assert.match(view, /css\/admin-dashboard\.css\?v=dashboard-12/);
 });
 
@@ -48,10 +48,17 @@ test('el panel no expone tablas ni lo que la plataforma no registra', async () =
     assert.match(transporte.noDisponible[0].motivo, /todavía no disponible/);
     assert.equal('valor' in transporte.noDisponible[0], false, 'sin valor numérico');
     assert.ok(transporte.etapas.every((e) => !/Viaje/.test(e.nombre)), 'un flete aceptado no se presenta como viaje');
-    const conViajes = procesos({ ...base, transporte: { ...base.transporte, viajesInstrumentados: true, viajesRegistrados: { total: 3, cabezas: 7 } } }).find((a) => a.clave === 'transporte');
-    assert.equal(conViajes.noDisponible.length, 0);
-    assert.deepEqual([conViajes.etapas[conViajes.etapas.length - 1].nombre, conViajes.etapas[conViajes.etapas.length - 1].valor], ['Viaje realizado', '3'],
-        'con registro, el viaje es la última etapa y se cuenta aparte de los fletes aceptados');
+    // Histórico con filas pero sin proceso que lo alimente: se muestra como «registrado», nunca «realizado» ni verificado.
+    const conViajes = procesos({ ...base, transporte: { ...base.transporte, viajesRegistrados: { total: 3, cabezas: 7, ingresosRegistrados: 50000 } } }).find((a) => a.clave === 'transporte');
+    const ultima = conViajes.etapas[conViajes.etapas.length - 1];
+    assert.deepEqual([ultima.nombre, ultima.valor], ['Viajes registrados', '3'], 'el histórico es la última etapa, aparte de los fletes aceptados');
+    assert.equal(conViajes.principal.etiqueta, 'viajes registrados');
+    assert.match(ultima.explicacion, /7 cabezas registradas/);
+    assert.match(ultima.explicacion, /no es un pago confirmado/, 'el monto registrado no se presenta como cobrado');
+    assert.doesNotMatch(JSON.stringify(conViajes), /realizad[oa]s? por|verificad|ganancia/i);
+    assert.match(conViajes.noDisponible[0].motivo, /no registra viajes nuevos/, 'se aclara que ningún proceso lo alimenta');
+    const sinCabezas = procesos({ ...base, transporte: { ...base.transporte, viajesRegistrados: { total: 1, cabezas: null } } }).find((a) => a.clave === 'transporte');
+    assert.match(sinCabezas.etapas[sinCabezas.etapas.length - 1].explicacion, /cabezas sin registrar/, 'sin cabezas no se inventa un 0');
     // Etapas conceptuales: sin tasas de conversión entre etapas.
     assert.doesNotMatch(texto, /conversi|tasa/i);
     const subastas = procesos(base).find((a) => a.clave === 'subastas');
@@ -90,12 +97,12 @@ test('el alias se muestra solo si es distinto del nombre', async () => {
     assert.equal(conAlias({ nombre: 'Ana', alias: null }), 'Ana');
 });
 
-test('requieren atención: solo pendientes de la operación, incluidos los fletes aceptados sin viaje', async () => {
+test('requieren atención: solo pendientes de la operación; un flete aceptado no es un viaje pendiente', async () => {
     const { atencion } = await import('../../Public/js/dashboard.js');
     const resumen = { control: { documentosPorEstado: { PENDIENTE: 2 }, correosPendientes: 3 }, comercializacion: { solicitudesCreadas: { PENDIENTE: 0 } },
-        transporte: { solicitudesFletePorEstado: { PENDIENTE: 1, ACEPTADA: 5 }, fletesSinViaje: 4, viajesRegistrados: { total: 1 } } };
+        transporte: { solicitudesFletePorEstado: { PENDIENTE: 1, ACEPTADA: 5 }, viajesRegistrados: { total: 1 } } };
     const a = atencion(resumen);
-    assert.deepEqual(a.map((x) => [x.nombre, x.valor]), [['Fletes sin respuesta del transportista', 1], ['Fletes aceptados sin viaje registrado', 4],
+    assert.deepEqual(a.map((x) => [x.nombre, x.valor]), [['Fletes sin respuesta del transportista', 1],
         ['Documentos de identidad por verificar', 2]], 'solo lo que existe; los correos no se exponen');
     assert.ok(a.every((x) => x.accion && !/^(Ver|Abrir|Revisar)$/.test(x.accion)), 'cada acción dice qué abre');
 });

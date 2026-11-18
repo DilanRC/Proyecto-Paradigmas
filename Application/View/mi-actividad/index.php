@@ -19,7 +19,7 @@
     <link rel="stylesheet" href="css/mi-actividad.css?v=panel-6">
     <script type="module" src="js/public-theme.js?v=theme-4"></script>
     <script type="module" src="js/public-ui.js?v=public-24"></script>
-    <script type="module" src="js/mi-actividad.js?v=panel-23"></script>
+    <script type="module" src="js/mi-actividad.js?v=panel-24"></script>
 </head>
 <body class="public-home activity-page">
     <div class="public-shell" id="inicio">

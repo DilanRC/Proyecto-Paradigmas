@@ -191,10 +191,6 @@ final class AdminDashboard
                 "SELECT s.tbcomprasolicitudfleteestado AS clave, COUNT(*) AS total FROM tbcomprasolicitud s
                  WHERE s.tbtransportistaofertaid IS NOT NULL AND s.tbcomprasolicitudfleteestado IS NOT NULL{$fSolicitud}
                  GROUP BY s.tbcomprasolicitudfleteestado", $pSolicitud),
-            // Fletes aceptados que todavía no tienen su viaje marcado como realizado (sin periodo: es un pendiente vigente).
-            'fletesSinViaje' => (int) $this->valor("SELECT COUNT(*) FROM tbcomprasolicitud s WHERE s.tbcomprasolicitudestado = 'ACEPTADA'
-                AND s.tbcomprasolicitudfleteestado = 'ACEPTADA'
-                AND NOT EXISTS (SELECT 1 FROM tbtransportistaflete f WHERE f.tbcomprasolicitudid = s.tbcomprasolicitudid)"),
             'viajesRegistrados' => [
                 'total' => (int) $viajes['total'],
                 'cabezas' => $viajes['cabezas'] === null ? null : (int) $viajes['cabezas'],

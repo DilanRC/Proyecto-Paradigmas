@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Dashboard administrativo (DEC-DASHBOARD-002): cada número del resumen se concilia contra una consulta SQL
  * independiente sobre los hechos guardados, sin importar qué datos tenga la base local (más útil con
  * Tools/seed-dashboard-demo.php). Además: validación de la consulta, paginación, privacidad del expediente y que los
- * hechos sin flujo de registro (pagos) se declaren "sin instrumentar".
+ * hechos sin flujo de registro (pagos, viajes) se declaren "sin instrumentar".
  */
 
 require __DIR__ . '/bootstrap.php';
@@ -70,12 +70,13 @@ if ($solicitud !== null) {
 
 // Transporte: un flete aceptado nunca aparece como viaje.
 $t = $d['transporte'];
-test_assert($t['viajesInstrumentados'] === true, 'los viajes realizados se registran (REGISTRAR_VIAJE)');
+test_assert($t['viajesInstrumentados'] === false, 'ningún proceso registra viajes: el histórico se muestra como registrado');
+test_assert(!array_key_exists('fletesSinViaje', $t), 'sin el enlace solicitud-viaje no se cuentan fletes aceptados sin viaje');
 test_assert($t['viajesRegistrados']['total'] === (int) $uno('SELECT COUNT(*) FROM tbtransportistaflete'), 'viajes = solo tbtransportistaflete');
 test_assert(($t['solicitudesFletePorEstado']['ACEPTADA'] ?? 0) === (int) $uno(
     "SELECT COUNT(*) FROM tbcomprasolicitud WHERE tbtransportistaofertaid IS NOT NULL AND tbcomprasolicitudfleteestado = 'ACEPTADA'"),
     'fletes aceptados vienen de la solicitud, no de los viajes');
-test_assert(isset($d['instrumentacion']['pagos']['motivo']) && !isset($d['instrumentacion']['viajesRealizados']), 'el motivo de lo no instrumentado viaja con los datos');
+test_assert(isset($d['instrumentacion']['pagos']['motivo'], $d['instrumentacion']['viajesRealizados']['motivo']), 'el motivo de lo no instrumentado viaja con los datos');
 
 // ───── Periodo vacío: el pasado lejano no tiene hechos y los porcentajes quedan en null, no en 0 ─────
 $vacio = $ok($controlador->procesar('GET', ['desde' => '2001-01-01', 'hasta' => '2001-01-31']));

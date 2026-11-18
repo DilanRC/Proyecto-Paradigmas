@@ -115,12 +115,14 @@ final class AdminDashboardController
                 ], array_filter($lista, static fn (array $s): bool => $s['estado'] === 'FINALIZADA' && $s['montoAdjudicado'] !== null))),
             ],
             'transporte' => $this->consultas->transporte($sql) + [
-                // El transportista marca el viaje realizado (REGISTRAR_VIAJE, DEC-VIAJE-001); un flete aceptado no lo es.
-                'viajesInstrumentados' => true,
+                // tbtransportistaflete es un histórico sin proceso que lo alimente (REGISTRAR_VIAJE se retiró con la 027):
+                // sus filas se muestran como "registradas", y un flete aceptado nunca se cuenta como viaje.
+                'viajesInstrumentados' => false,
             ],
             'control' => $this->consultas->control(),
             'instrumentacion' => [
                 'altasDePersonas' => ['instrumentado' => false, 'motivo' => 'tbpersona no guarda fecha de alta; la bitácora no sustituye el hecho.'],
+                'viajesRealizados' => ['instrumentado' => false, 'motivo' => 'Ningún proceso registra un viaje: el histórico de fletes no se enlaza con la solicitud de compra y un flete aceptado no es un viaje.'],
                 'pagos' => ['instrumentado' => false, 'motivo' => 'La adjudicación y la venta se registran; el pago efectivo no.'],
                 'reputacion' => ['instrumentado' => false, 'motivo' => 'tbtransportistaresena no tiene flujo y Calidad no aprobó una política de confiabilidad.'],
             ],

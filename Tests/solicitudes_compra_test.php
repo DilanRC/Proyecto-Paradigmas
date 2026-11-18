@@ -71,7 +71,6 @@ function sol_cleanup(array $identificaciones, array $vendedores, array $animalId
     if ($solicitudIds !== []) {
         $m = implode(',', array_fill(0, count($solicitudIds), '?'));
         $db->prepare("DELETE FROM tbbitacora WHERE tbbitacoraentidad = 'COMPRA_SOLICITUD' AND tbbitacoraregistroidentificacionnumero IN ({$m})")->execute($solicitudIds);
-        $db->prepare("DELETE FROM tbtransportistaflete WHERE tbcomprasolicitudid IN ({$m})")->execute($solicitudIds);
         $db->prepare("DELETE FROM tbcomprasolicitud WHERE tbcomprasolicitudid IN ({$m})")->execute($solicitudIds);
     }
     $animalIds = array_values(array_unique(array_filter($animalIds)));
@@ -261,23 +260,13 @@ try {
     test_same(409, $fletes->procesar('PATCH', ['solicitudId' => $solB1['solicitudId'], 'accion' => 'RECHAZAR_FLETE'])['status'], 'El flete no se responde dos veces');
     test_assert($comprasB->procesar('GET')['body']['data']['hechas'][0]['flete']['transportista']['telefono'] !== null, 'El comprador ve el teléfono del transportista');
 
-    // Viaje realizado (DEC-VIAJE-001): solo el transportista, solo con flete aceptado, una vez y sin fecha futura.
-    $viaje = ['solicitudId' => $solB1['solicitudId'], 'accion' => 'REGISTRAR_VIAJE'];
-    test_same(false, $fleteOk['body']['data']['solicitud']['flete']['viajeRegistrado'], 'Aceptar el flete no es un viaje realizado');
-    test_same(404, $comprasB->procesar('PATCH', $viaje)['status'], 'Solo el transportista registra el viaje');
-    test_same(422, $fletes->procesar('PATCH', $viaje + ['fecha' => '2999-01-01'])['status'], 'Un viaje no tiene fecha futura');
-    test_same(422, $fletes->procesar('PATCH', $viaje + ['fecha' => '2020-01-01'])['status'], 'Ni anterior a la aceptación del flete');
-    test_same(422, $fletes->procesar('PATCH', $viaje + ['cantidadCabezas' => 0])['status'], 'Cabezas entre 1 y 1000');
-    test_same(422, $fletes->procesar('PATCH', $viaje + ['distanciaKm' => true])['status'], 'La distancia no acepta booleanos');
-    test_same(422, $fletes->procesar('PATCH', $viaje + ['placa' => 'X'])['status'], 'Campo desconocido');
-    test_same(0, sol_contar('SELECT COUNT(*) FROM tbtransportistaflete WHERE tbcomprasolicitudid = :id', ['id' => $solB1['solicitudId']]), 'Un 422 no escribe el viaje');
-    $hecho = $fletes->procesar('PATCH', $viaje + ['distanciaKm' => 42.5]);
-    test_same(200, $hecho['status'], 'El transportista registra el viaje');
-    test_same(true, $hecho['body']['data']['solicitud']['flete']['viajeRegistrado'], 'La solicitud muestra el viaje registrado');
-    test_same(1, sol_contar('SELECT COUNT(*) FROM tbtransportistaflete WHERE tbcomprasolicitudid = :id AND tbtransportistafletecantidadcabezas = 1
-        AND tbtransportistafletedistanciakm = 42.5 AND tbpagometodoid IS NULL', ['id' => $solB1['solicitudId']]), 'Un viaje por solicitud, con cabezas por defecto y sin pago inventado');
-    test_same(409, $fletes->procesar('PATCH', $viaje)['status'], 'El viaje no se registra dos veces');
-    test_same(1, sol_contar("SELECT COUNT(*) FROM tbbitacora WHERE tbbitacoraaccion = 'REGISTRAR_VIAJE' AND tbbitacoraregistroidentificacionnumero = :id", ['id' => (string) $solB1['solicitudId']]), 'La bitácora registra el viaje');
+    // Regresión (027 revertida): no existe acción para marcar un viaje desde la solicitud; un flete aceptado no crea viaje.
+    $viajesAntes = sol_contar('SELECT COUNT(*) FROM tbtransportistaflete', []);
+    $viaje = $fletes->procesar('PATCH', ['solicitudId' => $solB1['solicitudId'], 'accion' => 'REGISTRAR_VIAJE']);
+    test_same(422, $viaje['status'], 'REGISTRAR_VIAJE ya no es una acción válida');
+    test_assert(isset($viaje['body']['errors']['accion']), 'El 422 explica el campo accion');
+    test_same(false, array_key_exists('viajeRegistrado', $fleteOk['body']['data']['solicitud']['flete']), 'La solicitud no anuncia un viaje registrado');
+    test_same($viajesAntes, sol_contar('SELECT COUNT(*) FROM tbtransportistaflete', []), 'Aceptar un flete no escribe el histórico de viajes');
 
     // Publicación "a convenir": el vendedor fija el precio al aceptar.
     $c = $comprasA->procesar('POST', ['publicacionId' => $pubAConvenir]);
